@@ -1,0 +1,53 @@
+.head-discount{
+    width: 100%;
+    height: 80vh;
+    position: relative;
+    overflow: hidden;
+}
+.radius{
+    background-image: url(carly.png);
+    height: 440px;
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+.discount-section {
+    margin-top: 70px;
+    text-align: center;
+}
+.discount-section h1 {
+    font-family: 'Zain', sans-serif;
+    font-size: 57px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 20px;
+}
+.discount-section h3 {
+    color: white;
+    font-family: 'Zain', sans-serif;
+    font-size: 27px;
+    margin: 44px;
+}
+.more-btn-discount {
+    margin-top: 0;
+    width: 100%;
+    height: 55px;
+    background-color: white;
+    border-radius: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    border: 3px solid #BF9456;
+}
+@media (max-width: 576px) {
+    .radius {
+        left: -77px;
+    }
+    .more-btn-discount {
+        width: fit-content;
+        padding: 11px;
+    }
+}

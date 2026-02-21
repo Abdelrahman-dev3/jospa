@@ -1,0 +1,101 @@
+.maincard{
+    border: 1px solid #BF945633;
+    padding: 30px;
+    text-align: center;
+    height: 85%;
+    margin: auto;
+}
+.cardimg{
+    width: 70%;
+    height: 250px;
+    background: #BF94561A;
+    display: flex;
+    justify-content: center; 
+    align-items: center;
+    margin: auto; 
+}
+.cardimg img{
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.Category_Name{
+    font-size: 30px;
+    font-weight: 300 !important;
+    font-family: 'Almarai', sans-serif !important;
+    color: #BF9456;
+}
+.Category_desc{
+    font-size: 20px;
+    font-weight: 200 !important;
+    color: #000000 !important;
+    font-family: 'Almarai', sans-serif !important;
+}
+.tooltip-wrapper {
+position: relative;
+display: inline-block;
+cursor: help;
+}
+
+.tooltip-wrapper .tooltip-content {
+    position: absolute;
+    bottom: 120%; 
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f1f1f;
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 10px;
+    width: max-content;
+    max-width: 320px;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: center;
+    white-space: normal;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.3s ease;
+    z-index: 999;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+
+    max-height: 200px; 
+    overflow-y: auto;  
+}
+
+.tooltip-wrapper .tooltip-content::before {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #1f1f1f transparent transparent transparent;
+}
+
+.tooltip-wrapper:hover .tooltip-content {
+    opacity: 1;
+    pointer-events: auto;
+}
+    .tooltip-content {
+        overflow-y: auto;
+        scroll-behavior: smooth; /* smooth scroll */
+    }
+    
+    .tooltip-content::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .tooltip-content::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 8px;
+    }
+    
+    .tooltip-content::-webkit-scrollbar-thumb {
+        background-color: #BF9456;
+        border-radius: 8px;
+        border: 2px solid #f0f0f0;
+    }

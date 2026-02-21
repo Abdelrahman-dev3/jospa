@@ -1,0 +1,120 @@
+.product-card {
+  width: 320px;
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+  transition: 0.3s ease;
+  font-family: 'Zain', sans-serif;
+}
+
+.product-card:hover {
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
+.product-image {
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-content {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.category {
+  color: #999;
+  font-size: 14px;
+  margin: 0;
+}
+
+.product-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 8px 0;
+  color: #333;
+}
+
+.product-title span {
+  font-weight: bold;
+}
+
+.rating {
+  color: #f7c948; /* نجوم باللون الذهبي */
+  font-size: 14px;
+}
+
+.description {
+  font-size: 14px;
+  color: #666;
+  margin: 10px 0;
+}
+
+.bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.price {
+  font-size: 18px;
+  font-weight: bold;
+  color: #d19d00;
+}
+
+.add-to-cart {
+    background: #d19d00;
+    color: #fff;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 28px;
+    cursor: pointer;
+    display: flex;
+    width: 63%;
+    height: 40px;
+    text-align: center;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.add-to-cart:hover {
+  background: #b8860b;
+}
+.more-btn{
+    margin-top: 66px;
+    width: 30%;
+    height: 55px;
+    background-color: #CF9233;
+    border-radius: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+.more-btn::before {
+    content: "";
+    position: absolute;
+    width: 96%;
+    height: 80%;
+    border: 2px solid white;
+    border-radius: 28px;
+}
+@media (max-width: 576px) {
+    .more-btn {
+        width: 100%;
+    }
+}

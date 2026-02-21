@@ -1,0 +1,112 @@
+@keyframes cardFadeIn {
+  0% { opacity: 0; transform: translateY(40px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.book-btn:hover {
+  background: linear-gradient(90deg, #a8834b 60%, #bc9a69 100%) !important;
+  box-shadow: 0 8px 32px #bc9a6970;
+  transform: scale(1.07);
+}
+.book-btn:hover .icon-move {
+  transform: translateX(7px) scale(1.15) rotate(-8deg);
+}
+.service-card:hover {
+  box-shadow: 0 12px 40px #bc9a6970, 0 2px 12px #0002;
+  transform: translateY(-6px) scale(1.025);
+}
+.main-head{
+    position: relative;
+    height: fit-content;
+    padding: 72px;
+}
+.branch-card {
+  width: 317px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+  text-align: center;
+  font-family: 'Zain', sans-serif !important;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: 0.3s;
+}
+
+.branch-card:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.branch-image img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.branch-content {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.branch-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.branch-address {
+  font-size: 14px;
+  color: #777;
+}
+
+.book-btn {
+  margin:auto;
+  margin-top:5px;
+  background: #d19d00; /* اللون الذهبي */
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 25px;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.3s;
+}
+
+.book-btn:hover {
+  background: #b8860b;
+}
+
+.book-btn .icon {
+  font-size: 16px;
+}
+.more-btn-hero{
+    margin-top: 0;
+    width: 50%;
+    height: 55px;
+    background-color: #BF9456;
+    border-radius: 28px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+.more-btn-hero::before {
+    content: "";
+    position: absolute;
+    width: 91%;
+    height: 80%;
+    border: 2px solid white;
+    border-radius: 28px;
+}
+@media (max-width: 768px) {
+    
+    .more-btn-hero{
+        width: 100%;
+    }
+}

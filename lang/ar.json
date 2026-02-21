@@ -1,0 +1,10 @@
+{
+  "Status": "الحالة",
+  "Pending": "قيد الانتظار",
+  "Confirmed": "مؤكد",
+  "Cancelled": "ملغي",
+  "Completed": "مكتمل",
+  "Confirm": "تأكيد",
+  "Check In": "تسجيل دخول",
+  "Checkout": "تسجيل خروج"
+}

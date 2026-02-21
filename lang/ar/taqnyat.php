@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'sms_gateway_settings' => 'إعدادات بوابة TAQNYAT SMS',
+    'enable_sms' => 'تفعيل TAQNYAT SMS',
+    'enable_sms_gateway' => 'تفعيل بوابة TAQNYAT SMS',
+    'enable_sms_gateway_hint' => 'تفعيل أو تعطيل بوابة TAQNYAT SMS',
+
+    'api_configuration' => 'إعدادات API',
+    'api_key' => 'مفتاح API',
+    'api_key_placeholder' => 'أدخل مفتاح TAQNYAT API',
+    'api_key_hint' => 'مفتاح TAQNYAT API للمصادقة',
+    'sender_name' => 'اسم المرسل',
+    'sender_name_placeholder' => 'أدخل اسم المرسل',
+    'sender_name_hint' => 'الاسم الذي سيظهر كمرسل في رسائل SMS',
+    'test_connection' => 'اختبار الاتصال',
+
+    'message_templates' => 'نماذج الرسائل',
+    'welcome_message' => 'رسالة الترحيب',
+    'welcome_message_placeholder' => 'أدخل نموذج رسالة الترحيب',
+    'welcome_message_hint' => 'الرسالة المرسلة عند تسجيل المستخدم لأول مرة. استخدم [[name]] و [[app_name]] كمتغيرات.',
+    'booking_created_message' => 'رسالة إنشاء الحجز',
+    'booking_created_message_placeholder' => 'أدخل نموذج رسالة إنشاء الحجز',
+    'booking_created_message_hint' => 'الرسالة المرسلة عند إنشاء حجز جديد. استخدم [[booking_id]] و [[booking_date]] و [[booking_time]] كمتغيرات.',
+    'booking_cancelled_message' => 'رسالة إلغاء الحجز',
+    'booking_cancelled_message_placeholder' => 'أدخل نموذج رسالة إلغاء الحجز',
+    'booking_cancelled_message_hint' => 'الرسالة المرسلة عند إلغاء حجز. استخدم [[booking_id]] كمتغير.',
+    'booking_reminder_message' => 'رسالة تذكير الحجز',
+    'booking_reminder_message_placeholder' => 'أدخل نموذج رسالة تذكير الحجز',
+    'booking_reminder_message_hint' => 'الرسالة المرسلة كتذكير قبل الموعد. استخدم [[booking_time]] و [[service_name]] كمتغيرات.',
+    'password_reset_message' => 'رسالة إعادة تعيين كلمة المرور',
+    'password_reset_message_placeholder' => 'أدخل نموذج رسالة إعادة تعيين كلمة المرور',
+    'password_reset_message_hint' => 'الرسالة المرسلة لإعادة تعيين كلمة المرور. استخدم [[reset_code]] كمتغير.',
+
+    'test_message' => 'رسالة تجريبية',
+    'phone_number' => 'رقم الهاتف',
+    'phone_number_placeholder' => 'أدخل رقم الهاتف',
+    'phone_number_hint' => 'التنسيق: +966XXXXXXXXX أو 05XXXXXXXX',
+    'send_test_message' => 'إرسال رسالة تجريبية',
+    'save_settings' => 'حفظ الإعدادات',
+];

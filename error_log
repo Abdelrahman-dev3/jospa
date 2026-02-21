@@ -1,0 +1,295 @@
+[22-Sep-2025 09:55:58 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 09:55:58 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 09:58:43 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 09:58:43 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 09:58:49 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 09:58:49 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:05:25 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:05:25 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:05:27 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:05:27 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:06:40 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:06:40 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:06:43 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:06:43 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:12:06 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:12:06 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:19:05 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:19:05 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:20:44 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:20:44 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:24:58 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:24:58 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:29:24 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:29:24 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:29:25 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:29:25 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:29:26 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:29:26 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:34 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:34 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:35 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:35 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:35 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:35 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:35 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:35 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:45 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:30:45 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:28 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:28 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:28 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:28 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:28 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:28 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:29 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:29 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:44 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:31:44 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:17 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:17 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:18 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:18 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:18 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:18 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:18 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:18 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:19 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:19 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:19 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:35:19 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:36:56 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:36:56 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:36:58 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:36:58 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:16 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:16 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:18 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:18 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:18 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:18 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:18 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:18 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:19 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:20 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:20 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:20 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:20 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:20 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:37:20 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:49:11 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:49:11 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:49:12 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:49:12 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:57:03 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:57:03 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:58:54 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 10:58:54 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 11:36:44 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 11:36:44 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 11:37:07 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 11:37:07 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:00:50 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:00:50 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:01 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:01 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:02 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:02 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:03 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:04 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:04 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:11 UTC] PHP Warning:  require(/home/city2tec/public_html/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/city2tec/public_html/index.php on line 37
+[22-Sep-2025 12:03:11 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/city2tec/public_html/../vendor/autoload.php' (include_path='.:/opt/cpanel/ea-php82/root/usr/share/pear') in /home/city2tec/public_html/index.php:37
+Stack trace:
+#0 {main}
+  thrown in /home/city2tec/public_html/index.php on line 37

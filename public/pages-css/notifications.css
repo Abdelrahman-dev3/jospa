@@ -1,0 +1,135 @@
+:root{
+  --duration: 3s;   
+  --banner-height: 84px;
+  --accent-1: #7C3AED;   
+  --accent-2: #06B6D4;   
+  --bg-glass: rgba(255,255,255,0.06);
+  --text: #fff;
+  --shadow: 0 10px 30px rgba(12,12,30,0.55);
+}
+.notify-wrap{
+  position:fixed;
+  inset: 20px auto auto 20px; /* fallback for RTL */
+  right: 20px;
+  top: 20px;
+  z-index:999999;
+  display:flex;flex-direction:column;gap:12px;
+  pointer-events:none;
+}
+
+.notify{
+  --progress: 0%;
+  width: min(420px, calc(100% - 40px));
+  height: var(--banner-height);
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;
+  border-radius:14px;
+  background: linear-gradient(135deg, rgba(124,58,237,0.16), rgba(6,182,212,0.08));
+  backdrop-filter: blur(8px) saturate(1.1);
+  box-shadow: var(--shadow);
+  color:var(--text);
+  pointer-events:auto;
+  overflow:hidden;
+  transform-origin: right center;
+  animation: popIn 700ms cubic-bezier(.16,1,.3,1) forwards;
+}
+
+@keyframes popIn{
+  0% { transform: translateX(24px) scale(.96) rotateZ(-4deg); opacity:0; filter: blur(6px) }
+  60% { transform: translateX(-8px) scale(1.02) rotateZ(2deg); opacity:1; filter: blur(0) }
+  100% { transform: translateX(0) scale(1) rotateZ(0); opacity:1; filter: blur(0) }
+}
+
+.notify .icon{
+  min-width:56px;min-height:56px;border-radius:12px;
+  display:grid;place-items:center;font-weight:700;
+  background: linear-gradient(135deg,var(--accent-1),var(--accent-2));
+  box-shadow: 0 6px 18px rgba(6,182,212,0.12), inset 0 -6px 18px rgba(0,0,0,0.12);
+  flex-shrink:0;
+  transform: translateZ(0);
+}
+.notify .icon svg{width:28px;height:28px;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.12))}
+
+.notify .content11{
+  display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;
+}
+.notify .title11{
+  font-size:15px;font-weight:700;letter-spacing:0.2px;
+  line-height:1;
+}
+.notify .desc11{
+  font-size:13px;
+  opacity:0.92;
+  color:rgba(255,255,255,0.92);
+  white-space: normal;  
+  overflow: visible;    
+  text-overflow: clip;  
+  word-break: break-word; 
+  line-height: 1.3;
+}
+
+.notify .close{
+  margin-inline-start:12px;background:transparent;border:0;color:inherit;
+  cursor:pointer;padding:8px;border-radius:10px;flex-shrink:0;
+  display:grid;place-items:center;
+  opacity:0.95;
+}
+.notify .close:active{transform:scale(.96)}
+
+.notify .progress{
+  position:absolute;left:0;right:0;bottom:0;height:4px;border-radius:0 0 12px 12px;
+  overflow:hidden;background:linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+}
+.notify .progress > i{
+  display:block;height:100%;width:0%;
+  background: linear-gradient(90deg,var(--accent-2),var(--accent-1));
+  transform-origin:left center;
+  animation: fill var(--duration) linear forwards;
+}
+@keyframes fill{
+  from{width:0%}
+  to{width:100%}
+}
+
+.notify::before,
+.notify::after{
+  content:"";
+  position:absolute;pointer-events:none;
+  filter:blur(18px) saturate(1.2);
+  mix-blend-mode: screen;opacity:0.9;
+}
+.notify::before{
+  width:180px;height:120px;right:-40px;top:-50px;border-radius:40%;
+  background: radial-gradient(circle at 30% 30%, rgba(124,58,237,0.9), transparent 30%),
+              radial-gradient(circle at 70% 70%, rgba(6,182,212,0.8), transparent 30%);
+  transform: rotate(20deg);
+  animation: floatB 6s ease-in-out infinite;
+  opacity:0.65;
+}
+.notify::after{
+  width:120px;height:70px;left:-30px;bottom:-12px;border-radius:40%;
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.06), transparent 30%);
+  animation: floatA 5s ease-in-out infinite;
+  opacity:0.28;
+}
+@keyframes floatA{ 0%{transform:translateY(0)}50%{transform:translateY(-8px)}100%{transform:translateY(0)} }
+@keyframes floatB{ 0%{transform:translateY(0) rotate(20deg)}50%{transform:translateY(-10px) rotate(18deg)}100%{transform:translateY(0) rotate(20deg)} }
+
+.notify.closing{
+  animation: popOut 420ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+@keyframes popOut{
+  0% { transform: translateY(0) scale(1); opacity:1; filter: blur(0) }
+  100% { transform: translateY(-18px) scale(.98); opacity:0; filter: blur(6px) }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .notify, .notify::before, .notify::after, .notify .progress > i { animation: none !important; transition: none !important; }
+}
+
+@media (max-width:420px){
+  .notify{ height:76px; border-radius:12px; padding:12px 12px; gap:10px }
+  .notify .icon{ min-width:48px; min-height:48px; border-radius:10px }
+  .notify .title11{ font-size:14px }
+  .notify .desc11{ font-size:12px }
+}

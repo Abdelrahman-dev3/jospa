@@ -1,0 +1,20 @@
+<?php
+return [
+    'wheel_of_fortune_management' => 'إدارة عجلة الحظ',
+    'gift_type' => 'نوع الهدية',
+    'select_type' => 'اختر النوع',
+    'points' => 'نقاط ولاء',
+    'add_new_reward' => 'إضافة جائزة جديدة',
+    'reward_value' => 'قيمة المكافأة',
+    'enter_value' => 'أدخل القيمة',
+    'reward_description' => 'وصف الجائزة',
+    'enter_description' => 'مثلا : تهانينا لقد حصلت على 500 نقطة هدية تستخدمهم للخصم على خدمات Sami',
+    'add_reward' => 'إضافة الجائزة',
+    'current_rewards' => 'الجوائز الحالية',
+    'clear_all' => 'مسح الكل',
+    'no_rewards_added' => 'لم تتم إضافة أي جائزة بعد.',
+    'The_award_has_been_added_successfully' => 'تمت اضافة الجائزة بنجاح',
+    'The_award_has_been_deleted_successfully' => 'تم حذف الجائزة',
+    'success_delete_all' => 'تم حذف جميع الجوائز بنجاح',
+    'WheelOfFortune' => 'عجلة الحظ',
+];
