@@ -60,7 +60,7 @@ public function index(Request $request)
         ['name' => 'كوبون بقيمة 5000', 'price' => 5000],
     ];
 
-    return view('salon.gift', compact('subCategories', 'errors' ,'packages' , 's' , 'currentLocale' , 'coupons' , 'ads'));
+    return view('frontend.gift-cards.create', compact('subCategories', 'errors' ,'packages' , 's' , 'currentLocale' , 'coupons' , 'ads'));
 }
 
 public function store(Request $request)
