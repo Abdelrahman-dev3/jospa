@@ -1,8 +1,7 @@
-<!DOCTYPE html>
-<html lang="ar">
+@extends('layouts.frontend-page', ['showNavbar' => true, 'topSpacerHeight' => null, 'showFooter' => false, 'htmlLang' => $currentLocale, 'htmlDir' => $currentLocale === 'ar' ? 'rtl' : 'ltr', 'bodyDir' => $currentLocale === 'ar' ? 'rtl' : 'ltr', 'bodyLang' => $currentLocale])
 
-<head>
-    <meta charset="UTF-8">
+@section('head')
+<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ __('messagess.giftcard') }} - JOSPA</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -11,12 +10,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     
     <link rel="stylesheet" href="{{ asset('pages-css/gift.css') }}?v={{ filemtime(public_path('pages-css/gift.css')) }}">
+@endsection
 
-</head>
-
-<body dir="{{ $currentLocale === 'ar' ? 'rtl' : 'ltr' }}" lang="{{ $currentLocale }}">
-    @include('components.frontend.navbar')
-    <div class="d-none d-md-block proh">
+@section('content')
+<div class="d-none d-md-block proh">
         <div class="slider-track">
             @if($ads->count())
                 @foreach($ads as $key => $item)
@@ -193,12 +190,13 @@
 
                 </form>
             </div>
-            @include('components.frontend.footer')
-        </div>
+            </div>
 
     </div>
+@endsection
 
-    <script>
+@section('scripts')
+<script>
         document.addEventListener('DOMContentLoaded', function () {
             const params = new URLSearchParams(window.location.search);
             const packId = params.get('pack');
@@ -354,6 +352,4 @@
             @endforeach
         @endif
     </script>
-</body>
-
-</html>
+@endsection

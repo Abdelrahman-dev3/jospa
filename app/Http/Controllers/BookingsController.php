@@ -21,6 +21,6 @@ class BookingsController extends Controller
         $States = State::where('status' , 1)->get();
         $suggest = Product::with(['media' , 'categories'])->where('status', 1)->where('is_featured', 1)->where('deleted_at', null)->get();
         $cities = City::where('status' , 1)->get();
-        return view('home.create' , compact('States','b' , 'suggest' ,'cities'));
+        return view('home.booking.create' , compact('States','b' , 'suggest' ,'cities'));
     }    
 }

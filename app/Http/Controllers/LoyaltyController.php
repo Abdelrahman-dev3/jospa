@@ -33,6 +33,6 @@ class LoyaltyController extends Controller
     public function loyalety(Request $request){
         $point_value = Setting::get('point_value');
         
-        return view('components.frontend.loyalety' , compact('point_value'));
+        return view('frontend.loyalty.index' , compact('point_value'));
     }
 }

@@ -67,7 +67,7 @@ class CardPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
-                return view('components.frontend.status.CAPTURED');
+                return view('frontend.payment-status.captured');
             } catch (\Exception $e) {
                 return redirect()->back()->with('error', $e->getMessage());
             }
@@ -153,7 +153,7 @@ class CardPaymentStrategy
             if ($redirect) {
                 $datas['redirect'] = $redirect;
             }
-            return view('components.frontend.status.FAILED', $datas);
+            return view('frontend.payment-status.failed', $datas);
         };
     
 
@@ -185,7 +185,7 @@ class CardPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $fakeRequest, $data['final_before_sub'] , true);
                 session()->forget('tap_payment');
-                return view('components.frontend.status.CAPTURED');
+                return view('frontend.payment-status.captured');
             case "FAILED":
                 if ($redirectToPayment) {
                     session()->forget('tap_payment');

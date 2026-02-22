@@ -66,7 +66,7 @@ class TamaraPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
-                return view('components.frontend.status.CAPTURED');
+                return view('frontend.payment-status.captured');
             } catch (\Exception $e) {
                 return redirect()->back()->with('error', $e->getMessage());
             }
@@ -188,7 +188,7 @@ class TamaraPaymentStrategy
 
         if ($status !== 'approved') {
             session()->forget('tamara_payment');
-            return view('components.frontend.status.FAILED');
+            return view('frontend.payment-status.failed');
         }
 
         app(PaymentFinalizerService::class)->finalizePayment(
@@ -213,14 +213,14 @@ class TamaraPaymentStrategy
 
         session()->forget('tamara_payment');
 
-        return view('components.frontend.status.CAPTURED');
+        return view('frontend.payment-status.captured');
     }
 
     public function failure()
     {
         session()->forget('tamara_payment');
 
-        return view('components.frontend.status.FAILED', [
+        return view('frontend.payment-status.failed', [
             'message' => __('messages.payment_failed')
         ]);
     }
@@ -229,7 +229,7 @@ class TamaraPaymentStrategy
     {
         session()->forget('tamara_payment');
 
-        return view('components.frontend.status.FAILED', [
+        return view('frontend.payment-status.failed', [
             'message' => __('messages.payment_cancelled')
         ]);
     }

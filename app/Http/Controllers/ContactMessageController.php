@@ -17,7 +17,7 @@ public function index(Request $request)
 
     $messages = ContactMessage::orderBy('created_at', $sort)->get();
 
-    return view('home.contact', compact('messages'));
+    return view('backend.contact-messages.index', compact('messages'));
 }
 
 

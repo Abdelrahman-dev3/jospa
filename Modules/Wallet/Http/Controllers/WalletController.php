@@ -122,7 +122,7 @@ class WalletController extends Controller
         
         $failed = function($message, $sub = '', $redirect = '/') {
             $datas = [ 'message' => $message, 'sub' => $sub];
-            return view('components.frontend.status.FAILED', $datas);
+            return view('frontend.payment-status.failed', $datas);
         };
         
         $amount = (float) session('walletToAdd');
@@ -175,7 +175,7 @@ class WalletController extends Controller
                     ]);
                 });                
                 session()->forget('walletToAdd');
-                return view('components.frontend.status.CAPTURED');
+                return view('frontend.payment-status.captured');
             case "FAILED":
                 session()->forget('walletToAdd');
                 return $failed(__('messages.failed_status'), __('messages.failed_message'));

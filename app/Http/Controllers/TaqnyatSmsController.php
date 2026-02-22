@@ -22,7 +22,7 @@ class TaqnyatSmsController extends Controller
     {
         $module_action = 'SMS Settings';
         
-        return view('home.sms', compact('module_action'));
+        return view('backend.sms.index', compact('module_action'));
     }
 
     /**

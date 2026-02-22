@@ -66,7 +66,7 @@ class TabbyPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
-                return view('components.frontend.status.CAPTURED');
+                return view('frontend.payment-status.captured');
             } catch (\Exception $e) {
                 return redirect()->back()->with('error', $e->getMessage());
             }
@@ -201,19 +201,19 @@ class TabbyPaymentStrategy
                     $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub'] , true);
     
                     session()->forget('tabby_payment');
-                    return view('components.frontend.status.CAPTURED');
+                    return view('frontend.payment-status.captured');
                 } catch (\Exception $e) {
                     session()->forget('tabby_payment');
                     return redirect()->back()->with('error', $e->getMessage());
                 }
-                return view('components.frontend.status.CAPTURED');
+                return view('frontend.payment-status.captured');
             case "FAILED":
             case "CANCELLED":
                 session()->forget('tabby_payment');
-                return view('components.frontend.status.FAILED', ['message' => $status]);
+                return view('frontend.payment-status.failed', ['message' => $status]);
             default:
                 session()->forget('tabby_payment');
-                return view('components.frontend.status.FAILED', ['message' => 'Unknown status: ' . $status]);
+                return view('frontend.payment-status.failed', ['message' => 'Unknown status: ' . $status]);
         }
     }
 }

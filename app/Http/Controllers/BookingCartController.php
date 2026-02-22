@@ -62,7 +62,7 @@ class BookingCartController extends Controller
 
         $productCount = $products->count();
 
-        return view('components.frontend.cart', compact('services' , 'products' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount', 'gifts'));
+        return view('frontend.cart.index', compact('services' , 'products' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount', 'gifts'));
     }
 
      public function store(Request $request)
@@ -228,7 +228,7 @@ class BookingCartController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['status' => false, 'message' => 'No tap_id provided.'], 400);
             }
-            return view('components.frontend.status.ERPAY')->with('error', 'No tap_id provided.');
+            return view('frontend.payment-status.erpay')->with('error', 'No tap_id provided.');
         }
     
         $response = Http::withHeaders([
@@ -280,7 +280,7 @@ class BookingCartController extends Controller
                 ]);
             }
     
-            return view('components.frontend.status.CAPTURED');
+            return view('frontend.payment-status.captured');
         } else {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -290,7 +290,7 @@ class BookingCartController extends Controller
                 ]);
             }
     
-            return view('components.frontend.status.FAILED');
+            return view('frontend.payment-status.failed');
         }
 }
 

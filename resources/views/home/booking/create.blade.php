@@ -13,12 +13,14 @@
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Lemonada:wght@300;400;500;600;700&display=swap" rel="stylesheet"> 
-    
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
         <!-- Icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
         
-        <link rel="stylesheet" href="{{ asset('pages-css/book-page.css') }}">
+        <link rel="stylesheet" href="{{ asset('pages-css/h-book-page.css') }}">
 @endsection
 
 @section('content')
@@ -85,22 +87,43 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                 <div class="location-form">
                     <div class="form-group">
                         <label class="top-label"> 
-                            {{ __('messagess.select_branch') }} 
-                            <span class="step-help-btn"
-                                  data-step="step1"
-                                  data-help='@json(trans("steps.step1"))'>
-                                <i class="bi bi-question-circle"></i>
-                            </span>
+                            {{ __('messagess.location_data') }} 
                         </label>
-                        <br>
-                        <select class="w-100-mob" name="State">
-                            @foreach($States as $State)
-                            <option value="{{$State->id}}">{{$State->name}}</option>
-                            @endforeach
-                        </select>
-                        <div class="branch-cards">
+                        <div class="location-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>{{ __('messagess.service_for_name') }}</label>
+                                    <input type="text" id="customerName" placeholder="{{ __('messagess.name') }}">
+                                </div>
+                                <div class="form-group">
+                                    <label>{{ __('messagess.mobile_no') }}</label>
+                                    <input type="tel" id="mobileNo" placeholder="05*********">
+                                    <small class="form-text text-muted">{{ __('messagess.wsb') }}</small>
+                                </div>
+                            </div>
                             
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>{{ __('messagess.neighbor') }}</label>
+                                    <select id="neighborhood">
+                                        <option value="">{{ __('messagess.please_select') }}</option>
+                                        @foreach($cities as $city)
+                                            <option value=" {{ json_decode($city->name, true)[app()->getLocale() ?? 'en'] }}"> {{ json_decode($city->name, true)[app()->getLocale() ?? 'en'] }}</option>
+                                        @endforeach  
+                                    </select>
+                                </div>
+                            </div>
+            
+            
+                            <div class="form-group">
+                                <label>{{ __('messagess.select_location') }}</label>
+                                <button type="button" id="myLocationBtn">{{ __('messagess.my_location') }}</button>
+                                <input type="text" id="locationInput" placeholder="{{ __('messagess.location_placeholder') }}" readonly>
+                            </div>
+                            <div id="map" style="width:100%; height:400px; margin-top:10px;"></div>
+            
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -220,9 +243,13 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
         let maxSteps = 5; 
         
         let selectedData = {
-            branch: null,
-            branchName: null,
-            services: []    
+            customerName:null,
+            mobileNo:null,
+            neighborhood:null,
+            location: null,
+            branch: 0,
+            branchName: 'home services',
+            services: []  
         };
         
         const summaryCard = document.getElementById('summaryCard');
@@ -264,17 +291,6 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
         });
         
         function initializeApp() {
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const branchId = urlParams.get('branch_id');
-
-            if(branchId) {
-                selectedData.branch = branchId;
-                currentStep = 2; 
-                updateUI();
-                fetchServiceGroups();
-            }
-
             updateUI();
             setupEventListeners();
             setupAutoNavigation();
@@ -301,7 +317,6 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
             // Update navigation buttons
             prevBtn.disabled = currentStep === 1;
             nextBtn.textContent = currentStep === maxSteps ? translations.complete : translations.next;
-            fetchbranch({{$first_States->id}})
         }
 
         // Add this to your setupEventListeners() function
@@ -362,67 +377,9 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
             document.getElementById("wifi-loader").style.display = "none";
         }
  
-        function fetchbranch(cityId) {
-            showLoader();
-            fetch(`/api/branchs/${cityId}`)
-                .then(response => response.json())
-                .then(data => {
-                    const branchsContainer = document.querySelector('.branch-cards');
-                    branchsContainer.innerHTML = '';
-
-                    const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
-
-                    data.forEach(branch => {
-                        console.log(branch)
-                        const card = document.createElement('div');
-                        card.className = "branch-card";
-                        
-                        card.innerHTML = `
-                          <label class="branch-option">
-                            <input type="radio" name="branch" value="${branch.id}" hidden>
-                        
-                            <div class="branch-image">
-                                <img src="${branch.feature_image}">
-                            </div>
-                        
-                            <div class="branch-info">
-                              <h5 class="branch-name">${branch.name[lang]}</h5>
-                              <p style="font-size: 11px;margin-top: 15px;font-weight: 600;">${branch.description}</p>
-                            </div>
-                          </label>
-                        `;
-                            
-                        card.addEventListener('click', (e) => {
-                            document.querySelectorAll('.branch-card').forEach(c => c.classList.remove('selected'));
-                            card.classList.add('selected');
-                            selectedData = {
-                                branch: null,
-                                branchName: null,
-                                services: []    
-                            };
-                            selectedData.branch = branch.id;
-                            selectedData.branchName = branch.name[lang];
-                            setTimeout(() => {
-                                if (currentStep === 1 && validateCurrentStep()) {
-                                    currentStep = 2;
-                                    updateUI();
-                                    fetchServiceGroups();
-                                }
-                            }, 300);
-                        });
-                        branchsContainer.appendChild(card);
-                    });
-                    hideLoader()
-                })
-                .catch(error => {
-                    console.error('Error fetching services:', error);
-                       hideLoader()
-                });
-        }
-        
         function fetchServiceGroups() {
             showLoader();
-            fetch(`/api/service-groups`)
+            fetch(`/api/service-groups?is_home=1`)
                 .then(response => response.json())
                 .then(data => {
                     const serviceGrid = document.querySelector('.service-grid');
@@ -455,8 +412,7 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                             selectedData.services.push({
                                 id: service.id,
                                 name: serviceName,
-                                image: service.image,
-                                subServices: []
+                                image: service.image
                             });
                         }
                         fetchServicesByGroup(service.id);
@@ -495,7 +451,6 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                         searchWrapper.appendChild(searchInput);
                         massageContainer.parentNode.insertBefore(searchWrapper, massageContainer);
         
-                        // حدث البحث
                         searchInput.addEventListener('input', function () {
                             const query = this.value.toLowerCase();
                             document.querySelectorAll('.massage-card').forEach(card => {
@@ -549,56 +504,43 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                         `;
                         card.addEventListener('click', (e) => {
                             if (e.target.classList.contains('massage-book-btn')) return;
-                        
                             card.classList.toggle('selected');
-                        
                             let parentGroup = selectedData.services.find(s => s.id == serviceGroupId);
-                        
-                            if (!parentGroup) {
-                                selectedData.services.push({
-                                    id: serviceGroupId,
-                                    name: serviceName,
-                                    image: service.image,
-                                    subServices: []
-                                });
-                                parentGroup = selectedData.services.find(s => s.id == serviceGroupId);
-                            }
-                        
-                            if (!parentGroup.subServices) parentGroup.subServices = [];
-                        
-                            const exists = parentGroup.subServices.find(sub => sub.id === service.id);
-                        
-                            if (exists) {
-                                parentGroup.subServices = parentGroup.subServices.filter(sub => sub.id !== service.id);
-                            } else {
-                                parentGroup.subServices.push({
-                                    id: service.id,
-                                    name: serviceName,
-                                    duration: service.duration_min,
-                                    price: parseInt(service.default_price)
-                                });
-                            }
-                            updateSummarySteps();
-                            
-                            if (validateCurrentStep()) {
-                                if (currentStep < 3) {
-                                    currentStep = 3;
-                                    updateUI();
+                            if (parentGroup) {
+                                if (!parentGroup.subServices) {
+                                    parentGroup.subServices = [];
+                                }
+                                const exists = parentGroup.subServices.find(sub => sub.id == service.id);
+                                if (exists) {
+                                    parentGroup.subServices = parentGroup.subServices.filter(sub => sub.id != service.id);
+                                    updateSummarySteps();
+                                } else {
+                                    parentGroup.subServices.push({
+                                        id: service.id,
+                                        name: serviceName,
+                                        duration: service.duration_min,
+                                        price: parseInt(service.default_price)
+                                    });
+                                    updateSummarySteps();
+                                    setTimeout(() => {
+                                        currentStep++;
+                                        updateUI();
+                                        updateSummarySteps();
+                                    
                                         setTimeout(() => {
                                             const firstSummaryCard = document.querySelector('.sammary-steps .summary-card');
                                             if (firstSummaryCard) {
                                                 firstSummaryCard.click();
                                             }
                                         }, 300);
+                                    }, 500);
 
                                 }
                             }
                         });
                         massageContainer.appendChild(card);
                         if(subServiceId && parseInt(subServiceId) == service.id){
-                            setTimeout(() => {
-                                card.click();
-                            }, 300);
+                            card.click();
                         }
                     });
                     hideLoader();
@@ -803,12 +745,8 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                     afternoonGrid.innerHTML = '';
 
                     if (data.length === 0) {
-                        const noTimesText = currentLang === 'ar' 
-                            ? 'لا توجد مواعيد متاحة لهذا اليوم.' 
-                            : 'No available times for this day.';
-                        
-                        morningGrid.innerHTML = `<p>${noTimesText}</p>`;
-                        afternoonGrid.innerHTML = `<p>${noTimesText}</p>`;
+                        morningGrid.innerHTML = '<p>لا توجد مواعيد متاحة لهذا اليوم.</p>';
+                        afternoonGrid.innerHTML = '<p>لا توجد مواعيد متاحة لهذا اليوم.</p>';
                         hideLoader();
                         return;
                     }
@@ -843,17 +781,11 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                         }
                     });
                     if (!hasMorning) {
-                        const noMorningText = currentLang === 'ar' 
-                            ? 'لا توجد مواعيد صباحية متاحة.' 
-                            : 'No morning slots available.';
-                        morningGrid.innerHTML = `<p>${noMorningText}</p>`;
+                        morningGrid.innerHTML = '<p>لا توجد مواعيد صباحية متاحة.</p>';
                     }
-                    
+        
                     if (!hasAfternoon) {
-                        const noAfternoonText = currentLang === 'ar' 
-                            ? 'لا توجد مواعيد مسائية متاحة.' 
-                            : 'No afternoon slots available.';
-                        afternoonGrid.innerHTML = `<p>${noAfternoonText}</p>`;
+                        afternoonGrid.innerHTML = '<p>لا توجد مواعيد مسائية متاحة.</p>';
                     }
                     morningBtn.click()
                     hideLoader();
@@ -1020,7 +952,7 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                 }
             });
         }
-
+        
         function setupAutoNavigation() {
         document.querySelectorAll('.progress-step').forEach(step => {
                 step.addEventListener('click', () => {
@@ -1030,32 +962,32 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
                         updateUI();
                     }
                 });
-            });
-
-        // عند اختيار المدينة
-        document.querySelectorAll('select[name="State"]').forEach(radio => {
-                radio.addEventListener('change', (e) => {
-                    const stateId = e.target.value;
-                    fetchbranch(stateId);
-                });
-            });
+            }); 
         }
-        
+
         function validateCurrentStep() {
             switch (currentStep) {
                 case 1:
-                    const selectedBranch = document.querySelector('input[name="branch"]:checked');
-                    if (!selectedBranch) {
-                        alert('{{ __("messagess.please_select_branch") }}');
+                    const customerName = document.getElementById('customerName').value;
+                    const mobileNo = document.getElementById('mobileNo').value;
+                    const neighborhood = document.getElementById('neighborhood').value;
+                    const locationInput = document.getElementById('locationInput').value;
+                    if (!customerName || !mobileNo || !neighborhood || !locationInput) {
+                        alert('{{ __("messagess.please_fill_data") }}');
                         return false;
                     }
+                    selectedData.customerName = customerName;
+                    selectedData.mobileNo = mobileNo;
+                    selectedData.neighborhood = neighborhood;
+                    selectedData.locationInput = locationInput;
+                
+                    console.log(selectedData);
+                    fetchServiceGroups();
+    
                     break;
                 case 2:
-                    const hasAtLeastOneSubService = Array.isArray(selectedData.services) &&
-                        selectedData.services.some(service => Array.isArray(service.subServices) && service.subServices.length > 0);
-
-                    if (!hasAtLeastOneSubService) {
-                        createNotify({ title: '', desc: '{{ __("messages.gift_card_service_required") }}'})
+                    if (!selectedData.services || selectedData.services.length === 0) {
+                        alert('Please select at least one service');
                         return false;
                     }
                     break;
@@ -1188,6 +1120,7 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
         // Initialize the application
         document.addEventListener('DOMContentLoaded', initializeApp);
 </script>
+        
     <script>
         const panel = document.getElementById('stepHelpPanel');
         
@@ -1228,8 +1161,47 @@ getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
             video.pause(); 
             panel.classList.remove('show');
         }
-
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+    const map = L.map('map').setView([24.7136, 46.6753], 8);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    let marker;
+    
+    map.on('click', function(e) {
+        const lat = e.latlng.lat.toFixed(6);
+        const lng = e.latlng.lng.toFixed(6);
+    
+        if(marker) marker.setLatLng([lat, lng]);
+        else marker = L.marker([lat, lng]).addTo(map);
+    
+        document.getElementById('locationInput').value = lat + ',' + lng;
+    });
+    
+    document.getElementById('myLocationBtn').addEventListener('click', () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const lat = position.coords.latitude.toFixed(6);
+                const lng = position.coords.longitude.toFixed(6);
+    
+                if(marker) marker.setLatLng([lat, lng]);
+                else marker = L.marker([lat, lng]).addTo(map);
+    
+                map.setView([lat, lng], 15);
+                document.getElementById('locationInput').value = lat + ',' + lng;
+            }, (err) => {
+                alert('تعذر الحصول على موقعك: ' + err.message);
+            });
+        } else {
+            alert('المتصفح لا يدعم تحديد الموقع');
+        }
+    });
+    
+    </script>
 @endsection
