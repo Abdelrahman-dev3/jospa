@@ -22,7 +22,6 @@
 @endsection
 
 @section('content')
-getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
     <!-- Main Container -->
     <div class="container">
         <div id="wifi-loader" style="display:none;">

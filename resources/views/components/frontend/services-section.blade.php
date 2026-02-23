@@ -1,5 +1,8 @@
+{{-- CSS --}}
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('pages-css/services-section.css') }}">
+
+{{-- HTML --}}
 <div id="wifi-loader" style="display:none;">
     <svg class="circle-outer" viewBox="0 0 86 86">
         <circle class="back" cx="43" cy="43" r="40"></circle>
@@ -52,6 +55,7 @@
 <div id="branchContainer" style="display:none !important;"></div>
 <br>
 
+{{-- script --}}
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
     AOS.init({ once: true });

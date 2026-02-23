@@ -18,7 +18,7 @@
               <i class="fa-solid fa-star star"></i>
           </span>
 
-          <a class="deta" href="{{ route('home.details', $package_id) }}" style="    background: #BF9456;padding: 6px;width: 27%;text-align: center;border-radius: 17px;color: white;"> {{ __('messagess.details') }}</a>
+          <a class="deta" href="{{ route('home.details', $package_id) }}" style="background: #BF9456;padding: 6px;width: 27%;text-align: center;border-radius: 17px;color: white;"> {{ __('messagess.details') }}</a>
       </div>
 
     </div>
