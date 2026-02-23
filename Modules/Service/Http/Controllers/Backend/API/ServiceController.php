@@ -53,17 +53,23 @@ class ServiceController extends Controller
 
         return $this->sendResponse($service_branch, __('service.branch_service'));
     }
-  
+
     public function servicesbranches($id)
     {
-        $service_branch = ServiceBranches::with('branch' , 'service')->where('service_id', $id)->whereNull('deleted_at')->get();
-        $service_branch = $service_branch->each(function ($data) {
-            $data['name'] = $data->branch->name;
-            $data['is_visible'] = $data->service->is_visible;
-            return $data;
-        });
-
-        return $this->sendResponse($service_branch, __('service.branch_service'));
+        $serviceBranches = ServiceBranches::with(['branch', 'service'])
+            ->where('service_id', $id)
+            ->whereNull('deleted_at')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'branch_id' => $item->branch_id,
+                    'service_id' => $item->service_id,
+                    'name' => $item->branch?->name,
+                    'is_visible' => $item->service?->is_visible,
+                ];
+            });
+        return $this->sendResponse($serviceBranches, __('service.branch_service'));
     }
 
     public function assign_branch_update($id, Request $request)
