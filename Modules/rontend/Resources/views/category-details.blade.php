@@ -640,85 +640,98 @@
             showBranchesForMainService(mainServiceId , subServiceId);
         }
 
-        function showBranchesForMainService(mainServiceId, subServiceId) {
-        
-            showLoader();
-        
-            fetch(`/api/services/branches/${subServiceId}`)
-                .then(res => res.json())
-                .then(response => {
-        
-                    const branches = response.data || [];
-        
-                    const container = document.getElementById('branchContainer');
-                    container.style.position = "fixed";
-                    container.innerHTML = '';
-        
-                    const closeBtn = document.createElement('button');
-                    closeBtn.className = 'close-btn';
-                    closeBtn.innerText = '✖';
-                    closeBtn.addEventListener('click', () => {
-                        container.style.setProperty('display', 'none', 'important');
-                    });
-        
-                    container.appendChild(closeBtn);
-        
-                    const currentLang = "{{ app()->getLocale() }}";
-        
-                    branches.forEach(item => {
-        
-                        const branch = item.branch;
-        
-                        const card = document.createElement('div');
-                        card.className = 'branch-card';
-        
-                        card.innerHTML = `
-                            <img src="${branch.feature_image}" 
-                                 alt="${branch.name[currentLang]}" 
-                                 style="width:100%; height:200px; object-fit:cover;">
-        
-                            <h5>${branch.name[currentLang]}</h5>
-                            <p>${branch.description ?? ''}</p>
-                        `;
-        
-                        card.addEventListener('click', () => {
-                            window.location.href = `/salonService?branch_id=${branch.id}&mainService_id=${selectedMainServiceId}&subService_id=${selectedSubServiceId}`;;
-                        });
-                        
-                        container.appendChild(card);
-                    });
-        
-                    const hasHomeService = branches.some(item => Number(item.is_visible) === 1);
-        
-                    if (hasHomeService) {
-        
-                        const card_H = document.createElement('div');
-                        card_H.className = 'branch-card';
-        
-                        card_H.innerHTML = `
-                            <img src="/images/frontend/jospahomeservises.png"
-                                 alt="${currentLang === 'ar' ? 'الخدمات المنزلية' : 'Home Service'}"
-                                 style="width:100%; height:200px; object-fit:cover;">
-                                 
-                            <h5>${currentLang === 'ar' ? 'الخدمات المنزلية' : 'Home Service'}</h5>
-                        `;
-        
-                        card_H.addEventListener('click', () => {
-                            window.location.href = `/HomeService?branch_id=0`;
-                        });
-        
-                        container.appendChild(card_H);
-                    }
-        
-                    container.style.display = 'block';
-                    hideLoader();
-                })
-                .catch(err => {
-                    console.error(err);
-                    hideLoader();
-                });
+function showBranchesForMainService(mainServiceId, subServiceId) {
+
+    showLoader();
+
+    fetch(`/api/services/branches/${subServiceId}`)
+        .then(res => res.json())
+        .then(response => {
+
+            if (!response.status) {
+                hideLoader();
+                return;
             }
 
+            const branches = response.data ?? [];
+            const container = document.getElementById('branchContainer');
+
+            container.style.position = "fixed";
+            container.innerHTML = '';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'close-btn';
+            closeBtn.innerText = '✖';
+            closeBtn.addEventListener('click', () => {
+                container.style.setProperty('display', 'none', 'important');
+            });
+
+            container.appendChild(closeBtn);
+
+            const currentLang = "{{ app()->getLocale() }}";
+
+            branches.forEach(item => {
+
+                if (!item.branch) return; // حماية
+
+                const branch = item.branch;
+
+                const branchName = branch.name?.[currentLang] ?? '';
+                const branchImage = branch.feature_image ?? '/images/av3.webp';
+                const branchDescription = branch.description ?? '';
+
+                const card = document.createElement('div');
+                card.className = 'branch-card';
+
+                card.innerHTML = `
+                    <img src="${branchImage}" 
+                         alt="${branchName}" 
+                         style="width:100%; height:200px; object-fit:cover;">
+                    <h5>${branchName}</h5>
+                    <p>${branchDescription}</p>
+                `;
+
+                card.addEventListener('click', () => {
+                    window.location.href =
+                        `/salonService?branch_id=${branch.id}&mainService_id=${mainServiceId}&subService_id=${subServiceId}`;
+                });
+
+                container.appendChild(card);
+            });
+
+            const hasHomeService = branches.some(item => item.is_visible == 1);
+
+            if (hasHomeService) {
+
+                const card_H = document.createElement('div');
+                card_H.className = 'branch-card';
+
+                const homeTitle = currentLang === 'ar'
+                    ? 'الخدمات المنزلية'
+                    : 'Home Service';
+
+                card_H.innerHTML = `
+                    <img src="/images/frontend/jospahomeservises.png"
+                         alt="${homeTitle}"
+                         style="width:100%; height:200px; object-fit:cover;">
+                    <h5>${homeTitle}</h5>
+                `;
+
+                card_H.addEventListener('click', () => {
+                    window.location.href = `/HomeService?branch_id=0`;
+                });
+
+                container.appendChild(card_H);
+            }
+
+            container.style.setProperty('display', 'grid', 'important');
+            hideLoader();
+        })
+        .catch(err => {
+            console.error('Branches fetch error:', err);
+            hideLoader();
+        });
+}
 </script>
 @stack('after-scripts')
 @endsection
