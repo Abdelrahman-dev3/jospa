@@ -1,11 +1,12 @@
+@extends('layouts.booking', ['showTopNotifications' => false, 'showBottomNotifications' => false, 'showTopSpacer' => false])
+
 @php
     $currentLocale = session('locale', app()->getLocale());
 @endphp
-<!DOCTYPE html>
-<html lang="{{ app()->getLocale() }}" dir="{{ language_direction() }}" class="theme-fs-sm">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+
+@section('head')
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     
         <title>{{ $category->name }} - {{ __('messagess.category_details') }}</title>
     
@@ -491,11 +492,10 @@
             }
           }
       </style>
-    
-    </head>
+@endsection
 
-    <body>
-        @include('components.frontend.progress-bar')
+@section('content')
+    @include('components.frontend.progress-bar')
         <div id="wifi-loader" style="display:none;">
         <svg class="circle-outer" viewBox="0 0 86 86">
             <circle class="back" cx="43" cy="43" r="40"></circle>
@@ -512,10 +512,6 @@
         </svg>
         <div class="text" data-text="Loading"></div>
     </div>
-        <div class="position-relative vh-17">
-            @include('components.frontend.navbar')
-        </div>
-
         <!-- image && sumary-->
         <div class="service-container" data-aos="fade-up">
             <div class="service-content">
@@ -612,8 +608,9 @@
         </div>
 
         <div id="branchContainer" style="display:none !important;"></div>
-        <!-- Footer -->
-        @include('components.frontend.footer')
+@endsection
+
+@section('scripts')
 
     <!-- ملفات JS -->
     <script src="{{ mix('js/backend.js') }}"></script>
@@ -723,7 +720,5 @@
             }
 
 </script>
-    @stack('after-scripts')
-</body>
-
-</html>
+@stack('after-scripts')
+@endsection
