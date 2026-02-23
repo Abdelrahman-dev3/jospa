@@ -10,7 +10,7 @@
         $showTopSpacer = $showTopSpacer ?? true;
     @endphp
 
-    <div class="position-relative" @if($showTopSpacer) style="height: 17vh;" @endif>
+    <div class="position-relative" @if($showTopSpacer) style="height: 15vh;" @endif>
         @include('components.frontend.navbar')
         @if($showTopNotifications)
             @include('components.frontend.notifications')
