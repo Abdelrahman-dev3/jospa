@@ -1,5 +1,5 @@
 <?php
-    use App\Http\Controllers\AdsController;
+    use App\Http\Controllers\Backend\AdsController;
     use App\Http\Controllers\BookingsController;
     use App\Http\Controllers\BookingCartController;
     use App\Http\Controllers\ContactMessageController;
@@ -8,24 +8,25 @@
     use App\Http\Controllers\HomeBookingController;
     use App\Http\Controllers\InvoiceController;
     use App\Http\Controllers\LanguageController;
-    use App\Http\Controllers\LoyaltyController;
+    use App\Http\Controllers\Backend\LoyaltyController;
+    use App\Http\Controllers\FrontendLoyaltyController;
     use App\Http\Controllers\MobileVerificationController;
-    use App\Http\Controllers\ModuleController;
+    use App\Http\Controllers\Backend\ModuleController;
     use App\Http\Controllers\offersController;
     use App\Http\Controllers\PaymentchanalController;
     use App\Http\Controllers\PermissionController;
     use App\Http\Controllers\ReportsController;
     use App\Http\Controllers\RoleController;
     use App\Http\Controllers\RolePermission;
-    use App\Http\Controllers\RejectController;
+    use App\Http\Controllers\Backend\RejectController;
     use App\Http\Controllers\SearchController;
     use App\Http\Controllers\SaloneBookController;
     use App\Http\Controllers\SignController;
     use App\Http\Controllers\SmsController;
-    use App\Http\Controllers\TermsAndConditionsController;
-    use App\Http\Controllers\TaqnyatSmsController;
-    use App\Http\Controllers\TextController;
-    use App\Http\Controllers\WheelController;
+    use App\Http\Controllers\Backend\TermsAndConditionsController;
+    use App\Http\Controllers\Backend\TaqnyatSmsController;
+    use App\Http\Controllers\Backend\TextController;
+    use App\Http\Controllers\Backend\WheelController;
     
     use App\Http\Controllers\Backend\BackendController;
     use App\Http\Controllers\Backend\BackupController;
@@ -109,7 +110,7 @@
     
     
     Route::post('/staff/working-hours/{id}', [EmployeesController::class, 'store_working_houer'])->name('staff.working-hours.store');
-    Route::get('/loyalety' , [LoyaltyController::class , 'loyalety'])->name('home.loyalety');
+    Route::get('/loyalety' , [FrontendLoyaltyController::class , 'loyalety'])->name('home.loyalety');
     
     // Use when user not loggin
     Route::post('/cart', [BookingCartController::class, 'store'])->name('cart.store');
@@ -437,4 +438,3 @@
     //  Get quick cart
     Route::get('/qu/cart', [SaloneBookController::class, 'getUserCart']);
     Route::delete('/qu/cart/remove/{id}', [SaloneBookController::class, 'remove']);
-

@@ -11,102 +11,102 @@
 
 <!-- style -->
 <style>
-.gift-section {
-    position: relative;
-    height: 540px;
-}
-
-.gift-bg {
-    object-fit: cover;
-    min-height: 500px;
-}
-
-.gift-overlay {
-    background: #BF945680;
-}
-
-.main-gift {
-    font-weight: bold;
-    min-height: 500px;
-    z-index: 3;
-}
-
-.gift-title {
-    font-size: 3rem;
-    color: #fff;
-}
-
-.gift-desc {
-    font-size: 22px;
-    font-weight: 400;
-    font-family: 'Almarai', sans-serif;
-    color: #fff;
-}
-
-.b_h {
-    transition: all 0.5s ease;
-}
-
-.b_h:hover {
-    background-color: rgba(255,255,255,0.2) !important;
-    color: #000 !important;
-}
-
-/* Responsive */
-@media (max-width: 767.98px) {
-    .gift-title {
-        font-size: 1.6rem !important;
+    .gift-section {
+        position: relative;
+        height: 540px;
     }
 
-    .gift-desc {
-        font-size: 1rem !important;
-        max-width: 95% !important;
+    .gift-bg {
+        object-fit: cover;
+        min-height: 500px;
     }
 
-    .gift-btn {
-        font-size: 0.95rem !important;
-        max-width: 320px;
-        margin: auto;
+    .gift-overlay {
+        background: #BF945680;
     }
-}
 
-@media (max-width: 576px) {
     .main-gift {
-        justify-content: center;
-        gap: 14px;
+        font-weight: bold;
+        min-height: 500px;
+        z-index: 3;
+    }
+
+    .gift-title {
+        font-size: 3rem;
+        color: #fff;
     }
 
     .gift-desc {
-        margin: 0 !important;
+        font-size: 22px;
+        font-weight: 400;
+        font-family: 'Almarai', sans-serif;
+        color: #fff;
     }
-}
-.gift-btn {
-    position: relative;
-    z-index: 9;
-    border-radius: 42px !important;
-    border: 1px solid #c69b6d;
-    background: #fff;
-    max-width: 340px;
-    width: 100%;
-    height: 58px;
-    color: #c69b6d;
-    transition: all 0.3s ease;
-}
 
-.gift-btn span {
-    font-size: 22px;
-    white-space: nowrap;
-    color: inherit;
-}
+    .b_h {
+        transition: all 0.5s ease;
+    }
 
-.gift-btn:hover {
-    background-color: #c69b6d;
-    color: #fff;
-}
+    .b_h:hover {
+        background-color: rgba(255,255,255,0.2) !important;
+        color: #000 !important;
+    }
 
-.gift-btn:hover .iconify {
-    color: #fff !important;
-}
+    /* Responsive */
+    @media (max-width: 767.98px) {
+        .gift-title {
+            font-size: 1.6rem !important;
+        }
+
+        .gift-desc {
+            font-size: 1rem !important;
+            max-width: 95% !important;
+        }
+
+        .gift-btn {
+            font-size: 0.95rem !important;
+            max-width: 320px;
+            margin: auto;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .main-gift {
+            justify-content: center;
+            gap: 14px;
+        }
+
+        .gift-desc {
+            margin: 0 !important;
+        }
+    }
+    .gift-btn {
+        position: relative;
+        z-index: 9;
+        border-radius: 42px !important;
+        border: 1px solid #c69b6d;
+        background: #fff;
+        max-width: 340px;
+        width: 100%;
+        height: 58px;
+        color: #c69b6d;
+        transition: all 0.3s ease;
+    }
+
+    .gift-btn span {
+        font-size: 22px;
+        white-space: nowrap;
+        color: inherit;
+    }
+
+    .gift-btn:hover {
+        background-color: #c69b6d;
+        color: #fff;
+    }
+
+    .gift-btn:hover .iconify {
+        color: #fff !important;
+    }
 </style>
 
 <!-- html -->

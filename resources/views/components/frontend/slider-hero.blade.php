@@ -5,6 +5,7 @@
 
     $vartext = Vartext::where('type','banner')->first();
     $ads = Ad::where('page', 'home')->where('status', 1)->get();
+    $lang = app()->getLocale();
 @endphp
 
 <!-- css -->
@@ -22,8 +23,8 @@
     <div class="hero-container">
         
         <div class="first-sec">
-            <h1>{{ $vartext->title[app()->getlocale()] ?? $vartext->title['en'] ?? '' }}</h1>
-            <p >{{ $vartext->description[app()->getlocale()] ?? $vartext->description['en'] ?? '' }}</p>
+            <h1>{{ $vartext->title[$lang] ?? $vartext->title['en'] ?? '' }}</h1>
+            <p >{{ $vartext->description[$lang] ?? $vartext->description['en'] ?? '' }}</p>
 
             <div class="buttons">
                 <a href="#bookNaw" class="gradient-border btn-primary">

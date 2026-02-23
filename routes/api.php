@@ -9,7 +9,6 @@ use App\Http\Controllers\Backend\API\DashboardController;
 use App\Http\Controllers\Backend\API\NotificationsController;
 use App\Http\Controllers\Backend\API\SettingController;
 use App\Http\Controllers\Backend\API\UserApiController;
-use App\Http\Controllers\CalanderBookingController;
 use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\HomeBookingController;
 use App\Http\Controllers\BookingCartController;
@@ -20,12 +19,10 @@ use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\VartextController;
 use App\Http\Controllers\Api\CategoriesController;
+use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\PackagesController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\OuroffersController;
-use App\Models\Ad;
-use App\Models\Vartext;
-use App\Http\Controllers;
 use Modules\Service\Http\Controllers\Backend\API\ServiceController;
 
 
@@ -58,6 +55,8 @@ Route::prefix('Ouroffers')->group(function () {
     Route::get('/', [OuroffersController::class, 'index']);
 });
 
+Route::get('/loyalty/point-value', [LoyaltyController::class, 'index']);
+
 
 Route::get('branch-list', [BranchController::class, 'branchList']);
 
@@ -75,28 +74,9 @@ Route::prefix('branches')->group(function () {
 });
 Route::post('verify-slot', [BranchController::class, 'verifySlot']);
 
-Route::prefix('gift-cards')->group(function () {
-    Route::get('/', [GiftCardController::class, 'index'])->name('gift.page');
-    Route::post('/', [GiftCardController::class, 'store'])->name('gift.create');
-    Route::get('/payment-result', [GiftCardController::class, 'handlePaymentResult'])->name('gift.payment_result');
-});
-
-
-
 Route::prefix('services')->group(function () {
     Route::get('/branches/{id}', [ServiceController::class, 'servicesbranches']);
 });
-
-Route::get('user-detail', [AuthController::class, 'userDetails']);
-Route::get('services', [CalanderBookingController::class, 'getservices']);
-Route::post('/Calander-bookings-new', [CalanderBookingController::class, 'store']);
-Route::get('/employees', [CalanderBookingController::class, 'emplouee']);
-// routes/api.php
-Route::put('/booking-carts/{id}', [CalanderBookingController::class, 'update']);
-Route::delete('/booking-carts/{id}', [CalanderBookingController::class, 'destroy']);
-Route::get('/booking-carts/by-time', [CalanderBookingController::class, 'getAllByTime']);
-Route::get('/booking-carts/by-day', [CalanderBookingController::class, 'getAllByDay']);
-
 
 Route::get('/States', [BookingsController::class, 'States']);
 Route::get('/branchs/{id}', [BookingsController::class, 'branchs']);

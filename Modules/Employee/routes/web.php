@@ -35,11 +35,11 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
      * ---------------------------------------------------------------------
      */
      Route::get('/staff-working-hours/{id}', function ($userId) {
-    return view('employee::backend.employees.staff-working-hours', ['userId' => $userId]);
-});
-            Route::post('/staff/working-hours/{id}', [EmployeesController::class, 'store_working_houer'])->name('staff.working-hours.store');
-
-
+        return view('employee::backend.employees.staff-working-hours', ['userId' => $userId]);
+    });
+    
+    Route::post('/staff/working-hours/{id}', [EmployeesController::class, 'store_working_houer'])->name('staff.working-hours.store');
+    
     Route::group(['prefix' => 'employees', 'as' => 'employees.'], function () {
         Route::get('index_list', [EmployeesController::class, 'index_list'])->name('index_list');
         Route::get('commision_list', [EmployeesController::class, 'commision_list'])->name('commision_list');
