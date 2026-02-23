@@ -2,13 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HomeBookService;
-use App\Models\ServiceHome;
-use App\Models\StaffHome;
-use Illuminate\Http\Request;
-use App\Models\ServiceGroupHome;
-use Modules\Package\Models\Package;
-use Modules\Package\Models\PackageService;
 use Illuminate\Support\Facades\DB;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;

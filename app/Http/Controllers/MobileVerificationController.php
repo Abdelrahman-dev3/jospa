@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-  use App\Models\User;
+use App\Models\User;
+use App\Services\TaqnyatSmsService;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
 
@@ -33,14 +34,14 @@ class MobileVerificationController extends Controller
         $mobile = Session::get('mobile');
         
         if (!$mobile) {
-            return redirect()->route('login')->withErrors(['otp' => 'Session expired']);
+            return redirect()->route('signin')->withErrors(['otp' => __('messagess.session_expired')]);
         }
         
         $cacheOtp = Cache::get('otp_'.$mobile);
         
         if (!$cacheOtp) {
             return back()->withErrors([
-                'otp1' => 'Verification code expired, please resend the code.'
+                'otp1' => __('messagess.otp_code_expired')
             ]);
         }
 
@@ -69,10 +70,10 @@ class MobileVerificationController extends Controller
         }
 
         auth()->login($user);
-        return redirect()->route('frontend.home')->with('success', 'Mobile verified successfully!');
+        return redirect()->route('frontend.home')->with('success', __('messagess.mobile_verified_success'));
     }
 
-    return back()->withErrors(['otp1' => 'The OTP is incorrect.'])->withInput();
+    return back()->withErrors(['otp1' => __('messagess.invalid_otp')])->withInput();
 }
 
     
@@ -80,7 +81,7 @@ class MobileVerificationController extends Controller
     {
         $mobile = $request->input('mobile');
         if (!$mobile) {
-            return redirect()->route('login')->withErrors(['otp' => __('messagess.session_expired')]);
+            return redirect()->route('signin')->withErrors(['otp' => __('messagess.session_expired')]);
         }
     
         $cacheKey = "otp_resend_count_{$mobile}";

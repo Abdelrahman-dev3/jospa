@@ -155,6 +155,7 @@ return [
     'apply_loyalty_points' => 'Apply Loyalty Points',
     'cart_item_deleted' => 'Cart item has been deleted',
     'gift_deleted_successfully' => 'Gift deleted successfully.',
+    'offer_saved_successfully' => 'Offer saved successfully.',
     'delete'         => 'Delete',
     'name__'         => 'Name',
     'confirm_delete' => 'Are you sure you want to delete this gift?',

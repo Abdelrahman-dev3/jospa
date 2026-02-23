@@ -3,12 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\GiftCard;
-use Illuminate\Support\Facades\Http;
-use App\Models\Service;
 use Illuminate\Http\Request;
 use Modules\Category\Models\Category;
 use Modules\Package\Models\Package;
-use Modules\World\Models\State;
 use App\Models\Ad;
 
 
@@ -67,6 +64,9 @@ public function store(Request $request)
 {
     $user = auth()->user();
     $data = $request->all();
+    $request->validate([
+        'optional_services' => 'nullable|string|max:100',
+    ]);
     
     if (!$user) {
         session()->put('temp_gift_booking', [
@@ -121,6 +121,7 @@ public function store(Request $request)
         'recipient_name'    => $data['recipient_name'],
         'sender_phone'      => $data['sender_phone'],
         'recipient_phone'   => $data['recipient_phone'],
+        'message'           => $data['optional_services'] ?? null,
         'requested_services'=> json_encode($data['requested_services']),
         'package_ids'       => json_encode($request->package_ids) ?? null,
         'coupons'           => $coupons_data,

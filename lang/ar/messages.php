@@ -477,6 +477,7 @@ return [
     'confirm_delete' => 'هل أنت متأكد أنك تريد حذف هذه الهدية؟',
     'confirm_delete_invice' => 'هل أنت متأكد أنك تريد حذف هذه الفاتورة؟',
     'gift_deleted_successfully' => 'تم حذف الهدية بنجاح.',
+    'offer_saved_successfully' => 'تم حفظ العرض بنجاح.',
     
     'cart' => 'السلة',
     'cart_empty' => 'السلة فارغة.',

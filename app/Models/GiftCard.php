@@ -16,6 +16,7 @@ class GiftCard extends Model
         'recipient_name',
         'sender_phone',
         'recipient_phone',
+        'message',
         'requested_services',
         'package_ids',
         'user_id',

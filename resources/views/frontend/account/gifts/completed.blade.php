@@ -81,6 +81,14 @@
                                 <div class="col-6">{{ $gift->recipient_phone }}</div>
                             </div>
 
+
+                            @if(!empty($gift->message))
+                                <div class="row mb-2">
+                                    <div class="col-6 text-muted">{{ __('messagess.optional_msg') }}</div>
+                                    <div class="col-6">{{ $gift->message }}</div>
+                                </div>
+                            @endif
+
                             <hr>
 
                             <!-- Coupons -->

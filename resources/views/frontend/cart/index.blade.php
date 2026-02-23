@@ -214,7 +214,7 @@
             return;
         }
         
-        const url = `/validate-coupon?coupon_code=${encodeURIComponent(couponCode)}&service_id=${serviceId}&booking_id=${bookingId}`;
+        const url = `/api/validate-coupon?coupon_code=${encodeURIComponent(couponCode)}&service_id=${serviceId}&booking_id=${bookingId}`;
         fetch(url)
             .then(response => response.json())
             .then(data => {

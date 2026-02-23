@@ -755,7 +755,7 @@
                 return;
             }
         
-            fetch(`/validate-invoice-coupon?coupon_code=${encodeURIComponent(couponCode)}`)
+            fetch(`/api/validate-invoice-coupon?coupon_code=${encodeURIComponent(couponCode)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.valid) {

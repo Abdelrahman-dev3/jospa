@@ -10,7 +10,8 @@ use App\Http\Controllers\Backend\API\NotificationsController;
 use App\Http\Controllers\Backend\API\SettingController;
 use App\Http\Controllers\Backend\API\UserApiController;
 use App\Http\Controllers\GiftCardController;
-use App\Http\Controllers\HomeBookingController;
+use App\Http\Controllers\PackageBookingController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingCartController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\VartextController;
 use App\Http\Controllers\Api\CategoriesController;
+use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\PackagesController;
 use App\Http\Controllers\Api\ShopController;
@@ -56,6 +58,8 @@ Route::prefix('Ouroffers')->group(function () {
 });
 
 Route::get('/loyalty/point-value', [LoyaltyController::class, 'index']);
+Route::get('/validate-coupon', [CouponController::class, 'validateCoupon']);
+Route::get('/validate-invoice-coupon', [CouponController::class, 'validateInvoiceCoupon']);
 
 
 Route::get('branch-list', [BranchController::class, 'branchList']);
@@ -86,7 +90,7 @@ Route::get('/staff', [BookingsController::class, 'index']);
 Route::get('/available/{date}/{staffId}', [BookingsController::class, 'getAvailableTimes']);
 
 
-Route::get('/payment-success', [HomeBookingController::class, 'handlePaymentResult']);
+Route::get('/payment-success', [PackageBookingController::class, 'handlePaymentResult']);
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -155,8 +159,8 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::delete('/cart/{id}', [BookingCartController::class, 'destroy']);
     Route::post('/cart-pay', [BookingCartController::class, 'cartPay']);
     Route::get('/loyallety', [BookingCartController::class, 'balance']);
-    Route::post('/bookings', [HomeBookingController::class, 'store']);
+    Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/details/{id}', [SaloneBookController::class, 'show']);
-    Route::get('/pay-now', [HomeBookingController::class, 'createPayment']);
+    Route::get('/pay-now', [PackageBookingController::class, 'createPayment']);
 });
 Route::post('app-configuration', [SettingController::class, 'appConfiguraton']);

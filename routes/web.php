@@ -2,27 +2,29 @@
     use App\Http\Controllers\Backend\AdsController;
     use App\Http\Controllers\BookingsController;
     use App\Http\Controllers\BookingCartController;
-    use App\Http\Controllers\ContactMessageController;
+    use App\Http\Controllers\Backend\ContactMessageController;
     use App\Http\Controllers\GiftCardController;
-    use App\Http\Controllers\GiftController;
-    use App\Http\Controllers\HomeBookingController;
-    use App\Http\Controllers\InvoiceController;
+    use App\Http\Controllers\Backend\GiftController;
+    use App\Http\Controllers\PackageBookingController;
+    use App\Http\Controllers\BookingController;
+    use App\Http\Controllers\Backend\InvoiceController;
     use App\Http\Controllers\LanguageController;
     use App\Http\Controllers\Backend\LoyaltyController;
     use App\Http\Controllers\FrontendLoyaltyController;
+    use App\Http\Controllers\Auth\SignupController;
     use App\Http\Controllers\MobileVerificationController;
     use App\Http\Controllers\Backend\ModuleController;
-    use App\Http\Controllers\offersController;
+    use App\Http\Controllers\Backend\offersController;
     use App\Http\Controllers\PaymentchanalController;
     use App\Http\Controllers\PermissionController;
-    use App\Http\Controllers\ReportsController;
+    use App\Http\Controllers\Backend\ReportsController;
     use App\Http\Controllers\RoleController;
     use App\Http\Controllers\RolePermission;
     use App\Http\Controllers\Backend\RejectController;
     use App\Http\Controllers\SearchController;
     use App\Http\Controllers\SaloneBookController;
+    use App\Http\Controllers\ProfileController;
     use App\Http\Controllers\SignController;
-    use App\Http\Controllers\SmsController;
     use App\Http\Controllers\Backend\TermsAndConditionsController;
     use App\Http\Controllers\Backend\TaqnyatSmsController;
     use App\Http\Controllers\Backend\TextController;
@@ -38,15 +40,11 @@
     
     use Illuminate\Support\Facades\Route;
     use Illuminate\Support\Facades\Artisan;
-    use Illuminate\Http\Request;
     use Illuminate\Support\Facades\Storage;
     
     use App\Services\Payment\Strategies\CardPaymentStrategy;
-    use App\Services\Payment\Strategies\TabbyPaymentStrategy;
     use App\Services\Payment\Strategies\TamaraPaymentStrategy;
     
-    use App\Models\Branch;
-    use App\Models\BookingCart;
     
     use Modules\Affiliate\Http\Controllers\AffiliateAdminController;
     use Modules\Employee\Http\Controllers\Backend\EmployeesController;
@@ -74,8 +72,8 @@
     */
 
 
-    Route::get('/signup', [SignController::class, 'index'])->name('signup');
-    Route::post('/signup', [SignController::class, 'store'])->name('signup.store');
+    Route::get('/signup', [SignupController::class, 'index'])->name('signup');
+    Route::post('/signup', [SignupController::class, 'store'])->name('signup.store');
     Route::get('/signin', [SignController::class, 'login'])->name('signin');
     Route::post('/signin/verify', [SignController::class, 'verify'])->name('signin.verify');
     Route::get('verify-mobile', [MobileVerificationController::class, 'showVerifyForm'])->name('verify.mobile');
@@ -132,8 +130,8 @@
         Route::post('/contact', [ContactMessageController::class, 'store'])->name('contact.store');
     
     
-        Route::get('/profile', [SignController::class, 'profile'])->name('profile');
-        Route::put('/profile/{id}/update', [SignController::class, 'update'])->name('profile.update');
+        Route::get('/profile', [ProfileController::class, 'profile'])->name('profile');
+        Route::put('/profile/{id}/update', [ProfileController::class, 'update'])->name('profile.update');
         Route::post('/logout', [SignController::class, 'logout'])->name('logout');    
     
         Route::get('/success-py-invoice', [BookingCartController::class, 'handlePaymentResult']);
@@ -145,11 +143,11 @@
         Route::post('/cart-pay', [BookingCartController::class, 'cartPay'])->name('cart.payment');
     });
     
-    Route::get('all/branchs/', [HomeBookingController::class, 'allbranchs']);
-    Route::post('/bookings', [HomeBookingController::class, 'store'])->name('bookings.store');
+    Route::get('all/branchs/', [PackageBookingController::class, 'allbranchs']);
+    Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
     Route::get('/cart/add/{id}', [BookingCartController::class, 'addToCart'])->name('cart.add');
-    Route::post('/package-booking', [HomeBookingController::class, 'storePackageBooking'])->name('package.booking.store');
-    Route::get('/complete-package-booking', [HomeBookingController::class, 'completePackageBooking'])->name('package.booking.complete');
+    Route::post('/package-booking', [PackageBookingController::class, 'storePackageBooking'])->name('package.booking.store');
+    Route::get('/complete-package-booking', [PackageBookingController::class, 'completePackageBooking'])->name('package.booking.complete');
 
 
     Route::get('lang/{locale}', function ($locale) {
@@ -381,15 +379,15 @@
         });
     });
 
-    Route::get('/my-bookings', [SignController::class, 'myBookings'])->name('profile.my_bookings');
+    Route::get('/my-bookings', [ProfileController::class, 'myBookings'])->name('profile.my_bookings');
 
-    Route::get('/coupon', [SignController::class, 'coupon'])->name('profile.coupon');
+    Route::get('/coupon', [ProfileController::class, 'coupon'])->name('profile.coupon');
 
-    Route::post('/booking/cancel/{id}', [SignController::class, 'destroy_myBooking'])->name('myBooking.destroy');
+    Route::post('/booking/cancel/{id}', [ProfileController::class, 'destroy_myBooking'])->name('myBooking.destroy');
 
-    Route::get('/complate-bookings', [SignController::class, 'complateBookings'])->name('profile.complateBokkings');
+    Route::get('/complate-bookings', [ProfileController::class, 'complateBookings'])->name('profile.complateBokkings');
     
-    Route::get('/complate-Gift', [SignController::class, 'complateGift'])->name('profile.complateGift');
+    Route::get('/complate-Gift', [ProfileController::class, 'complateGift'])->name('profile.complateGift');
 
     Route::middleware(['auth'])->prefix('app/affiliate')->name('affiliate.')->group(function () {
         Route::get('/statistics', [AffiliateAdminController::class, 'dashboard'])->name('statistics');
@@ -417,8 +415,6 @@
         Route::post('/app/ads/store', [AdsController::class, 'store'])->name('ads.store');
         Route::post('/app/TermsAndConditions/store', [TermsAndConditionsController::class, 'store'])->name('TermsAndConditions.store');
         Route::post('/app/Offerspages/store', [offersController::class, 'store'])->name('ouroffersections.store');
-        Route::get('/validate-coupon', [InvoiceController::class, 'validateCoupon']);// about serves
-        Route::get('/validate-invoice-coupon', [InvoiceController::class, 'validateInvoiceCoupon']);
 
 
         Route::put('/TermsAndConditions/{id}/update', [TermsAndConditionsController::class, 'update'])->name('TermsAndConditions.update');

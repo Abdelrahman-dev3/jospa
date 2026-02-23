@@ -3,28 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Session;
-use Modules\Booking\Models\Booking;
-use Modules\Package\Models\SubmitBookingPackage;
-use Modules\Category\Models\Category;
-use Modules\Service\Models\Service;
-use Illuminate\Support\Facades\Log;
 use Modules\Booking\Models\BookingService;
 use Modules\BussinessHour\Models\BussinessHour;
-use Modules\Package\Models\BookingPackages;
-use Modules\Package\Models\Package;
+
 
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use App\Models\ServiceGroupHome;
 use App\Models\StaffWorkingHour;
-use App\Models\HomeBookService;
-use App\Models\ServiceHome;
-use App\Models\StaffHome;
 use App\Models\Branch;
 use Modules\World\Models\State;
 

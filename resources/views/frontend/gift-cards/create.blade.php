@@ -79,7 +79,7 @@
 
                         <div class="input-group full-width">
                             <label class="input-label">{{ __('messagess.optional_msg') }}</label>
-                            <textarea class="form-textarea" name="optional_services" maxlength="100">{{ old('optional_msg') }}</textarea>
+                            <textarea class="form-textarea" name="optional_services" maxlength="100">{{ old('optional_services') }}</textarea>
                         </div>
                     </div>
 

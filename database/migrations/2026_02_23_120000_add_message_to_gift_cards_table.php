@@ -6,22 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('home_sections', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+        Schema::table('gift_cards', function (Blueprint $table) {
+            $table->string('message', 100)->nullable()->after('recipient_phone');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('home_sections');
+        Schema::table('gift_cards', function (Blueprint $table) {
+            $table->dropColumn('message');
+        });
     }
 };
