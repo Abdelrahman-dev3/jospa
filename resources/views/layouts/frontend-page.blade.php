@@ -14,7 +14,7 @@
         $showFooter = $showFooter ?? true;
         $showTopNotifications = $showTopNotifications ?? false;
         $showBottomNotifications = $showBottomNotifications ?? false;
-        $topSpacerHeight = $topSpacerHeight ?? '17vh';
+        $topSpacerHeight = $topSpacerHeight ?? '71.4px';
         $bottomSpacerHeight = $bottomSpacerHeight ?? null;
     @endphp
 

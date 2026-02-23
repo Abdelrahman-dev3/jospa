@@ -1,4 +1,4 @@
-@extends('layouts.frontend-page', ['showProgress' => true, 'topSpacerHeight' => '17vh', 'bottomSpacerHeight' => '17vh'])
+@extends('layouts.frontend-page', ['showProgress' => true, 'topSpacerHeight' => '71.4px', 'bottomSpacerHeight' => '71.4px'])
 
 @section('head')
 <meta charset="UTF-8">

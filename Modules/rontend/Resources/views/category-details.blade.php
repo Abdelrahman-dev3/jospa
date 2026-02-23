@@ -539,7 +539,7 @@
                     <div class="col">
                         <a href="{{ url('services/category/' . $Cat->id) }}" style="text-decoration-line: none;">
                             <div class="galary"
-                                        style="background-image: url('{{ $Cat->feature_image ? asset($Cat->feature_image) : asset('images/av3.webp') }}');"
+                                        style="background-image: url('{{ $Cat->feature_image ? asset($Cat->feature_image) : asset('images/av3.webp') }}');
                                         background-size: cover;
                                         background-position: center;
                                         height: 200px;
