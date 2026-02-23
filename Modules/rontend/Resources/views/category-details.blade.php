@@ -1,4 +1,4 @@
-@extends('layouts.frontend', ['showTopNotifications' => false, 'showBottomNotifications' => false, 'showTopSpacer' => false])
+@extends('layouts.frontend-page', ['showTopNotifications' => false, 'showBottomNotifications' => false, 'showTopSpacer' => false])
 
 @php
     $currentLocale = session('locale', app()->getLocale());
