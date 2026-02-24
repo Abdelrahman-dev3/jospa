@@ -147,6 +147,14 @@ class FrontendController extends Controller
     {
         $ads = Ad::where('page' , 'shop')->where('status', 1)->get();
 
+        $bestSellingProducts = Product::with(['media', 'categories'])
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->orderByDesc('total_sale_count')
+            ->orderByDesc('id')
+            ->take(8)
+            ->get();
+
         // Fetch active products for the homepage
         $categories = ProductCategory::with(['products' => function ($q) {
             $q->where('products.status', 1)
@@ -157,7 +165,7 @@ class FrontendController extends Controller
         ->where('product_categories.status', 1)
         ->get();
 
-        return view('frontend::shop', compact( 'categories' , 'ads'));
+        return view('frontend::shop', compact('categories', 'ads', 'bestSellingProducts'));
     }
 
     public function productDetails($id)

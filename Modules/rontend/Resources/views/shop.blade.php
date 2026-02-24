@@ -199,6 +199,28 @@
 
     <!-- Page Content -->
     <main>
+    @php
+        $bestSellingTitle = app()->getLocale() === 'ar' ? 'المنتجات الأكثر مبيعًا' : 'Best Selling Products';
+    @endphp
+
+    @if(isset($bestSellingProducts) && $bestSellingProducts->count())
+        <section class="category-products" data-aos="fade-up">
+            <h2 class="section-title">{{ $bestSellingTitle }}</h2>
+            <div class="products-grid">
+                @foreach($bestSellingProducts as $product)
+                    @include('components.frontend.products-card', [
+                        'image' => $product->feature_image,
+                        'name' => $product->name,
+                        'des' => $product->short_description,
+                        'product_id' => $product->id,
+                        'categories' => $product->categories,
+                        'min_price' => $product->min_price,
+                        'max_price' => $product->max_price,
+                    ])
+                @endforeach
+            </div>
+        </section>
+    @endif
     {{-- الأقسام --}}
     <section class="categories">
         <h2 class="section-title">{{ __('messagess.categories') }}</h2>

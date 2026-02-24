@@ -709,7 +709,7 @@
                     <div class="service-card">
                         <div class="card-content">
                             <h3>{{  $service->service_name }}</h3>
-                            <p class="duration">{{ __('messagess.duration', ['minutes' => $service->duration_min]) }}</p>
+                            <p class="duration">{{ (int) ($service->duration_min ?? 0) }} {{ __('messagess.minutes') }}</p>
                             <p class="service-price">SR {{ $service->discounted_price }}</p>
                         </div>
                     </div>
