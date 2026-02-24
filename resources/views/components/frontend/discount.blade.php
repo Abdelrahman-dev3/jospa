@@ -22,7 +22,7 @@
                     }
                 @endphp
                 <h1>{{ __('messages.discount') }} {{ intval($page->discount_value) }} {{ $page->discount_type == 'percentage' ? '%' : 'ريال' }}</h1>
-                <h3>{{ $description }} "vdsfimvdfojbdgoindgoi nfgonfgon"</h3>
+                <h3>{{ $description }}</h3>
                 <div style="width: 17%;margin: auto;">
                     <a href="{{route('frontend.Ouroffers')}}" class="more-btn-discount">
                         <p style="color:white;font-size: 16px;margin: 0 13px;color:#BF9456">{{ __('messagess.learn_more') }}</p>
@@ -31,7 +31,6 @@
             @endif
         </div>
         <img src="{{ asset('fl-dis.png') }}" alt="" style="position: absolute;left: 0;bottom: -11px;width: 195px;">
-        <img src="{{asset('wavy.png')}}" alt="fl img" style="position: absolute;right: 0;bottom: 0;">
     </div>
 </div>
 @endif

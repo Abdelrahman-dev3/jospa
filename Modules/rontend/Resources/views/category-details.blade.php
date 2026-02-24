@@ -672,7 +672,7 @@ function showBranchesForMainService(mainServiceId, subServiceId) {
 
             branches.forEach(item => {
 
-                if (!item.branch) return; // حماية
+                if (!item.branch) return;
 
                 const branch = item.branch;
 
