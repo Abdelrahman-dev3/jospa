@@ -43,7 +43,6 @@ class GiftCardController extends Controller
         $packages = Package::with(['service', 'service.services', 'media'])
         ->where('status', 1)
         ->whereDate('end_date', '>=', now())
-        ->take(6)
         ->get();
         
         $coupons = [
