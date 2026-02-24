@@ -72,7 +72,7 @@ class PaymentFinalizerService
             if (!empty($giftIds)) {
                 GiftCard::whereIn('id', $giftIds)->update(['payment_status' => 1]);
                 
-                $giftCards = GiftCard::whereIn('id', $giftIds)->where('delivery_method', 'بطاقة الكترونية')->get();
+                $giftCards = GiftCard::whereIn('id', $giftIds)->whereIn('delivery_method', ['electronic_card', 'email', 'بطاقة الكترونية'])->get();
             
                 foreach ($giftCards as $gift) {
                     $gift->update([

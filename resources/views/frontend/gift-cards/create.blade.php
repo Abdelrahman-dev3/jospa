@@ -1,7 +1,7 @@
 @extends('layouts.frontend-page', ['showNavbar' => true, 'topSpacerHeight' => null, 'showFooter' => false, 'htmlLang' => $currentLocale, 'htmlDir' => $currentLocale === 'ar' ? 'rtl' : 'ltr', 'bodyDir' => $currentLocale === 'ar' ? 'rtl' : 'ltr', 'bodyLang' => $currentLocale])
 
 @section('head')
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ __('messagess.giftcard') }} - JOSPA</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -28,7 +28,6 @@
 
     <div class="main-container">
         <div class="gift-card-container">
-
             <h1 class="page-title">{{ __('messagess.perfect_gift') }}</h1>
             <!-- Right side - Form -->
             <div class="form-container">
@@ -39,12 +38,12 @@
                         <h3 class="section-title fw-bold">{{ __('messagess.delivery_method') }}</h3>
                         <div class="radio-group">
                             <label class="radio-item">
-                                <input type="radio" name="delivery_method" value="استلام من المركز" checked>
+                                <input type="radio" name="delivery_method" value="center_pickup" checked>
                                 <span class="radio-indicator"></span>
                                 <span class="radio-text">{{ __('messagess.traditional_gift_card') }}</span>
                             </label>
                             <label class="radio-item">
-                                <input type="radio" name="delivery_method" value='بطاقة الكترونية'>
+                                <input type="radio" name="delivery_method" value='electronic_card'>
                                 <span class="radio-indicator"></span>
                                 <span class="radio-text">{{ __('messagess.email_delivery') }}</span>
                             </label>

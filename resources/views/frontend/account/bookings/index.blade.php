@@ -95,7 +95,7 @@
                 <div class="mb-3 text-center">
                     <div>
                         <strong>{{ __('messages.delivery_method') }}:</strong> 
-                        <span class="badge bg-info text-dark">{{ $order->delivery_method }}</span>
+                        <span class="badge bg-info text-dark">{{ in_array($order->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</span>
                     </div>
                     @if($order->ref)
                     <div>

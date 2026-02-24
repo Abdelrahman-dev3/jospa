@@ -38,9 +38,9 @@
                         <div class="card-header d-flex justify-content-between align-items-center bg-light">
                             <div>
                                 <i class="bi bi-gift-fill text-primary me-1"></i>
-                                <strong>{{ $gift->delivery_method }}</strong>
+                                <strong>{{ in_array($gift->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</strong>
                                 
-                                @if ($gift->delivery_method == __('gift.digital_card'))
+                                @if (in_array($gift->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true))
                                     :<strong>{{ $gift->balance }}</strong>
                                 @endif
                             </div>

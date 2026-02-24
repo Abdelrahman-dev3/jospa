@@ -106,7 +106,7 @@ use App\Models\GiftCard;
             <p style="display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px dashed #ddd;"><strong>{{ __('messages.recipient_name') }}:</strong> {{ $gift->recipient_name }}</p>
             <p style="display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px dashed #ddd;"><strong>{{ __('messages.sender_phone') }}:</strong> {{ $gift->sender_phone }}</p>
             <p style="display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px dashed #ddd;"><strong>{{ __('messages.recipient_phone') }}:</strong> {{ $gift->recipient_phone }}</p>
-            <p style="display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px dashed #ddd;"><strong>{{ __('messages.delivery_method') }}:</strong> {{ $gift->delivery_method }}</p>
+            <p style="display: flex; justify-content: space-between; padding: 5px 0; border-top: 1px dashed #ddd;"><strong>{{ __('messages.delivery_method') }}:</strong> {{ in_array($gift->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</p>
         
             @php
                 $requestedServices = json_decode($gift->requested_services, true);

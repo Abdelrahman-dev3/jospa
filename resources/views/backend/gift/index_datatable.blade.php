@@ -38,7 +38,7 @@
                 <tr>
                 <td>{{ $loop->iteration }}</td>
                 <td>{{ $gift->user->first_name ?? '-' }} {{ $gift->user->last_name ?? '-' }}</td>
-                <td>{{ $gift->delivery_method ?? '-' }}</td>
+                <td>{{ in_array($gift->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</td>
                 <td>{{ $gift->ref ?? '---' }}</td>
                 <td>{{ $gift->balance ?? '---' }}</td>
                 <td>{{ $gift->sender_name ?? '-' }}</td>

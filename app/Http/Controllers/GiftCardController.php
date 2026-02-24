@@ -65,6 +65,16 @@ public function store(Request $request)
     $user = auth()->user();
     $data = $request->all();
     $request->validate([
+        'delivery_method' => 'required|in:center_pickup,electronic_card,استلام من المركز,بطاقة الكترونية,traditional,email',
+        'sender_name' => 'required|string|max:255',
+        'recipient_name' => 'required|string|max:255',
+        'sender_phone' => 'required|string|max:20',
+        'recipient_phone' => 'required|string|max:20',
+        'requested_services' => 'required|array|min:1',
+        'requested_services.*' => 'integer|exists:services,id',
+        'package_ids' => 'nullable|array',
+        'package_ids.*' => 'integer|exists:packages,id',
+        'coupons' => 'nullable|array',
         'optional_services' => 'nullable|string|max:100',
     ]);
     
@@ -81,6 +91,12 @@ public function store(Request $request)
         $data = session('temp_gift_booking.data');
         session()->forget('temp_gift_booking');
     }
+
+    $deliveryMethod = match ($data['delivery_method']) {
+        'بطاقة الكترونية', 'email' => 'electronic_card',
+        'استلام من المركز', 'traditional' => 'center_pickup',
+        default => $data['delivery_method'],
+    };
     
     $selectedServices = array_map('intval', $data['requested_services']);
     $services = ServiceModel::whereIn('id', $selectedServices)->get();
@@ -88,8 +104,8 @@ public function store(Request $request)
 
 
     $total_packages = 0;
-    if ($request->filled('package_ids')) {
-    $selectedPackage = array_map('intval', $request->package_ids);
+    if (!empty($data['package_ids']) && is_array($data['package_ids'])) {
+    $selectedPackage = array_map('intval', $data['package_ids']);
     $packages = Package::whereIn('id', $selectedPackage)->get();
     $total_packages = $packages->sum('package_price') ?? 0;
     }
@@ -97,8 +113,8 @@ public function store(Request $request)
     $coupons_data = null;
     $total_coupons = 0;
     $coupon_names = [];
-    if ($request->filled('coupons')) {
-        $decodedCoupons = array_map(fn($c) => json_decode($c, true), $request->coupons);
+    if (!empty($data['coupons']) && is_array($data['coupons'])) {
+        $decodedCoupons = array_map(fn($c) => json_decode($c, true), $data['coupons']);
         
         foreach ($decodedCoupons as $data_coupon) {
             if (isset($data_coupon['price'])) {
@@ -115,7 +131,7 @@ public function store(Request $request)
 
 
     $giftCard = GiftCard::create([
-        'delivery_method'   => $data['delivery_method'],
+        'delivery_method'   => $deliveryMethod,
         'user_id'           => auth()->id(),
         'sender_name'       => $data['sender_name'],
         'recipient_name'    => $data['recipient_name'],
@@ -123,7 +139,7 @@ public function store(Request $request)
         'recipient_phone'   => $data['recipient_phone'],
         'message'           => $data['optional_services'] ?? null,
         'requested_services'=> json_encode($data['requested_services']),
-        'package_ids'       => json_encode($request->package_ids) ?? null,
+        'package_ids'       => json_encode($data['package_ids'] ?? null),
         'coupons'           => $coupons_data,
         'subtotal'          => $total,
     ]);

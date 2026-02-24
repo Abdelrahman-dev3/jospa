@@ -354,7 +354,7 @@ class BookingCartController extends Controller
             $ref = null;
             $balance = 0;
     
-            if ($giftCard->delivery_method == 'بطاقة الكترونية') {
+            if (in_array($giftCard->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true)) {
                 $ref = 'REF-' . strtoupper(Str::random(8));
                 $balance = $giftCard->subtotal;
             }
