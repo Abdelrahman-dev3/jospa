@@ -120,17 +120,25 @@ class GiftCardController extends Controller
         $coupon_names = [];
         if (!empty($data['coupons']) && is_array($data['coupons'])) {
             $decodedCoupons = array_map(fn($c) => json_decode($c, true), $data['coupons']);
-            
+
             foreach ($decodedCoupons as $data_coupon) {
-                if (isset($data_coupon['price'])) {
-                    $total_coupons += (float) $data_coupon['price'];
+                if (!isset($data_coupon['name'], $data_coupon['price'])) {
+                    return back()->with('error', 'بيانات الكوبون غير صحيحة');
                 }
-                if (isset($data_coupon['name'])) {
-                    $coupon_names[] = $data_coupon['name'];
+                preg_match('/\d+/', $data_coupon['name'], $matches);
+                if (!isset($matches[0])) {
+                    return back()->with('error', 'لا يوجد رقم داخل اسم الكوبون');
                 }
+                $priceFromName = (float) $matches[0];
+                $price = (float) $data_coupon['price'];
+
+                if ($priceFromName != $price) {
+                    return back()->with('error', 'سعر الكوبون لا يطابق القيمة المكتوبة');
+                }
+                $total_coupons += $price;
+                $coupon_names[] = $data_coupon['name'];
             }
-        
-            $coupons_data = json_encode($decodedCoupons);
+        $coupons_data = json_encode($decodedCoupons);
         }
         $total = $services_total + $total_packages + $total_coupons;
 

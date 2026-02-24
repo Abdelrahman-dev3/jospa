@@ -124,9 +124,7 @@ Route::get('branch-gallery', [BranchController::class, 'branchGallery']);
 
 
 Route::prefix('gift-cards')->group(function () {
-    Route::get('/', [GiftCardController::class, 'index']);
     Route::post('/', [GiftCardController::class, 'store']);
-    Route::get('/payment-result', [GiftCardController::class, 'handlePaymentResult']);
 });
 
 Route::get('/success-py-gift', [GiftCardController::class, 'handlePaymentResult']);
