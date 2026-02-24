@@ -19,14 +19,11 @@ class LoginResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'mobile' => $this->mobile,
-            'email' => $this->email,
-            'gender' => $this->gender,
             'user_role' => $this->getRoleNames() ?? [],
             'api_token' => $this->api_token,
             'profile_image' => $this->avatar,
             'login_type' => $this->login_type,
             'profile_image' => $this->media->pluck('original_url')->first(),
-
         ];
     }
 }

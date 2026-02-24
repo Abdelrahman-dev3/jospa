@@ -14,13 +14,13 @@ class BookingsController extends Controller
         $States = State::where('status' , 1)->get();
         $first_States = State::where('status' , 1)->first();
         $suggest = Product::with(['media' , 'categories'])->where('status', 1)->where('is_featured', 1)->where('deleted_at', null)->take(4)->get();
-        return view('salon.create' , compact('States','b' , 'suggest' , 'first_States'));
+        return view('frontend.salon.create' , compact('States','b' , 'suggest' , 'first_States'));
     }    
     public function home(Request $request){
         $b = $request->query('branch');
         $States = State::where('status' , 1)->get();
         $suggest = Product::with(['media' , 'categories'])->where('status', 1)->where('is_featured', 1)->where('deleted_at', null)->get();
         $cities = City::where('status' , 1)->get();
-        return view('home.booking.create' , compact('States','b' , 'suggest' ,'cities'));
+        return view('frontend.home.booking.create' , compact('States','b' , 'suggest' ,'cities'));
     }    
 }

@@ -146,5 +146,4 @@ public function store(Request $request)
     
     return redirect()->route('cart.page')->with('success', __('messages.gift_added_success'));
 }
-        
 }

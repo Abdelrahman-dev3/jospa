@@ -32,36 +32,32 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $user = User::withTrashed()->where('mobile', $request->input('mobile'))->first();
-    dd($user);
-        if ($user == null) {
+        $validated = $request->validate([
+            'mobile' => ['required', 'string', 'max:20'],
+        ]);
+
+        $user = User::where('mobile', $validated['mobile'])->first();
+
+        if ($user == null || !$user) {
             return response()->json([
                 'status' => false,
-                'message' => __('messages.register_before_login')
-            ]);
+                'message' => __('messages.register_before_login'),
+            ], 200);
         }
-    
-        if (Auth::attempt(['mobile' => $request->mobile])) {
-            $user = Auth::user();
-    
-            if ($user->is_banned == 1 || $user->status == 0) {
-                return response()->json([
-                    'status' => false,
-                    'message' => __('messages.login_error')
-                ]);
-            }
-    
-            $user['api_token'] = $user->createToken(setting('app_name'))->plainTextToken;
-    
-            $loginResource = new LoginResource($user);
-            $message = __('messages.user_login');
-    
-            return $this->sendResponse($loginResource, $message);
+
+        if ($user->is_banned == 1 || $user->status == 0) {
+            return response()->json([
+                'status' => false,
+                'message' => __('messages.login_error'),
+            ], 200);
         }
-    
-        return $this->sendError(__('messages.not_matched'), [
-            'error' => __('messages.unauthorised')
-        ], 200);
+
+        $user['api_token'] = $user->createToken(setting('app_name'))->plainTextToken;
+
+        $loginResource = new LoginResource($user);
+        $message = __('messages.user_login');
+
+        return $this->sendResponse($loginResource, $message);
     }
 
 
