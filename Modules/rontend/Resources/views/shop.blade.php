@@ -102,6 +102,7 @@
         /* المنتجات */
         .category-products {
             margin-bottom: 70px;
+            margin-top: 20px;
             width: 86%;
             margin: auto;
         }
@@ -180,7 +181,6 @@
     @include('components.frontend.notifications')
 
     <div class="position-relative" style="height: 17vh;">
-
         @include('components.frontend.navbar')
     </div>
     <!-- Swiper -->
@@ -203,24 +203,6 @@
         $bestSellingTitle = app()->getLocale() === 'ar' ? 'المنتجات الأكثر مبيعًا' : 'Best Selling Products';
     @endphp
 
-    @if(isset($bestSellingProducts) && $bestSellingProducts->count())
-        <section class="category-products" data-aos="fade-up">
-            <h2 class="section-title">{{ $bestSellingTitle }}</h2>
-            <div class="products-grid">
-                @foreach($bestSellingProducts as $product)
-                    @include('components.frontend.products-card', [
-                        'image' => $product->feature_image,
-                        'name' => $product->name,
-                        'des' => $product->short_description,
-                        'product_id' => $product->id,
-                        'categories' => $product->categories,
-                        'min_price' => $product->min_price,
-                        'max_price' => $product->max_price,
-                    ])
-                @endforeach
-            </div>
-        </section>
-    @endif
     {{-- الأقسام --}}
     <section class="categories">
         <h2 class="section-title">{{ __('messagess.categories') }}</h2>
@@ -255,8 +237,25 @@
             </section>
         @endif
     @endforeach
-</div>
 
+    @if(isset($bestSellingProducts) && $bestSellingProducts->count())
+        <section class="category-products" data-aos="fade-up">
+            <h2 class="section-title">{{ $bestSellingTitle }}</h2>
+            <div class="products-grid">
+                @foreach($bestSellingProducts as $product)
+                    @include('components.frontend.products-card', [
+                        'image' => $product->feature_image,
+                        'name' => $product->name,
+                        'des' => $product->short_description,
+                        'product_id' => $product->id,
+                        'categories' => $product->categories,
+                        'min_price' => $product->min_price,
+                        'max_price' => $product->max_price,
+                    ])
+                @endforeach
+            </div>
+        </section>
+    @endif
     </main>
 
     <div class="position-relative" style="height: 17vh;">
@@ -312,13 +311,13 @@
             delay: 3000,
             disableOnInteraction: false,
         },
-        effect: 'fade', // تأثير fade بسيط
+        effect: 'fade',
         fadeEffect: {
             crossFade: true
         },
         pagination: {
             el: ".swiper-pagination",
-            clickable: true, // النقط قابلة للنقر للتنقل
+            clickable: true,
         },
     });
 </script>
