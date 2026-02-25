@@ -21,6 +21,12 @@ use App\Models\GiftCard;
 use Illuminate\Support\Str;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\Cart;
+use App\Services\Payment\PaymentCalculatorService;
+use App\Services\Payment\PaymentFinalizerService;
+use App\Services\Payment\PaymentSubMethodsService;
+use App\Services\TapPaymentService;
+use Illuminate\Support\Facades\URL;
+use App\Models\User;
 
 
 
@@ -223,53 +229,70 @@ class BookingCartController extends Controller
     public function handlePaymentResult(Request $request)
     {
         $tapId = $request->get('tap_id');
-    
+
         if (!$tapId) {
             if ($request->expectsJson()) {
                 return response()->json(['status' => false, 'message' => 'No tap_id provided.'], 400);
             }
             return view('frontend.payment-status.erpay')->with('error', 'No tap_id provided.');
         }
-    
+
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . env('TAP_SECRET_KEY'),
         ])->get("https://api.tap.company/v2/charges/{$tapId}");
-    
+
         $charge = $response->json();
-    
-        if (isset($charge['status']) && $charge['status'] === 'CAPTURED') {
-            $user = auth()->user();
-    
+
+        if (!isset($charge['status']) || $charge['status'] !== 'CAPTURED') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Payment failed or not captured.',
+                    'tap_response' => $charge
+                ]);
+            }
+
+            return view('frontend.payment-status.failed');
+        }
+
+        $user = $this->resolvePaymentUser($request);
+        if (!$user) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+            }
+            return view('frontend.payment-status.failed')->with('error', 'User not authenticated.');
+        }
+
+        if ($this->hasLegacyPaymentSession()) {
             $discountAmount = session('discountAmount', 0);
             $loyaltyDiscount = session('loyaltyDiscount', 0);
-            $totalDiscount = $discountAmount + $loyaltyDiscount;
             $finalTotal = session('finalTotal', 0);
-    
+
             $cartIds = Booking::where('user_id', $user->id)
-                    ->where('payment_status', 0)
-                    ->pluck('id')
-                    ->toArray();
-                        
+                ->where('payment_status', 0)
+                ->pluck('id')
+                ->toArray();
+
             $gift_ids = GiftCard::where('user_id', $user->id)
-                    ->where('payment_status', 0)
-                    ->pluck('id')
-                    ->toArray();
-                        
+                ->where('payment_status', 0)
+                ->pluck('id')
+                ->toArray();
+
             if ($loyaltyDiscount > 0) {
                 DB::table('loyalty_points')
                     ->where('user_id', $user->id)
                     ->where('points', '>=', $loyaltyDiscount)
                     ->decrement('points', $loyaltyDiscount);
             }
-    
+
             $this->addLoyaltyPoints($user->id, $charge['amount']);
-            $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds , $gift_ids);
-            $this->paymentSuccess( $cartIds , $tapId , 'card');
-    
+            $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids);
+            $this->paymentSuccess($cartIds, $tapId, 'card');
+
             Booking::where('user_id', $user->id)
                 ->where('payment_status', 0)
                 ->update(['payment_status' => 1]);
-            
+
             $this->activateGiftCards($user->id);
 
             if ($request->expectsJson()) {
@@ -279,20 +302,225 @@ class BookingCartController extends Controller
                     'data' => $charge
                 ]);
             }
-    
+
             return view('frontend.payment-status.captured');
-        } else {
+        }
+
+        $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
+        $calculator = app(PaymentCalculatorService::class);
+        $totalData = $calculator->calculateTotal('cart', $couponCode);
+
+        if (isset($totalData['error'])) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => $totalData['error']], 422);
+            }
+            return view('frontend.payment-status.failed')->with('error', $totalData['error']);
+        }
+
+        $subMethodService = app(PaymentSubMethodsService::class);
+        $subResult = $subMethodService->apply($user->id, $request, $totalData['total']);
+
+        if (isset($subResult['error'])) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => $subResult['error']], 422);
+            }
+            return view('frontend.payment-status.failed')->with('error', $subResult['error']);
+        }
+
+        $expectedCharge = (float) $subResult['remaining_amount'];
+        $chargedAmount = (float) ($charge['amount'] ?? 0);
+
+        if ($expectedCharge > 0 && $chargedAmount > 0 && abs($expectedCharge - $chargedAmount) > 0.01) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Payment failed or not captured.',
-                    'tap_response' => $charge
-                ]);
+                    'message' => 'Paid amount does not match expected amount.',
+                    'expected' => $expectedCharge,
+                    'paid' => $chargedAmount,
+                ], 422);
             }
-    
-            return view('frontend.payment-status.failed');
+            return view('frontend.payment-status.failed')->with('error', 'Paid amount does not match expected amount.');
         }
+
+        $finalizer = app(PaymentFinalizerService::class);
+        $finalizer->finalizePayment(
+            $user->id,
+            $totalData['total'],
+            $totalData['tax'],
+            $totalData['discountAmount'],
+            'cart',
+            $totalData['cart_ids'] ?? [],
+            $totalData['gift_ids'] ?? [],
+            'card',
+            $couponCode ?? '',
+            true
+        );
+        $subMethodService->apply($user->id, $request, $totalData['total'], true);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Payment successful.',
+                'data' => $charge
+            ]);
+        }
+
+        return view('frontend.payment-status.captured');
 }
+
+    public function cartPay(Request $request)
+    {
+        $user = $request->user() ?? auth()->user();
+
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+        }
+
+        $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
+        $calculator = app(PaymentCalculatorService::class);
+        $totalData = $calculator->calculateTotal('cart', $couponCode);
+
+        if (isset($totalData['error'])) {
+            return response()->json(['status' => false, 'message' => $totalData['error']], 422);
+        }
+
+        $subMethodService = app(PaymentSubMethodsService::class);
+        $subResult = $subMethodService->apply($user->id, $request, $totalData['total']);
+
+        if (isset($subResult['error'])) {
+            return response()->json(['status' => false, 'message' => $subResult['error']], 422);
+        }
+
+        $remainingAmount = (float) $subResult['remaining_amount'];
+
+        if ($remainingAmount <= 0) {
+            $finalizer = app(PaymentFinalizerService::class);
+            $finalizer->finalizePayment(
+                $user->id,
+                $totalData['total'],
+                $totalData['tax'],
+                $totalData['discountAmount'],
+                'cart',
+                $totalData['cart_ids'] ?? [],
+                $totalData['gift_ids'] ?? [],
+                'sub_methods',
+                $couponCode ?? '',
+                true
+            );
+            $subMethodService->apply($user->id, $request, $totalData['total'], true);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Payment completed using sub methods.',
+                'data' => [
+                    'paid' => true,
+                    'amount' => $totalData['total'],
+                ],
+            ]);
+        }
+
+        $tap = new TapPaymentService();
+        $paymentSource = $request->get('payment_source') ?? 'src_card';
+
+        $redirectUrl = $this->buildCartPaymentRedirectUrl($request, $user->id, $couponCode);
+
+        $charge = $tap->createCharge(
+            $remainingAmount,
+            [
+                "name"         => $user->first_name . $user->last_name,
+                "country_code" => "966",
+                "phone"        => $user->mobile,
+                "method"       => $paymentSource,
+            ],
+            $redirectUrl
+        );
+
+        if (!isset($charge['transaction']['url'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create payment charge.',
+                'data' => $charge,
+            ], 502);
+        }
+
+        $paymentUrl = $this->applyTapLanguage($charge['transaction']['url']);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Redirect to payment gateway.',
+                'data' => [
+                    'payment_url' => $paymentUrl,
+                    'charge_id' => $charge['id'] ?? null,
+                    'amount' => $remainingAmount,
+                ],
+            ]);
+        }
+
+        return redirect()->away($paymentUrl);
+    }
+
+    private function buildCartPaymentRedirectUrl(Request $request, int $userId, ?string $couponCode): string
+    {
+        $params = array_filter([
+            'user_id' => $userId,
+            'coupon_code' => $couponCode,
+            'wallet' => $request->boolean('wallet') ? 1 : null,
+            'loyalty' => $request->boolean('loyalty') ? 1 : null,
+            'gift_code' => $request->get('gift_code'),
+        ], function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        if ($request->expectsJson()) {
+            return URL::temporarySignedRoute(
+                'api.cart.payment.success',
+                now()->addMinutes(30),
+                $params
+            );
+        }
+
+        $baseUrl = url('/success-py-invoice');
+        return $params ? $baseUrl . '?' . http_build_query($params) : $baseUrl;
+    }
+
+    private function applyTapLanguage(string $paymentUrl): string
+    {
+        $lang = app()->getLocale() ?? 'en';
+        $paymentUrl = preg_replace('/([&?])language=[^&]+/', '$1language=' . $lang, $paymentUrl);
+
+        if (!str_contains($paymentUrl, 'language=')) {
+            $paymentUrl .= (str_contains($paymentUrl, '?') ? '&' : '?') . 'language=' . $lang;
+        }
+
+        return $paymentUrl;
+    }
+
+    private function resolvePaymentUser(Request $request): ?User
+    {
+        $user = $request->user() ?? auth()->user();
+        if ($user) {
+            return $user;
+        }
+
+        if (!URL::hasValidSignature($request)) {
+            return null;
+        }
+
+        $userId = (int) $request->get('user_id');
+        if ($userId <= 0) {
+            return null;
+        }
+
+        return User::find($userId);
+    }
+
+    private function hasLegacyPaymentSession(): bool
+    {
+        return session()->has('finalTotal')
+            || session()->has('discountAmount')
+            || session()->has('loyaltyDiscount');
+    }
 
     public function addLoyaltyPoints($userId, $paidAmount)
     {

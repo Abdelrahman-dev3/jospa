@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\LoginResource;
 use App\Http\Resources\RegisterResource;
 use App\Http\Resources\SocialLoginResource;
+use App\Models\UserProfile;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Services\TaqnyatSmsService;
@@ -310,6 +311,96 @@ class AuthController extends Controller
         }
 
         return response()->json(['status' => true, 'data' => $user, 'message' => __('messages.user_details_successfull')]);
+    }
+
+    public function profileDetails(Request $request)
+    {
+        $user = $request->user()->load(['profile', 'addresses']);
+
+        $data = [
+            'id' => $user->id,
+            'username' => $user->username,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'full_name' => $user->full_name,
+            'email' => $user->email,
+            'mobile' => $user->mobile,
+            'gender' => $user->gender,
+            'date_of_birth' => $user->date_of_birth,
+            'address' => $user->address,
+            'city' => $user->city,
+            'country' => $user->country,
+            'login_type' => $user->login_type,
+            'status' => $user->status,
+            'is_banned' => $user->is_banned,
+            'is_subscribe' => $user->is_subscribe,
+            'email_verified_at' => $user->email_verified_at,
+            'last_notification_seen' => $user->last_notification_seen,
+            'profile_image' => $user->profile_image,
+            'user_role' => $user->getRoleNames(),
+            'profile' => $user->profile,
+            'addresses' => $user->addresses,
+        ];
+
+        return $this->sendResponse($data, __('messages.user_details_successfull'));
+    }
+
+    public function updateMyProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'username' => ['sometimes', 'nullable', 'string', 'max:191', 'unique:users,username,' . $user->id],
+            'first_name' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'last_name' => ['sometimes', 'nullable', 'string', 'max:191'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:191', 'unique:users,email,' . $user->id],
+            'mobile' => ['sometimes', 'nullable', 'string', 'max:20', 'unique:users,mobile,' . $user->id],
+            'gender' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'date_of_birth' => ['sometimes', 'nullable', 'date'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'country' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'profile_image' => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'about_self' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'expert' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'facebook_link' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'instagram_link' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'twitter_link' => ['sometimes', 'nullable', 'url', 'max:255'],
+            'dribbble_link' => ['sometimes', 'nullable', 'url', 'max:255'],
+        ]);
+
+        $userData = collect($validated)->only([
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'mobile',
+            'gender',
+            'date_of_birth',
+            'address',
+            'city',
+            'country',
+        ])->all();
+
+        if (!empty($userData)) {
+            $user->update($userData);
+        }
+
+        if ($request->hasFile('profile_image')) {
+            storeMediaFile($user, $request->file('profile_image'), 'profile_image');
+            $user->save();
+        }
+
+        $profileKeys = ['about_self', 'expert', 'facebook_link', 'instagram_link', 'twitter_link', 'dribbble_link'];
+        if ($request->hasAny($profileKeys)) {
+            $profileData = collect($validated)->only($profileKeys)->all();
+            $user->profile()->updateOrCreate([], $profileData);
+        }
+
+        return $this->sendResponse(
+            $user->fresh()->load(['profile', 'addresses']),
+            __('messages.profile_update')
+        );
     }
 
     public function deleteAccount(Request $request)

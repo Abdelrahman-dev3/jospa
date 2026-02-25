@@ -127,7 +127,7 @@ Route::prefix('gift-cards')->group(function () {
 });
 
 Route::get('/success-py-gift', [GiftCardController::class, 'handlePaymentResult']);
-Route::get('/success-py-invoice', [BookingCartController::class, 'handlePaymentResult']);
+Route::get('/success-py-invoice', [BookingCartController::class, 'handlePaymentResult'])->name('api.cart.payment.success');
 
 
 Route::group(['middleware' => 'auth:sanctum'], function () {
