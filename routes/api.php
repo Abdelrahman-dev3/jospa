@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\VartextController;
 use App\Http\Controllers\Api\CategoriesController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\LoyaltyController;
+use App\Http\Controllers\Api\MobileCartController;
 use App\Http\Controllers\Api\PackagesController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\OuroffersController;
@@ -150,6 +151,8 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
 
     Route::post('verify-slot', [BranchController::class, 'verifySlot']);
 
+    Route::get('/mobile/cart', [MobileCartController::class, 'index']);
+    Route::post('/mobile/cart/bookings', [MobileCartController::class, 'storeBooking']);
     Route::post('/cart/products/{id}', [BookingCartController::class, 'addToCart']);
     Route::delete('/cart/{id}', [BookingCartController::class, 'destroy']);
     Route::post('/cart-pay', [BookingCartController::class, 'cartPay']);

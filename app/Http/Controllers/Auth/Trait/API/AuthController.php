@@ -51,7 +51,7 @@ class AuthController extends Controller
         $dailyKey = 'login_otp_count_'.$phone.'_'.date('Y-m-d');
         $dailyCount = (int) Cache::get($dailyKey, 0);
 
-        if ($dailyCount >= 3) {
+        if ($dailyCount >= 711) {
             return $this->sendError(__('messagess.sms_daily_limit_reached'), [], 429);
         }
 
