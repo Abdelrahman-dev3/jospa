@@ -87,7 +87,7 @@ Route::get('/States', [BookingsController::class, 'States']);
 Route::get('/branchs/{id}', [BookingsController::class, 'branchs']);
 Route::get('/service-groups', [BookingsController::class, 'getServiceGroups']);
 Route::get('/services/{serviceGroupId}/{branchId}/bookings', [BookingsController::class, 'getServicesByGroup']);
-Route::get('/staff', [BookingsController::class, 'index']);
+Route::get('/staff', [BookingsController::class, 'getstaff']);
 Route::get('/available/{date}/{staffId}', [BookingsController::class, 'getAvailableTimes']);
 
 

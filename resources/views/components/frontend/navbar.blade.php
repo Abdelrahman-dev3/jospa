@@ -21,12 +21,12 @@
             margin: 0;
         }
         .logo-img {
-            width: 90px !important;
+            width: 148px !important;
         }
         .mob-nav {
             display: flex !important;
             align-items: center;
-            justify-content: center;
+            justify-content: space-around;
         }
     }
 </style>
@@ -179,17 +179,13 @@
 
     <!-- زرار فتح المينيو -->
     <div class="mob-nav">
-        <button class="btn mob-btn d-lg-none" style="margin-top: 12px;" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
-            <div class="hamburger" onclick="this.classList.toggle('active')">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
+        <button class="btn mob-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
+            <span class="iconify" data-icon="hugeicons:menu-02" data-width="30" data-height="30"  style="color: black;"></span>
         </button>
-
+        
         <a href="/" style="display: flex;align-items: center;"> <img class="logo-img" style="width: 118px;" src="{{asset('images/jospalogo.png')}}"></a>
-
-         <div class="settings d-flex justify-content-center align-items-center gap-4" style="margin-top: 22px !important;">
+        
+        <div class="settings d-flex justify-content-center align-items-center gap-4" style="margin-top: 22px !important;">
             <!-- My Profile -->
             <a href="{{ route('profile') }}">
             <div class="text-center">
@@ -210,12 +206,6 @@
             </a>
         </div>
 
-
-        <div class="loyalty" style="width: 22%;height: 100%;margin: 11px;display: flex;justify-content: center;align-items: center;">
-            <a href="{{route('home.loyalety')}}" class="more-btn-nav">
-                <p style="color: #BF9456;font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
-            </a>
-        </div>
     </div>
 
     <!-- المينيو الجانبي -->
@@ -276,6 +266,11 @@
             <a href="{{ route('language.switch', 'en') }}" style="color:#cf9233;text-decoration-line: none;">English</a> |
             <a href="{{ route('language.switch', 'ar') }}" style="color:#cf9233;text-decoration-line: none;">العربية</a>
          </li>
+        <div class="loyalty" style="width: 100% !important;height: 100%;margin: 11px;display: flex;justify-content: center;align-items: center;">
+            <a href="{{route('home.loyalety')}}" class="more-btn-nav" style="width: 55%;">
+                <p style="color: #BF9456;font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
+            </a>
+        </div>
         </ul>
       </div>
     </div>

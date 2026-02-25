@@ -90,7 +90,7 @@ public function getServicesByGroup($serviceGroupId, $branchId)
     return response()->json($services);
 }
 
-public function index(Request $request)
+public function getstaff(Request $request)
 {
     $branchId = (int) $request->get('branch_id');
     $serviceId = (int) $request->get('service_id');
@@ -129,11 +129,20 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     if (!$user) {
         return response()->json([]);
     }
-    $branchId = $user->branch->branch_id;
-    $shift = $user->shift?->shift_id;
-    $dayName = strtolower(Carbon::createFromFormat('Y-m-d', $date)->format('l'));
-    $serve_book_min = $request->query('Increasing') ?? 30;
-    $min_minutes = $serve_book_min;
+    try {
+        $dateObj = Carbon::createFromFormat('Y-m-d', $date);
+        if ($dateObj->format('Y-m-d') !== $date) {
+            return response()->json([]);
+        }
+    } catch (\Throwable $e) {
+        return response()->json([]);
+    }
+
+    $branchId = optional($user->branch)->branch_id;
+    $shift = optional($user->shift)->shift_id;
+    $dayName = strtolower($dateObj->format('l'));
+    $serve_book_min = (int) $request->query('Increasing', 30);
+    $min_minutes = max(1, $serve_book_min);
 
     $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)->where('day_of_week', $dayName)->orderBy('id', 'desc')->first();
 
@@ -145,25 +154,16 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
 
     $start = Carbon::createFromFormat('H:i', $staffWorkingHours->start_time);
     $end = Carbon::createFromFormat('H:i', $staffWorkingHours->end_time);
+    if ($end->lte($start)) {
+        return response()->json([]);
+    }
 
-        $bookedTimes = BookingService::where('employee_id', $staffId)->whereDate('start_date_time', $date)
-            ->whereHas('booking', function ($q) {
-                $q->whereIn('status', ['pending', 'confirmed', 'check_in']);
-            })
-            ->get(['start_date_time', 'duration_min'])
-            ->flatMap(function ($booking) {
-                $times = [];
-                $start = Carbon::parse($booking->start_date_time);
-                $duration = $booking->duration_min ?? 0;
-                $steps = floor($duration / 1);
-                for ($i = 0; $i < $steps; $i++) {
-                    $times[] = $start->copy()->addMinutes($i * 1)->format('H:i');
-                }
-
-                return $times;
-            })->unique()->values()->toArray();
+    $bookedTimes = $this->buildBookedTimes($staffId, $date, $min_minutes);
 
     $breaks = json_decode($staffWorkingHours->breaks, true) ?? [];
+    if (!is_array($breaks)) {
+        $breaks = [];
+    }
 
     $availableTimes = [];
 
@@ -174,6 +174,10 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     $now = Carbon::now('Asia/Riyadh')->startOfMinute();
 
     while ($current <= $end) {
+    $candidateEnd = $current->copy()->addMinutes($min_minutes);
+    if ($candidateEnd->gt($end)) {
+        break;
+    }
     $timeStr = $current->format('H:i');
 
     if ($isToday && $current->lt($now)) {
@@ -186,7 +190,7 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
         $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
 
-        if ($current->between($breakStart, $breakEnd)) {
+        if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
             $isInBreak = true;
             break;
         }
@@ -199,9 +203,9 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     $current->addMinute();
 }
 
-    $availableTimes2 = $this->filterAvailableTimes($availableTimes, $serve_book_min);
+    $availableTimes2 = $this->filterAvailableTimes($availableTimes, $min_minutes);
 
-    $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $serve_book_min);
+    $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $min_minutes);
 
 
     return response()->json($availableTimes3);
@@ -216,26 +220,16 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
 
         $start = Carbon::createFromFormat('H:i', $workingHours->start_time);
         $end = Carbon::createFromFormat('H:i', $workingHours->end_time);
+        if ($end->lte($start)) {
+            return response()->json([]);
+        }
 
+        $bookedTimes = $this->buildBookedTimes($staffId, $date, $min_minutes);
 
-        $bookedTimes = BookingService::where('employee_id', $staffId)->whereDate('start_date_time', $date)
-            ->whereHas('booking', function ($q) {
-                $q->whereIn('status', ['pending', 'confirmed', 'check_in']);
-            })
-            ->get(['start_date_time', 'duration_min'])
-            ->flatMap(function ($booking)  use ($min_minutes) {
-                $times = [];
-                $start = Carbon::parse($booking->start_date_time);
-                $duration = $booking->duration_min ?? 0;
-                $steps = floor($duration / $min_minutecs);
-                for ($i = 0; $i < $steps; $i++) {
-                    $times[] = $start->copy()->addMinutes($i * $min_minutecs)->format('H:i');
-                }
-
-                return $times;
-            })->unique()->values()->toArray();
-
-        $breaks = $workingHours->breaks;
+        $breaks = json_decode($workingHours->breaks, true) ?? [];
+        if (!is_array($breaks)) {
+            $breaks = [];
+        }
 
         $availableTimes = [];
 
@@ -246,10 +240,14 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         $now = Carbon::now('Asia/Riyadh')->startOfMinute();
 
         while (true) {
+            $candidateEnd = $current->copy()->addMinutes($min_minutes);
+            if ($candidateEnd->gt($end)) {
+                break;
+            }
             $timeStr = $current->format('H:i');
 
             if ($isToday && $current->lt($now)) {
-                $current->addMinutes($min_minutecs);
+                $current->addMinute();
                 if ($current->gt($end)) break;
                 continue;
             }
@@ -259,7 +257,7 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
                 $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
                 $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
 
-                if ($current->between($breakStart, $breakEnd)) {
+                if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
                     $isInBreak = true;
                     break;
                 }
@@ -269,18 +267,20 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
                 $availableTimes[] = $timeStr;
             }
 
-            $current->addMinutes($min_minutecs);
+            $current->addMinute();
 
             if ($current->gt($end)) break;
         }
 
-    $availableTimes2 = $this->filterAvailableTimes($availableTimes, $serve_book_min);
+    $availableTimes2 = $this->filterAvailableTimes($availableTimes, $min_minutes);
+    $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $min_minutes);
 
-    return response()->json($availableTimes2);
+    return response()->json($availableTimes3);
     }
 }
     /*-----------------------Helper function to filter time---------------------------*/
     function filterAvailableTimes($availableTimes, $serviceDuration) {
+        $serviceDuration = max(1, (int) $serviceDuration);
         $filtered = [];
         $count = count($availableTimes);
     
@@ -308,6 +308,7 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     
     /*-----------------------Helper function to filter time---------------------------*/
     function filterAvailableTimesNotConf($availableTimes, $bookedTimes, $serve_book_min) {
+        $serve_book_min = max(1, (int) $serve_book_min);
         $result = [];
     
         foreach ($availableTimes as $time) {
@@ -332,6 +333,35 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         }
     
         return $result;
+    }
+
+    private function buildBookedTimes(int $staffId, string $date, int $fallbackDuration): array
+    {
+        $times = BookingService::where('employee_id', $staffId)
+            ->whereDate('start_date_time', $date)
+            ->whereHas('booking', function ($q) {
+                $q->whereIn('status', ['pending', 'confirmed', 'check_in']);
+            })
+            ->get(['start_date_time', 'duration_min'])
+            ->flatMap(function ($booking) use ($fallbackDuration) {
+                $start = Carbon::parse($booking->start_date_time);
+                $duration = (int) ($booking->duration_min ?? 0);
+                if ($duration < 1) {
+                    $duration = $fallbackDuration;
+                }
+
+                $minutes = [];
+                for ($i = 0; $i < $duration; $i++) {
+                    $minutes[] = $start->copy()->addMinutes($i)->format('H:i');
+                }
+
+                return $minutes;
+            })
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return $times;
     }
 
 }

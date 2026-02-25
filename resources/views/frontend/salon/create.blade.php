@@ -1,7 +1,7 @@
 @extends('layouts.booking', ['showTopNotifications' => true, 'showBottomNotifications' => false])
 
 @section('head')
-<meta charset="UTF-8">
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ __('messagess.booking_system') }}</title>
@@ -372,7 +372,6 @@
                     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
 
                     data.forEach(branch => {
-                        console.log(branch)
                         const card = document.createElement('div');
                         card.className = "branch-card";
                         
@@ -767,9 +766,6 @@
                                 });
                             });
                         }
-                    
-                        console.log(selectedData);
-                        console.log("date selected:", selectedDateFormatted);
                     });
 
                 }
@@ -1067,7 +1063,6 @@
                       alert("من فضلك اختر موظف لكل خدمة فرعية");
                       return false;
                     }
-                    console.log(selectedData)
                     break;
                 case 4:
                 let allHavetimes = selectedData.services.every(service =>
@@ -1204,7 +1199,6 @@
                     video.style.display = 'block';
                     video.load();  
                     video.play().catch(() => {
-                        console.log('Autoplay prevented by browser');
                     });
                 } else {
                     video.pause();

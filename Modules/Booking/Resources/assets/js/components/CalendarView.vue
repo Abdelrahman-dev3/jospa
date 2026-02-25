@@ -48,14 +48,14 @@
               </nav>
 
             </div>
-  <div ref="calenderRef"></div>
+  <div ref="calenderRef" class="calendar-root"></div>
   <booking-form :booking-type="bookingType"
                 :status-list="bookingStatus"
                 @onSubmit="onSubmitEvent"
                 :booking-data="bookingData"></booking-form>
 </template>
 <script setup>
-import { reactive, ref, onMounted, onUnmounted, watch } from 'vue'
+import { reactive, ref, onMounted, onUnmounted } from 'vue'
 import { createRequest } from '@/helpers/utilities'
 
 import Calendar from '@event-calendar/core'
@@ -93,6 +93,19 @@ const bookingData = reactive({
   employee_id: null,
   branch_id: props.branchId
 })
+const resourceWidths = ref([])
+const resizeState = reactive({
+  active: false,
+  index: -1,
+  startX: 0,
+  startWidth: 0
+})
+const MIN_RESOURCE_WIDTH = 120
+const MAX_RESOURCE_WIDTH = 420
+const DEFAULT_RESOURCE_WIDTH = 180
+const RESIZE_HANDLE_SIZE = 6
+let resizeHandlersAttached = false
+let detachResizeHandlers = null
 
 const refreshPage = () => {
   window.location.reload();
@@ -145,6 +158,184 @@ const filterByEmployee = (employee) => {
 
   // إعادة تحميل الـ events بعد الاختيار
   calenderInit.value.refetchEvents()
+  refreshResourceSizing()
+}
+
+const clampResourceWidth = (value) => {
+  return Math.min(MAX_RESOURCE_WIDTH, Math.max(MIN_RESOURCE_WIDTH, value))
+}
+
+const loadResourceWidths = () => {
+  try {
+    const raw = localStorage.getItem('bookingResourceWidths')
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((width) => clampResourceWidth(parseInt(width, 10) || DEFAULT_RESOURCE_WIDTH))
+  } catch (error) {
+    return []
+  }
+}
+
+const saveResourceWidths = () => {
+  try {
+    localStorage.setItem('bookingResourceWidths', JSON.stringify(resourceWidths.value))
+  } catch (error) {
+    // ignore
+  }
+}
+
+const syncResourceWidths = (count) => {
+  if (count <= 0) return
+
+  if (resourceWidths.value.length === 0) {
+    const saved = loadResourceWidths()
+    if (saved.length === count) {
+      resourceWidths.value = saved
+      return
+    }
+
+    resourceWidths.value = Array.from({ length: count }, (_, index) =>
+      saved[index] ?? DEFAULT_RESOURCE_WIDTH
+    )
+    return
+  }
+
+  if (resourceWidths.value.length !== count) {
+    const next = Array.from({ length: count }, (_, index) =>
+      resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH
+    )
+    resourceWidths.value = next
+  }
+}
+
+const setElementWidth = (element, width) => {
+  const safeWidth = clampResourceWidth(width)
+  element.style.flex = `0 0 ${safeWidth}px`
+  element.style.minWidth = `${safeWidth}px`
+  element.style.maxWidth = `${safeWidth}px`
+  element.style.width = `${safeWidth}px`
+}
+
+const applyResourceWidths = () => {
+  const root = calenderRef.value
+  if (!root) return
+
+  const headerResources = Array.from(root.querySelectorAll('.ec-header .ec-resource'))
+  const bodyResources = Array.from(root.querySelectorAll('.ec-body .ec-resource'))
+  const allDayResources = Array.from(root.querySelectorAll('.ec-all-day .ec-resource'))
+  const allDayDays = allDayResources.length
+    ? []
+    : Array.from(root.querySelectorAll('.ec-all-day .ec-days'))
+  const count = Math.max(
+    headerResources.length,
+    bodyResources.length,
+    allDayResources.length,
+    allDayDays.length
+  )
+
+  if (count === 0) return
+  syncResourceWidths(count)
+
+  headerResources.forEach((element, index) => {
+    setElementWidth(element, resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH)
+  })
+
+  bodyResources.forEach((element, index) => {
+    setElementWidth(element, resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH)
+  })
+
+  allDayResources.forEach((element, index) => {
+    setElementWidth(element, resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH)
+  })
+
+  allDayDays.forEach((element, index) => {
+    setElementWidth(element, resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH)
+  })
+}
+
+const refreshResourceSizing = () => {
+  if (!calenderRef.value) return
+  requestAnimationFrame(() => {
+    applyResourceWidths()
+    attachResizeHandlers()
+  })
+}
+
+const attachResizeHandlers = () => {
+  if (resizeHandlersAttached || !calenderRef.value) return
+
+  const root = calenderRef.value
+  resizeHandlersAttached = true
+
+  const onMouseMove = (event) => {
+    if (resizeState.active) return
+    const resourceCell = event.target.closest('.ec-resource')
+    if (!resourceCell || !root.contains(resourceCell)) {
+      root.style.cursor = ''
+      return
+    }
+
+    const rect = resourceCell.getBoundingClientRect()
+    const nearEdge = rect.right - event.clientX <= RESIZE_HANDLE_SIZE
+    root.style.cursor = nearEdge ? 'col-resize' : ''
+  }
+
+  const onMouseDown = (event) => {
+    const resourceCell = event.target.closest('.ec-resource')
+    if (!resourceCell || !root.contains(resourceCell)) return
+
+    const rect = resourceCell.getBoundingClientRect()
+    if (rect.right - event.clientX > RESIZE_HANDLE_SIZE) return
+
+    const headerCells = Array.from(root.querySelectorAll('.ec-header .ec-resource'))
+    const bodyCells = Array.from(root.querySelectorAll('.ec-body .ec-resource'))
+    const totalCells = Math.max(headerCells.length, bodyCells.length)
+
+    let index = headerCells.indexOf(resourceCell)
+    if (index < 0) {
+      index = bodyCells.indexOf(resourceCell)
+    }
+    if (index < 0) return
+
+    syncResourceWidths(totalCells)
+    resizeState.active = true
+    resizeState.index = index
+    resizeState.startX = event.clientX
+    resizeState.startWidth = resourceWidths.value[index] ?? rect.width
+    document.body.classList.add('ec-resizing')
+    event.preventDefault()
+  }
+
+  const onDrag = (event) => {
+    if (!resizeState.active) return
+    const delta = event.clientX - resizeState.startX
+    const nextWidth = clampResourceWidth(resizeState.startWidth + delta)
+    if (resourceWidths.value[resizeState.index] !== nextWidth) {
+      resourceWidths.value.splice(resizeState.index, 1, nextWidth)
+      applyResourceWidths()
+    }
+  }
+
+  const onMouseUp = () => {
+    if (!resizeState.active) return
+    resizeState.active = false
+    resizeState.index = -1
+    document.body.classList.remove('ec-resizing')
+    saveResourceWidths()
+  }
+
+  root.addEventListener('mousemove', onMouseMove)
+  root.addEventListener('mousedown', onMouseDown)
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', onMouseUp)
+
+  detachResizeHandlers = () => {
+    root.removeEventListener('mousemove', onMouseMove)
+    root.removeEventListener('mousedown', onMouseDown)
+    document.removeEventListener('mousemove', onDrag)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
 }
 
 
@@ -158,6 +349,12 @@ onUnmounted(() => {
       bookingType.value = ''
     })
   }
+  if (detachResizeHandlers) {
+    detachResizeHandlers()
+    detachResizeHandlers = null
+    resizeHandlersAttached = false
+  }
+  document.body.classList.remove('ec-resizing')
 })
 onMounted(() => {
   const elem = document.getElementById('booking-form')
@@ -236,6 +433,7 @@ onMounted(() => {
                   totalEmployees.value = res.total_count
                   EMPLOYEE_LIST.value = employees
                   calenderInit.value.setOption('resources', employees)
+                  refreshResourceSizing()
                   return data
                 })
                 return events
@@ -264,11 +462,13 @@ onMounted(() => {
         }
       }
     })
+    refreshResourceSizing()
   }
 })
 
 const onSubmitEvent = () => {
   calenderInit.value.refetchEvents()
+  refreshResourceSizing()
 }
 
 
@@ -325,10 +525,11 @@ body {
 .ec-icon.ec-prev:after, .ec-icon.ec-next:after {
   border-color: var(--bs-body-color);
 }
-.ec-resource {
-    min-width: 160px;
-}
 .ec-body {
     width: fit-content !important;
+}
+body.ec-resizing {
+  user-select: none;
+  cursor: col-resize;
 }
 </style>
