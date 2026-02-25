@@ -150,8 +150,7 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
 
     Route::post('verify-slot', [BranchController::class, 'verifySlot']);
 
-    Route::get('/cart', [BookingCartController::class, 'index']);
-    Route::post('/cart', [BookingCartController::class, 'store']);
+    Route::post('/cart/products/{id}', [BookingCartController::class, 'addToCart']);
     Route::delete('/cart/{id}', [BookingCartController::class, 'destroy']);
     Route::post('/cart-pay', [BookingCartController::class, 'cartPay']);
     Route::get('/loyallety', [BookingCartController::class, 'balance']);

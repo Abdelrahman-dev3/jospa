@@ -13,7 +13,8 @@
 @endsection
 
 @section('content')
-<div class="d-none d-md-block proh">
+<div class="gift-page-shell">
+    <div class="d-none d-md-block proh">
         <div class="slider-track">
             @if($ads->count())
                 @foreach($ads as $key => $item)
@@ -29,13 +30,14 @@
     <div class="main-container">
         <div class="gift-card-container">
             <h1 class="page-title">{{ __('messagess.perfect_gift') }}</h1>
+            <p class="page-subtitle">{{ __('messagess.choose_your_gift') }}</p>
             <!-- Right side - Form -->
             <div class="form-container">
                 <form method="GET" action= "{{ route('gift.create') }}" id="Form">
                     @csrf
                     <!-- Delivery Method Section -->
                     <div class="section delivery-section">
-                        <h3 class="section-title fw-bold">{{ __('messagess.delivery_method') }}</h3>
+                        <h3 class="section-title fw-bold"><i class="fa-solid fa-truck-fast"></i> {{ __('messagess.delivery_method') }}</h3>
                         <div class="radio-group">
                             <label class="radio-item">
                                 <input type="radio" name="delivery_method" value="center_pickup" checked>
@@ -52,7 +54,7 @@
                     <input type="hidden" id="userId" value="{{ auth()->check() ? auth()->id() : '' }}">
                     <!-- Card Information Section -->
                     <div class="section card-info-section">
-                        <h3 class="section-title fw-bold">{{ __('messagess.card_info') }}</h3>
+                        <h3 class="section-title fw-bold"><i class="fa-solid fa-address-card"></i> {{ __('messagess.card_info') }}</h3>
 
                         <div class="input-row">
                             <div class="input-group">
@@ -84,7 +86,7 @@
 
                     <!-- Services Selection -->
                     <div class="services-container">
-                        <h3 class="section-title fw-bold">{{ __('messagess.service_selection') }}</h3>
+                        <h3 class="section-title fw-bold"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('messagess.service_selection') }}</h3>
                         <input type="hidden" id="tlt" value="" name="subtotal">
                             <div class="container">
                                 <div class="clickable-div" onclick="toggleList(this)">
@@ -189,9 +191,10 @@
 
                 </form>
             </div>
-            </div>
+        </div>
 
     </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -275,6 +278,7 @@
         function toggleList($par) {
             const list = $par.nextElementSibling;
             list.classList.toggle('show');
+            $par.classList.toggle('active');
         }
         // Image gallery functionality
         function switchMainImage(thumbnailElement) {

@@ -377,7 +377,7 @@ class BookingCartController extends Controller
     
     public function addToCart(Request $request, $id)
     {
-        $qty = (int) $request->query('qty', 1);
+        $qty = (int) $request->input('qty', $request->query('qty', 1));
 
         if ($qty < 1) {
             return response()->json([
