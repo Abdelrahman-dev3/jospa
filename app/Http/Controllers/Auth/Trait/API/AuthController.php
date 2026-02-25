@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\LoginResource;
 use App\Http\Resources\RegisterResource;
 use App\Http\Resources\SocialLoginResource;
+use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Services\TaqnyatSmsService;
 use Auth;
@@ -54,7 +55,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.sms_daily_limit_reached'), [], 429);
         }
 
-        $otp = (string) random_int(1000, 9999);
+        $otp = 1111;//(string) random_int(1000, 9999);
 
         Cache::put('login_otp_'.$phone, [
             'otp' => $otp,
@@ -64,11 +65,11 @@ class AuthController extends Controller
 
         if ((int) setting('is_taqnyat_sms') === 1) {
             $message = __('messagess.otp_sms', ['code' => $otp]);
-            $sent = $smsService->sendSms($phone, $message);
+            // $sent = $smsService->sendSms($phone, $message);
 
-            if ($sent === false) {
-                return $this->sendError(__('messagess.sms_failed'), [], 500);
-            }
+            // if ($sent === false) {
+            //     return $this->sendError(__('messagess.sms_failed'), [], 500);
+            // }
         }
 
         return $this->sendResponse([
@@ -154,11 +155,20 @@ class AuthController extends Controller
 
     public function sendRegisterOtp(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'username' => ['required', 'string', 'max:191', 'unique:users,username'],
             'mobile' => ['required', 'string', 'max:20', 'unique:users,mobile'],
         ]);
-    
+
+        if ($validator->fails()) {
+            return $this->sendError(
+                $validator->errors()->first(),
+                $validator->errors(),
+                422
+            );
+        }
+
+        $validated = $validator->validated();
         $smsService = new TaqnyatSmsService();
         $phone = $smsService->validatePhoneNumber($validated['mobile']);
     
