@@ -140,6 +140,8 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::get('gallery-list', [DashboardController::class, 'globalGallery']);
     Route::get('search-list', [DashboardController::class, 'searchList']);
     Route::post('update-profile', [AuthController::class, 'updateProfile']);
+    Route::get('profile-details', [AuthController::class, 'profileDetails']);
+    Route::post('profile-update', [AuthController::class, 'updateMyProfile']);
     Route::post('change-password', [UserController::class, 'change_password'])->name('change_password');
     Route::post('change-password', [AuthController::class, 'changePassword']);
     Route::post('delete-account', [AuthController::class, 'deleteAccount']);
