@@ -16,7 +16,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-8">
                         <div class="input-group gap-2 flex-nowrap">
                             <input type="text" name="date_range" id="date_range" placeholder="Select Date" class="financial-report-date-range form-control" readonly />
                             <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="Reset">
