@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
+use Modules\Package\Models\Package;
 use Modules\Product\Models\Cart;
 use Modules\Service\Models\Service;
 
@@ -144,6 +145,102 @@ class MobileCartController extends Controller
             'data' => [
                 'booking_ids' => $createdBookingIds,
                 'count' => count($createdBookingIds),
+            ],
+        ], 201);
+    }
+
+    public function storeGiftCard(Request $request)
+    {
+        $validated = $request->validate([
+            'delivery_method' => ['required', 'in:center_pickup,electronic_card,استلام من المركز,بطاقة الكترونية,traditional,email'],
+            'sender_name' => ['required', 'string', 'max:255'],
+            'recipient_name' => ['required', 'string', 'max:255'],
+            'sender_phone' => ['required', 'string', 'max:20'],
+            'recipient_phone' => ['required', 'string', 'max:20'],
+            'requested_services' => ['required', 'array', 'min:1'],
+            'requested_services.*' => ['integer', 'exists:services,id'],
+            'package_ids' => ['nullable', 'array'],
+            'package_ids.*' => ['integer', 'exists:packages,id'],
+            'coupons' => ['nullable', 'array'],
+            'optional_services' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $deliveryMethod = match ($validated['delivery_method']) {
+            'بطاقة الكترونية', 'email' => 'electronic_card',
+            'استلام من المركز', 'traditional' => 'center_pickup',
+            default => $validated['delivery_method'],
+        };
+
+        $serviceIds = array_map('intval', $validated['requested_services']);
+        $servicesTotal = (float) Service::whereIn('id', $serviceIds)->sum('default_price');
+
+        $packagesTotal = 0.0;
+        if (! empty($validated['package_ids']) && is_array($validated['package_ids'])) {
+            $packageIds = array_map('intval', $validated['package_ids']);
+            $packagesTotal = (float) Package::whereIn('id', $packageIds)->sum('package_price');
+        }
+
+        $couponsTotal = 0.0;
+        $normalizedCoupons = [];
+        if (! empty($validated['coupons']) && is_array($validated['coupons'])) {
+            foreach ($validated['coupons'] as $coupon) {
+                $couponData = is_string($coupon) ? json_decode($coupon, true) : $coupon;
+
+                if (! is_array($couponData) || ! isset($couponData['name'], $couponData['price'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Coupon data is invalid',
+                    ], 422);
+                }
+
+                preg_match('/\d+/', (string) $couponData['name'], $matches);
+                if (! isset($matches[0])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Coupon name does not contain a numeric value',
+                    ], 422);
+                }
+
+                $priceFromName = (float) $matches[0];
+                $price = (float) $couponData['price'];
+                if ($priceFromName !== $price) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Coupon price mismatch',
+                    ], 422);
+                }
+
+                $couponsTotal += $price;
+                $normalizedCoupons[] = [
+                    'name' => $couponData['name'],
+                    'price' => $price,
+                ];
+            }
+        }
+
+        $subtotal = $servicesTotal + $packagesTotal + $couponsTotal;
+
+        $giftCard = GiftCard::create([
+            'delivery_method' => $deliveryMethod,
+            'user_id' => $request->user()->id,
+            'sender_name' => $validated['sender_name'],
+            'recipient_name' => $validated['recipient_name'],
+            'sender_phone' => $validated['sender_phone'],
+            'recipient_phone' => $validated['recipient_phone'],
+            'message' => $validated['optional_services'] ?? null,
+            'requested_services' => json_encode($validated['requested_services']),
+            'package_ids' => json_encode($validated['package_ids'] ?? null),
+            'coupons' => ! empty($normalizedCoupons) ? json_encode($normalizedCoupons) : null,
+            'subtotal' => $subtotal,
+            'payment_status' => 0,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => __('messages.gift_added_success'),
+            'data' => [
+                'gift_card_id' => $giftCard->id,
+                'subtotal' => (float) $giftCard->subtotal,
             ],
         ], 201);
     }

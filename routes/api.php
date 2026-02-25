@@ -153,6 +153,7 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
 
     Route::get('/mobile/cart', [MobileCartController::class, 'index']);
     Route::post('/mobile/cart/bookings', [MobileCartController::class, 'storeBooking']);
+    Route::post('/mobile/cart/gift-cards', [MobileCartController::class, 'storeGiftCard']);
     Route::post('/cart/products/{id}', [BookingCartController::class, 'addToCart']);
     Route::delete('/cart/{id}', [BookingCartController::class, 'destroy']);
     Route::post('/cart-pay', [BookingCartController::class, 'cartPay']);
