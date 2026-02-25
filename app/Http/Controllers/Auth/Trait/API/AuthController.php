@@ -144,15 +144,13 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $user = Auth::guard('sanctum')->user();
+        $request->user()->currentAccessToken()->delete();
 
-        if ($request->is('api*')) {
-            $user->save();
-
-            return response()->json(['status' => true, 'message' => __('messages.user_logout')]);
-        }
+        return response()->json([
+            'status' => true,
+            'message' => __('messages.user_logout')
+        ]);
     }
-
     public function sendRegisterOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [

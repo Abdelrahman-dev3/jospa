@@ -1,7 +1,7 @@
 @extends('layouts.frontend-page', ['showProgress' => true, 'showTopNotifications' => true, 'topSpacerHeight' => '71.4px', 'showFooter' => false])
 
 @section('head')
-<meta charset="utf-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
 
     <title>@yield('title') | {{ app_name() }}</title>
@@ -25,11 +25,9 @@
 <div class="container my-5">
         <div class="profile-card p-4">
             <div class="row align-items-center">
-            <!-- صورة البروفايل -->
             <div class="col-md-4 text-center">
                 <img src="{{ $user->avatar ?? $user->profile_image }}" alt="صورة" class="profile-img">
             </div>
-            <!-- البيانات -->
             <div class="col-md-7">
                 <div class="row mb-3">
                     <div class="col-md-6" style="margin-bottom: 20px;">
@@ -71,7 +69,6 @@
                     </div>
                 </div>
             </div>
-            <!-- زر تعديل البيانات -->
             <div class="col-md-1 H-editProfileModal">
                 <a href="#" class="editProfileModal" data-bs-toggle="modal" data-bs-target="#editProfileModal">
                     <i class="fas fa-edit"></i>
@@ -85,26 +82,11 @@
         </div>
         </div>
     </div>
-    <!--<div class="text-center mb-4">-->
-    <!--    <a href="{{ route('frontend.become.affiliate') }}"-->
-    <!--    style="color: #BF9456;-->
-    <!--            font-weight: 600;-->
-    <!--            text-decoration: none;-->
-    <!--            font-size: 16px;">-->
-    <!--        <i class="fa-solid fa-handshake me-1"></i>-->
-    <!--        انضم إلى برنامج الشركاء-->
-    <!--    </a>-->
-    <!--</div>-->
-
     <div class="stats-box">
         <div class="stat-item">
           <h6> <span class="stat-icon"><img src="{{ asset('images/icons/vesa.png') }}"></span>{{ __('profile.wallet') }}</h6>
           <div><span class="stat-value">{{$balance}}</span> <span class="stat-unit">{{ __('profile.currency') }}</span> <button type="button" style="border: none;background: #f0f8ff00;font-size: 18px;" data-bs-toggle="modal" data-bs-target="#depositModal">+</button></div>
         </div>
-        <!--<div class="stat-item">-->
-        <!--  <h6><span class="stat-icon"><img src="{{ asset('images/icons/vesa.png') }}"></span> {{ __('profile.referral_balance') }}</h6>-->
-        <!--  <div><span class="stat-value">0</span> <span class="stat-unit">{{ __('profile.currency') }}</span> <span class="text-muted">+</span></div>-->
-        <!--</div>-->
         <div class="stat-item">
           <h6><span class="stat-icon"><img src="{{ asset('images/icons/gift.png') }}"></span>{{ __('profile.loyalty_points') }}</h6>
           <div><span class="stat-value">{{ $points }}</span> <span class="stat-unit">{{ __('profile.point') }}</span></div>
@@ -163,7 +145,6 @@
 
 
      <div class="row" style="width: 87%;margin: 40px auto 60px auto;">
-    <!-- القسم الأيسر (جدول المعاملات) -->
     <div class="col-lg-8 mb-4">
       <div class="rounded p-3" style="background: white;">
         <h5 style="padding: 10px;color: #BF9456;font-weight: bold;font-size: 21px;" class="text-center mb-3">{{ __('profile.my_transactions') }}</h5>
@@ -180,13 +161,21 @@
                     <h5>{{ $booking->branch->name ?? '---' }}</h5>
                     <h5>{{ \Carbon\Carbon::parse($booking->start_date_time)->format('Y-m-d') }}</h5>
                     @if($booking->status == 'pending')
-                        <h5 style="color:#F7F316">{{ __('messagess.booked') }}</h5>
-                    @endif
-                    @if($booking->status == 'completed')
-                        <h5 style="color:#1FAF38">{{ __('messagess.completed') }}</h5>
-                    @endif
-                    @if($booking->status == 'cancelled')
-                        <h5 style="color:#FF473E">{{ __('messagess.cancelled') }}</h5>
+                        <h5 style="color:#F7F316">
+                            {{ __('messagess.booked') }}
+                        </h5>
+                    @elseif($booking->status == 'completed')
+                        <h5 style="color:#1FAF38">
+                            {{ __('messagess.completed') }}
+                        </h5>
+                    @elseif($booking->status == 'cancelled')
+                        <h5 style="color:#FF473E">
+                            {{ __('messagess.cancelled') }}
+                        </h5>
+                    @else
+                        <h5 style="color:#999">
+                            {{ $booking->status ?? '---' }}
+                        </h5>
                     @endif
                 </div>
             @endforeach
@@ -196,7 +185,6 @@
       </div>
     </div>
 
-    <!-- القسم الأيمن (طرق الدفع) -->
     <div class="col-lg-4">
       <div class="payment-box shadow-sm">
         <h6 class="mb-5" style="font-weight: bold;">{{ __('messages.payment_methods') }}</h6>
@@ -278,25 +266,25 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 
-      <script>
-      document.addEventListener("DOMContentLoaded", function () {
-          @if(session('success'))
-                createNotify({ title: '', desc: "{{ session('success') }}" });
-          @endif
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        @if(session('success'))
+              createNotify({ title: '', desc: "{{ session('success') }}" });
+        @endif
 
-          @if(session('error'))
-                createNotify({ title: '', desc: "{{ session('error') }}" });
-          @endif
+        @if(session('error'))
+              createNotify({ title: '', desc: "{{ session('error') }}" });
+        @endif
 
-          @if($errors->any())
-              @foreach($errors->all() as $error)
-                    createNotify({ title: '', desc: "{{ $error }}" });
-              @endforeach
-          @endif
-      });
+        @if($errors->any())
+            @foreach($errors->all() as $error)
+                  createNotify({ title: '', desc: "{{ $error }}" });
+            @endforeach
+        @endif
+    });
   </script>
   <script>
   document.getElementById('profileEditForm').addEventListener('submit', function(e) {
@@ -305,11 +293,11 @@
     const saudiRegex = /^(05\d{8}|(\+9665\d{8}))$/;
 
     if (!saudiRegex.test(mobile)) {
-        e.preventDefault(); // يمنع إرسال الفورم
+        e.preventDefault(); 
         createNotify({ title: '', desc: "الرجاء إدخال رقم جوال سعودي صحيح (مثال: 05XXXXXXXX أو +9665XXXXXXXX)" });
         mobileInput.focus();
     }
-});
+  });
     document.getElementById('depositBtn').addEventListener('click', function() {
         let amount = document.getElementById('amount').value;
         if (!amount || amount <= 0) {

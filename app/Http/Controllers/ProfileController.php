@@ -17,10 +17,7 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        $baseQuery = Booking::with('service.service', 'service.employee')
-            ->whereHas('service')
-            ->where('created_by', $user->id)
-            ->whereNull('deleted_by');
+        $baseQuery = Booking::with('service.service')->whereHas('service')->where('created_by', $user->id)->whereNull('deleted_by');
 
         $pending = (clone $baseQuery)->whereNotIn('status', ['completed', 'canceled'])->whereNull('deleted_by')->count();
         $completed = (clone $baseQuery)->where('payment_status', 1)->where('status', 'completed')->count();
@@ -31,11 +28,7 @@ class ProfileController extends Controller
         $balance = $wallet ? $wallet->amount : 0.00;
         $points = LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0;
 
-        $bookings = Booking::with('service.service', 'service.employee')
-            ->where('created_by', $user->id)
-            ->whereHas('services')
-            ->whereNull('deleted_by')
-            ->get();
+        $bookings = Booking::with('service.service')->where('created_by', $user->id)->whereHas('services')->whereNull('deleted_by')->get();
 
         return view('frontend.account.profile', compact('user', 'balance', 'points', 'bookings', 'pending', 'completed', 'coupons', 'completedGift'));
     }
@@ -90,23 +83,21 @@ class ProfileController extends Controller
     {
         $reasons = reject::all();
 
-        $bookings = Booking::with('service.service', 'service.employee')
-            ->where('created_by', auth()->user()->id)
-            ->whereNull('deleted_by')
-            ->where('status', '!=', 'completed')
-            ->get();
+        $bookings = Booking::with('service.service', 'service.employee')->where('created_by', auth()->user()->id)->whereNull('deleted_by')->whereNotIn('status', ['completed', 'canceled'])->get();
 
-        $today = now()->toDateString();
-        $gifts = GiftCard::where('user_id', auth()->id())->whereDate('created_at', '>=', $today)->where('payment_status', 1)->get();
-
-        return view('frontend.account.bookings.index', compact('bookings', 'reasons', 'gifts'));
+        return view('frontend.account.bookings.index', compact('bookings', 'reasons'));
     }
 
     public function destroy_myBooking(Request $request, $id)
     {
         $booking = Booking::find($id);
-        $booking->delete();
 
+        if (!$booking) {
+            return back()->with('error', 'الـ Booking غير موجود');
+        }
+        $booking->bookingService()->delete();
+        $booking->delete();
+        
         $reasons = $request->input('reasons', []);
         foreach ($reasons as $reasonId) {
             $reason = reject::find($reasonId);
@@ -120,12 +111,7 @@ class ProfileController extends Controller
 
     public function complateBookings()
     {
-        $bookings = Booking::with('service.service', 'service.employee')
-            ->where('created_by', auth()->user()->id)
-            ->whereNull('deleted_by')
-            ->where('payment_status', 1)
-            ->where('status', '=', 'completed')
-            ->get();
+        $bookings = Booking::with('service.service', 'service.employee')->where('created_by', auth()->user()->id)->whereNull('deleted_by')->where('payment_status', 1)->where('status', '=', 'completed')->get();
 
         return view('frontend.account.bookings.completed', compact('bookings'));
     }

@@ -68,77 +68,12 @@
                   </td>
                   <td style="color: #FF473E; font-weight: bold; cursor: pointer;" data-booking-id="{{$booking->id}}" data-bs-toggle="modal" data-bs-target="#cancelModal">
                       {{ __('messagess.cancellation_of_reservation') }}
-                   </td>
+                  </td>
                 </tr>
                 @endforeach
           @endforeach
           </tbody>
         </table>
-            @foreach($gifts as $order)
-        <div class="card shadow mb-4" style="margin-top: 78px;font-family: system-ui;font-style: normal;font-size: 14px;">
-            <div class="card-header text-white d-flex justify-content-between" style="background: #bf9456;">
-                <span> {{ $order->created_at->format('d/m/y') }}</span>
-                <span>{{ $order->subtotal }} {{ __('messages.currency') }}</span>
-            </div>
-
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6 text-center">
-                        <strong>{{ __('messages.sender_name') }}:</strong> {{ $order->sender_name }}<br>
-                        <strong>{{ __('messages.sender_phone') }}:</strong> {{ $order->sender_phone }}
-                    </div>
-                    <div class="col-md-6 text-center">
-                        <strong>{{ __('messages.recipient_name') }}:</strong> {{ $order->recipient_name }}<br>
-                        <strong>{{ __('messages.recipient_phone') }}:</strong> {{ $order->recipient_phone }}
-                    </div>
-                </div>
-                <div class="mb-3 text-center">
-                    <div>
-                        <strong>{{ __('messages.delivery_method') }}:</strong> 
-                        <span class="badge bg-info text-dark">{{ in_array($order->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</span>
-                    </div>
-                    @if($order->ref)
-                    <div>
-                        <strong>{{ __('messages.giftref') }}:</strong> 
-                        <span class="badge bg-info text-dark">{{ $order->ref }}</span>
-                    </div>
-                    @endif
-                </div>
-                <div class="mb-3">
-                    <strong>{{ __('booking.lbl_services') }}:</strong>
-                    <ul class="list-group mt-2">
-                    @foreach($order->services_list as $service)
-                        <li style="display: flex;justify-content: space-between;" class="list-group-item">{{ $service->name }} <span style="color:#4CAF50">{{ $service->default_price }} {{ __('messages.currency') }}</span></li>
-                    @endforeach
-                    </ul>
-                </div>
-
-                @if($order->package_ids)
-                <div class="mb-3">
-                    <strong>{{ __('messages.packages') }}:</strong>
-                    <ul class="list-group mt-2">
-                    @foreach($order->packages as $package)
-                        <li style="display: flex;justify-content: space-between;" class="list-group-item">{{ $package->name }} <span style="color:#4CAF50">{{ $package->package_price }} {{ __('messages.currency') }}</span></li>
-                    @endforeach
-                    </ul>
-                </div>
-                @endif
-                @if($order->coupons && count($order->coupons) > 0)
-                    <div class="mb-3">
-                        <strong>{{ __('messages.coupons') }}:</strong>
-                        <ul class="list-group mt-2">
-                        @foreach($order->coupons as $coupon)
-                            <li style="display: flex;justify-content: space-between;" class="list-group-item">
-                                {{ $coupon['name'] ?? '-' }} 
-                                <span style="color:#4CAF50">{{ $coupon['price'] ?? 0 }} {{ __('messages.currency') }}</span>
-                            </li>
-                        @endforeach
-                        </ul>
-                    </div>
-                @endif
-            </div>
-        </div>
-    @endforeach
       </div>
     </div>
   </div>
