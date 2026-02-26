@@ -3,6 +3,12 @@
 @section('title') {{ __($module_title) }} @endsection
 
 @section('content')
+    <style>
+        #datatable th,
+        #datatable td {
+            text-align: center;
+        }
+    </style>
     <div class="card">
         <div class="card-body">
             <x-backend.section-header>
@@ -81,6 +87,7 @@
             title: "{{ __('report.lbl_period') }}",
             orderable: false,
             searchable: false,
+            className: 'text-center',
         },
         {
             data: 'bookings_total',
@@ -88,6 +95,7 @@
             title: "{{ __('report.lbl_bookings_total') }}",
             orderable: false,
             searchable: false,
+            className: 'text-center',
         },
         {
             data: 'orders_total',
@@ -95,6 +103,15 @@
             title: "{{ __('report.lbl_orders_total') }}",
             orderable: false,
             searchable: false,
+            className: 'text-center',
+        },
+        {
+            data: 'giftcards_total',
+            name: 'giftcards_total',
+            title: "{{ __('report.lbl_giftcards_total') }}",
+            orderable: false,
+            searchable: false,
+            className: 'text-center',
         },
         {
             data: 'grand_total',
@@ -102,6 +119,7 @@
             title: "{{ __('report.lbl_grand_total') }}",
             orderable: false,
             searchable: false,
+            className: 'text-center',
         },
     ]
 

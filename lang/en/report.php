@@ -60,6 +60,7 @@ return [
     'lbl_period' => 'Period',
     'lbl_bookings_total' => 'Bookings Total',
     'lbl_orders_total' => 'Orders Total',
+    'lbl_giftcards_total' => 'Gift Cards Total',
     'lbl_grand_total' => 'Grand Total',
     'lbl_daily' => 'Daily',
     'lbl_monthly' => 'Monthly',

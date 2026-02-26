@@ -50,6 +50,7 @@ return [
     'lbl_period' => 'الفترة',
     'lbl_bookings_total' => 'إجمالي الحجوزات',
     'lbl_orders_total' => 'إجمالي المتجر',
+    'lbl_giftcards_total' => 'إجمالي الجيفت كارد',
     'lbl_grand_total' => 'الإجمالي الكلي',
     'lbl_daily' => 'يومي',
     'lbl_monthly' => 'شهري',

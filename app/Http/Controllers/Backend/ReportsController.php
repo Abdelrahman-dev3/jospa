@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\GiftCard;
 use App\Models\User;
 use Carbon\Carbon;
 use Currency;
@@ -117,16 +118,30 @@ class ReportsController extends Controller
 
         $bookingTransactions = $bookingQuery->get();
         $orderGroups = $orderQuery->get();
+        $giftQuery = GiftCard::query()->where('payment_status', 1);
+
+        if ($startDate) {
+            $giftQuery->whereDate('created_at', '>=', $startDate->toDateString());
+        }
+        if ($endDate) {
+            $giftQuery->whereDate('created_at', '<=', $endDate->toDateString());
+        }
+
+        $giftCards = $giftQuery->get();
 
         if ($reportType === 'custom') {
             $bookingTotal = $this->sumBookingRevenue($bookingTransactions);
             $orderTotal = $orderGroups->sum('grand_total_amount');
+            $giftTotal = $giftCards->sum(function ($gift) {
+                return (float) ($gift->subtotal ?? 0);
+            });
 
             $rows = [[
                 'period' => $this->formatRangeLabel($startDate, $endDate),
                 'bookings_total' => Currency::format($bookingTotal),
                 'orders_total' => Currency::format($orderTotal),
-                'grand_total' => Currency::format($bookingTotal + $orderTotal),
+                'giftcards_total' => Currency::format($giftTotal),
+                'grand_total' => Currency::format($bookingTotal + $orderTotal + $giftTotal),
             ]];
 
             return $datatable->collection(collect($rows))->toJson();
@@ -145,23 +160,34 @@ class ReportsController extends Controller
                 ? $date->format('Y-m')
                 : $date->format('Y-m-d');
         });
+        $giftByPeriod = $giftCards->groupBy(function ($gift) use ($reportType) {
+            $date = $gift->created_at;
+            return $reportType === 'monthly'
+                ? $date->format('Y-m')
+                : $date->format('Y-m-d');
+        });
 
         $periods = collect()
             ->merge($bookingByPeriod->keys())
             ->merge($orderByPeriod->keys())
+            ->merge($giftByPeriod->keys())
             ->unique()
             ->sort()
             ->values();
 
-        $rows = $periods->map(function ($period) use ($bookingByPeriod, $orderByPeriod) {
+        $rows = $periods->map(function ($period) use ($bookingByPeriod, $orderByPeriod, $giftByPeriod) {
             $bookingTotal = $this->sumBookingRevenue($bookingByPeriod->get($period, collect()));
             $orderTotal = $orderByPeriod->get($period, collect())->sum('grand_total_amount');
+            $giftTotal = $giftByPeriod->get($period, collect())->sum(function ($gift) {
+                return (float) ($gift->subtotal ?? 0);
+            });
 
             return [
                 'period' => $period,
                 'bookings_total' => Currency::format($bookingTotal),
                 'orders_total' => Currency::format($orderTotal),
-                'grand_total' => Currency::format($bookingTotal + $orderTotal),
+                'giftcards_total' => Currency::format($giftTotal),
+                'grand_total' => Currency::format($bookingTotal + $orderTotal + $giftTotal),
             ];
         });
 
