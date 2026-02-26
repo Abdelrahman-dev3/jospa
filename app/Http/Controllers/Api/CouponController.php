@@ -32,7 +32,10 @@ class CouponController extends Controller
             ->where('use_limit', '>=', 1)
             ->first();
 
-        if ($coupon && in_array((int) $serviceId, $coupon->services)) {
+        $services = $this->normalizeServices($coupon?->services ?? []);
+        $serviceId = (int) $serviceId;
+
+        if ($coupon && in_array($serviceId, $services, true)) {
             $bookingService = BookingService::where('booking_id', $bookingId)->whereNull('coupon_code')->first();
 
             if (!$bookingService) {
@@ -78,8 +81,8 @@ class CouponController extends Controller
             return response()->json(['valid' => false]);
         }
 
-        $services = $coupon->services;
-        if (!in_array(0, $services)) {
+        $services = $this->normalizeServices($coupon->services);
+        if (!in_array(0, $services, true)) {
             return response()->json(['valid' => false]);
         }
 
@@ -89,5 +92,23 @@ class CouponController extends Controller
             'discount_percentage' => $coupon->discount_percentage ?? 0,
             'discount_amount' => $coupon->discount_amount ?? 0,
         ]);
+    }
+
+    private function normalizeServices($services): array
+    {
+        if (is_array($services)) {
+            return $services;
+        }
+
+        if (is_string($services)) {
+            $decoded = json_decode($services, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
+            }
+
+            return array_values(array_filter(array_map('intval', array_map('trim', explode(',', $services)))));
+        }
+
+        return [];
     }
 }
