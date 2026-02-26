@@ -14,6 +14,7 @@ use Carbon\Carbon;
 use App\Models\StaffWorkingHour;
 use App\Models\Branch;
 use Modules\World\Models\State;
+use Modules\Holiday\Models\Holiday;
 
 class BookingsController extends Controller
 {
@@ -143,6 +144,10 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     $dayName = strtolower($dateObj->format('l'));
     $serve_book_min = (int) $request->query('Increasing', 30);
     $min_minutes = max(1, $serve_book_min);
+
+    if ($branchId && Holiday::where('branch_id', $branchId)->whereDate('date', $date)->exists()) {
+        return response()->json([]);
+    }
 
     $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)->where('day_of_week', $dayName)->orderBy('id', 'desc')->first();
 

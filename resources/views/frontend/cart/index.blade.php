@@ -58,11 +58,11 @@ use Illuminate\Support\Str;
                     <div class="product-img"><i class="bi bi-person"></i></div>
                     <div class="text-start">
                       <strong>
-                        {{ \Illuminate\Support\Str::limit($service->service_name, 23) }}
+                        {{ \Illuminate\Support\Str::limit($service->service_name, 12) }}
                         <i class="bi bi-chevron-left"></i> 
                         <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i>
                         <i class="bi bi-chevron-left"></i>
-                        {{ \Illuminate\Support\Str::limit($service->service_name, 23) }}
+                        {{ \Illuminate\Support\Str::limit($service->service_name, 12) }}
                       </strong><br>
                       <small class="text-muted">{{ __('messagess.employee') }}: {{ $service->employee->full_name ?? '-' }}</small>
                     </div>
@@ -103,7 +103,7 @@ use Illuminate\Support\Str;
                 <div class="product-img"><i class="bi bi-person"></i></div>
                 <div class="text-start">
                     <strong>
-                        {{ \Illuminate\Support\Str::limit($item->product->name, 23) }}
+                        {{ \Illuminate\Support\Str::limit($item->product->name, 12) }}
                     </strong>
                     <br>
                   <small class="text-muted">{{ __('booking.qty') }}: {{ $item->qty }}</small>
@@ -136,11 +136,11 @@ use Illuminate\Support\Str;
                 <div class="text-start">
                   <strong>
                       {{ __('messagess.giftcard') }}:
-                      {{ Str::limit($item->sender_name, 23) }}
+                      {{ Str::limit($item->sender_name, 12) }}
                       <i class="bi bi-chevron-left"></i>
                       <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i>
                       <i class="bi bi-chevron-left"></i>
-                      {{ Str::limit($item->recipient_name, 23) }}
+                      {{ Str::limit($item->recipient_name, 12) }}
                   </strong>
                 </div>
               </td>

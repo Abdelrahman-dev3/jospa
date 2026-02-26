@@ -726,7 +726,21 @@
         
         function fetchAvailableTimes(date , staffId , subserve) {
             showLoader();
-            fetch(`/api/available/${date}/${staffId}`)
+            let increasing = 30;
+            if (selectedData.services) {
+                selectedData.services.forEach(service => {
+                    if (!service.subServices) return;
+                    service.subServices.forEach(sub => {
+                        if (sub.id == subserve && sub.duration) {
+                            const parsed = parseInt(sub.duration, 10);
+                            if (!Number.isNaN(parsed) && parsed > 0) {
+                                increasing = parsed;
+                            }
+                        }
+                    });
+                });
+            }
+            fetch(`/api/available/${date}/${staffId}?Increasing=${encodeURIComponent(increasing)}`)
                 .then(response => response.json())
                 .then(data => {
 
