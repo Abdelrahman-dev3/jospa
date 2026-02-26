@@ -322,6 +322,11 @@ class ReportsController extends Controller
             ->addColumn('discount_amount', function ($data) {
                 return Currency::format($data->discount ?? 0);
             })
+            ->addColumn('note', function ($data) {
+                return ! $data->booking_id
+                    ? __('report.lbl_coupon_note_products_gifts')
+                    : '-';
+            })
             ->editColumn('created_at', function ($data) {
                 return customDate($data->created_at);
             })

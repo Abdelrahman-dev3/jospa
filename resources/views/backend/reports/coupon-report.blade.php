@@ -125,6 +125,13 @@
             orderable: false,
             searchable: false,
         },
+        {
+            data: 'note',
+            name: 'note',
+            title: "{{ __('report.lbl_note') }}",
+            orderable: false,
+            searchable: false,
+        },
     ]
 
     let finalColumns = [
