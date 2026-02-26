@@ -187,8 +187,15 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
 
     $isInBreak = false;
     foreach ($breaks as $break) {
-        $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
-        $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
+        if (!is_array($break) || empty($break['start_break']) || empty($break['end_break'])) {
+            continue;
+        }
+        try {
+            $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
+            $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
+        } catch (\Throwable $e) {
+            continue;
+        }
 
         if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
             $isInBreak = true;
@@ -254,8 +261,15 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
 
             $isInBreak = false;
             foreach ($breaks as $break) {
-                $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
-                $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
+                if (!is_array($break) || empty($break['start_break']) || empty($break['end_break'])) {
+                    continue;
+                }
+                try {
+                    $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
+                    $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
+                } catch (\Throwable $e) {
+                    continue;
+                }
 
                 if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
                     $isInBreak = true;
@@ -272,12 +286,13 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
             if ($current->gt($end)) break;
         }
 
-    $availableTimes2 = $this->filterAvailableTimes($availableTimes, $min_minutes);
-    $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $min_minutes);
+        $availableTimes2 = $this->filterAvailableTimes($availableTimes, $min_minutes);
+        $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $min_minutes);
 
-    return response()->json($availableTimes3);
+        return response()->json($availableTimes3);
     }
 }
+
     /*-----------------------Helper function to filter time---------------------------*/
     function filterAvailableTimes($availableTimes, $serviceDuration) {
         $serviceDuration = max(1, (int) $serviceDuration);
@@ -288,13 +303,11 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
             $startTime = $availableTimes[$i];
             $filtered[] = $startTime;
     
-            // اقفز بعدد الدقايق الخاصة بالخدمة
             $nextIndex = $i;
             $targetTime = Carbon::createFromFormat('H:i', $startTime)
                 ->addMinutes($serviceDuration)
                 ->format('H:i');
     
-            // دور على أقرب وقت يساوي أو أكبر من target
             while ($nextIndex < $count && $availableTimes[$nextIndex] < $targetTime) {
                 $nextIndex++;
             }
@@ -320,7 +333,6 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
             foreach ($bookedTimes as $booked) {
                 $bookedTimestamp = strtotime($booked);
     
-                // لو وقت الحجز داخل الفترة [start, end]
                 if ($bookedTimestamp >= $start && $bookedTimestamp < $end) {
                     $conflict = true;
                     break;

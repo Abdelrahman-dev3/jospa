@@ -1,3 +1,7 @@
+@php
+use Illuminate\Support\Str;
+@endphp
+
 @extends('layouts.frontend-page', ['showProgress' => true, 'topSpacerHeight' => '71.4px', 'bottomSpacerHeight' => '71.4px'])
 
 @section('head')
@@ -53,7 +57,13 @@
                   <td class="d-flex align-items-center gap-2">
                     <div class="product-img"><i class="bi bi-person"></i></div>
                     <div class="text-start">
-                      <strong>{{ $service->service_name }} <i class="bi bi-chevron-left"></i> <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i> <i class="bi bi-chevron-left"></i> {{ $service->service_name }}</strong><br>
+                      <strong>
+                        {{ \Illuminate\Support\Str::limit($service->service_name, 23) }}
+                        <i class="bi bi-chevron-left"></i> 
+                        <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i>
+                        <i class="bi bi-chevron-left"></i>
+                        {{ \Illuminate\Support\Str::limit($service->service_name, 23) }}
+                      </strong><br>
                       <small class="text-muted">{{ __('messagess.employee') }}: {{ $service->employee->full_name ?? '-' }}</small>
                     </div>
                   </td>
@@ -92,7 +102,10 @@
               <td class="d-flex align-items-center gap-2">
                 <div class="product-img"><i class="bi bi-person"></i></div>
                 <div class="text-start">
-                  <strong>{{ $item->product->name }}</strong><br>
+                    <strong>
+                        {{ \Illuminate\Support\Str::limit($item->product->name, 23) }}
+                    </strong>
+                    <br>
                   <small class="text-muted">{{ __('booking.qty') }}: {{ $item->qty }}</small>
                 </div>
               </td>
@@ -121,7 +134,14 @@
               <td class="d-flex align-items-center gap-2">
                 <div class="product-img"><i class="bi bi-gift"></i></div>
                 <div class="text-start">
-                  <strong> {{ __('messagess.giftcard') }}:  {{ $item->sender_name }} <i class="bi bi-chevron-left"></i> <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i> <i class="bi bi-chevron-left"></i> {{ $item->recipient_name }}</strong><br>
+                  <strong>
+                      {{ __('messagess.giftcard') }}:
+                      {{ Str::limit($item->sender_name, 23) }}
+                      <i class="bi bi-chevron-left"></i>
+                      <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i>
+                      <i class="bi bi-chevron-left"></i>
+                      {{ Str::limit($item->recipient_name, 23) }}
+                  </strong>
                 </div>
               </td>
               <td class="prc">
