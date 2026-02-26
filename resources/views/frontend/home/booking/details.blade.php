@@ -710,6 +710,7 @@
                         <div class="card-content">
                             <h3>{{  $service->service_name }}</h3>
                             <p class="duration">{{ (int) ($service->duration_min ?? 0) }} {{ __('messagess.minutes') }}</p>
+                            <p class="service-qty">{{ __('booking.qty') }}: {{ (int) ($service->qty ?? 1) }}</p>
                             <p class="service-price">SR {{ $service->discounted_price }}</p>
                         </div>
                     </div>

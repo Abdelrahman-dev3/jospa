@@ -72,10 +72,6 @@
               <label class="form-label" for="services">{{ $t('branch.lbl_select_service') }}</label>
               <Multiselect v-model="service_id" :value="service_id" :options="service.options" :placeholder="$t('branch.select_service')" v-bind="multiselectOption" id="services"></Multiselect>
             </div>
-            <div class="form-group col-md-12">
-              <label class="form-label" for="categories">{{ $t('category.plural_title') }}</label>
-              <Multiselect v-model="category_ids" :value="category_ids" :options="categories.options" placeholder="Select Categories" v-bind="multiselectOption" id="categories"></Multiselect>
-            </div>
             <div class="form-group col-md-6">
               <label class="form-label"> {{ $t('branch.lbl_contact_number') }} <span class="text-danger">*</span> </label>
               <vue-tel-input type="number" :value="contact_number" @input="handleInput" v-bind="{mode: 'international',maxLen: 15}"></vue-tel-input>

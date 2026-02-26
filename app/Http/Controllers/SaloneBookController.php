@@ -35,6 +35,7 @@ class SaloneBookController extends Controller
                 'package_services.id as package_service_id',
                 'package_services.service_price',
                 'package_services.discounted_price',
+                'package_services.qty',
                 'services.id as service_id',
                 'services.name as service_name',
                 'services.duration_min',
@@ -60,8 +61,14 @@ class SaloneBookController extends Controller
     });
 
 
-        $totalServicePrice = $services->sum('service_price');
-        $totalService = $services->sum('discounted_price');
+        $totalServicePrice = $services->sum(function ($service) {
+            $qty = isset($service->qty) ? (int) $service->qty : 1;
+            return (float) ($service->service_price ?? 0) * max(0, $qty);
+        });
+        $totalService = $services->sum(function ($service) {
+            $qty = isset($service->qty) ? (int) $service->qty : 1;
+            return (float) ($service->discounted_price ?? 0) * max(0, $qty);
+        });
         $branchDes = $package['branch_description'] ?? '';
         $branchName = json_decode($package['branch_name'], true)[$currentLocale] ?? '';
 

@@ -26,7 +26,7 @@
                   <div class="flex-grow-1">{{ item.name }}</div>
                   <button type="button" @click="removeBranch(item.branch_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
                 </div>
-                <div class="row mb-2">
+                <div class="row mb-2 d-none">
                   <div class="d-flex justify-content-end align-items-center gap-2 col-6"><i class="fa-regular fa-clock"></i><input type="number" v-model="item.duration_min" class="form-control" /></div>
                   <div class="d-flex justify-content-end align-items-center gap-2 col-6">{{ CURRENCY_SYMBOL }}<input type="text" v-model="item.service_price" class="form-control" :validation="validationSchema.service_price" /></div>
                 </div>
