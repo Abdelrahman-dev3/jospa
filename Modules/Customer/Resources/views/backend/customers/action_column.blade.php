@@ -1,9 +1,9 @@
 <div class="d-flex gap-2 align-items-center">
-    @hasPermission('customer_password')
+    {{-- @hasPermission('customer_password')
         <button type='button' data-assign-module="{{ $data->id }}" data-assign-target='#Employee_change_password'
             data-assign-event='employee_assign' class='btn btn-soft-info btn-sm rounded text-nowrap' data-bs-toggle="tooltip"
             title="{{ __('messages.change_password') }}"><i class="fas fa-key"></i></button>
-    @endhasPermission
+    @endhasPermission --}}
     @hasPermission('view_loyalty')
         <a href="{{ route('backend.customers.loyalty_history', $data->id) }}" class="btn btn-soft-success btn-sm"
             data-bs-toggle="tooltip" title="{{ __('messages.loyalty_points') }}">

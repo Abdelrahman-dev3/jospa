@@ -553,8 +553,8 @@ class PackagesController extends Controller
                 $user = optional($data->user);
                 $Profile_image = $user->profile_image ?? default_user_avatar();
                 $name = $user->full_name ?? default_user_name();
-                $email = $user->email ?? '--';
-                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'email'));
+                $mobile = $user->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->orderColumn('username', function ($query, $order) {
                 $query->select('user_packages.*')

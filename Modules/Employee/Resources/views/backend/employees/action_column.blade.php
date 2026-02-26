@@ -1,10 +1,10 @@
 <div class="d-flex gap-2 align-items-center">
-    @hasPermission('staff_password')
+    {{-- @hasPermission('staff_password')
         <button type='button' data-assign-module="{{ $data->id }}" data-assign-target='#Employee_change_password'
             data-assign-event='employee_assign' class='btn btn-soft-info btn-sm rounded text-nowrap' data-bs-toggle="tooltip"
             title="{{ __('messages.change_password') }}
         "><i class="fas fa-key"></i></button>
-    @endhasPermission
+    @endhasPermission --}}
     @hasPermission('edit_staff')
         <button type="button" class="btn btn-soft-primary btn-sm" data-crud-id="{{ $data->id }}"
             title="{{ __('messages.edit') }} " data-bs-toggle="tooltip"> <i class="fa-solid fa-pen-clip"></i></button>

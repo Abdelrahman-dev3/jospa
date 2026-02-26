@@ -105,8 +105,8 @@ class OrdersController extends Controller
                 $user = optional($data->user);
                 $Profile_image = $user->profile_image ?? default_user_avatar();
                 $name = $user->full_name ?? default_user_name();
-                $email = $user->email ?? '--';
-                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image','name','email'));
+                $mobile = $user->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image','name','mobile'));
                 // return view('product::backend.order.columns.customer_column', compact('data'));
             })
             ->addColumn('phone', function ($data) {
@@ -135,7 +135,7 @@ class OrdersController extends Controller
                     $query->whereHas('user', function ($q) use ($keyword) {
                         $q->where('first_name', 'like', '%'.$keyword.'%');
                         $q->orWhere('last_name', 'like', '%'.$keyword.'%');
-                        $q->orWhere('email', 'like', '%' . $keyword . '%');
+                        $q->orWhere('mobile', 'like', '%' . $keyword . '%');
                     });
                 }
             })

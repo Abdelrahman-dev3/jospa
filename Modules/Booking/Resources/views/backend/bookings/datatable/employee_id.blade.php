@@ -2,6 +2,6 @@
     <img src="{{  $Profile_image }}" alt="avatar" class="avatar avatar-40 rounded-pill">
     <div>
         <h6 class="m-0">{{ $name  }}</h6>
-        <small>{{ $email  }}</small>
+        <small>{{ $mobile ?? '--' }}</small>
     </div>
 </div>

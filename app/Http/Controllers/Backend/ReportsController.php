@@ -451,8 +451,8 @@ class ReportsController extends Controller
             ->editColumn('customer_name', function ($data) {
                 $Profile_image = optional($data->user)->profile_image ?? default_user_avatar();
                 $name = optional($data->user)->full_name ?? default_user_name();
-                $email = optional($data->user)->email ?? '--';
-                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data->user)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->addColumn('phone', function ($data) {
                 return optional($data->user)->mobile ?? '-';
@@ -480,7 +480,7 @@ class ReportsController extends Controller
                 $query->whereHas('user', function ($q) use ($keyword) {
                     $q->where('first_name', 'like', "%{$keyword}%")
                       ->orWhere('last_name', 'like', "%{$keyword}%")
-                      ->orWhere('email', 'like', "%{$keyword}%");
+                      ->orWhere('mobile', 'like', "%{$keyword}%");
                 });
             })
             ->filterColumn('phone', function ($query, $keyword) {
@@ -670,9 +670,9 @@ class ReportsController extends Controller
                 $employee = optional($data->services->first())->employee;
                 $Profile_image = $employee->profile_image ?? default_user_avatar();
                 $name = $employee->full_name ?? default_user_name();
-                $email = $employee->email ?? '--';
+                $mobile = $employee->mobile ?? '--';
 
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->editColumn('total_service', function ($data) {
                 return $data->total_service;
@@ -771,8 +771,8 @@ class ReportsController extends Controller
             ->editColumn('first_name', function ($data) {
                 $Profile_image = optional($data->employee)->profile_image ?? default_user_avatar();
                 $name = optional($data->employee)->full_name ?? default_user_name();
-                $email = optional($data->employee)->email ?? '--';
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data->employee)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->editColumn('commission_amount', function ($data) {
                 return Currency::format($data->commission_amount ?? 0);
@@ -959,8 +959,8 @@ class ReportsController extends Controller
             ->editColumn('first_name', function ($data) {
                 $Profile_image = optional($data)->profile_image ?? default_user_avatar();
                 $name = optional($data)->full_name ?? default_user_name();
-                $email = optional($data)->email ?? '--';
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->orderColumn('first_name', function ($query, $order) {
                 $query->orderBy('users.first_name', $order) // Ordering by first name

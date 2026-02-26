@@ -211,7 +211,7 @@ class BranchController extends Controller
             ->filterColumn('name', function ($query, $keyword) {
                 if (!empty($keyword)) {
                     $query->Where('name', 'like', '%' . $keyword . '%');
-                    $query->orWhere('contact_email', 'like', '%' . $keyword . '%');
+                    $query->orWhere('contact_number', 'like', '%' . $keyword . '%');
                 }
             })
             ->editColumn('status', function ($row) {
@@ -227,8 +227,8 @@ class BranchController extends Controller
             ';
             })
             ->editColumn('name', function ($data) {
-                $email = optional($data)->contact_email ?? '--';
-                return view('backend.branch.branch_id', compact('data', 'email'));
+                $phone = optional($data)->contact_number ?? '--';
+                return view('backend.branch.branch_id', compact('data', 'phone'));
             })
             ->editColumn('address.city', function ($data) {
                 return optional(optional($data->address)->city_data)->name ?? '-';
@@ -239,8 +239,8 @@ class BranchController extends Controller
             ->editColumn('manager_id', function ($data) {
                 $Profile_image = optional($data->employee)->profile_image ?? default_user_avatar();
                 $name = optional($data->employee)->full_name ?? default_user_name();
-                $email = optional($data->employee)->email ?? '--';
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data->employee)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->editColumn('branch_for', function ($data) use ($branch_for_list) {
                 return view('backend.branch.select_column', compact('data', 'branch_for_list'));

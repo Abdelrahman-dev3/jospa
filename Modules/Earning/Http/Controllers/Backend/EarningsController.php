@@ -98,7 +98,7 @@ class EarningsController extends Controller
                 'users.id',
                 DB::raw('MAX(users.first_name) as first_name'),
                 DB::raw('MAX(users.last_name) as last_name'),
-                DB::raw('MAX(users.email) as email'),
+                DB::raw('MAX(users.mobile) as mobile'),
                 DB::raw('(SELECT COUNT(*) FROM commission_earnings WHERE commission_earnings.employee_id = users.id AND commission_earnings.commission_status = "unpaid") as totalBookings'),
                 DB::raw('COALESCE(SUM(booking_services.service_price), 0) + COALESCE(SUM(booking_packages.package_price), 0) as total_service_amount')
             )
@@ -121,8 +121,8 @@ class EarningsController extends Controller
             ->editColumn('first_name', function ($data) {
                 $Profile_image = optional($data)->profile_image ?? default_user_avatar();
                 $name = optional($data)->full_name ?? default_user_name();
-                $email = optional($data)->email ?? '--';
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->filterColumn('first_name', function ($query, $keyword) {
                 $cleanedKeyword = preg_replace('/[^A-Za-z\s]/', '', $keyword);

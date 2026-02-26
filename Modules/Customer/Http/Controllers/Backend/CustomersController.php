@@ -168,7 +168,7 @@ class CustomersController extends Controller
             ->addColumn('user_id', function ($data) {
                 $Profile_image = optional($data)->profile_image ?? default_user_avatar();
                 $name = optional($data)->full_name ?? default_user_name();
-                $email = optional($data)->email ?? '--';
+                $mobile = optional($data)->mobile ?? '--';
                 $url = route('app.invoice') . '?customer_name=' . urlencode(optional($data)->full_name) . '&date=' ;
             
                 return '
@@ -178,7 +178,7 @@ class CustomersController extends Controller
                         </div>
                         <div class="d-flex flex-column">
                             <span class="fw-bold">'.$name.'</span>
-                            <small class="text-muted">'.$email.'</small>
+                            <small class="text-muted">'.$mobile.'</small>
                         </div>
                     </a>
                 ';
@@ -192,11 +192,11 @@ class CustomersController extends Controller
             ->filterColumn('user_id', function ($query, $keyword) {
                 if (!empty($keyword)) {
                     // Assuming 'users' table has first_name and last_name
-                    $query->where(function ($query) use ($keyword) {
-                        $query->where('first_name', 'like', '%' . $keyword . '%')
+                        $query->where(function ($query) use ($keyword) {
+                            $query->where('first_name', 'like', '%' . $keyword . '%')
                               ->orWhere('last_name', 'like', '%' . $keyword . '%') // Filtering by last name
-                              ->orWhere('email', 'like', '%' . $keyword . '%');
-                    });
+                              ->orWhere('mobile', 'like', '%' . $keyword . '%');
+                        });
                 }
             })
             

@@ -10,7 +10,7 @@
         <x-backend.section-header>
             <div>
                 <h5 class="mb-0">{{ __('messages.loyalty_points') }} - {{ $customer->full_name }}</h5>
-                <small class="text-muted">{{ $customer->email ?? $customer->mobile }}</small>
+                <small class="text-muted">{{ $customer->mobile ?? '-' }}</small>
             </div>
             <x-slot name="toolbar">
                 <a href="{{ route('backend.customers.index') }}" class="btn btn-secondary">

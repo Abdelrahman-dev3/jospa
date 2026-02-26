@@ -654,8 +654,19 @@
         .service-card .service-price {
             font-size: 15px;
             font-weight: 700;
-            color: #ff6b6b;
-            margin-top: 5px;
+            color: #000;
+        }
+
+        .service-card .service-qty {
+            color: #000;
+        }
+
+        .service-card .service-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 6px;
         }
 
         .right-box .branch,
@@ -710,8 +721,10 @@
                         <div class="card-content">
                             <h3>{{  $service->service_name }}</h3>
                             <p class="duration">{{ (int) ($service->duration_min ?? 0) }} {{ __('messagess.minutes') }}</p>
-                            <p class="service-qty">{{ __('booking.qty') }}: {{ (int) ($service->qty ?? 1) }}</p>
-                            <p class="service-price">SR {{ $service->discounted_price }}</p>
+                            <div class="service-meta">
+                                <p class="service-qty">{{ __('booking.qty') }}: {{ (int) ($service->qty ?? 1) }}</p>
+                                <p class="service-price">SR {{ $service->discounted_price }}</p>
+                            </div>
                         </div>
                     </div>
                 @endforeach

@@ -266,8 +266,8 @@ class EmployeesController extends Controller
             ->addColumn('employee_id', function ($data) {
                 $Profile_image = $data->profile_image ?? default_user_avatar();
                 $name = $data->full_name ?? default_user_name();
-                $email = $data->email ?? '--';
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                $mobile = $data->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
 
             ->orderColumn('employee_id', function ($query, $order) {
@@ -280,7 +280,7 @@ class EmployeesController extends Controller
                     $query->where(function ($query) use ($keyword) {
                         $query->where('first_name', 'like', '%' . $keyword . '%')
                             ->orWhere('last_name', 'like', '%' . $keyword . '%')
-                            ->orWhere('email', 'like', '%' . $keyword . '%');
+                            ->orWhere('mobile', 'like', '%' . $keyword . '%');
                     });
                 }
             })
@@ -790,15 +790,15 @@ class EmployeesController extends Controller
             ->editColumn('employee_id', function ($data) {
                 $Profile_image = optional($data->employee)->profile_image ?? default_user_avatar();
                 $name = optional($data->employee)->full_name ?? default_user_name();
-                $email = optional($data->employee)->email ?? '--';
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data->employee)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->filterColumn('employee_id', function ($query, $keyword) {
                 if (!empty($keyword)) {
                     $query->whereHas('employee', function ($q) use ($keyword) {
                         $q->where('first_name', 'like', '%' . $keyword . '%');
                         $q->orWhere('last_name', 'like', '%' . $keyword . '%');
-                        $q->orWhere('email', 'like', '%' . $keyword . '%');
+                        $q->orWhere('mobile', 'like', '%' . $keyword . '%');
                     });
                 }
             })
@@ -812,8 +812,8 @@ class EmployeesController extends Controller
             ->editColumn('user_id', function ($data) {
                 $Profile_image = optional($data->user)->profile_image ?? default_user_avatar();
                 $name = optional($data->user)->full_name ?? default_user_name();
-                $email = optional($data->user)->email ?? '--';
-                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'email'));
+                $mobile = optional($data->user)->mobile ?? '--';
+                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'mobile'));
                 // return view('employee::backend.employees.review_user_id', compact('data'));
             })
             ->filterColumn('user_id', function ($query, $keyword) {
@@ -821,7 +821,7 @@ class EmployeesController extends Controller
                     $query->whereHas('user', function ($q) use ($keyword) {
                         $q->where('first_name', 'like', '%' . $keyword . '%');
                         $q->orWhere('last_name', 'like', '%' . $keyword . '%');
-                        $q->orWhere('email', 'like', '%' . $keyword . '%');
+                        $q->orWhere('mobile', 'like', '%' . $keyword . '%');
                     });
                 }
             })

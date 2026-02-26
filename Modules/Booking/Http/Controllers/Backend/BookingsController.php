@@ -370,9 +370,9 @@ public function index_list(Request $request)
                 $user = optional($data->user);
                 $Profile_image = $user->profile_image ?? default_user_avatar();
                 $name = $user->full_name ?? default_user_name();
-                $email = $user->email ?? '--';
+                $mobile = $user->mobile ?? '--';
 
-                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'email'));
+                return view('booking::backend.bookings.datatable.user_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->editColumn('employee_id', function ($data) {
                 // $Profile_image = $data->services->first()->employee?->profile_image ?? $data->bookingPackages->first()->employee?->profile_image ?? default_user_avatar() ;
@@ -384,9 +384,9 @@ public function index_list(Request $request)
 
                 $Profile_image = $employee->profile_image ?? default_user_avatar();
                 $name = $employee->full_name ?? default_user_name();
-                $email = $employee->email ?? '--';
+                $mobile = $employee->mobile ?? '--';
 
-                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'email'));
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->editColumn('service_amount', function ($data) {
                 $serviceAmount = $data->services->sum('service_price');
@@ -453,7 +453,7 @@ public function index_list(Request $request)
                         $q->whereHas('employee', function ($qn) use ($keyword) {
                             $qn->where('first_name', 'like', '%' . $keyword . '%');
                             $qn->orWhere('last_name', 'like', '%' . $keyword . '%');
-                            $qn->orWhere('email', 'like', '%' . $keyword . '%');
+                            $qn->orWhere('mobile', 'like', '%' . $keyword . '%');
                         });
                     });
                 }
@@ -467,7 +467,7 @@ public function index_list(Request $request)
                 if (!empty($keyword)) {
                     $query->whereHas('user', function ($q) use ($keyword) {
                         $q->whereRaw('CONCAT(first_name, " ", last_name) LIKE ?', ['%' . $keyword . '%']);
-                        $q->orWhere('email', 'like', '%' . $keyword . '%');
+                        $q->orWhere('mobile', 'like', '%' . $keyword . '%');
                     });
                 }
             })
