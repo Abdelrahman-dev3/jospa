@@ -21,9 +21,6 @@ class PaymentController extends Controller
         $GifttCount = 0;
         $GiftPrice = 0;
         
-        
-        
-        
         if($type_page == 'payment'){
             $cartservice = Booking::with([
                     'service.service',
@@ -56,7 +53,7 @@ class PaymentController extends Controller
             });
             $productCount = $cartproduct->count();
             
-            $gifts = GiftCard::where('user_id', auth()->id())->where('payment_status', 0 )->get();
+            $gifts = GiftCard::where('user_id', $userId)->where('payment_status', 0 )->get();
             $GifttCount = $gifts->count();
             $GiftPrice = $gifts->sum(fn($g) => $g->subtotal ?? 0);
         }

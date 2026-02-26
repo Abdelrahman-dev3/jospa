@@ -61,6 +61,7 @@ Route::prefix('Ouroffers')->group(function () {
 Route::get('/loyalty/point-value', [LoyaltyController::class, 'index']);
 Route::get('/validate-coupon', [CouponController::class, 'validateCoupon']);
 Route::get('/validate-invoice-coupon', [CouponController::class, 'validateInvoiceCoupon']);
+Route::get('/available-coupons', [CouponController::class, 'availableCoupons']);
 
 
 Route::get('branch-list', [BranchController::class, 'branchList']);

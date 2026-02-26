@@ -29,4 +29,21 @@ class PaymentchanalController extends Controller
 
         return $strategy->pay($request, $typePage);
     }
+
+    public function tabbySuccess(Request $request, $invoice = null)
+    {
+        return app(TabbyPaymentStrategy::class)->callback($request);
+    }
+
+    public function tabbyFail($invoice = null)
+    {
+        session()->forget('tabby_payment');
+        return view('frontend.payment-status.failed', ['message' => __('messages.payment_failed')]);
+    }
+
+    public function tabbyCancel($invoice = null)
+    {
+        session()->forget('tabby_payment');
+        return view('frontend.payment-status.failed', ['message' => __('messages.payment_cancelled')]);
+    }
 }

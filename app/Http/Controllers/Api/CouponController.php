@@ -10,6 +10,17 @@ use Modules\Promotion\Models\UserCouponRedeem;
 
 class CouponController extends Controller
 {
+    public function availableCoupons(Request $request)
+    {
+        $coupons = Coupon::with('promotion')->where('is_expired', 0)->where('use_limit', '>=', 1)->get();
+        
+        return response()->json([
+            'status' => true,
+            'data' => $coupons,
+            'message' => __('promotion.coupons_list'),
+        ], 200);
+    }
+
     public function validateCoupon(Request $request)
     {
         $couponCode = $request->query('coupon_code');

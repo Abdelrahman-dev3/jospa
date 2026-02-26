@@ -7,6 +7,8 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
+use Modules\Booking\Models\Booking;
+use App\Models\GiftCard;
 
 class TamaraPaymentStrategy
 {
@@ -74,10 +76,15 @@ class TamaraPaymentStrategy
 
         session(['tamara_payment' => array_merge($data, ['amount' => $remainingAmount])]);
 
-        $paymentUrl = $this->createTamaraCheckout($remainingAmount);
+        try {
+            $paymentUrl = $this->createTamaraCheckout($remainingAmount);
+        } catch (\Exception $e) {
+            session()->forget('tamara_payment');
+            return redirect()->back()->with('error', $e->getMessage());
+        }
         
         if (!$paymentUrl) {
-            throw new \Exception('Tabby payment not available');
+            throw new \Exception('Tamara payment not available');
         }
         
         return redirect()->away($paymentUrl);
@@ -104,6 +111,7 @@ class TamaraPaymentStrategy
         $cartIds    = $session['cart_ids'] ?? [];
         $invoiceRef = 'INV-' . implode('-', $cartIds);
     
+        $consumerName = $user->full_name ?? $user->username ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
         $payload = [
             'total_amount' => [
                 'amount'   => round($amount, 2),
@@ -125,7 +133,7 @@ class TamaraPaymentStrategy
             'payment_type'       => 'PAY_BY_INSTALMENTS',
     
             'consumer' => [
-                'first_name'   => $user->username,
+                'first_name'   => $consumerName,
                 'phone_number' => $user->mobile,
             ],
     
@@ -191,6 +199,11 @@ class TamaraPaymentStrategy
             return view('frontend.payment-status.failed');
         }
 
+        if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+            session()->forget('tamara_payment');
+            return view('frontend.payment-status.captured');
+        }
+
         app(PaymentFinalizerService::class)->finalizePayment(
             auth()->id(),
             $data['final_before_sub'],
@@ -232,6 +245,29 @@ class TamaraPaymentStrategy
         return view('frontend.payment-status.failed', [
             'message' => __('messages.payment_cancelled')
         ]);
+    }
+
+    private function isAlreadyFinalized(array $cartIds, array $giftIds): bool
+    {
+        if (empty($cartIds) && empty($giftIds)) {
+            return false;
+        }
+
+        if (!empty($cartIds)) {
+            $paid = Booking::whereIn('id', $cartIds)->where('payment_status', 1)->count();
+            if ($paid !== count($cartIds)) {
+                return false;
+            }
+        }
+
+        if (!empty($giftIds)) {
+            $paidGifts = GiftCard::whereIn('id', $giftIds)->where('payment_status', 1)->count();
+            if ($paidGifts !== count($giftIds)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }

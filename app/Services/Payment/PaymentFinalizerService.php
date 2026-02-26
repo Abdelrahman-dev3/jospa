@@ -14,6 +14,7 @@ use Modules\Product\Models\Cart;
 use Modules\Product\Models\Order;
 use Modules\Product\Models\OrderGroup;
 use Modules\Product\Models\OrderItem;
+use Modules\Product\Models\Product;
 use App\Models\GiftCard;
 use Illuminate\Support\Facades\DB;
 use App\Models\Setting;

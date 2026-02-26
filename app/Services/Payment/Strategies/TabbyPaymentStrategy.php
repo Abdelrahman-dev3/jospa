@@ -7,6 +7,8 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
+use Modules\Booking\Models\Booking;
+use App\Models\GiftCard;
 
 class TabbyPaymentStrategy
 {
@@ -74,7 +76,12 @@ class TabbyPaymentStrategy
 
         session(['tabby_payment' => array_merge($data, ['amount' => $remainingAmount])]);
 
-        $data = $this->createTabbyCharge($request, $typePage , $remainingAmount);
+        try {
+            $data = $this->createTabbyCharge($request, $typePage , $remainingAmount);
+        } catch (\Exception $e) {
+            session()->forget('tabby_payment');
+            return redirect()->back()->with('error', $e->getMessage());
+        }
 
         $paymentUrl = $data['configuration']['available_products']['installments'][0]['web_url'] ?? $data['configuration']['available_products']['pay_later'][0]['web_url'] ?? null;
         
@@ -112,6 +119,7 @@ class TabbyPaymentStrategy
 
         $invoiceRef = 'INV-' . implode('-', $cartIds);
     
+        $buyerName = $user->full_name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
         $payload = [
             "merchant_code" => $merchantCode,
             "payment" => [
@@ -120,7 +128,7 @@ class TabbyPaymentStrategy
                 "description" => "Invoice #{$invoiceRef}",
                 "buyer" => [
                     "phone" => $user->mobile,
-                    "name"  => $user->name,
+                    "name"  => $buyerName,
                 ],
             ],
             "order" => [
@@ -144,7 +152,13 @@ class TabbyPaymentStrategy
             throw new \Exception('Tabby payment failed');
         }
     
-        return $response->json();
+        $responseData = $response->json();
+        $checkoutId = $responseData['id'] ?? $responseData['checkout_id'] ?? null;
+        if ($checkoutId) {
+            session()->put('tabby_payment.checkout_id', $checkoutId);
+        }
+
+        return $responseData;
     }
 
 
@@ -157,13 +171,13 @@ class TabbyPaymentStrategy
             abort(403);
         }
 
-        $tapId = $request->tap_id ?? $data['checkout_id'] ?? null;
-        if (!$tapId) {
+        $checkoutId = $request->get('checkout_id') ?? $request->get('payment_id') ?? $data['checkout_id'] ?? null;
+        if (!$checkoutId) {
             return redirect()->back()->with('error', 'Tabby ID not found');
         }
 
         $secretKey = config('tabby.secret_key');
-        $baseUrl = "https://api.tabby.ai/api/v2/checkout/{$tapId}";
+        $baseUrl = "https://api.tabby.ai/api/v2/checkout/{$checkoutId}";
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $secretKey,
         ])->get($baseUrl);
@@ -178,8 +192,15 @@ class TabbyPaymentStrategy
 
         $finalizer = app(PaymentFinalizerService::class);
 
-        switch ($status) {
-            case "CAPTURED":
+        $normalizedStatus = strtolower((string) $status);
+        switch ($normalizedStatus) {
+            case "captured":
+            case "authorized":
+            case "approved":
+                if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                    session()->forget('tabby_payment');
+                    return view('frontend.payment-status.captured');
+                }
                 try {
                     $fakeRequest = new Request([
                         'wallet'    => $data['submethods']['wallet'] ?? false,
@@ -207,13 +228,36 @@ class TabbyPaymentStrategy
                     return redirect()->back()->with('error', $e->getMessage());
                 }
                 return view('frontend.payment-status.captured');
-            case "FAILED":
-            case "CANCELLED":
+            case "failed":
+            case "cancelled":
                 session()->forget('tabby_payment');
                 return view('frontend.payment-status.failed', ['message' => $status]);
             default:
                 session()->forget('tabby_payment');
                 return view('frontend.payment-status.failed', ['message' => 'Unknown status: ' . $status]);
         }
+    }
+
+    private function isAlreadyFinalized(array $cartIds, array $giftIds): bool
+    {
+        if (empty($cartIds) && empty($giftIds)) {
+            return false;
+        }
+
+        if (!empty($cartIds)) {
+            $paid = Booking::whereIn('id', $cartIds)->where('payment_status', 1)->count();
+            if ($paid !== count($cartIds)) {
+                return false;
+            }
+        }
+
+        if (!empty($giftIds)) {
+            $paidGifts = GiftCard::whereIn('id', $giftIds)->where('payment_status', 1)->count();
+            if ($paidGifts !== count($giftIds)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
