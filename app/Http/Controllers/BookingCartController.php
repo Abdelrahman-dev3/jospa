@@ -51,7 +51,7 @@ class BookingCartController extends Controller
             return $price * ($item->qty ?? 1);
         });
         
-        $gifts = GiftCard::where('user_id', auth()->id())->where('payment_status', 0 )->get();
+        $gifts = GiftCard::where('user_id', $userId)->where('payment_status', 0 )->get();
 
         $GiftPrice = $gifts->sum(fn($g) => $g->subtotal ?? 0);
         
@@ -142,27 +142,24 @@ class BookingCartController extends Controller
                 'success' => true,
                 'message' => __('messages.booking_added_to_cart')
             ], 201);
-        }
+    }
+    
     
     public function destroy($id)
     {
-        $user = auth()->user();
-    
         $booking = Booking::find($id);
     
         if (!$booking) {
             return response()->json(['message' => 'Cart item not found'], 404);
         }
-        
+        $booking->bookingService()->delete();
         $booking->delete();
     
         return redirect()->back()->with('success', __('messages.item_removed_from_cart'));
     } 
- 
+
     public function destroy_product($id)
     {
-        $user = auth()->user();
-    
         $product = Cart::findOrFail($id);
     
         if (!$product) {
@@ -176,8 +173,6 @@ class BookingCartController extends Controller
 
     public function destroy_gift($id)
     {
-        $user = auth()->user();
-    
         $gift = GiftCard::findOrFail($id);
     
         if (!$gift) {
@@ -194,13 +189,10 @@ class BookingCartController extends Controller
     {
         $user = auth()->user();
         
-        $bookings = Booking::with('services', 'products')->where('user_id', $user->id)->where('payment_status', 0)->get();
+        $bookings = Booking::with('services')->where('created_by', $user->id)->where('payment_status', 0)->get();
         
         foreach ($bookings as $booking) {
-            $booking->services()->delete();
-    
-            $booking->products()->delete();
-    
+            $booking->bookingService()->delete();
             $booking->delete();
         }
 
