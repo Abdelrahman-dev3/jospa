@@ -42,6 +42,7 @@ use Modules\Service\Http\Controllers\Backend\API\ServiceController;
 
 Route::prefix('var')->group(function () {
     Route::get('/AD', [AdController::class, 'index']);
+    Route::get('/gift-card-images', [AdController::class, 'giftCardImages']);
     Route::get('/text', [VartextController::class, 'index']);
 });
 

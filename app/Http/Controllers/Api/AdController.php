@@ -17,4 +17,20 @@ class AdController extends Controller
             ]
         ]);
     }
+
+    public function giftCardImages()
+    {
+        $ads = Ad::where('page', 'gift_page')
+            ->where('status', 1)
+            ->get()
+            ->map(function ($ad) {
+                $ad->image_url = $ad->image ? asset($ad->image) : null;
+                return $ad;
+            });
+
+        return response()->json([
+            'status' => true,
+            'data' => $ads,
+        ]);
+    }
 }

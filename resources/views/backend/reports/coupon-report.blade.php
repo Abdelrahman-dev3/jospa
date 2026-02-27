@@ -99,13 +99,6 @@
             searchable: false,
         },
         {
-            data: 'promotion_name',
-            name: 'promotion_name',
-            title: "{{ __('report.lbl_promotion') }}",
-            orderable: false,
-            searchable: false,
-        },
-        {
             data: 'customer_name',
             name: 'customer_name',
             title: "{{ __('report.lbl_customer') }}",
