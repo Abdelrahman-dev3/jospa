@@ -14,6 +14,8 @@ use App\Http\Controllers\PackageBookingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingCartController;
 use App\Http\Controllers\PaymentchanalController;
+use App\Services\Payment\Strategies\TabbyPaymentStrategy;
+use App\Services\Payment\Strategies\TamaraPaymentStrategy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SaloneBookController;
@@ -131,6 +133,14 @@ Route::prefix('gift-cards')->group(function () {
 
 Route::get('/success-py-gift', [GiftCardController::class, 'handlePaymentResult']);
 Route::get('/success-py-invoice', [BookingCartController::class, 'handlePaymentResult'])->name('api.cart.payment.success');
+
+// Mobile payment callbacks (public)
+Route::get('/payments/tabby/success/{invoice?}', [TabbyPaymentStrategy::class, 'callback'])->name('api.tabby.success');
+Route::get('/payments/tabby/fail/{invoice?}', [TabbyPaymentStrategy::class, 'fail'])->name('api.tabby.fail');
+Route::get('/payments/tabby/cancel/{invoice?}', [TabbyPaymentStrategy::class, 'cancel'])->name('api.tabby.cancel');
+Route::get('/payments/tamara/success', [TamaraPaymentStrategy::class, 'success'])->name('api.tamara.success');
+Route::get('/payments/tamara/failure', [TamaraPaymentStrategy::class, 'failure'])->name('api.tamara.failure');
+Route::get('/payments/tamara/cancel', [TamaraPaymentStrategy::class, 'cancel'])->name('api.tamara.cancel');
 
 
 Route::group(['middleware' => 'auth:sanctum'], function () {

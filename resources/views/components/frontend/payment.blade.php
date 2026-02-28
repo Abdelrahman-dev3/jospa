@@ -656,7 +656,7 @@
                         <div>
                             <strong id="tax">
                             @if($pageName == 'cart')
-                                {{ getTaxamount($productsAmount)['total_tax_amount'] + ( $totalPrice * 0.15 ) }} 
+                                {{ getTaxamount($productsAmount)['total_tax_amount'] + ( $totalPrice * 0.15 ) + getBookingTaxamount($totalPrice, 0, null )['total_tax_amount']  }} 
                             @elseif($pageName == 'bookings')
                                 0.00
                             @elseif($pageName == 'gift')

@@ -98,7 +98,11 @@ class TamaraPaymentStrategy
         if ($request->expectsJson()) {
             $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
             try {
-                $paymentUrl = $this->createTamaraCheckout($remainingAmount, $merchantUrls);
+                $paymentUrl = $this->createTamaraCheckout($remainingAmount, $merchantUrls, [
+                    'cart_ids' => $data['cart_ids'] ?? [],
+                    'platform' => $request->get('platform'),
+                    'is_mobile' => $request->boolean('is_mobile'),
+                ]);
             } catch (\Exception $e) {
                 return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
             }
@@ -135,7 +139,7 @@ class TamaraPaymentStrategy
         return redirect()->away($paymentUrl);
     }
 
-    private function createTamaraCheckout(float $amount, ?array $merchantUrlOverrides = null): string
+    private function createTamaraCheckout(float $amount, ?array $merchantUrlOverrides = null, ?array $context = null): string
     {
         $user = auth()->user();
         
@@ -146,14 +150,16 @@ class TamaraPaymentStrategy
         if (!$secretKey) {
             throw new \Exception('Tamara configuration error');
         }
-    
-        $session = session('tamara_payment');
-    
+
+        $session = $context ?: session('tamara_payment');
         if (!$session) {
             throw new \Exception('Tamara session missing');
         }
-    
+
         $cartIds    = $session['cart_ids'] ?? [];
+        if (empty($cartIds)) {
+            throw new \Exception('Tamara cart ids missing');
+        }
         $invoiceRef = 'INV-' . implode('-', $cartIds);
     
         $consumerName = $user->full_name ?? $user->username ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
@@ -188,8 +194,8 @@ class TamaraPaymentStrategy
                 'cancel'  => route('tamara.cancel'),
             ],
     
-            'platform'  => 'web',
-            'is_mobile' => false,
+            'platform'  => $context['platform'] ?? 'web',
+            'is_mobile' => (bool) ($context['is_mobile'] ?? false),
         ];
     
         $response = Http::withHeaders([
@@ -226,14 +232,14 @@ class TamaraPaymentStrategy
         $checkoutId = $request->checkout_id ?? ($data['checkout_id'] ?? null);
 
         if (!$checkoutId) {
-            return redirect()->route('home')->with('error', 'Tamara checkout id missing');
+            return $this->respondFailure($request, 'Tamara checkout id missing', 400);
         }
 
         $response = Http::withToken(config('tamara.secret_key'))
             ->get(config('tamara.base_url') . "/api/v2/checkout/{$checkoutId}");
 
         if (!$response->successful()) {
-            return redirect()->back()->with('error', 'Failed to verify Tamara payment');
+            return $this->respondFailure($request, 'Failed to verify Tamara payment', 502);
         }
 
         $checkout = $response->json();
@@ -241,13 +247,13 @@ class TamaraPaymentStrategy
 
         if ($status !== 'approved') {
             session()->forget('tamara_payment');
-            return view('frontend.payment-status.failed');
+            return $this->respondFailure($request, __('messages.payment_failed'), 402);
         }
 
         if ($data) {
             if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
                 session()->forget('tamara_payment');
-                return view('frontend.payment-status.captured');
+                return $this->respondSuccess($request, 'Payment already finalized.');
             }
 
             app(PaymentFinalizerService::class)->finalizePayment(
@@ -272,31 +278,31 @@ class TamaraPaymentStrategy
 
             session()->forget('tamara_payment');
 
-            return view('frontend.payment-status.captured');
+            return $this->respondSuccess($request, 'Payment captured successfully.');
         }
 
         $context = $this->resolveStatelessContext($request);
         if (!$context) {
-            return view('frontend.payment-status.failed', ['message' => 'Invalid payment callback.']);
+            return $this->respondFailure($request, 'Invalid payment callback.', 400);
         }
 
         $user = User::find($context['user_id']);
         if (!$user) {
-            return view('frontend.payment-status.failed', ['message' => 'User not found.']);
+            return $this->respondFailure($request, 'User not found.', 404);
         }
 
         $calculator = app(PaymentCalculatorService::class);
         $totalData = $calculator->calculateTotal($context['page'], $context['couponCode']);
         if (isset($totalData['error'])) {
-            return view('frontend.payment-status.failed', ['message' => $totalData['error']]);
+            return $this->respondFailure($request, $totalData['error'], 422);
         }
 
         if ($context['discount_amount'] !== null && ! $this->isClientDiscountMatching($context['discount_amount'], $totalData['discountAmount'])) {
-            return view('frontend.payment-status.failed', ['message' => 'Discount amount mismatch.']);
+            return $this->respondFailure($request, 'Discount amount mismatch.', 422);
         }
 
         if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
-            return view('frontend.payment-status.captured');
+            return $this->respondSuccess($request, 'Payment already finalized.');
         }
 
         app(PaymentFinalizerService::class)->finalizePayment(
@@ -323,25 +329,21 @@ class TamaraPaymentStrategy
             true
         );
 
-        return view('frontend.payment-status.captured');
+        return $this->respondSuccess($request, 'Payment captured successfully.');
     }
 
     public function failure()
     {
         session()->forget('tamara_payment');
 
-        return view('frontend.payment-status.failed', [
-            'message' => __('messages.payment_failed')
-        ]);
+        return $this->respondFailure(request(), __('messages.payment_failed'), 402);
     }
 
     public function cancel()
     {
         session()->forget('tamara_payment');
 
-        return view('frontend.payment-status.failed', [
-            'message' => __('messages.payment_cancelled')
-        ]);
+        return $this->respondFailure(request(), __('messages.payment_cancelled'), 400);
     }
 
     private function isAlreadyFinalized(array $cartIds, array $giftIds): bool
@@ -411,16 +413,20 @@ class TamaraPaymentStrategy
             return $value !== null && $value !== '';
         });
 
+        $successRoute = $this->wantsJson($request) ? 'api.tamara.success' : 'tamara.success';
+        $failureRoute = $this->wantsJson($request) ? 'api.tamara.failure' : 'tamara.failure';
+        $cancelRoute = $this->wantsJson($request) ? 'api.tamara.cancel' : 'tamara.cancel';
+
         $successUrl = URL::temporarySignedRoute(
-            'tamara.success',
+            $successRoute,
             now()->addMinutes(30),
             $params
         );
 
         return [
             'success' => $successUrl,
-            'failure' => route('tamara.failure'),
-            'cancel'  => route('tamara.cancel'),
+            'failure' => route($failureRoute),
+            'cancel'  => route($cancelRoute),
         ];
     }
 
@@ -459,6 +465,36 @@ class TamaraPaymentStrategy
         }
 
         return abs($clientDiscount - $expectedDiscount) <= 0.01;
+    }
+
+    private function wantsJson(Request $request): bool
+    {
+        return $request->expectsJson() || $request->wantsJson() || $request->is('api/*');
+    }
+
+    private function respondSuccess(Request $request, string $message, array $data = [])
+    {
+        if ($this->wantsJson($request)) {
+            return response()->json([
+                'status' => true,
+                'message' => $message,
+                'data' => $data,
+            ]);
+        }
+
+        return view('frontend.payment-status.captured');
+    }
+
+    private function respondFailure(Request $request, string $message, int $status = 400)
+    {
+        if ($this->wantsJson($request)) {
+            return response()->json([
+                'status' => false,
+                'message' => $message,
+            ], $status);
+        }
+
+        return view('frontend.payment-status.failed', ['message' => $message]);
     }
 
 }

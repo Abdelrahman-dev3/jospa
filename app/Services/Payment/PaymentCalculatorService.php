@@ -23,7 +23,7 @@ class PaymentCalculatorService
         if ($typePage === 'payment') {
                 $services = Booking::with('service.service')
                     ->where('created_by', $userId)
-                    ->where('status', '!=', 'cancelled')
+                    ->whereNotIn('status', ['completed', 'cancelled']) 
                     ->where('payment_type', 'payment')
                     ->where('payment_status', 0)
                     ->whereNull('deleted_by')
@@ -38,7 +38,7 @@ class PaymentCalculatorService
         } else {
             $services = Booking::with('service.service')
                 ->where('created_by', $userId)
-                ->where('status', '!=', 'cancelled')
+                ->whereNotIn('status', ['completed', 'cancelled']) 
                 ->where('payment_type', 'cart')
                 ->where('payment_status', 0)
                 ->whereNull('deleted_by')

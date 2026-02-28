@@ -11,6 +11,7 @@ use Modules\Booking\Models\Booking;
 use App\Models\GiftCard;
 use Illuminate\Support\Facades\URL;
 
+
 class CardPaymentStrategy
 {
     public function pay(Request $request, string $typePage)

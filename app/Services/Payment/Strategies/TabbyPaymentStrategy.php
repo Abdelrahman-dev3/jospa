@@ -249,7 +249,7 @@ class TabbyPaymentStrategy
                 if ($data) {
                     if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
                         session()->forget('tabby_payment');
-                        return view('frontend.payment-status.captured');
+                        return $this->respondSuccess($request, 'Payment already finalized.');
                     }
                     try {
                         $fakeRequest = new Request([
@@ -272,35 +272,37 @@ class TabbyPaymentStrategy
                         $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub'] , true);
         
                         session()->forget('tabby_payment');
-                        return view('frontend.payment-status.captured');
+                        return $this->respondSuccess($request, 'Payment captured successfully.', [
+                            'invoice_id' => $invoiceId ?? null,
+                        ]);
                     } catch (\Exception $e) {
                         session()->forget('tabby_payment');
-                        return redirect()->back()->with('error', $e->getMessage());
+                        return $this->respondFailure($request, $e->getMessage(), 500);
                     }
                 }
 
                 $context = $this->resolveStatelessContext($request);
                 if (!$context) {
-                    return view('frontend.payment-status.failed', ['message' => 'Invalid payment callback.']);
+                    return $this->respondFailure($request, 'Invalid payment callback.', 400);
                 }
 
                 $user = User::find($context['user_id']);
                 if (!$user) {
-                    return view('frontend.payment-status.failed', ['message' => 'User not found.']);
+                    return $this->respondFailure($request, 'User not found.', 404);
                 }
 
                 $calculator = app(PaymentCalculatorService::class);
                 $totalData = $calculator->calculateTotal($context['page'], $context['couponCode']);
                 if (isset($totalData['error'])) {
-                    return view('frontend.payment-status.failed', ['message' => $totalData['error']]);
+                    return $this->respondFailure($request, $totalData['error'], 422);
                 }
 
                 if ($context['discount_amount'] !== null && ! $this->isClientDiscountMatching($context['discount_amount'], $totalData['discountAmount'])) {
-                    return view('frontend.payment-status.failed', ['message' => 'Discount amount mismatch.']);
+                    return $this->respondFailure($request, 'Discount amount mismatch.', 422);
                 }
 
                 if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
-                    return view('frontend.payment-status.captured');
+                    return $this->respondSuccess($request, 'Payment already finalized.');
                 }
 
                 $fakeRequest = new Request([
@@ -322,15 +324,27 @@ class TabbyPaymentStrategy
                 );
                 $subMethodService->apply($user->id, $fakeRequest, $totalData['total'], true);
 
-                return view('frontend.payment-status.captured');
+                return $this->respondSuccess($request, 'Payment captured successfully.');
             case "failed":
             case "cancelled":
                 session()->forget('tabby_payment');
-                return view('frontend.payment-status.failed', ['message' => $status]);
+                return $this->respondFailure($request, $status, 402);
             default:
                 session()->forget('tabby_payment');
-                return view('frontend.payment-status.failed', ['message' => 'Unknown status: ' . $status]);
+                return $this->respondFailure($request, 'Unknown status: ' . $status, 400);
         }
+    }
+
+    public function fail(Request $request, $invoice = null)
+    {
+        session()->forget('tabby_payment');
+        return $this->respondFailure($request, __('messages.payment_failed'), 402);
+    }
+
+    public function cancel(Request $request, $invoice = null)
+    {
+        session()->forget('tabby_payment');
+        return $this->respondFailure($request, __('messages.payment_cancelled'), 400);
     }
 
     private function isAlreadyFinalized(array $cartIds, array $giftIds): bool
@@ -401,16 +415,20 @@ class TabbyPaymentStrategy
             return $value !== null && $value !== '';
         });
 
+        $successRoute = $this->wantsJson($request) ? 'api.tabby.success' : 'tabby.success';
+        $failRoute = $this->wantsJson($request) ? 'api.tabby.fail' : 'tabby.fail';
+        $cancelRoute = $this->wantsJson($request) ? 'api.tabby.cancel' : 'tabby.cancel';
+
         $successUrl = URL::temporarySignedRoute(
-            'tabby.success',
+            $successRoute,
             now()->addMinutes(30),
             $params
         );
 
         return [
             "success" => $successUrl,
-            "fail" => route('tabby.fail', $params['invoice']),
-            "cancel"  => route('tabby.cancel', $params['invoice']),
+            "fail" => route($failRoute, $params['invoice'] ?? null),
+            "cancel"  => route($cancelRoute, $params['invoice'] ?? null),
         ];
     }
 
@@ -450,5 +468,35 @@ class TabbyPaymentStrategy
         }
 
         return abs($clientDiscount - $expectedDiscount) <= 0.01;
+    }
+
+    private function wantsJson(Request $request): bool
+    {
+        return $request->expectsJson() || $request->wantsJson() || $request->is('api/*');
+    }
+
+    private function respondSuccess(Request $request, string $message, array $data = [])
+    {
+        if ($this->wantsJson($request)) {
+            return response()->json([
+                'status' => true,
+                'message' => $message,
+                'data' => $data,
+            ]);
+        }
+
+        return view('frontend.payment-status.captured');
+    }
+
+    private function respondFailure(Request $request, string $message, int $status = 400)
+    {
+        if ($this->wantsJson($request)) {
+            return response()->json([
+                'status' => false,
+                'message' => $message,
+            ], $status);
+        }
+
+        return view('frontend.payment-status.failed', ['message' => $message]);
     }
 }
