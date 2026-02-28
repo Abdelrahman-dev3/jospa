@@ -501,19 +501,20 @@
                         <lable>{{ __('messagess.please_select_payment_method') }}</lable>
                     </div>
 
-                    <!-- METHOD: CARD -->
-                    <div class="method" data-method="card" tabindex="0">
-                        <div class="con-card">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="card" checked>
+                    @if(($paymentMethods['card'] ?? 1) == 1)
+                        <!-- METHOD: CARD -->
+                        <div class="method" data-method="card" tabindex="0">
+                            <div class="con-card">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }}>
+                                </div>
+                                <div class="flex-fill muted" style="width: 25%;">{{ __('messagess.debit_credit_card') }}</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
+                                    <img src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
+                                    <img src="{{ asset('images/icons/master.png') }}" alt="mc">
+                                </div>
                             </div>
-                            <div class="flex-fill muted" style="width: 25%;">{{ __('messagess.debit_credit_card') }}</div>
-                            <div class="d-flex align-items-center gap-2">
-                                <img src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
-                                <img src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
-                                <img src="{{ asset('images/icons/master.png') }}" alt="mc">
-                            </div>
-                        </div>
                         <style>
                             .payment-option {
                                 display: block;
@@ -544,74 +545,79 @@
                                 height: 26px;
                             }
                         </style>
-                        <!-- card fields -->
-                        <div class="payment-methods mt-4 mb-3 px-2">
-                        
-                            <label class="l-payment mb-2 d-block">
-                                {{ __('messagess.choose_payment_method') }}
-                            </label>
-                        
-                            <div class="row g-2">
-                        
-                                <!-- Visa / MasterCard -->
-                                <div class="col-12">
-                                    <label class="payment-option">
-                                        <input type="radio" name="payment_source" value="src_card" checked>
-                                        <div class="payment-box">
-                                            <img src="{{ asset('images/icons/visa (2).png') }}" alt="Visa">
-                                            <span>Visa / MasterCard</span>
-                                        </div>
-                                    </label>
+                            <!-- card fields -->
+                            <div class="payment-methods mt-4 mb-3 px-2">
+                            
+                                <label class="l-payment mb-2 d-block">
+                                    {{ __('messagess.choose_payment_method') }}
+                                </label>
+                            
+                                <div class="row g-2">
+                            
+                                    <!-- Visa / MasterCard -->
+                                    <div class="col-12">
+                                        <label class="payment-option">
+                                            <input type="radio" name="payment_source" value="src_card" checked>
+                                            <div class="payment-box">
+                                                <img src="{{ asset('images/icons/visa (2).png') }}" alt="Visa">
+                                                <span>Visa / MasterCard</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                            
+                                    <!-- Apple Pay -->
+                                    <div class="col-12">
+                                        <label class="payment-option">
+                                            <input type="radio" name="payment_source" value="src_apple_pay">
+                                            <div class="payment-box">
+                                                <img src="{{ asset('images/icons/applepay.png') }}" alt="Apple Pay">
+                                                <span>Apple Pay</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                            
+                                    <!-- Mada -->
+                                    <div class="col-12">
+                                        <label class="payment-option">
+                                            <input type="radio" name="payment_source" value="src_sa.mada">
+                                            <div class="payment-box">
+                                                <img src="{{ asset('images/icons/mada (2).png') }}" alt="Mada">
+                                                <span>Mada</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                            
                                 </div>
-                        
-                                <!-- Apple Pay -->
-                                <div class="col-12">
-                                    <label class="payment-option">
-                                        <input type="radio" name="payment_source" value="src_apple_pay">
-                                        <div class="payment-box">
-                                            <img src="{{ asset('images/icons/applepay.png') }}" alt="Apple Pay">
-                                            <span>Apple Pay</span>
-                                        </div>
-                                    </label>
-                                </div>
-                        
-                                <!-- Mada -->
-                                <div class="col-12">
-                                    <label class="payment-option">
-                                        <input type="radio" name="payment_source" value="src_sa.mada">
-                                        <div class="payment-box">
-                                            <img src="{{ asset('images/icons/mada (2).png') }}" alt="Mada">
-                                            <span>Mada</span>
-                                        </div>
-                                    </label>
-                                </div>
-                        
                             </div>
-                        </div>
 
-                    </div>
+                        </div>
+                    @endif
 
-                    <!-- METHOD: Tabby -->
-                    <div class="method d-flex" style="gap: 20px;" data-method="tabby" tabindex="0">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="paymentMethod" value="tabby">
+                    @if(($paymentMethods['tabby'] ?? 1) == 1)
+                        <!-- METHOD: Tabby -->
+                        <div class="method d-flex" style="gap: 20px;" data-method="tabby" tabindex="0">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }}>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{asset('images/icons/tabby (2).png')}}" alt="tabby" style="height:28px">
+                            </div>
+                            <div class="flex-fill muted"> {{__('messagess.installments_4')}} </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <img src="{{asset('images/icons/tabby (2).png')}}" alt="tabby" style="height:28px">
-                        </div>
-                        <div class="flex-fill muted"> {{__('messagess.installments_4')}} </div>
-                    </div>
+                    @endif
 
-                    <!-- METHOD: Tamara -->
-                    <div class="method d-flex" style="gap: 20px;" data-method="tamara" tabindex="0">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="paymentMethod" value="tamara">
+                    @if(($paymentMethods['tamara'] ?? 1) == 1)
+                        <!-- METHOD: Tamara -->
+                        <div class="method d-flex" style="gap: 20px;" data-method="tamara" tabindex="0">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }}>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{asset('images/icons/tmara.png')}}" alt="tamara" style="height:28px">
+                            </div>
+                            <div class="flex-fill muted"> {{__('messagess.split_bill_4_payments')}} </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <img src="{{asset('images/icons/tmara.png')}}" alt="tamara" style="height:28px">
-                        </div>
-                        <div class="flex-fill muted"> {{__('messagess.split_bill_4_payments')}} </div>
-                    </div>
+                    @endif
 
                 </div>
             </div>

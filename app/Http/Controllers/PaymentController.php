@@ -89,8 +89,24 @@ class PaymentController extends Controller
             ];
         })->unique('branch_id')->values();   
 
-        
+        $paymentMethods = [
+            'card' => (int) (Setting::get('tap_payment_method', 1)),
+            'tabby' => (int) (Setting::get('tabby_payment_method', 1)),
+            'tamara' => (int) (Setting::get('tamara_payment_method', 1)),
+        ];
 
-        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches'));
+        $defaultPaymentMethod = 'card';
+        if (($paymentMethods['card'] ?? 0) !== 1) {
+            $defaultPaymentMethod = null;
+            foreach (['tabby', 'tamara'] as $method) {
+                if (($paymentMethods[$method] ?? 0) === 1) {
+                    $defaultPaymentMethod = $method;
+                    break;
+                }
+            }
+            $defaultPaymentMethod = $defaultPaymentMethod ?? 'card';
+        }
+
+        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'defaultPaymentMethod'));
     }
 }

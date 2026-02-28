@@ -7,8 +7,10 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Modules\Booking\Models\Booking;
 use App\Models\GiftCard;
+use App\Models\User;
 
 class TabbyPaymentStrategy
 {
@@ -41,6 +43,10 @@ class TabbyPaymentStrategy
         $data['tax'] = $totalData['tax'];
         $data['cart_ids'] = $totalData['cart_ids'];
         $data['gift_ids'] = $totalData['gift_ids'];
+
+        if ($response = $this->validateClientDiscount($request, $totalData['discountAmount'])) {
+            return $response;
+        }
         
         $subMethodService = app(PaymentSubMethodsService::class);
         $subResult = $subMethodService->apply($data['user_id'], $request, $data['final_before_sub']);
@@ -68,10 +74,53 @@ class TabbyPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'Payment completed using sub methods.',
+                        'data' => [
+                            'paid' => true,
+                            'amount' => $data['final_before_sub'],
+                            'payment_method' => $data['payment_method'],
+                        ],
+                    ]);
+                }
+
                 return view('frontend.payment-status.captured');
             } catch (\Exception $e) {
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+                }
                 return redirect()->back()->with('error', $e->getMessage());
             }
+        }
+
+        if ($request->expectsJson()) {
+            $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
+            try {
+                $chargeData = $this->createTabbyCharge($request, $typePage , $remainingAmount, $merchantUrls);
+            } catch (\Exception $e) {
+                return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+            }
+
+            $paymentUrl = $chargeData['configuration']['available_products']['installments'][0]['web_url']
+                ?? $chargeData['configuration']['available_products']['pay_later'][0]['web_url']
+                ?? null;
+            
+            if (!$paymentUrl) {
+                return response()->json(['status' => false, 'message' => 'Tabby payment not available'], 422);
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Redirect to payment gateway.',
+                'data' => [
+                    'payment_url' => $paymentUrl,
+                    'amount' => $remainingAmount,
+                    'payment_method' => $data['payment_method'],
+                    'discount_amount' => $data['discountAmount'] ?? 0,
+                ],
+            ]);
         }
 
         session(['tabby_payment' => array_merge($data, ['amount' => $remainingAmount])]);
@@ -93,7 +142,7 @@ class TabbyPaymentStrategy
 
     }
 
-    private function createTabbyCharge(Request $request, string $typePage , float $remainingAmount)
+    private function createTabbyCharge(Request $request, string $typePage , float $remainingAmount, ?array $merchantUrls = null)
     {
         $secretKey    = config('tabby.secret_key');
         $merchantCode = config('tabby.merchant_code');
@@ -135,7 +184,7 @@ class TabbyPaymentStrategy
                 "reference_id" => $invoiceRef,
             ],
             "lang" => app()->getLocale() ?? 'en',
-            "merchant_urls" => [
+            "merchant_urls" => $merchantUrls ?? [
                 "success" => route('tabby.success', $invoiceRef),
                 "fail" => route('tabby.fail', $invoiceRef),
                 "cancel"  => route('tabby.cancel',  $invoiceRef),
@@ -167,11 +216,11 @@ class TabbyPaymentStrategy
         $data = session('tabby_payment');
         $subMethodService = app(PaymentSubMethodsService::class);
 
-        if (!$data || $data['user_id'] !== auth()->id()) {
+        if ($data && $data['user_id'] !== auth()->id()) {
             abort(403);
         }
 
-        $checkoutId = $request->get('checkout_id') ?? $request->get('payment_id') ?? $data['checkout_id'] ?? null;
+        $checkoutId = $request->get('checkout_id') ?? $request->get('payment_id') ?? ($data['checkout_id'] ?? null);
         if (!$checkoutId) {
             return redirect()->back()->with('error', 'Tabby ID not found');
         }
@@ -197,36 +246,82 @@ class TabbyPaymentStrategy
             case "captured":
             case "authorized":
             case "approved":
-                if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
-                    session()->forget('tabby_payment');
+                if ($data) {
+                    if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                        session()->forget('tabby_payment');
+                        return view('frontend.payment-status.captured');
+                    }
+                    try {
+                        $fakeRequest = new Request([
+                            'wallet'    => $data['submethods']['wallet'] ?? false,
+                            'loyalty'   => $data['submethods']['loyalty'] ?? false,
+                            'gift_code' => $data['submethods']['gift_code'] ?? null,
+                        ]);
+                        $invoiceId = $finalizer->finalizePayment(
+                            auth()->id(),
+                            $data['final_before_sub'],
+                            $data['tax'],
+                            $data['discountAmount'],
+                            $data['page'],
+                            $data['cart_ids'] ?? [],
+                            $data['gift_ids'] ?? [],
+                            $data['payment_method'] ?? "Sub Methods",
+                            $data['couponCode'] ?? "",
+                            true
+                        );
+                        $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub'] , true);
+        
+                        session()->forget('tabby_payment');
+                        return view('frontend.payment-status.captured');
+                    } catch (\Exception $e) {
+                        session()->forget('tabby_payment');
+                        return redirect()->back()->with('error', $e->getMessage());
+                    }
+                }
+
+                $context = $this->resolveStatelessContext($request);
+                if (!$context) {
+                    return view('frontend.payment-status.failed', ['message' => 'Invalid payment callback.']);
+                }
+
+                $user = User::find($context['user_id']);
+                if (!$user) {
+                    return view('frontend.payment-status.failed', ['message' => 'User not found.']);
+                }
+
+                $calculator = app(PaymentCalculatorService::class);
+                $totalData = $calculator->calculateTotal($context['page'], $context['couponCode']);
+                if (isset($totalData['error'])) {
+                    return view('frontend.payment-status.failed', ['message' => $totalData['error']]);
+                }
+
+                if ($context['discount_amount'] !== null && ! $this->isClientDiscountMatching($context['discount_amount'], $totalData['discountAmount'])) {
+                    return view('frontend.payment-status.failed', ['message' => 'Discount amount mismatch.']);
+                }
+
+                if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
                     return view('frontend.payment-status.captured');
                 }
-                try {
-                    $fakeRequest = new Request([
-                        'wallet'    => $data['submethods']['wallet'] ?? false,
-                        'loyalty'   => $data['submethods']['loyalty'] ?? false,
-                        'gift_code' => $data['submethods']['gift_code'] ?? null,
-                    ]);
-                    $invoiceId = $finalizer->finalizePayment(
-                        auth()->id(),
-                        $data['final_before_sub'],
-                        $data['tax'],
-                        $data['discountAmount'],
-                        $data['page'],
-                        $data['cart_ids'] ?? [],
-                        $data['gift_ids'] ?? [],
-                        $data['payment_method'] ?? "Sub Methods",
-                        $data['couponCode'] ?? "",
-                        true
-                    );
-                    $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub'] , true);
-    
-                    session()->forget('tabby_payment');
-                    return view('frontend.payment-status.captured');
-                } catch (\Exception $e) {
-                    session()->forget('tabby_payment');
-                    return redirect()->back()->with('error', $e->getMessage());
-                }
+
+                $fakeRequest = new Request([
+                    'wallet'    => $context['wallet'],
+                    'loyalty'   => $context['loyalty'],
+                    'gift_code' => $context['gift_code'],
+                ]);
+                $finalizer->finalizePayment(
+                    $user->id,
+                    $totalData['total'],
+                    $totalData['tax'],
+                    $totalData['discountAmount'],
+                    $context['page'],
+                    $totalData['cart_ids'] ?? [],
+                    $totalData['gift_ids'] ?? [],
+                    'tabby',
+                    $context['couponCode'] ?? "",
+                    true
+                );
+                $subMethodService->apply($user->id, $fakeRequest, $totalData['total'], true);
+
                 return view('frontend.payment-status.captured');
             case "failed":
             case "cancelled":
@@ -259,5 +354,101 @@ class TabbyPaymentStrategy
         }
 
         return true;
+    }
+
+    private function validateClientDiscount(Request $request, float $expectedDiscount)
+    {
+        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        if ($clientDiscountRaw === null || $clientDiscountRaw === '') {
+            return null;
+        }
+
+        if (!is_numeric($clientDiscountRaw)) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
+            }
+            return redirect()->back()->with('error', 'Invalid discount amount.');
+        }
+
+        $clientDiscount = (float) $clientDiscountRaw;
+        if (abs($clientDiscount - $expectedDiscount) > 0.01) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Discount amount mismatch.',
+                    'expected' => $expectedDiscount,
+                    'provided' => $clientDiscount,
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'Discount amount mismatch.');
+        }
+
+        return null;
+    }
+
+    private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
+    {
+        $params = array_filter([
+            'invoice' => 'INV-' . implode('-', $data['cart_ids'] ?? []),
+            'user_id' => $data['user_id'],
+            'page' => $typePage,
+            'coupon_code' => $data['couponCode'] ?? null,
+            'wallet' => $request->boolean('wallet') ? 1 : null,
+            'loyalty' => $request->boolean('loyalty') ? 1 : null,
+            'gift_code' => $request->get('gift_code'),
+            'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
+        ], function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        $successUrl = URL::temporarySignedRoute(
+            'tabby.success',
+            now()->addMinutes(30),
+            $params
+        );
+
+        return [
+            "success" => $successUrl,
+            "fail" => route('tabby.fail', $params['invoice']),
+            "cancel"  => route('tabby.cancel', $params['invoice']),
+        ];
+    }
+
+    private function resolveStatelessContext(Request $request): ?array
+    {
+        if (! $request->hasValidSignatureWhileIgnoring(['checkout_id', 'payment_id', 'status', 'payment_status', 'order_id'])) {
+            return null;
+        }
+
+        $userId = (int) $request->get('user_id');
+        if ($userId <= 0) {
+            
+            return null;
+        }
+
+        $discountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        $discount = null;
+        if ($discountRaw !== null && $discountRaw !== '' && is_numeric($discountRaw)) {
+            $discount = (float) $discountRaw;
+        }
+
+        return [
+            'user_id' => $userId,
+            'page' => $request->get('page', 'cart'),
+            'couponCode' => $request->get('coupon_code'),
+            'wallet' => $request->boolean('wallet'),
+            'loyalty' => $request->boolean('loyalty'),
+            'gift_code' => $request->get('gift_code'),
+            'discount_amount' => $discount,
+        ];
+    }
+
+    private function isClientDiscountMatching(?float $clientDiscount, float $expectedDiscount): bool
+    {
+        if ($clientDiscount === null) {
+            return true;
+        }
+
+        return abs($clientDiscount - $expectedDiscount) <= 0.01;
     }
 }

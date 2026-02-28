@@ -9,6 +9,7 @@ use App\Services\Payment\PaymentSubMethodsService;
 use App\Services\TapPaymentService;
 use Modules\Booking\Models\Booking;
 use App\Models\GiftCard;
+use Illuminate\Support\Facades\URL;
 
 class CardPaymentStrategy
 {
@@ -43,6 +44,10 @@ class CardPaymentStrategy
         $data['cart_ids'] = $totalData['cart_ids'];
         $data['gift_ids'] = $totalData['gift_ids'];
 
+        if ($response = $this->validateClientDiscount($request, $totalData['discountAmount'])) {
+            return $response;
+        }
+
         $subMethodService = app(PaymentSubMethodsService::class);
         $subResult = $subMethodService->apply($data['user_id'], $request, $data['final_before_sub']);
 
@@ -69,10 +74,62 @@ class CardPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'Payment completed using sub methods.',
+                        'data' => [
+                            'paid' => true,
+                            'amount' => $data['final_before_sub'],
+                            'payment_method' => $data['payment_method'],
+                        ],
+                    ]);
+                }
+
                 return view('frontend.payment-status.captured');
             } catch (\Exception $e) {
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+                }
                 return redirect()->back()->with('error', $e->getMessage());
             }
+        }
+
+        if ($request->expectsJson()) {
+            $tap = new TapPaymentService();
+            $redirectUrl = $this->buildApiRedirectUrl($request, $data['user_id'], $data['couponCode'] ?? '');
+            $charge = $tap->createCharge(
+                $remainingAmount,
+                [
+                    "name"         => auth()->user()->first_name . auth()->user()->last_name,
+                    "country_code" => "966",
+                    "phone"        => auth()->user()->mobile,
+                    "method"       => $data['payment_source'] ?? 'src_card',
+                ],
+                $redirectUrl
+            );
+
+            if (!isset($charge['transaction']['url'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Failed to create payment charge.',
+                    'data' => $charge,
+                ], 502);
+            }
+
+            $paymentUrl = $this->applyTapLanguage($charge['transaction']['url']);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Redirect to payment gateway.',
+                'data' => [
+                    'payment_url' => $paymentUrl,
+                    'charge_id' => $charge['id'] ?? null,
+                    'amount' => $remainingAmount,
+                    'payment_method' => $data['payment_method'],
+                    'discount_amount' => $data['discountAmount'] ?? 0,
+                ],
+            ]);
         }
 
         session(['tap_payment' => array_merge($data, ['amount' => $remainingAmount])]);
@@ -240,6 +297,69 @@ class CardPaymentStrategy
         }
 
         return true;
+    }
+
+    private function validateClientDiscount(Request $request, float $expectedDiscount)
+    {
+        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        if ($clientDiscountRaw === null || $clientDiscountRaw === '') {
+            return null;
+        }
+
+        if (!is_numeric($clientDiscountRaw)) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
+            }
+            return redirect()->back()->with('error', 'Invalid discount amount.');
+        }
+
+        $clientDiscount = (float) $clientDiscountRaw;
+        if (abs($clientDiscount - $expectedDiscount) > 0.01) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Discount amount mismatch.',
+                    'expected' => $expectedDiscount,
+                    'provided' => $clientDiscount,
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'Discount amount mismatch.');
+        }
+
+        return null;
+    }
+
+    private function buildApiRedirectUrl(Request $request, int $userId, ?string $couponCode): string
+    {
+        $params = array_filter([
+            'user_id' => $userId,
+            'coupon_code' => $couponCode,
+            'wallet' => $request->boolean('wallet') ? 1 : null,
+            'loyalty' => $request->boolean('loyalty') ? 1 : null,
+            'gift_code' => $request->get('gift_code'),
+            'payment_method' => 'card',
+            'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
+        ], function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        return URL::temporarySignedRoute(
+            'api.cart.payment.success',
+            now()->addMinutes(30),
+            $params
+        );
+    }
+
+    private function applyTapLanguage(string $paymentUrl): string
+    {
+        $lang = app()->getLocale() ?? 'en';
+        $paymentUrl = preg_replace('/([&?])language=[^&]+/', '$1language=' . $lang, $paymentUrl);
+
+        if (!str_contains($paymentUrl, 'language=')) {
+            $paymentUrl .= (str_contains($paymentUrl, '?') ? '&' : '?') . 'language=' . $lang;
+        }
+
+        return $paymentUrl;
     }
     
 }

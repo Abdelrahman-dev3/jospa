@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use App\Models\Setting;
 use App\Services\Payment\Strategies\CardPaymentStrategy;
 use App\Services\Payment\Strategies\TabbyPaymentStrategy;
 use App\Services\Payment\Strategies\TamaraPaymentStrategy;
@@ -15,8 +16,18 @@ class PaymentchanalController extends Controller
      */
     public function payment(Request $request)
     {
-        $method   = $request->paymentMethod;
+        $method   = $request->get('paymentMethod', $request->get('payment_method', 'card'));
         $typePage = $request->ids ? 'payment' : 'cart';
+
+        if (! $this->isPaymentMethodEnabled($method)) {
+            $message = __('messages.invalid_payment_method');
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => $message], 422);
+            }
+            throw ValidationException::withMessages([
+                'paymentMethod' => $message
+            ]);
+        }
 
         $strategy = match ($method) {
             'card'   => app(CardPaymentStrategy::class),
@@ -45,5 +56,16 @@ class PaymentchanalController extends Controller
     {
         session()->forget('tabby_payment');
         return view('frontend.payment-status.failed', ['message' => __('messages.payment_cancelled')]);
+    }
+
+    private function isPaymentMethodEnabled(string $method): bool
+    {
+        $map = [
+            'card' => (int) Setting::get('tap_payment_method', 1),
+            'tabby' => (int) Setting::get('tabby_payment_method', 1),
+            'tamara' => (int) Setting::get('tamara_payment_method', 1),
+        ];
+
+        return ($map[$method] ?? 0) === 1;
     }
 }

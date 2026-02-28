@@ -1,6 +1,9 @@
 <?php
 
 return [
+  'lbl_tap' => 'تاب (بطاقات)',
+  'lbl_tabby' => 'تابي',
+  'lbl_tamara' => 'تمارا',
   'lbl_razorpay' => 'Razorpay',
     'lbl_secret_key' => 'مفتاح السر',
     'lbl_app_key' => 'مفتاح التطبيق',

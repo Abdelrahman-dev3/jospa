@@ -37,7 +37,7 @@ class PaymentSubMethodsService
                         $wallet->save();
                         WalletHistory::create([
                         'datetime'         => now(),
-                        'user_id'          => auth()->id(),
+                        'user_id'          => $userId,
                         'activity_type'    => 'withdraw',
                         'activity_message' => 'Wallet balance withdraw',
                         'activity_data'    => json_encode([

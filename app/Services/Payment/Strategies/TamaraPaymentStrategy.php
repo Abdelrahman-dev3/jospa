@@ -7,8 +7,10 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Modules\Booking\Models\Booking;
 use App\Models\GiftCard;
+use App\Models\User;
 
 class TamaraPaymentStrategy
 {
@@ -41,6 +43,10 @@ class TamaraPaymentStrategy
         $data['tax'] = $totalData['tax'];
         $data['cart_ids'] = $totalData['cart_ids'];
         $data['gift_ids'] = $totalData['gift_ids'];
+
+        if ($response = $this->validateClientDiscount($request, $totalData['discountAmount'])) {
+            return $response;
+        }
         
         $subMethodService = app(PaymentSubMethodsService::class);
         $subResult = $subMethodService->apply($data['user_id'], $request, $data['final_before_sub']);
@@ -68,10 +74,49 @@ class TamaraPaymentStrategy
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'Payment completed using sub methods.',
+                        'data' => [
+                            'paid' => true,
+                            'amount' => $data['final_before_sub'],
+                            'payment_method' => $data['payment_method'],
+                        ],
+                    ]);
+                }
+
                 return view('frontend.payment-status.captured');
             } catch (\Exception $e) {
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+                }
                 return redirect()->back()->with('error', $e->getMessage());
             }
+        }
+
+        if ($request->expectsJson()) {
+            $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
+            try {
+                $paymentUrl = $this->createTamaraCheckout($remainingAmount, $merchantUrls);
+            } catch (\Exception $e) {
+                return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+            }
+            
+            if (!$paymentUrl) {
+                return response()->json(['status' => false, 'message' => 'Tamara payment not available'], 422);
+            }
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'Redirect to payment gateway.',
+                'data' => [
+                    'payment_url' => $paymentUrl,
+                    'amount' => $remainingAmount,
+                    'payment_method' => $data['payment_method'],
+                    'discount_amount' => $data['discountAmount'] ?? 0,
+                ],
+            ]);
         }
 
         session(['tamara_payment' => array_merge($data, ['amount' => $remainingAmount])]);
@@ -90,7 +135,7 @@ class TamaraPaymentStrategy
         return redirect()->away($paymentUrl);
     }
 
-    private function createTamaraCheckout(float $amount): string
+    private function createTamaraCheckout(float $amount, ?array $merchantUrlOverrides = null): string
     {
         $user = auth()->user();
         
@@ -137,7 +182,7 @@ class TamaraPaymentStrategy
                 'phone_number' => $user->mobile,
             ],
     
-            'merchant_url' => [
+            'merchant_url' => $merchantUrlOverrides ?? [
                 'success' => route('tamara.success'),
                 'failure' => route('tamara.failure'),
                 'cancel'  => route('tamara.cancel'),
@@ -174,11 +219,11 @@ class TamaraPaymentStrategy
     {
         $data = session('tamara_payment');
 
-        if (!$data || $data['user_id'] !== auth()->id()) {
+        if ($data && $data['user_id'] !== auth()->id()) {
             abort(403);
         }
 
-        $checkoutId = $request->checkout_id ?? $data['checkout_id'] ?? null;
+        $checkoutId = $request->checkout_id ?? ($data['checkout_id'] ?? null);
 
         if (!$checkoutId) {
             return redirect()->route('home')->with('error', 'Tamara checkout id missing');
@@ -199,32 +244,84 @@ class TamaraPaymentStrategy
             return view('frontend.payment-status.failed');
         }
 
-        if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+        if ($data) {
+            if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                session()->forget('tamara_payment');
+                return view('frontend.payment-status.captured');
+            }
+
+            app(PaymentFinalizerService::class)->finalizePayment(
+                auth()->id(),
+                $data['final_before_sub'],
+                $data['tax'],
+                $data['discountAmount'],
+                $data['page'],
+                $data['cart_ids'],
+                $data['gift_ids'],
+                $data['payment_method'] ?? "Sub Methods",
+                $data['couponCode'] ?? "",
+                true
+            );
+
+            app(PaymentSubMethodsService::class)->apply(
+                auth()->id(),
+                new Request($data['submethods']),
+                $data['final_before_sub'],
+                true
+            );
+
             session()->forget('tamara_payment');
+
+            return view('frontend.payment-status.captured');
+        }
+
+        $context = $this->resolveStatelessContext($request);
+        if (!$context) {
+            return view('frontend.payment-status.failed', ['message' => 'Invalid payment callback.']);
+        }
+
+        $user = User::find($context['user_id']);
+        if (!$user) {
+            return view('frontend.payment-status.failed', ['message' => 'User not found.']);
+        }
+
+        $calculator = app(PaymentCalculatorService::class);
+        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode']);
+        if (isset($totalData['error'])) {
+            return view('frontend.payment-status.failed', ['message' => $totalData['error']]);
+        }
+
+        if ($context['discount_amount'] !== null && ! $this->isClientDiscountMatching($context['discount_amount'], $totalData['discountAmount'])) {
+            return view('frontend.payment-status.failed', ['message' => 'Discount amount mismatch.']);
+        }
+
+        if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
             return view('frontend.payment-status.captured');
         }
 
         app(PaymentFinalizerService::class)->finalizePayment(
-            auth()->id(),
-            $data['final_before_sub'],
-            $data['tax'],
-            $data['discountAmount'],
-            $data['page'],
-            $data['cart_ids'],
-            $data['gift_ids'],
-            $data['payment_method'] ?? "Sub Methods",
-            $data['couponCode'] ?? "",
+            $user->id,
+            $totalData['total'],
+            $totalData['tax'],
+            $totalData['discountAmount'],
+            $context['page'],
+            $totalData['cart_ids'] ?? [],
+            $totalData['gift_ids'] ?? [],
+            'tamara',
+            $context['couponCode'] ?? "",
             true
         );
 
         app(PaymentSubMethodsService::class)->apply(
-            auth()->id(),
-            new Request($data['submethods']),
-            $data['final_before_sub'],
+            $user->id,
+            new Request([
+                'wallet' => $context['wallet'],
+                'loyalty' => $context['loyalty'],
+                'gift_code' => $context['gift_code'],
+            ]),
+            $totalData['total'],
             true
         );
-
-        session()->forget('tamara_payment');
 
         return view('frontend.payment-status.captured');
     }
@@ -268,6 +365,100 @@ class TamaraPaymentStrategy
         }
 
         return true;
+    }
+
+    private function validateClientDiscount(Request $request, float $expectedDiscount)
+    {
+        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        if ($clientDiscountRaw === null || $clientDiscountRaw === '') {
+            return null;
+        }
+
+        if (!is_numeric($clientDiscountRaw)) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
+            }
+            return redirect()->back()->with('error', 'Invalid discount amount.');
+        }
+
+        $clientDiscount = (float) $clientDiscountRaw;
+        if (abs($clientDiscount - $expectedDiscount) > 0.01) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Discount amount mismatch.',
+                    'expected' => $expectedDiscount,
+                    'provided' => $clientDiscount,
+                ], 422);
+            }
+            return redirect()->back()->with('error', 'Discount amount mismatch.');
+        }
+
+        return null;
+    }
+
+    private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
+    {
+        $params = array_filter([
+            'user_id' => $data['user_id'],
+            'page' => $typePage,
+            'coupon_code' => $data['couponCode'] ?? null,
+            'wallet' => $request->boolean('wallet') ? 1 : null,
+            'loyalty' => $request->boolean('loyalty') ? 1 : null,
+            'gift_code' => $request->get('gift_code'),
+            'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
+        ], function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        $successUrl = URL::temporarySignedRoute(
+            'tamara.success',
+            now()->addMinutes(30),
+            $params
+        );
+
+        return [
+            'success' => $successUrl,
+            'failure' => route('tamara.failure'),
+            'cancel'  => route('tamara.cancel'),
+        ];
+    }
+
+    private function resolveStatelessContext(Request $request): ?array
+    {
+        if (! $request->hasValidSignatureWhileIgnoring(['checkout_id', 'status', 'payment_id', 'order_id'])) {
+            return null;
+        }
+
+        $userId = (int) $request->get('user_id');
+        if ($userId <= 0) {
+            return null;
+        }
+
+        $discountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        $discount = null;
+        if ($discountRaw !== null && $discountRaw !== '' && is_numeric($discountRaw)) {
+            $discount = (float) $discountRaw;
+        }
+
+        return [
+            'user_id' => $userId,
+            'page' => $request->get('page', 'cart'),
+            'couponCode' => $request->get('coupon_code'),
+            'wallet' => $request->boolean('wallet'),
+            'loyalty' => $request->boolean('loyalty'),
+            'gift_code' => $request->get('gift_code'),
+            'discount_amount' => $discount,
+        ];
+    }
+
+    private function isClientDiscountMatching(?float $clientDiscount, float $expectedDiscount): bool
+    {
+        if ($clientDiscount === null) {
+            return true;
+        }
+
+        return abs($clientDiscount - $expectedDiscount) <= 0.01;
     }
 
 }

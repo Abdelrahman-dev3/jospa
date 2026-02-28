@@ -13,6 +13,7 @@ use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\PackageBookingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingCartController;
+use App\Http\Controllers\PaymentchanalController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SaloneBookController;
@@ -161,6 +162,7 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::post('/cart/products/{id}', [BookingCartController::class, 'addToCart']);
     Route::delete('/cart/{id}', [BookingCartController::class, 'destroy']);
     Route::post('/cart-pay', [BookingCartController::class, 'cartPay']);
+    Route::post('/payment-chanal', [PaymentchanalController::class, 'payment']);
     Route::get('/loyallety', [BookingCartController::class, 'balance']);
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::get('/details/{id}', [SaloneBookController::class, 'show']);

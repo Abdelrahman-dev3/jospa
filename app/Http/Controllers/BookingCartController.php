@@ -27,6 +27,7 @@ use App\Services\Payment\PaymentSubMethodsService;
 use App\Services\TapPaymentService;
 use Illuminate\Support\Facades\URL;
 use App\Models\User;
+use App\Models\Setting;
 
 
 
@@ -299,6 +300,18 @@ class BookingCartController extends Controller
         }
 
         $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
+        $paymentMethod = $this->getRequestedPaymentMethod($request);
+        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        $clientDiscount = null;
+        if ($clientDiscountRaw !== null && $clientDiscountRaw !== '') {
+            if (!is_numeric($clientDiscountRaw)) {
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
+                }
+                return view('frontend.payment-status.failed')->with('error', 'Invalid discount amount.');
+            }
+            $clientDiscount = (float) $clientDiscountRaw;
+        }
         $calculator = app(PaymentCalculatorService::class);
         $totalData = $calculator->calculateTotal('cart', $couponCode);
 
@@ -307,6 +320,21 @@ class BookingCartController extends Controller
                 return response()->json(['status' => false, 'message' => $totalData['error']], 422);
             }
             return view('frontend.payment-status.failed')->with('error', $totalData['error']);
+        }
+        
+        if ($clientDiscount !== null) {
+            $expectedDiscount = (float) $totalData['discountAmount'];
+            if (abs($clientDiscount - $expectedDiscount) > 0.01) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Discount amount mismatch.',
+                        'expected' => $expectedDiscount,
+                        'provided' => $clientDiscount,
+                    ], 422);
+                }
+                return view('frontend.payment-status.failed')->with('error', 'Discount amount mismatch.');
+            }
         }
 
         $subMethodService = app(PaymentSubMethodsService::class);
@@ -343,7 +371,7 @@ class BookingCartController extends Controller
             'cart',
             $totalData['cart_ids'] ?? [],
             $totalData['gift_ids'] ?? [],
-            'card',
+            $paymentMethod,
             $couponCode ?? '',
             true
         );
@@ -369,11 +397,38 @@ class BookingCartController extends Controller
         }
 
         $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
+        $paymentMethod = $this->getRequestedPaymentMethod($request);
+        if ($paymentMethod === 'card' && (int) Setting::get('tap_payment_method', 1) !== 1) {
+            return response()->json(['status' => false, 'message' => 'Payment method not available.'], 422);
+        }
+        if ($paymentMethod !== 'card') {
+            return app(\App\Http\Controllers\PaymentchanalController::class)->payment($request);
+        }
+        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
+        $clientDiscount = null;
+        if ($clientDiscountRaw !== null && $clientDiscountRaw !== '') {
+            if (!is_numeric($clientDiscountRaw)) {
+                return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
+            }
+            $clientDiscount = (float) $clientDiscountRaw;
+        }
         $calculator = app(PaymentCalculatorService::class);
         $totalData = $calculator->calculateTotal('cart', $couponCode);
 
         if (isset($totalData['error'])) {
             return response()->json(['status' => false, 'message' => $totalData['error']], 422);
+        }
+        
+        if ($clientDiscount !== null) {
+            $expectedDiscount = (float) $totalData['discountAmount'];
+            if (abs($clientDiscount - $expectedDiscount) > 0.01) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Discount amount mismatch.',
+                    'expected' => $expectedDiscount,
+                    'provided' => $clientDiscount,
+                ], 422);
+            }
         }
 
         $subMethodService = app(PaymentSubMethodsService::class);
@@ -445,6 +500,8 @@ class BookingCartController extends Controller
                     'payment_url' => $paymentUrl,
                     'charge_id' => $charge['id'] ?? null,
                     'amount' => $remainingAmount,
+                    'payment_method' => $paymentMethod,
+                    'discount_amount' => $totalData['discountAmount'] ?? 0,
                 ],
             ]);
         }
@@ -460,6 +517,8 @@ class BookingCartController extends Controller
             'wallet' => $request->boolean('wallet') ? 1 : null,
             'loyalty' => $request->boolean('loyalty') ? 1 : null,
             'gift_code' => $request->get('gift_code'),
+            'payment_method' => $this->getRequestedPaymentMethod($request),
+            'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
         ], function ($value) {
             return $value !== null && $value !== '';
         });
@@ -495,7 +554,7 @@ class BookingCartController extends Controller
             return $user;
         }
 
-        if (!URL::hasValidSignature($request)) {
+        if (! $request->hasValidSignatureWhileIgnoring(['tap_id', 'payment_id', 'checkout_id', 'status', 'payment_method'])) {
             return null;
         }
 
@@ -653,5 +712,12 @@ class BookingCartController extends Controller
             'status' => 'success',
             'message' => __('messages.cart_product_added'),
         ]);
+    }
+
+    private function getRequestedPaymentMethod(Request $request): string
+    {
+        $method = $request->get('payment_method') ?? $request->get('paymentMethod') ?? 'card';
+        $method = is_string($method) ? trim($method) : '';
+        return $method !== '' ? $method : 'card';
     }
 }

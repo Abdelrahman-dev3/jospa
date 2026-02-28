@@ -828,6 +828,33 @@ return [
 
         'elements' => [
             [
+                'type' => 'checkbox',
+                'data' => 'tap_payment_method',
+                'name' => 'tap_payment_method',
+                'label' => 'Tap',
+                'rules' => '',
+                'class' => '',
+                'value' => '1',
+            ],
+            [
+                'type' => 'checkbox',
+                'data' => 'tabby_payment_method',
+                'name' => 'tabby_payment_method',
+                'label' => 'Tabby',
+                'rules' => '',
+                'class' => '',
+                'value' => '1',
+            ],
+            [
+                'type' => 'checkbox',
+                'data' => 'tamara_payment_method',
+                'name' => 'tamara_payment_method',
+                'label' => 'Tamara',
+                'rules' => '',
+                'class' => '',
+                'value' => '1',
+            ],
+            [
                 'type' => 'checkbox', // input fields type
                 'data' => 'razorpayPayment', // data type, string, int, boolean
                 'name' => 'razor_payment_method', // unique name for field
