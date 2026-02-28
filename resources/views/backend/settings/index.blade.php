@@ -8,7 +8,7 @@
 
 <script>
     if (window.location.hash === '' || window.location.hash === '#/') {
-        window.location.href = '/app/settings#/commission';
+        window.location.href = '/app/settings#/payment-method';
     }
 </script>
 

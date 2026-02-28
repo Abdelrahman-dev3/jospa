@@ -37,6 +37,7 @@
         :wallet="$wallet->amount ?? 0"
         :loyalty-balance="$loyaltyBalance ?? 0"
         :branches="$branches"  
+        :defaultPaymentMethod="$defaultPaymentMethod"  
     />
     <div class="position-relative" style="height: 19vh;"></div>
     <!-- Footer -->
