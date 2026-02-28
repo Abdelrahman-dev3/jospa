@@ -7,6 +7,7 @@
         'loyaltyBalance' => 0,
         'branches' => [], 
         'defaultPaymentMethod' => '',
+        'paymentMethods' => [],
     ])
   <style>
     :root{

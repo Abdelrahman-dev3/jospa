@@ -38,6 +38,7 @@
         :loyalty-balance="$loyaltyBalance ?? 0"
         :branches="$branches"  
         :defaultPaymentMethod="$defaultPaymentMethod"  
+        :paymentMethods="$paymentMethods"  
     />
     <div class="position-relative" style="height: 19vh;"></div>
     <!-- Footer -->

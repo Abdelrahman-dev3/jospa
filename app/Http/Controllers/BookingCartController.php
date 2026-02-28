@@ -219,6 +219,27 @@ class BookingCartController extends Controller
         ]);
     }
 
+    public function walletLoyaltyBalance(Request $request)
+    {
+        $user = $request->user();
+
+        $wallet = Wallet::where('user_id', $user->id)->where('status', 1)->first();
+        $walletBalance = $wallet ? (float) $wallet->amount : 0.0;
+
+        $points = (int) (LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0);
+        $ratePerPoint = (float) (Setting::get('point_value') ?? 0.5);
+        $loyaltyBalance = $points * $ratePerPoint;
+
+        return response()->json([
+            'user_id' => $user->id,
+            'wallet_balance' => $walletBalance,
+            'loyalty_points' => $points,
+            'loyalty_balance' => $loyaltyBalance,
+            'loyalty_rate' => $ratePerPoint,
+        ]);
+    }
+
+
     public function handlePaymentResult(Request $request)
     {
         $tapId = $request->get('tap_id');

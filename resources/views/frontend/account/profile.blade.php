@@ -186,21 +186,34 @@
     </div>
 
     <div class="col-lg-4">
+      @php
+        $paymentMethods = [
+          'card' => (int) \App\Models\Setting::get('tap_payment_method', 1),
+          'tabby' => (int) \App\Models\Setting::get('tabby_payment_method', 1),
+          'tamara' => (int) \App\Models\Setting::get('tamara_payment_method', 1),
+        ];
+      @endphp
       <div class="payment-box shadow-sm">
         <h6 class="mb-5" style="font-weight: bold;">{{ __('messages.payment_methods') }}</h6>
         <div class="row g-3 text-center">
-          <div class="col-6">
-            <img src="{{asset('images/icons/visa.png')}}" alt="Visa" class="img-fluid  rounded p-3" style="background: #F9F6F0;">
-          </div>
-          <div class="col-6">
-            <img src="{{asset('images/icons/mada.png')}}" alt="Mada" class="img-fluid  rounded p-3" style="background: #F9F6F0;">
-          </div>
-          <div class="col-6">
-            <img src="{{asset('images/icons/tamara.png')}}" alt="تمارا" class="img-fluid border rounded p-3" style="background: #F9F6F0;">
-          </div>
-          <div class="col-6">
-            <img src="{{asset('images/icons/tabby.png')}}" alt="tabby" class="img-fluid  rounded p-3" style="background: #F9F6F0;">
-          </div>
+          @if(($paymentMethods['card'] ?? 0) === 1)
+            <div class="col-6">
+              <img src="{{asset('images/icons/visa.png')}}" alt="Visa" class="img-fluid  rounded p-3" style="background: #F9F6F0;">
+            </div>
+            <div class="col-6">
+              <img src="{{asset('images/icons/mada.png')}}" alt="Mada" class="img-fluid  rounded p-3" style="background: #F9F6F0;">
+            </div>
+          @endif
+          @if(($paymentMethods['tamara'] ?? 0) === 1)
+            <div class="col-6">
+              <img src="{{asset('images/icons/tamara.png')}}" alt="تمارا" class="img-fluid border rounded p-3" style="background: #F9F6F0;">
+            </div>
+          @endif
+          @if(($paymentMethods['tabby'] ?? 0) === 1)
+            <div class="col-6">
+              <img src="{{asset('images/icons/tabby.png')}}" alt="tabby" class="img-fluid  rounded p-3" style="background: #F9F6F0;">
+            </div>
+          @endif
         </div>
       </div>
     </div>

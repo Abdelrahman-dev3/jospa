@@ -829,7 +829,7 @@ return [
         'elements' => [
             [
                 'type' => 'checkbox',
-                'data' => 'tap_payment_method',
+                'data' => 'boolean',
                 'name' => 'tap_payment_method',
                 'label' => 'Tap',
                 'rules' => '',
@@ -838,7 +838,7 @@ return [
             ],
             [
                 'type' => 'checkbox',
-                'data' => 'tabby_payment_method',
+                'data' => 'boolean',
                 'name' => 'tabby_payment_method',
                 'label' => 'Tabby',
                 'rules' => '',
@@ -847,7 +847,7 @@ return [
             ],
             [
                 'type' => 'checkbox',
-                'data' => 'tamara_payment_method',
+                'data' => 'boolean',
                 'name' => 'tamara_payment_method',
                 'label' => 'Tamara',
                 'rules' => '',
