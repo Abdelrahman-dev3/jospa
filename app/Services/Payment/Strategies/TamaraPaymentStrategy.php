@@ -60,6 +60,9 @@ class TamaraPaymentStrategy
         if ($remainingAmount <= 0) {
             try {
                 $finalizer = app(PaymentFinalizerService::class);
+                $subPayments = array_merge($subResult ?? [], [
+                    'gift_code' => $request->get('gift_code'),
+                ]);
                 $invoiceId = $finalizer->finalizePayment(
                     $data['user_id'],
                     $data['final_before_sub'],
@@ -70,7 +73,8 @@ class TamaraPaymentStrategy
                     $totalData['gift_ids'] ?? [],
                     $data['payment_method'] ?? "Sub Methods",
                     $data['couponCode'] ?? "",
-                    true
+                    true,
+                    $subPayments
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
@@ -256,6 +260,16 @@ class TamaraPaymentStrategy
                 return $this->respondSuccess($request, 'Payment already finalized.');
             }
 
+            $subMethodService = app(PaymentSubMethodsService::class);
+            $fakeRequest = new Request($data['submethods']);
+            $subResult = $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub']);
+            if (isset($subResult['error'])) {
+                session()->forget('tamara_payment');
+                return $this->respondFailure($request, $subResult['error'], 422);
+            }
+            $subPayments = array_merge($subResult ?? [], [
+                'gift_code' => $data['submethods']['gift_code'] ?? null,
+            ]);
             app(PaymentFinalizerService::class)->finalizePayment(
                 auth()->id(),
                 $data['final_before_sub'],
@@ -266,12 +280,13 @@ class TamaraPaymentStrategy
                 $data['gift_ids'],
                 $data['payment_method'] ?? "Sub Methods",
                 $data['couponCode'] ?? "",
-                true
+                true,
+                $subPayments
             );
 
-            app(PaymentSubMethodsService::class)->apply(
+            $subMethodService->apply(
                 auth()->id(),
-                new Request($data['submethods']),
+                $fakeRequest,
                 $data['final_before_sub'],
                 true
             );
@@ -305,6 +320,19 @@ class TamaraPaymentStrategy
             return $this->respondSuccess($request, 'Payment already finalized.');
         }
 
+        $subMethodService = app(PaymentSubMethodsService::class);
+        $fakeRequest = new Request([
+            'wallet' => $context['wallet'],
+            'loyalty' => $context['loyalty'],
+            'gift_code' => $context['gift_code'],
+        ]);
+        $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
+        if (isset($subResult['error'])) {
+            return $this->respondFailure($request, $subResult['error'], 422);
+        }
+        $subPayments = array_merge($subResult ?? [], [
+            'gift_code' => $context['gift_code'],
+        ]);
         app(PaymentFinalizerService::class)->finalizePayment(
             $user->id,
             $totalData['total'],
@@ -315,16 +343,13 @@ class TamaraPaymentStrategy
             $totalData['gift_ids'] ?? [],
             'tamara',
             $context['couponCode'] ?? "",
-            true
+            true,
+            $subPayments
         );
 
-        app(PaymentSubMethodsService::class)->apply(
+        $subMethodService->apply(
             $user->id,
-            new Request([
-                'wallet' => $context['wallet'],
-                'loyalty' => $context['loyalty'],
-                'gift_code' => $context['gift_code'],
-            ]),
+            $fakeRequest,
             $totalData['total'],
             true
         );

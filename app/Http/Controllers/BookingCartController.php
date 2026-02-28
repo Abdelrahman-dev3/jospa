@@ -300,7 +300,9 @@ class BookingCartController extends Controller
             }
 
             $this->addLoyaltyPoints($user->id, $charge['amount']);
-            $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids);
+            $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
+            $giftCode = $request->get('gift_code');
+            $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode);
             $this->paymentSuccess($cartIds, $tapId, 'card');
 
             Booking::where('user_id', $user->id)
@@ -384,6 +386,9 @@ class BookingCartController extends Controller
         }
 
         $finalizer = app(PaymentFinalizerService::class);
+        $subPayments = array_merge($subResult ?? [], [
+            'gift_code' => $request->get('gift_code'),
+        ]);
         $finalizer->finalizePayment(
             $user->id,
             $totalData['total'],
@@ -394,7 +399,8 @@ class BookingCartController extends Controller
             $totalData['gift_ids'] ?? [],
             $paymentMethod,
             $couponCode ?? '',
-            true
+            true,
+            $subPayments
         );
         $subMethodService->apply($user->id, $request, $totalData['total'], true);
 
@@ -463,6 +469,9 @@ class BookingCartController extends Controller
 
         if ($remainingAmount <= 0) {
             $finalizer = app(PaymentFinalizerService::class);
+            $subPayments = array_merge($subResult ?? [], [
+                'gift_code' => $request->get('gift_code'),
+            ]);
             $finalizer->finalizePayment(
                 $user->id,
                 $totalData['total'],
@@ -473,7 +482,8 @@ class BookingCartController extends Controller
                 $totalData['gift_ids'] ?? [],
                 'sub_methods',
                 $couponCode ?? '',
-                true
+                true,
+                $subPayments
             );
             $subMethodService->apply($user->id, $request, $totalData['total'], true);
 
@@ -607,12 +617,14 @@ class BookingCartController extends Controller
         $loyalty->save();
     }
 
-    private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds , $gift_ids = null)
+    private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds , $gift_ids = null, $couponCode = null, $giftCode = null)
     {
         Invoice::create([
             'user_id' => $userId,
             'cart_ids' => json_encode($cartIds),
             'gift_ids' => json_encode($gift_ids),
+            'coupon_code' => $couponCode ?: null,
+            'gift_code' => $giftCode ?: null,
             'discount_amount' => $discountAmount,
             'loyalty_points_discount' => $loyaltyDiscount,
             'final_total' => $finalTotal,

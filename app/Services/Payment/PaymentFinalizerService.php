@@ -43,9 +43,10 @@ class PaymentFinalizerService
         array $giftIds = [],
         string $paymentMethod ,
         string $couponCode ,
-        bool $submethodsApplied = false
+        bool $submethodsApplied = false,
+        array $subPayments = []
     ): int {
-        DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode) {
+        DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments) {
             $product_ids = [];
             
             if($pageType == 'cart'){
@@ -63,7 +64,7 @@ class PaymentFinalizerService
 
 
             // Create Invoice
-            $invoiceId = $this->storeInvoice($userId, $discountAmount,$tax ,$paidAmount, $cartIds , $giftIds , $product_ids , $couponCode);
+            $invoiceId = $this->storeInvoice($userId, $discountAmount,$tax ,$paidAmount, $cartIds , $giftIds , $product_ids , $couponCode, $subPayments);
 
             //  Create Booking Transactions
             $this->createTransactions( $cartIds ,  'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
@@ -113,13 +114,18 @@ class PaymentFinalizerService
     /**
      * Store invoice
      */
-    private function storeInvoice(int $userId, float $discountAmount,float $tax , float $finalTotal, array $cartIds, array $giftIds, array $product_ids , string $couponCode): int
+    private function storeInvoice(int $userId, float $discountAmount,float $tax , float $finalTotal, array $cartIds, array $giftIds, array $product_ids , string $couponCode, array $subPayments = []): int
     {
+        $giftCode = $subPayments['gift_code'] ?? null;
+        $giftAmount = (float) ($subPayments['used_gift'] ?? 0);
         $invoice = Invoice::create([
             'user_id' => $userId,
             'cart_ids' => json_encode($cartIds),
             'gift_ids' => json_encode($giftIds),
             'product_ids' => $product_ids,
+            'coupon_code' => $couponCode ?: null,
+            'gift_code' => $giftCode ?: null,
+            'gift_amount' => $giftAmount,
             'discount_amount' => $discountAmount,
             'taxs_service' => $tax,
             'loyalty_points_discount' => 0,

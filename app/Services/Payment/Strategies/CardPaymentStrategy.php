@@ -61,6 +61,9 @@ class CardPaymentStrategy
         if ($remainingAmount <= 0) {
             try {
                 $finalizer = app(PaymentFinalizerService::class);
+                $subPayments = array_merge($subResult ?? [], [
+                    'gift_code' => $request->get('gift_code'),
+                ]);
                 $invoiceId = $finalizer->finalizePayment(
                     $data['user_id'],
                     $data['final_before_sub'],
@@ -71,7 +74,8 @@ class CardPaymentStrategy
                     $totalData['gift_ids'] ?? [],
                     $data['payment_method'] ?? "Sub Methods",
                     $data['couponCode'] ?? "",
-                    true
+                    true,
+                    $subPayments
                 );
                 $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
 
@@ -245,6 +249,13 @@ class CardPaymentStrategy
                     'loyalty'   => $data['submethods']['loyalty'] ?? false,
                     'gift_code' => $data['submethods']['gift_code'] ?? null,
                 ]);
+                $subResult = $subMethodService->apply($data['user_id'], $fakeRequest, $data['final_before_sub']);
+                if (isset($subResult['error'])) {
+                    return $failed($subResult['error'], '', null);
+                }
+                $subPayments = array_merge($subResult ?? [], [
+                    'gift_code' => $data['submethods']['gift_code'] ?? null,
+                ]);
                 $finalizer->finalizePayment(
                     $data['user_id'],
                     $data['final_before_sub'],
@@ -255,7 +266,8 @@ class CardPaymentStrategy
                     $data['gift_ids'] ?? [],
                     $data['payment_method'] ?? "Sub Methods",
                     $data['couponCode'] ?? "",
-                    true
+                    true,
+                    $subPayments
                 );
                 $subMethodService->apply($data['user_id'], $fakeRequest, $data['final_before_sub'] , true);
                 session()->forget('tap_payment');
