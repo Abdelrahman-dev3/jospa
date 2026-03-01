@@ -427,13 +427,23 @@ use App\Models\GiftCard;
         <div class="invoice-list">
             @forelse($invoices as $invoice)
                 @php
-                    $cartIds = $invoice->cart_ids ?? [];
+                    $cartIds = $invoice->cart_ids;
+                    
+                    if (is_string($cartIds)) {
+                        $cartIds = json_decode($cartIds, true);
+                        if (is_string($cartIds)) $cartIds = json_decode($cartIds, true);
+                    }
+                    $cartIds = is_array($cartIds) ? $cartIds : [];
                     $bookings = Modules\Booking\Models\Booking::whereIn('id', $cartIds)
                         ->with('services.employee', 'branch')
                         ->get();
                     $giftIds = $invoice->gift_ids ?? [];
+                    if (is_string($giftIds)) {
+                        $giftIds = json_decode($giftIds, true);
+                        if (is_string($giftIds)) $giftIds = json_decode($giftIds, true); 
+                    }
                     $bookingsGift = GiftCard::whereIn('id', $giftIds)->get();
-                    $products = $invoice->products;
+                    $productItems = $invoice->product_items;
                     $couponCode = $invoice->coupon_code ?? null;
                     $couponLabel = $couponCode ?: ((float) $invoice->discount_amount > 0 ? 'Applied' : '---');
                 @endphp
@@ -531,12 +541,19 @@ use App\Models\GiftCard;
 
                         <div class="detail-card">
                             <h5>Products</h5>
-                            @forelse($products as $product)
+                            @forelse($productItems as $item)
+                                @php
+                                    $product = $item->product;
+                                    $qty = (int) ($item->qty ?? 0);
+                                    $unit = (float) ($item->unit_price ?? 0);
+                                    $total = (float) ($item->total_price ?? ($unit * $qty));
+                                @endphp
                                 <div class="line-item">
                                     <div>
-                                        <div class="line-title">{{ $product->name }}</div>
+                                        <div class="line-title">{{ $product->name ?? 'Product' }}</div>
+                                        <div class="line-meta">Qty: {{ $qty }} | Unit: {{ number_format($unit, 2) }} SR</div>
                                     </div>
-                                    <div class="line-amount">{{ number_format($product->price ?? $product->min_price ?? $product->max_price ?? 0, 2) }} SR</div>
+                                    <div class="line-amount">{{ number_format($total, 2) }} SR</div>
                                 </div>
                             @empty
                                 <div class="line-meta">No products linked.</div>

@@ -56,5 +56,21 @@ class Invoice extends Model
         ->filter();
     }
 
+    public function getProductItemsAttribute()
+    {
+        if (empty($this->product_ids)) {
+            return collect();
+        }
+
+        return OrderGroup::with([
+            'order.orderItems.product'
+        ])
+        ->whereIn('id', $this->product_ids)
+        ->get()
+        ->flatMap(function ($group) {
+            return optional($group->order)->orderItems ?? [];
+        });
+    }
+
 }
 
