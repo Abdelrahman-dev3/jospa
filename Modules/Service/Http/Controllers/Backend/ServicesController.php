@@ -117,8 +117,14 @@ class ServicesController extends Controller
             });
         }
 
-        if (isset($category_id)) {
-            $data->where('category_id', $category_id);
+        if (!empty($category_id)) {
+            $category_ids = is_array($category_id)
+                ? $category_id
+                : preg_split('/[,\s]+/', (string) $category_id, -1, PREG_SPLIT_NO_EMPTY);
+
+            if (!empty($category_ids)) {
+                $data->whereIn('category_id', $category_ids);
+            }
         }
 
         if (isset($branch_id)) {

@@ -115,8 +115,19 @@
             </div>
             <div class="form-group col-md-12">
               <label class="form-label" for="category_id">Select Category</label>
-              <Multiselect id="category_id" v-model="category_id" :value="category_id" placeholder="Select Category"
-                v-bind="singleSelectOption" :options="categories.options" @select="categorySelect" class="form-group">
+              <Multiselect
+                id="category_id"
+                v-model="category_id"
+                :multiple="true"
+                :value="category_id"
+                placeholder="Select Category"
+                v-bind="multiSelectOption"
+                :options="categories.options"
+                @select="categorySelect"
+                @deselect="categorySelect"
+                @clear="categorySelect"
+                class="form-group"
+              >
               </Multiselect>
               <span v-if="errorMessages['category_id']">
                 <ul class="text-danger">
@@ -384,7 +395,7 @@ const defaultData = () => {
     profile_image: '',
     status: 1,
     branch_id: 0,
-    category_id: '',
+    category_id: [],
     service_id: [],
     commission_id: '',
     show_in_calender: 1,
@@ -403,6 +414,12 @@ const defaultData = () => {
 
 
 
+const normalizeCategoryIds = (value) => {
+  if (Array.isArray(value)) return value
+  if (value === null || value === undefined || value === '') return []
+  return [value]
+}
+
 //  Reset Form
 const setFormData = (data) => {
   ImageViewer.value = data.profile_image
@@ -419,7 +436,7 @@ const setFormData = (data) => {
       profile_image: data.profile_image,
       branch_id: data.branch_id,
       shift_id: data.shift_id,
-      category_id: data.category_id ?? '',
+      category_id: normalizeCategoryIds(data.category_id),
       service_id: data.service_id,
       commission_id: data.commission_id,
       status: data.status ? true : false,

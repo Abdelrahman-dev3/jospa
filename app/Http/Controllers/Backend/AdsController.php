@@ -27,7 +27,8 @@ class AdsController extends Controller
         return view('backend.Ads.index_datatable' , compact('home' , 'services' , 'packages' , 'shop' , 'gift'));
     }
     
-    public function store(Request $request){
+    public function store(Request $request)
+    {
         $request->validate([
             'page'   => 'required',
             'images' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -67,7 +68,8 @@ class AdsController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function update_link(Request $request){
+    public function update_link(Request $request)
+    {
         $request->validate([
             'id' => 'required|exists:ads,id',
             'link' => 'nullable|url|max:255',

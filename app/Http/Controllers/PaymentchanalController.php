@@ -16,7 +16,7 @@ class PaymentchanalController extends Controller
      */
     public function payment(Request $request)
     {
-        $method   = $request->get('paymentMethod', $request->get('payment_method', 'card'));
+        $method   = $request->get('paymentMethod');
         $typePage = $request->ids ? 'payment' : 'cart';
 
         if (! $this->isPaymentMethodEnabled($method)) {

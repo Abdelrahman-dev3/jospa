@@ -11,7 +11,6 @@ use Modules\Booking\Models\Booking;
 use App\Models\GiftCard;
 use Illuminate\Support\Facades\URL;
 
-
 class CardPaymentStrategy
 {
     public function pay(Request $request, string $typePage)
@@ -36,23 +35,31 @@ class CardPaymentStrategy
         $calculator = app(PaymentCalculatorService::class);
         $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon);
         if (isset($totalData['error'])) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $totalData['error'],
+                ], 422);
+            }
             return redirect()->back()->with('error', $totalData['error']);
         }
-        
+
         $data['final_before_sub'] = $totalData['total'];
         $data['discountAmount'] = $totalData['discountAmount'];
         $data['tax'] = $totalData['tax'];
         $data['cart_ids'] = $totalData['cart_ids'];
         $data['gift_ids'] = $totalData['gift_ids'];
 
-        if ($response = $this->validateClientDiscount($request, $totalData['discountAmount'])) {
-            return $response;
-        }
-
         $subMethodService = app(PaymentSubMethodsService::class);
         $subResult = $subMethodService->apply($data['user_id'], $request, $data['final_before_sub']);
 
         if (isset($subResult['error'])) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => $subResult['error'],
+                ], 422);
+            }
             return redirect()->back()->with('error', $subResult['error']);
         }
 
@@ -310,36 +317,6 @@ class CardPaymentStrategy
         }
 
         return true;
-    }
-
-    private function validateClientDiscount(Request $request, float $expectedDiscount)
-    {
-        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
-        if ($clientDiscountRaw === null || $clientDiscountRaw === '') {
-            return null;
-        }
-
-        if (!is_numeric($clientDiscountRaw)) {
-            if ($request->expectsJson()) {
-                return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
-            }
-            return redirect()->back()->with('error', 'Invalid discount amount.');
-        }
-
-        $clientDiscount = (float) $clientDiscountRaw;
-        if (abs($clientDiscount - $expectedDiscount) > 0.01) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Discount amount mismatch.',
-                    'expected' => $expectedDiscount,
-                    'provided' => $clientDiscount,
-                ], 422);
-            }
-            return redirect()->back()->with('error', 'Discount amount mismatch.');
-        }
-
-        return null;
     }
 
     private function buildApiRedirectUrl(Request $request, int $userId, ?string $couponCode): string
