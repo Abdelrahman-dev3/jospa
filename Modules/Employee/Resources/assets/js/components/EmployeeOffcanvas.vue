@@ -118,10 +118,9 @@
               <Multiselect
                 id="category_id"
                 v-model="category_id"
-                :multiple="true"
                 :value="category_id"
                 placeholder="Select Category"
-                v-bind="multiSelectOption"
+                v-bind="categorySelectOption"
                 :options="categories.options"
                 @select="categorySelect"
                 @deselect="categorySelect"
@@ -222,7 +221,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, BRANCH_LIST, SHIFT_LIST, CATEGORY_LIST, SERVICE_LIST, COMMISSION_LIST, EMAIL_UNIQUE_CHECK } from '../constant/employee'
 import { useField, useForm } from 'vee-validate'
 
@@ -258,6 +257,12 @@ const multiSelectOption = ref({
   mode: 'tags',
   closeOnSelect: true,
   searchable: true,
+})
+const categorySelectOption = ref({
+  mode: 'tags',
+  closeOnSelect: false,
+  searchable: true,
+  hideSelected: true,
 })
 
 const { getRequest, storeRequest, updateRequest } = useRequest()
@@ -331,7 +336,8 @@ const shiftSelect = () => {
   loadServicesForCurrentFilters({ resetSelected: true })
 }
 
-const categorySelect = () => {
+const categorySelect = async () => {
+  await nextTick()
   loadServicesForCurrentFilters({ resetSelected: true })
 }
 
