@@ -122,9 +122,9 @@
                 placeholder="Select Category"
                 v-bind="categorySelectOption"
                 :options="categories.options"
-                @select="categorySelect"
-                @deselect="categorySelect"
-                @clear="categorySelect"
+                @select="handleCategorySelect"
+                @deselect="handleCategoryDeselect"
+                @clear="handleCategoryClear"
                 class="form-group"
               >
               </Multiselect>
@@ -308,24 +308,66 @@ const shift  = ref({ options: [], list: [] })
 const categories = ref({ options: [], list: [] })
 const commissions = ref({ options: [], list: [] })
 const services = ref({ options: [], list: [] })
+const serviceCategoryMap = ref({})
 
 onMounted(() => {
   setFormData(defaultData())
 })
 
-const loadServicesForCurrentFilters = ({ resetSelected = false } = {}) => {
+const normalizeSingleId = (value) => {
+  if (value === null || value === undefined || value === '') return null
+
+  const parsedValue = Number(value)
+
+  return Number.isNaN(parsedValue) ? value : parsedValue
+}
+
+const normalizeServiceIds = (value) => {
+  if (Array.isArray(value)) return value.map((item) => normalizeSingleId(item)).filter((item) => item !== null)
+  if (value === null || value === undefined || value === '') return []
+
+  return [normalizeSingleId(value)].filter((item) => item !== null)
+}
+
+const rememberServiceCategories = (serviceList = []) => {
+  serviceList.forEach((service) => {
+    const serviceId = normalizeSingleId(service.id)
+    const categoryId = normalizeSingleId(service.category_id)
+
+    if (serviceId !== null && categoryId !== null) {
+      serviceCategoryMap.value[serviceId] = categoryId
+    }
+  })
+}
+
+const removeServicesForCategories = (removedCategoryIds = []) => {
+  const categoryIds = removedCategoryIds.map((item) => normalizeSingleId(item)).filter((item) => item !== null)
+
+  if (!categoryIds.length) {
+    return
+  }
+
+  service_id.value = normalizeServiceIds(service_id.value).filter((selectedServiceId) => {
+    return !categoryIds.includes(serviceCategoryMap.value[normalizeSingleId(selectedServiceId)])
+  })
+}
+
+const loadServicesForCurrentFilters = async ({ resetSelected = false } = {}) => {
   if (resetSelected) {
     service_id.value = []
   }
 
-  useSelect({
+  const data = await useSelect({
     url: SERVICE_LIST,
     data: {
       branch_id: branch_id.value,
       shift_id: shift_id.value,
       category_id: category_id.value
     }
-  }, { value: 'id', label: 'name' }).then((data) => (services.value = data))
+  }, { value: 'id', label: 'name' })
+
+  services.value = data
+  rememberServiceCategories(data.list)
 }
 
 const branchSelect = () => {
@@ -336,9 +378,21 @@ const shiftSelect = () => {
   loadServicesForCurrentFilters({ resetSelected: true })
 }
 
-const categorySelect = async () => {
+const handleCategorySelect = async () => {
   await nextTick()
-  loadServicesForCurrentFilters({ resetSelected: true })
+  loadServicesForCurrentFilters()
+}
+
+const handleCategoryDeselect = async (removedCategory) => {
+  removeServicesForCategories([removedCategory?.value ?? removedCategory])
+  await nextTick()
+  loadServicesForCurrentFilters()
+}
+
+const handleCategoryClear = async () => {
+  service_id.value = []
+  await nextTick()
+  loadServicesForCurrentFilters()
 }
 
 // File Upload Function
@@ -388,6 +442,7 @@ const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile:
 // Default FORM DATA
 const defaultData = () => {
   errorMessages.value = {}
+  serviceCategoryMap.value = {}
   return {
     id: '',
     first_name: '',
@@ -421,13 +476,14 @@ const defaultData = () => {
 
 
 const normalizeCategoryIds = (value) => {
-  if (Array.isArray(value)) return value
+  if (Array.isArray(value)) return value.map((item) => normalizeSingleId(item)).filter((item) => item !== null)
   if (value === null || value === undefined || value === '') return []
-  return [value]
+  return [normalizeSingleId(value)].filter((item) => item !== null)
 }
 
 //  Reset Form
 const setFormData = (data) => {
+  serviceCategoryMap.value = {}
   ImageViewer.value = data.profile_image
   resetForm({
     values: {
@@ -443,7 +499,7 @@ const setFormData = (data) => {
       branch_id: data.branch_id,
       shift_id: data.shift_id,
       category_id: normalizeCategoryIds(data.category_id),
-      service_id: data.service_id,
+      service_id: normalizeServiceIds(data.service_id),
       commission_id: data.commission_id,
       status: data.status ? true : false,
       show_in_calender: data.show_in_calender,

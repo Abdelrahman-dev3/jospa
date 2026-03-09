@@ -445,18 +445,11 @@ class EmployeesController extends Controller
         }
 
         if ($request->has('service_id')) {
-            if ($request->service_id !== null) {
-                $services = explode(',', $request->service_id);
-
-                foreach ($services as $value) {
-                    $service_data = [
-
-                        'employee_id' => $employee_id,
-                        'service_id' => $value,
-
-                    ];
-                    ServiceEmployee::create($service_data);
-                }
+            foreach ($this->extractServiceIds($request->service_id) as $serviceId) {
+                ServiceEmployee::create([
+                    'employee_id' => $employee_id,
+                    'service_id' => $serviceId,
+                ]);
             }
         }
         if (isset($request->commission_id) && $request->has('commission_id')) {
@@ -496,7 +489,7 @@ class EmployeesController extends Controller
      */
     public function edit($id)
     {
-        $data = User::role('employee')->with('branches', 'services', 'commissions', 'profile')->findOrFail($id);
+        $data = User::role('employee')->with('branches', 'services.service:id,category_id', 'commissions', 'profile')->findOrFail($id);
         if (!is_null($data)) {
             $custom_field_data = $data->withCustomFields();
             $data['custom_field_data'] = collect($custom_field_data->custom_fields_data)
@@ -512,7 +505,14 @@ class EmployeesController extends Controller
         
         $data['show_in_home_booking'] = $data->show_in_home_booking;
 
-        $data['service_id'] = $data->services->pluck('service_id') ?? [];
+        $data['service_id'] = $data->services->pluck('service_id')->values()->all();
+
+        $data['category_id'] = $data->services
+            ->pluck('service.category_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         $data['commission_id'] = $data->commissions()->first()->commission_id ?? null;
 
@@ -577,8 +577,6 @@ class EmployeesController extends Controller
 
         BranchEmployee::where('employee_id', $id)->delete();
 
-        ServiceEmployee::where('employee_id', $id)->delete();
-
         EmployeeCommission::where('employee_id', $id)->delete();
 
         $roles = ['employee'];
@@ -608,18 +606,20 @@ class EmployeesController extends Controller
         }
 
         if ($request->has('service_id')) {
-            if ($request->service_id !== null) {
-                $services = explode(',', $request->service_id);
+            $serviceIds = $this->extractServiceIds($request->service_id);
+            $serviceQuery = ServiceEmployee::where('employee_id', $employee_id);
 
-                foreach ($services as $value) {
-                    $service_data = [
+            if (! empty($serviceIds)) {
+                $serviceQuery->whereNotIn('service_id', $serviceIds);
+            }
 
-                        'employee_id' => $employee_id,
-                        'service_id' => $value,
+            $serviceQuery->delete();
 
-                    ];
-                    ServiceEmployee::create($service_data);
-                }
+            foreach ($serviceIds as $serviceId) {
+                ServiceEmployee::firstOrCreate([
+                    'employee_id' => $employee_id,
+                    'service_id' => $serviceId,
+                ]);
             }
         }
 
@@ -919,6 +919,41 @@ class EmployeesController extends Controller
         }
 
         return response()->json(['data' => $data, 'status' => true], 200);
+    }
+
+    private function extractServiceIds($serviceIds): array
+    {
+        if (empty($serviceIds) || $serviceIds === 'undefined') {
+            return [];
+        }
+
+        if (is_array($serviceIds)) {
+            return collect($serviceIds)
+                ->filter(fn ($serviceId) => $serviceId !== null && $serviceId !== '')
+                ->map(fn ($serviceId) => (int) $serviceId)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $rawServiceIds = trim((string) $serviceIds);
+        $decodedServiceIds = json_decode($rawServiceIds, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decodedServiceIds)) {
+            return collect($decodedServiceIds)
+                ->filter(fn ($serviceId) => $serviceId !== null && $serviceId !== '')
+                ->map(fn ($serviceId) => (int) $serviceId)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return collect(explode(',', $rawServiceIds))
+            ->filter(fn ($serviceId) => $serviceId !== null && $serviceId !== '')
+            ->map(fn ($serviceId) => (int) trim($serviceId))
+            ->unique()
+            ->values()
+            ->all();
     }
 
 }
