@@ -113,15 +113,6 @@
                 <!--</li>-->
                 @endhasPermission
 
-                @hasPermission('view_sms')
-                <!--<li class="nav-item {{ request()->routeIs('app.sms') ? 'active' : '' }}">-->
-                <!--    <a href="{{ route('app.sms') }}" class="nav-link {{ request()->routeIs('app.sms') ? 'active' : '' }}">-->
-                <!--        <i class="fas fa-sms"></i>-->
-                <!--        <span class="item-name">{{ __('messages.sms') }}</span>-->
-                <!--    </a>-->
-                <!--</li>-->
-                @endhasPermission
-
             </ul>
         </div>
     </div>

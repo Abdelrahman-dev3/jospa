@@ -6,29 +6,27 @@ use Illuminate\Support\Facades\DB;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
 
-class SaloneBookController extends Controller
+class PackageDetailsController extends Controller
 {
-
-
     public function show($id)
     {
-     $package = DB::table('packages')
-        ->leftJoin('branches', 'packages.branch_id', '=', 'branches.id')
-        ->select(
-            'packages.*',
-            'branches.name as branch_name',
-            'branches.description as branch_description'  
-        )
-        ->where('packages.id', $id)
-        ->first();
+        $package = DB::table('packages')
+            ->leftJoin('branches', 'packages.branch_id', '=', 'branches.id')
+            ->select(
+                'packages.*',
+                'branches.name as branch_name',
+                'branches.description as branch_description'
+            )
+            ->where('packages.id', $id)
+            ->first();
 
-        if (!$package) {
+        if (! $package) {
             abort(404, 'Package not found');
         }
-    
+
         $package = (array) $package;
         $package['name'] = json_decode($package['name'], true);
-    
+
         $services = DB::table('package_services')
             ->join('services', 'package_services.service_id', '=', 'services.id')
             ->select(
@@ -43,44 +41,50 @@ class SaloneBookController extends Controller
             )
             ->where('package_services.package_id', $id)
             ->get();
-            
+
         $media = DB::table('media')
             ->where('model_type', 'Modules\\Package\\Models\\Package')
             ->where('model_id', $package['id'])
             ->where('collection_name', 'package_image')
             ->first();
-        
+
         $package['image'] = $media
             ? asset('storage/' . 'uploads/' . $media->id . '/' . $media->file_name)
             : default_feature_image();
 
         $currentLocale = app()->getLocale();
         $services->transform(function ($service) use ($currentLocale) {
-        $service->service_name = json_decode($service->service_name, true)[$currentLocale] ?? '';
-        return $service;
-    });
+            $service->service_name = json_decode($service->service_name, true)[$currentLocale] ?? '';
 
+            return $service;
+        });
 
         $totalServicePrice = $services->sum(function ($service) {
             $qty = isset($service->qty) ? (int) $service->qty : 1;
+
             return (float) ($service->service_price ?? 0) * max(0, $qty);
         });
         $totalService = $services->sum(function ($service) {
             $qty = isset($service->qty) ? (int) $service->qty : 1;
+
             return (float) ($service->discounted_price ?? 0) * max(0, $qty);
         });
         $branchDes = $package['branch_description'] ?? '';
         $branchName = json_decode($package['branch_name'], true)[$currentLocale] ?? '';
 
-        return view('frontend.home.booking.details', compact('package', 'services', 'totalServicePrice','totalService',  'branchDes' , 'branchName'));
+        return view('frontend.home.booking.details', compact('package', 'services', 'totalServicePrice', 'totalService', 'branchDes', 'branchName'));
     }
-
 
     public function getUserCart()
     {
-        $user = auth()->user(); 
-        $cartItems = Booking::with('service.service', 'products.product' , 'service.employee')->where('created_by', $user->id)->where('status', 'pending')->where('payment_type', 'payment')->whereNull('deleted_by')->where('payment_status', 0)->get();
-
+        $user = auth()->user();
+        $cartItems = Booking::with('service.service', 'products.product', 'service.employee')
+            ->where('created_by', $user->id)
+            ->where('status', 'pending')
+            ->where('payment_type', 'payment')
+            ->whereNull('deleted_by')
+            ->where('payment_status', 0)
+            ->get();
 
         return response()->json($cartItems);
     }
@@ -90,11 +94,13 @@ class SaloneBookController extends Controller
         $booking = Booking::find($id);
         if ($booking) {
             $booking->delete();
+
             return response()->json(['success' => true]);
         }
+
         $bookingServices = BookingService::find($booking->id);
         $bookingServices->delete();
+
         return response()->json(['success' => false]);
     }
-
-}    
+}

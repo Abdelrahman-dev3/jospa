@@ -14,11 +14,11 @@ use App\Http\Controllers\PackageBookingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingCartController;
 use App\Http\Controllers\PaymentchanalController;
+use App\Http\Controllers\SystemUtilityController;
 use App\Services\Payment\Strategies\TabbyPaymentStrategy;
 use App\Services\Payment\Strategies\TamaraPaymentStrategy;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SaloneBookController;
+use App\Http\Controllers\PackageDetailsController;
 use App\Http\Controllers\Backend\UserController;
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\VartextController;
@@ -44,62 +44,93 @@ use Modules\Service\Http\Controllers\Backend\API\ServiceController;
 */
 
 Route::prefix('var')->group(function () {
-    Route::get('/AD', [AdController::class, 'index']);
-    Route::get('/gift-card-images', [AdController::class, 'giftCardImages']);
-    Route::get('/text', [VartextController::class, 'index']);
+    Route::controller(AdController::class)->group(function () {
+        Route::get('/AD', 'index');
+        Route::get('/gift-card-images', 'giftCardImages');
+    });
+
+    Route::controller(VartextController::class)->group(function () {
+        Route::get('/text', 'index');
+    });
 });
 
 Route::prefix('Home')->group(function () {
-    Route::get('/categories', [CategoriesController::class, 'index']);
-    Route::get('/packages', [PackagesController::class, 'index']);
+    Route::controller(CategoriesController::class)->group(function () {
+        Route::get('/categories', 'index');
+    });
+
+    Route::controller(PackagesController::class)->group(function () {
+        Route::get('/packages', 'index');
+    });
 });
 
 Route::prefix('shop')->group(function () {
-    Route::get('/', [ShopController::class, 'index']);
+    Route::controller(ShopController::class)->group(function () {
+        Route::get('/', 'index');
+    });
 });
 
 Route::prefix('Ouroffers')->group(function () {
-    Route::get('/', [OuroffersController::class, 'index']);
+    Route::controller(OuroffersController::class)->group(function () {
+        Route::get('/', 'index');
+    });
 });
 
-Route::get('/loyalty/point-value', [LoyaltyController::class, 'index']);
-Route::get('/validate-coupon', [CouponController::class, 'validateCoupon']);
-Route::get('/validate-invoice-coupon', [CouponController::class, 'validateInvoiceCoupon']);
-Route::get('/available-coupons', [CouponController::class, 'availableCoupons']);
+Route::controller(LoyaltyController::class)->group(function () {
+    Route::get('/loyalty/point-value', 'index');
+});
+
+Route::controller(CouponController::class)->group(function () {
+    Route::get('/validate-coupon', 'validateCoupon');
+    Route::get('/validate-invoice-coupon', 'validateInvoiceCoupon');
+    Route::get('/available-coupons', 'availableCoupons');
+});
 
 
-Route::get('branch-list', [BranchController::class, 'branchList']);
+Route::controller(BranchController::class)->group(function () {
+    Route::get('branch-list', 'branchList');
+});
 
 // Branch Routes
 Route::prefix('branches')->group(function () {
-    Route::get('/', [BranchController::class, 'branchList']);
-    Route::get('{id}', [BranchController::class, 'branchDetails']);
-    Route::get('{id}/services', [BranchController::class, 'branchService']);
-    Route::get('{id}/reviews', [BranchController::class, 'branchReviews']);
-    Route::get('{id}/employees', [BranchController::class, 'branchEmployee']);
-    Route::get('{id}/gallery', [BranchController::class, 'branchGallery']);
-    Route::get('{id}/config', [BranchController::class, 'branchConfig']);
-    Route::post('{id}/assign', [BranchController::class, 'assign_update']);
-     Route::get('{id}/available-dates', [BranchController::class, 'getAvailableDates']);
+    Route::controller(BranchController::class)->group(function () {
+        Route::get('/', 'branchList');
+        Route::get('{id}', 'branchDetails');
+        Route::get('{id}/services', 'branchService');
+        Route::get('{id}/reviews', 'branchReviews');
+        Route::get('{id}/employees', 'branchEmployee');
+        Route::get('{id}/gallery', 'branchGallery');
+        Route::get('{id}/config', 'branchConfig');
+        Route::post('{id}/assign', 'assign_update');
+        Route::get('{id}/available-dates', 'getAvailableDates');
+    });
 });
-Route::post('verify-slot', [BranchController::class, 'verifySlot']);
+Route::controller(BranchController::class)->group(function () {
+    Route::post('verify-slot', 'verifySlot');
+});
 
 Route::prefix('services')->group(function () {
-    Route::get('/branches/{id}', [ServiceController::class, 'servicesbranches']);
+    Route::controller(ServiceController::class)->group(function () {
+        Route::get('/branches/{id}', 'servicesbranches');
+    });
 });
 
-Route::get('/States', [BookingsController::class, 'States']);
-Route::get('/branchs/{id}', [BookingsController::class, 'branchs']);
-Route::get('/service-groups', [BookingsController::class, 'getServiceGroups']);
-Route::get('/services/{serviceGroupId}/{branchId}/bookings', [BookingsController::class, 'getServicesByGroup']);
-Route::get('/staff', [BookingsController::class, 'getstaff']);
-Route::get('/available/{date}/{staffId}', [BookingsController::class, 'getAvailableTimes']);
+Route::controller(BookingsController::class)->group(function () {
+    Route::get('/States', 'States');
+    Route::get('/branchs/{id}', 'branchs');
+    Route::get('/service-groups', 'getServiceGroups');
+    Route::get('/services/{serviceGroupId}/{branchId}/bookings', 'getServicesByGroup');
+    Route::get('/staff', 'getstaff');
+    Route::get('/available/{date}/{staffId}', 'getAvailableTimes');
+});
 
 
-Route::get('/payment-success', [PackageBookingController::class, 'handlePaymentResult']);
+Route::controller(PackageBookingController::class)->group(function () {
+    Route::get('/payment-success', 'handlePaymentResult');
+});
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+Route::middleware('auth:sanctum')->controller(SystemUtilityController::class)->group(function () {
+    Route::get('/user', 'currentUser');
 });
 
 Route::controller(AuthController::class)->group(function () {
@@ -117,22 +148,34 @@ Route::controller(AuthController::class)->group(function () {
 });
 
 
-Route::get('dashboard-detail', [DashboardController::class, 'dashboardDetail']);
-Route::get('base-branches', [BranchController::class, 'baseBranches']);
-Route::get('branch-configuration', [BranchController::class, 'branchConfig']);
-Route::get('branch-detail', [BranchController::class, 'branchDetails']);
-Route::get('branch-service', [BranchController::class, 'branchService']);
-Route::get('branch-review', [BranchController::class, 'branchReviews']);
-Route::get('branch-employee', [BranchController::class, 'branchEmployee']);
-Route::get('branch-gallery', [BranchController::class, 'branchGallery']);
+Route::controller(DashboardController::class)->group(function () {
+    Route::get('dashboard-detail', 'dashboardDetail');
+});
+
+Route::controller(BranchController::class)->group(function () {
+    Route::get('base-branches', 'baseBranches');
+    Route::get('branch-configuration', 'branchConfig');
+    Route::get('branch-detail', 'branchDetails');
+    Route::get('branch-service', 'branchService');
+    Route::get('branch-review', 'branchReviews');
+    Route::get('branch-employee', 'branchEmployee');
+    Route::get('branch-gallery', 'branchGallery');
+});
 
 
 Route::prefix('gift-cards')->group(function () {
-    Route::post('/', [GiftCardController::class, 'store']);
+    Route::controller(GiftCardController::class)->group(function () {
+        Route::post('/', 'store');
+    });
 });
 
-Route::get('/success-py-gift', [GiftCardController::class, 'handlePaymentResult']);
-Route::get('/success-py-invoice', [BookingCartController::class, 'handlePaymentResult'])->name('api.cart.payment.success');
+Route::controller(GiftCardController::class)->group(function () {
+    Route::get('/success-py-gift', 'handlePaymentResult');
+});
+
+Route::controller(BookingCartController::class)->group(function () {
+    Route::get('/success-py-invoice', 'handlePaymentResult')->name('api.cart.payment.success');
+});
 
 // Mobile payment callbacks (public)
 Route::get('/payments/tabby/success/{invoice?}', [TabbyPaymentStrategy::class, 'callback'])->name('api.tabby.success');
@@ -144,39 +187,74 @@ Route::get('/payments/tamara/cancel', [TamaraPaymentStrategy::class, 'cancel'])-
 
 
 Route::group(['middleware' => 'auth:sanctum'], function () {
-    Route::post('branch/assign/{id}', [BranchController::class, 'assign_update']);
+    Route::controller(BranchController::class)->group(function () {
+        Route::post('branch/assign/{id}', 'assign_update');
+        Route::post('verify-slot', 'verifySlot');
+    });
+
     Route::apiResource('branch', BranchController::class);
     Route::apiResource('user', UserApiController::class);
     Route::apiResource('setting', SettingController::class);
     Route::apiResource('notification', NotificationsController::class);
-    Route::get('notification-list', [NotificationsController::class, 'notificationList']);
-    Route::get('gallery-list', [DashboardController::class, 'globalGallery']);
-    Route::get('search-list', [DashboardController::class, 'searchList']);
-    Route::post('update-profile', [AuthController::class, 'updateProfile']);
-    Route::get('profile-details', [AuthController::class, 'profileDetails']);
-    Route::post('profile-update', [AuthController::class, 'updateMyProfile']);
-    Route::post('change-password', [UserController::class, 'change_password'])->name('change_password');
-    Route::post('change-password', [AuthController::class, 'changePassword']);
-    Route::post('delete-account', [AuthController::class, 'deleteAccount']);
+    Route::controller(NotificationsController::class)->group(function () {
+        Route::get('notification-list', 'notificationList');
+    });
 
-    Route::post('add-address', [AddressController::class, 'store']);
-    Route::get('address-list', [AddressController::class, 'AddressList']);
-    Route::get('remove-address', [AddressController::class, 'RemoveAddress']);
-    Route::post('edit-address', [AddressController::class, 'EditAddress']);
+    Route::controller(DashboardController::class)->group(function () {
+        Route::get('gallery-list', 'globalGallery');
+        Route::get('search-list', 'searchList');
+    });
 
-    Route::post('verify-slot', [BranchController::class, 'verifySlot']);
+    Route::controller(AuthController::class)->group(function () {
+        Route::post('update-profile', 'updateProfile');
+        Route::get('profile-details', 'profileDetails');
+        Route::post('profile-update', 'updateMyProfile');
+        Route::post('change-password', 'changePassword');
+        Route::post('delete-account', 'deleteAccount');
+    });
 
-    Route::get('/mobile/cart', [MobileCartController::class, 'index']);
-    Route::post('/mobile/cart/bookings', [MobileCartController::class, 'storeBooking']);
-    Route::post('/mobile/cart/gift-cards', [MobileCartController::class, 'storeGiftCard']);
-    Route::post('/cart/products/{id}', [BookingCartController::class, 'addToCart']);
-    Route::delete('/cart/{id}', [BookingCartController::class, 'destroy']);
-    Route::post('/cart-pay', [BookingCartController::class, 'cartPay']);
-    Route::get('/wallet-loyalty-balance', [BookingCartController::class, 'walletLoyaltyBalance']);
-    Route::post('/payment-chanal', [PaymentchanalController::class, 'payment']);
-    Route::get('/loyallety', [BookingCartController::class, 'balance']);
-    Route::post('/bookings', [BookingController::class, 'store']);
-    Route::get('/details/{id}', [SaloneBookController::class, 'show']);
-    Route::get('/pay-now', [PackageBookingController::class, 'createPayment']);
+    Route::controller(UserController::class)->group(function () {
+        Route::post('change-password', 'change_password')->name('change_password');
+    });
+
+    Route::controller(AddressController::class)->group(function () {
+        Route::post('add-address', 'store');
+        Route::get('address-list', 'AddressList');
+        Route::get('remove-address', 'RemoveAddress');
+        Route::post('edit-address', 'EditAddress');
+    });
+
+    Route::controller(MobileCartController::class)->group(function () {
+        Route::get('/mobile/cart', 'index');
+        Route::post('/mobile/cart/bookings', 'storeBooking');
+        Route::post('/mobile/cart/gift-cards', 'storeGiftCard');
+    });
+
+    Route::controller(BookingCartController::class)->group(function () {
+        Route::post('/cart/products/{id}', 'addToCart');
+        Route::delete('/cart/{id}', 'destroy');
+        Route::post('/cart-pay', 'cartPay');
+        Route::get('/wallet-loyalty-balance', 'walletLoyaltyBalance');
+        Route::get('/loyallety', 'balance');
+    });
+
+    Route::controller(PaymentchanalController::class)->group(function () {
+        Route::post('/payment-chanal', 'payment');
+    });
+
+    Route::controller(BookingController::class)->group(function () {
+        Route::post('/bookings', 'store');
+    });
+
+    Route::controller(PackageDetailsController::class)->group(function () {
+        Route::get('/details/{id}', 'show');
+    });
+
+    Route::controller(PackageBookingController::class)->group(function () {
+        Route::get('/pay-now', 'createPayment');
+    });
 });
-Route::post('app-configuration', [SettingController::class, 'appConfiguraton']);
+
+Route::controller(SettingController::class)->group(function () {
+    Route::post('app-configuration', 'appConfiguraton');
+});

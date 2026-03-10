@@ -16,23 +16,18 @@ class GiftCardController extends Controller
 
     public function index(Request $request)
     {
-
-        $ads = Ad::where('page', 'gift_page')->where('status', 1)->get();
-
         $currentLocale = session('locale', app()->getLocale());
-
+        $ads = Ad::where('page', 'gift_page')->where('status', 1)->get();
         $s = $request->query('service');
 
         $subCategories = Category::with(['Services' => function ($q) {
             $q->select('id', 'name', 'default_price','category_id', 'sub_category_id')->where('status', 1);
         }])->whereNull('parent_id')->where('status', 1)->get();
 
-        // Initialize errors if not already set
         if (!isset($errors)) {
             $errors = new \Illuminate\Support\MessageBag();
         }
 
-        // For JSON requests
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
@@ -55,7 +50,6 @@ class GiftCardController extends Controller
             ['name' => 'كوبون بقيمة 4000', 'price' => 4000],
             ['name' => 'كوبون بقيمة 5000', 'price' => 5000],
         ];
-
         return view('frontend.gift-cards.create', compact('subCategories', 'errors' ,'packages' , 's' , 'currentLocale' , 'coupons' , 'ads'));
     }
 

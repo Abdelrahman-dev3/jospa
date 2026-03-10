@@ -55,7 +55,14 @@ return [
     ],
     'tap' => [
         'secret_key' => env('TAP_SECRET_KEY'),
-    ]
+    ],
+    'odoo' => [
+        'booking_create_url' => env('ODOO_BOOKING_CREATE_URL'),
+        'db' => env('ODOO_DB'),
+        'login' => env('ODOO_LOGIN'),
+        'password' => env('ODOO_PASSWORD'),
+        'timeout' => env('ODOO_TIMEOUT', 15),
+    ],
 
 
 ];

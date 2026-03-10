@@ -3,6 +3,7 @@
 namespace App\Services\Payment;
 
 use App\Models\Invoice;
+use App\Services\OdooBookingSyncService;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingTransaction;
 use App\Models\LoyaltyPointTransaction;
@@ -39,13 +40,15 @@ class PaymentFinalizerService
         float $tax,
         float $discountAmount,
         string $pageType,
-        array $cartIds = [],
-        array $giftIds = [],
+        array $cartIds,
+        array $giftIds,
         string $paymentMethod ,
         string $couponCode ,
         bool $submethodsApplied = false,
         array $subPayments = []
     ): int {
+        $invoiceId = 0;
+
         DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments) {
             $product_ids = [];
             
@@ -84,6 +87,10 @@ class PaymentFinalizerService
                 }
             }
         });
+
+        if ($invoiceId > 0 && $pageType === 'cart' && ! empty($cartIds)) {
+            app(OdooBookingSyncService::class)->syncPaidCartBookings($invoiceId);
+        }
 
         return $invoiceId;
     }

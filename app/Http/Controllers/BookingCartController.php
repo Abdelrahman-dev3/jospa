@@ -303,7 +303,7 @@ class BookingCartController extends Controller
             $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
             $giftCode = $request->get('gift_code');
             $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode);
-            $this->paymentSuccess($cartIds, $tapId, 'card');
+            $this->paymentSuccess($cartIds, 'card', $tapId);
 
             Booking::where('user_id', $user->id)
                 ->where('payment_status', 0)
@@ -641,7 +641,7 @@ class BookingCartController extends Controller
         ]);
     }
 
-    private function paymentSuccess( array $cartIds , $tapId = null , $paymentMethod): void
+    private function paymentSuccess(array $cartIds, $paymentMethod, $tapId = null): void
     {
         foreach ($cartIds as $bookingId) {
             BookingTransaction::create([
