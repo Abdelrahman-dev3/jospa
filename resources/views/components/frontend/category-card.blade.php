@@ -38,7 +38,7 @@
     position: relative;
     display: inline-block;
     cursor: help;
-}
+    }
 
     .tooltip-wrapper .tooltip-content {
         position: absolute;

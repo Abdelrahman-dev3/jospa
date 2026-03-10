@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $category->name }} - Category Details</title>
+    <title>{{ $category->name }} - {{ __('messagess.details') }}</title>
     <link rel="stylesheet" href="{{ mix('css/libs.min.css') }}">
     <link rel="stylesheet" href="{{ mix('css/backend.css') }}">
     <link rel="stylesheet" href="{{ asset('custom-css/frontend.css') }}">
@@ -210,25 +210,25 @@
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="pricingModalLabel">{{ $category->name }} - Services & Pricing</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title" id="pricingModalLabel">{{ $category->name }} - {{ __('messagess.category_services_pricing') }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('messages.close') }}"></button>
           </div>
           <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
             @if($category->services && $category->services->count() > 0)
                 <table class="table table-striped">
                   <thead>
                     <tr>
-                      <th>Service</th>
-                      <th>Sub Category</th>
-                      <th>Price (SR)</th>
-                      <th>Duration (minutes)</th>
+                      <th>{{ __('messages.service') }}</th>
+                      <th>{{ __('category.sub_category') }}</th>
+                      <th>{{ __('messagess.price_sr') }}</th>
+                      <th>{{ __('messagess.duration_minutes') }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     @foreach($category->services as $service)
                         <tr>
                           <td>{{ $service->name }}</td>
-                          <td>{{ $service->sub_category ? $service->sub_category->name : 'N/A' }}</td>
+                          <td>{{ $service->sub_category ? $service->sub_category->name : '-' }}</td>
                           <td>{{ number_format($service->default_price, 2) }}</td>
                           <td>{{ $service->duration_min }}</td>
                         </tr>
@@ -237,7 +237,7 @@
                 </table>
             @else
                 <div class="text-center text-muted">
-                    <p>No services available in this category.</p>
+                    <p>{{ __('messagess.no_services_available') }}</p>
                 </div>
             @endif
           </div>

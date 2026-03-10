@@ -43,9 +43,6 @@
 </footer>
 
 <script>
-    function subscribeWhatsApp() {
-        alert('للتواصل السريع، يرجى الضغط على أحد أزرار الهاتف أعلاه.');
-    }
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             const href = this.getAttribute('href');

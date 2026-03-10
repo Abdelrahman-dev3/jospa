@@ -3,9 +3,9 @@
     use App\Models\Ad;
     use App\Models\Vartext;
 
+    $lang = app()->getLocale();
     $vartext = Vartext::where('type','banner')->first();
     $ads = Ad::where('page', 'home')->where('status', 1)->get();
-    $lang = app()->getLocale();
 @endphp
 
 <!-- css -->
@@ -14,11 +14,9 @@
 
 <!-- html -->
 <div class="screen-hero">
-    <img src="{{asset('Vector.png')}}"
-    class="fl-1" alt="fl img">
+    <img src="{{asset('Vector.png')}}" class="fl-1" alt="fl img" loading="lazy">
+    <img src="{{asset('images/icons/fl-2.png')}}" class="fl-2" alt="fl img" loading="lazy" >
     
-    <img src="{{asset('images/icons/fl-2.png')}}" 
-    class="fl-2" alt="fl img">
     
     <div class="hero-container">
         

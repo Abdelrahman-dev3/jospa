@@ -12,7 +12,7 @@
           <div class="d-grid">
             <div class="d-flex flex-column">
               <div class="form-group">
-                <Multiselect v-model="assign_ids" placeholder="Select Branch" :canClear="false" :value="assign_ids" v-bind="branches" @select="selectBranch" @deselect="removeBranch" id="branches_ids">
+                <Multiselect v-model="assign_ids" :placeholder="$t('branch.select_branch')" :canClear="false" :value="assign_ids" v-bind="branches" @select="selectBranch" @deselect="removeBranch" id="branches_ids">
                   <template v-slot:multiplelabel="{ values }">
                     <div class="multiselect-multiple-label">{{ $t('branch.select_branch')}}</div>
                   </template>
@@ -54,6 +54,7 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { POST_BRANCH_ASSIGN_URL, GET_BRANCH_ASSIGN_URL, EDIT_URL ,BRANCH_LIST} from '../../constant/service'
 
 import { useModuleId, useRequest } from '@/helpers/hooks/useCrudOpration'
@@ -62,6 +63,7 @@ import * as yup from 'yup'
 
 // Request
 const { listingRequest, getRequest, updateRequest } = useRequest()
+const { t } = useI18n()
 
 // Vue Form Select START
 // Select Option
@@ -142,10 +144,10 @@ const removeBranch = (value) => {
 const validationSchema = yup.object().shape({
   service_price: yup.number()
     .transform((value, originalValue) => (originalValue === '' ? null : parseFloat(originalValue)))
-    .typeError('Please enter a valid number')
-    .positive('Value must be positive')
-    .max(999999.99, 'Exceeds the maximum allowed value')
-    .required('Currency value is required'),
+    .typeError(t('messages.valid_number'))
+    .positive(t('messages.value_must_be_positive'))
+    .max(999999.99, t('messages.value_exceeds_maximum'))
+    .required(t('messages.currency_value_required')),
 });
 
 </script>

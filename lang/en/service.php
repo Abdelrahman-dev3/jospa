@@ -24,7 +24,7 @@ return [
     'service_delete' => 'Service Deleted Sucessfully',
     'stff_service' => 'ASSIGNED_STAFF_LIST',
     'stff_service_update' => 'Service Staff Updated Successfully',
-    'branch_service' => 'ASSIGNED_BRANCH_LIST',
+    'branch_service' => 'Assigned branch list',
     'branch_service_update' => 'Service Branch Updated Successfully',
     'service_notfound' => 'Service not found.',
     'servie_gallery' => 'All gallery retrieved successfully.',

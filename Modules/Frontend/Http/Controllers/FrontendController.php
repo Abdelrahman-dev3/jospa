@@ -5,7 +5,6 @@ namespace Modules\Frontend\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Modules\Service\Models\Service;
 use Modules\Category\Models\Category;
 use Modules\Package\Models\Package;
@@ -14,7 +13,6 @@ use Modules\Product\Models\ProductCategory;
 use App\Models\Ouroffersection;
 use App\Models\Term;
 use App\Models\Ad;
-use App\Models\Wheel;
 use Carbon\Carbon;
 
 
@@ -56,10 +54,7 @@ class FrontendController extends Controller
             ->take(6)
             ->get();
 
-        // Fetch Wheel homepage
-        $prizes = Wheel::pluck('reward_value');
-
-        return view('frontend::index', compact('services', 'categories', 'packages' , 'products' , 'prizes'));
+        return view('frontend::index', compact('services', 'categories', 'packages' , 'products'));
     }
 
     /**

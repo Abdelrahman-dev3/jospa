@@ -1,4 +1,4 @@
-    <link rel="stylesheet" href="{{ asset('pages-css/learn-about-section.css') }}">
+<link rel="stylesheet" href="{{ asset('pages-css/learn-about-section.css') }}">
 
 <div class="main-learn">
   <div class="learn-logo">

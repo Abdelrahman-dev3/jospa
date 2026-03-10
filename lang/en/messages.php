@@ -487,4 +487,8 @@ return [
     'cart_product_quantity_increased' => 'Product quantity increased in cart.',
     'cart_product_added' => 'Product added to cart successfully.',
     'cart_product_out_of_stock' => ':product is out of stock.',
+    'valid_number' => 'Please enter a valid number.',
+    'value_must_be_positive' => 'Value must be positive.',
+    'value_exceeds_maximum' => 'Exceeds the maximum allowed value.',
+    'currency_value_required' => 'Currency value is required.',
 ];

@@ -17,8 +17,8 @@ class GiftCardController extends Controller
     public function index(Request $request)
     {
         $currentLocale = session('locale', app()->getLocale());
+
         $ads = Ad::where('page', 'gift_page')->where('status', 1)->get();
-        $s = $request->query('service');
 
         $subCategories = Category::with(['Services' => function ($q) {
             $q->select('id', 'name', 'default_price','category_id', 'sub_category_id')->where('status', 1);
@@ -50,7 +50,7 @@ class GiftCardController extends Controller
             ['name' => 'كوبون بقيمة 4000', 'price' => 4000],
             ['name' => 'كوبون بقيمة 5000', 'price' => 5000],
         ];
-        return view('frontend.gift-cards.create', compact('subCategories', 'errors' ,'packages' , 's' , 'currentLocale' , 'coupons' , 'ads'));
+        return view('frontend.gift-cards.create', compact('subCategories', 'errors' ,'packages' , 'currentLocale' , 'coupons' , 'ads'));
     }
 
     public function store(Request $request)
@@ -66,7 +66,7 @@ class GiftCardController extends Controller
         }
 
         $validated = validator($data, [
-            'delivery_method' => 'required|in:center_pickup,electronic_card,استلام من المركز,بطاقة الكترونية,traditional,email',
+            'delivery_method' => 'required|in:center_pickup,electronic_card,traditional,email',
             'sender_name' => 'required|string|max:255',
             'recipient_name' => 'required|string|max:255',
             'sender_phone' => 'required|string|max:20',
@@ -86,13 +86,14 @@ class GiftCardController extends Controller
             ]);
             return redirect()->route('signup')->with('error', __('messages.login_required_to_continue'));
         }
+
         $request->session()->regenerate();
 
         $data = $validated;
 
         $deliveryMethod = match ($data['delivery_method']) {
-            'بطاقة الكترونية', 'email' => 'electronic_card',
-            'استلام من المركز', 'traditional' => 'center_pickup',
+            'email' => 'electronic_card',
+            'traditional' => 'center_pickup',
             default => $data['delivery_method'],
         };
         

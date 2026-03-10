@@ -3,15 +3,15 @@
         AdsController,ContactMessageController,GiftController,InvoiceController,
         LoyaltyController,ModuleController,offersController,ReportsController,
         RejectController,TermsAndConditionsController,TextController,
-        WheelController,BackendController,BackupController,BranchController,
-        NotificationsController,SettingController,UserController,UsersController
+        BackendController,BackupController,BranchController,NotificationsController,
+        SettingController,UserController,UsersController
     };
 
     use App\Http\Controllers\{
         BookingsController,BookingCartController,GiftCardController,PackageBookingController,
-        BookingController,LanguageController,FrontendLoyaltyController,MobileVerificationController,
+        BookingController,LanguageController,FrontendLoyaltyController,
         PaymentchanalController,PermissionController,RoleController,RolePermission,
-        SearchController,PackageDetailsController,ProfileController,SignController,SystemUtilityController
+        SearchController,PackageDetailsController,ProfileController,SystemUtilityController
     };
 
     use App\Services\Payment\Strategies\{
@@ -22,7 +22,7 @@
 
     
     use Modules\Employee\Http\Controllers\Backend\EmployeesController;
-    use App\Http\Controllers\Auth\SignupController;
+    use App\Http\Controllers\Auth\PhoneAuthController;
 
     /*
     |--------------------------------------------------------------------------
@@ -36,22 +36,18 @@
     */
 
 
-    Route::controller(SignupController::class)->group(function () {
-        Route::get('/signup', 'index')->name('signup');
-        Route::post('/signup', 'store')->name('signup.store');
-    });
+    Route::controller(PhoneAuthController::class)->middleware('guest')->group(function () {
+        Route::get('/signup', 'showSignupForm')->name('signup');
+        Route::post('/signup', 'register')->name('signup.store');
 
-    Route::controller(SignController::class)->group(function () {
-        Route::get('/signin', 'login')->name('signin');
-        Route::post('/signin/verify', 'verify')->name('signin.verify');
-        Route::get('send-OTP', 'showVerifyForm')->name('login.verify.form');
-        Route::post('verify-send-otp', 'verifyOTP')->name('verify.send.otp');
-    });
+        Route::get('/signin', 'showLoginForm')->name('signin');
+        Route::post('/signin/verify', 'sendLoginOtp')->name('signin.verify');
+        Route::get('send-OTP', 'showLoginOtpForm')->name('login.verify.form');
+        Route::post('verify-send-otp', 'verifyLoginOtp')->name('verify.send.otp');
 
-    Route::controller(MobileVerificationController::class)->group(function () {
-        Route::get('verify-mobile', 'showVerifyForm')->name('verify.mobile');
-        Route::post('verify-otp', 'verifyOtp')->name('verify.otp');
-        Route::post('resend-otp', 'resendOtp')->name('resend.otp');
+        Route::get('verify-mobile', 'showRegistrationOtpForm')->name('register.otp.form');
+        Route::post('verify-otp', 'verifyRegistrationOtp')->name('verify.otp');
+        Route::post('verify-mobile/resend', 'resendRegistrationOtp')->name('register.otp.resend');
     });
 
     Route::controller(BookingsController::class)->group(function () {
@@ -120,7 +116,7 @@
             Route::put('/profile/{id}/update', 'update')->name('profile.update');
         });
 
-        Route::controller(SignController::class)->group(function () {
+        Route::controller(PhoneAuthController::class)->group(function () {
             Route::post('/logout', 'logout')->name('logout');
         });
     });
@@ -402,13 +398,6 @@
             Route::post('/app/TermsAndConditions/store', 'store')->name('TermsAndConditions.store');
             Route::put('/TermsAndConditions/{id}/update', 'update')->name('TermsAndConditions.update');
             Route::get('/TermsAndConditions/{id}', 'destroy')->name('TermsAndConditions.destroy');
-        });
-
-        Route::controller(WheelController::class)->group(function () {
-            Route::get('/app/Wheel/settings', 'index')->name('app.Wheel');
-            Route::post('/app/Wheel/settings/store', 'store')->name('Wheel.store');
-            Route::delete('/app/Wheel/settings/destroy/{id}', 'destroy')->name('Wheel.destroy');
-            Route::delete('/app/Wheel/settings/destroy_all', 'destroy_all')->name('Wheel.destroy_all');
         });
 
         Route::controller(TextController::class)->group(function () {

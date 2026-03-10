@@ -291,6 +291,16 @@
           #branchContainer .close-btn:hover {
               background: #a37440;
           }
+          .branch-empty-state {
+              grid-column: 1 / -1;
+              background: #f9f6f0;
+              border-radius: 12px;
+              padding: 32px 24px;
+              text-align: center;
+              color: #6b4a1f;
+              font-size: 18px;
+              font-weight: 600;
+          }
           #wifi-loader {
             --background: #62abff;
             --front-color: #BF9456;
@@ -622,6 +632,11 @@
         AOS.init({
             duration: 1200,
         });
+        const branchTranslations = {
+            homeService: @json(__('messagess.home_services')),
+            noBranchesAvailable: @json(__('messagess.no_branches_available')),
+            errorLoadingBranches: @json(__('messagess.error_loading_branches')),
+        };
         let selectedMainServiceId = null;
 
         function showLoader() {
@@ -631,6 +646,25 @@
 
         function hideLoader() {
             document.getElementById("wifi-loader").style.display = "none";
+        }
+
+        function showBranchMessage(container, message) {
+            const messageBox = document.createElement('div');
+            messageBox.className = 'branch-empty-state';
+            messageBox.textContent = message;
+            container.appendChild(messageBox);
+            container.style.setProperty('display', 'grid', 'important');
+        }
+
+        function appendCloseButton(container) {
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'close-btn';
+            closeBtn.innerText = '×';
+            closeBtn.addEventListener('click', () => {
+                container.style.setProperty('display', 'none', 'important');
+            });
+
+            container.appendChild(closeBtn);
         }
 
         function selectMainService_sub(mainServiceId , subServiceId) {
@@ -647,6 +681,81 @@ function showBranchesForMainService(mainServiceId, subServiceId) {
     fetch(`/api/services/branches/${subServiceId}`)
         .then(res => res.json())
         .then(response => {
+        {
+            const branches = response.data ?? [];
+            const container = document.getElementById('branchContainer');
+
+            container.style.position = "fixed";
+            container.innerHTML = '';
+            appendCloseButton(container);
+
+            if (!response.status) {
+                showBranchMessage(container, response.message ?? branchTranslations.errorLoadingBranches);
+                hideLoader();
+                return;
+            }
+
+            const currentLang = "{{ app()->getLocale() }}";
+            let renderedBranchCards = 0;
+
+            branches.forEach(item => {
+                if (!item.branch) return;
+
+                const branch = item.branch;
+                const branchName = branch.name?.[currentLang] ?? '';
+                const branchImage = branch.feature_image ?? '/images/av3.webp';
+                const branchDescription = typeof branch.description === 'object'
+                    ? (branch.description?.[currentLang] ?? '')
+                    : (branch.description ?? '');
+
+                const card = document.createElement('div');
+                card.className = 'branch-card';
+
+                card.innerHTML = `
+                    <img src="${branchImage}" 
+                         alt="${branchName}" 
+                         style="width:100%; height:200px; object-fit:cover;">
+                    <h5>${branchName}</h5>
+                    <p>${branchDescription}</p>
+                `;
+
+                card.addEventListener('click', () => {
+                    window.location.href =
+                        `/salonService?branch_id=${branch.id}&mainService_id=${mainServiceId}&subService_id=${subServiceId}`;
+                });
+
+                container.appendChild(card);
+                renderedBranchCards++;
+            });
+
+            if (branches.some(item => item.is_visible == 1)) {
+                const card_H = document.createElement('div');
+                card_H.className = 'branch-card';
+
+                card_H.innerHTML = `
+                    <img src="/images/frontend/jospahomeservises.png"
+                         alt="${branchTranslations.homeService}"
+                         style="width:100%; height:200px; object-fit:cover;">
+                    <h5>${branchTranslations.homeService}</h5>
+                `;
+
+                card_H.addEventListener('click', () => {
+                    window.location.href = `/HomeService?branch_id=0`;
+                });
+
+                container.appendChild(card_H);
+                renderedBranchCards++;
+            }
+
+            if (renderedBranchCards === 0) {
+                showBranchMessage(container, branchTranslations.noBranchesAvailable);
+            } else {
+                container.style.setProperty('display', 'grid', 'important');
+            }
+
+            hideLoader();
+        }
+            return;
 
             if (!response.status) {
                 hideLoader();
@@ -729,7 +838,14 @@ function showBranchesForMainService(mainServiceId, subServiceId) {
         })
         .catch(err => {
             console.error('Branches fetch error:', err);
+            const container = document.getElementById('branchContainer');
+
+            container.style.position = "fixed";
+            container.innerHTML = '';
+            appendCloseButton(container);
+            showBranchMessage(container, branchTranslations.errorLoadingBranches);
             hideLoader();
+            return;
         });
 }
 </script>

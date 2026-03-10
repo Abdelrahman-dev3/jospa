@@ -562,4 +562,12 @@ return [
     'error_loading_package_details' => 'حدث خطأ أثناء تحميل تفاصيل الباقة. حاول مجددًا.',
     'SAR' => 'ريال ',
     'navItems' => 'عناصر القائمة',
+    'service_pricing' => 'تسعير الخدمة',
+    'description_label' => 'الوصف',
+    'available_at' => 'متاحة في',
+    'quick_info' => 'معلومات سريعة',
+    'add_to_favorites' => 'أضف إلى المفضلة',
+    'related_services' => 'خدمات ذات صلة',
+    'no_branches_available' => 'لا يوجد فروع متاح بها الخدمة حاليا.',
+    'error_loading_branches' => 'حدث خطأ أثناء تحميل الفروع المتاحة. يرجى المحاولة مرة أخرى.',
 ];

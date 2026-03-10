@@ -493,4 +493,8 @@ return [
     'cart_product_quantity_increased' => 'تم زيادة كمية المنتج في السلة.',
     'cart_product_added' => 'تمت إضافة المنتج إلى السلة بنجاح.',
     'cart_product_out_of_stock' => 'المنتج :product غير متوفر في المخزون.',
+    'valid_number' => 'يرجى إدخال رقم صحيح.',
+    'value_must_be_positive' => 'يجب أن تكون القيمة أكبر من صفر.',
+    'value_exceeds_maximum' => 'القيمة تتجاوز الحد الأقصى المسموح به.',
+    'currency_value_required' => 'قيمة العملة مطلوبة.',
 ];

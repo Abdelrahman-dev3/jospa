@@ -17,10 +17,8 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        $baseQuery = Booking::with('service.service')->whereHas('service')->where('created_by', $user->id)->whereNull('deleted_by');
-
-        $pending = (clone $baseQuery)->whereNotIn('status', ['completed', 'canceled'])->whereNull('deleted_by')->count();
-        $completed = (clone $baseQuery)->where('payment_status', 1)->where('status', 'completed')->count();
+        $pending = Booking::countUserActiveBookings($user->id);
+        $completed = Booking::countUserCompletedBookings($user->id);
         $completedGift = GiftCard::where('user_id', $user->id)->count();
         $coupons = Coupon::with('promotion')->where('is_expired', 0)->where('use_limit', '>=', 1)->count();
 
@@ -28,7 +26,7 @@ class ProfileController extends Controller
         $balance = $wallet ? $wallet->amount : 0.00;
         $points = LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0;
 
-        $bookings = Booking::with('service.service')->where('created_by', $user->id)->whereHas('services')->whereNull('deleted_by')->get();
+        $bookings = Booking::getUserBookings($user->id);
 
         return view('frontend.account.profile', compact('user', 'balance', 'points', 'bookings', 'pending', 'completed', 'coupons', 'completedGift'));
     }
@@ -83,14 +81,14 @@ class ProfileController extends Controller
     {
         $reasons = reject::all();
 
-        $bookings = Booking::with('service.service', 'service.employee')->where('created_by', auth()->user()->id)->whereNull('deleted_by')->whereNotIn('status', ['completed', 'canceled'])->get();
+        $bookings = Booking::getUserActiveBookings(auth()->id());
 
         return view('frontend.account.bookings.index', compact('bookings', 'reasons'));
     }
 
     public function destroy_myBooking(Request $request, $id)
     {
-        $booking = Booking::find($id);
+        $booking = Booking::findUserBooking(auth()->id(), (int) $id);
 
         if (!$booking) {
             return back()->with('error', 'الـ Booking غير موجود');
@@ -111,7 +109,7 @@ class ProfileController extends Controller
 
     public function complateBookings()
     {
-        $bookings = Booking::with('service.service', 'service.employee')->where('created_by', auth()->user()->id)->whereNull('deleted_by')->where('payment_status', 1)->where('status', '=', 'completed')->get();
+        $bookings = Booking::getUserCompletedBookings(auth()->id());
 
         return view('frontend.account.bookings.completed', compact('bookings'));
     }

@@ -130,7 +130,7 @@
                                     @foreach ($sub->services as $service)
                                     <div class="col-md-6">
                                         <div class="checkbox-item">
-                                          <input type="checkbox" id="service_{{ $service->id }}" name="requested_services[]" value="{{ $service->id }}" data-price="{{ $service->default_price }}"  {{ in_array($service->id, old('requested_services', [])) ? 'checked' : '' }} {{ (isset($s) && $s == $service->id) ? 'checked' : '' }}>
+                                          <input type="checkbox" id="service_{{ $service->id }}" name="requested_services[]" value="{{ $service->id }}" data-price="{{ $service->default_price }}"  {{ in_array($service->id, old('requested_services', [])) ? 'checked' : '' }}>
                                           <label for="service_{{ $service->id }}" style="display:flex;justify-content: space-between;margin: 0 6px;">
                                                 <div>
                                                 <span>{{ $service->name }}</span> 

@@ -5,6 +5,7 @@ namespace Modules\Booking\Models;
 use App\Models\BaseModel;
 use App\Models\Branch;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Modules\Package\Models\BookingPackages;
 use Modules\Package\Models\UserPackageServices;
 use Modules\Package\Models\BookingPackageService;
@@ -174,6 +175,58 @@ class Booking extends BaseModel
         } else {
             return $query->whereNotNull('branch_id');
         }
+    }
+
+    protected static function userBookingsQuery(int $userId, array $relations = []): Builder
+    {
+        return static::with($relations)
+            ->where('created_by', $userId)
+            ->whereNull('deleted_by');
+    }
+
+    public static function getUserBookings(int $userId, array $relations = ['service.service'])
+    {
+        return static::userBookingsQuery($userId, $relations)
+            ->whereHas('services')
+            ->get();
+    }
+
+    public static function getUserActiveBookings(int $userId, array $relations = ['service.service', 'service.employee'])
+    {
+        return static::userBookingsQuery($userId, $relations)
+            ->whereNotIn('status', ['completed', 'canceled'])
+            ->get();
+    }
+
+    public static function getUserCompletedBookings(int $userId, array $relations = ['service.service', 'service.employee'])
+    {
+        return static::userBookingsQuery($userId, $relations)
+            ->where('payment_status', 1)
+            ->where('status', 'completed')
+            ->get();
+    }
+
+    public static function countUserActiveBookings(int $userId): int
+    {
+        return static::userBookingsQuery($userId)
+            ->whereHas('service')
+            ->whereNotIn('status', ['completed', 'canceled'])
+            ->count();
+    }
+
+    public static function countUserCompletedBookings(int $userId): int
+    {
+        return static::userBookingsQuery($userId)
+            ->whereHas('service')
+            ->where('payment_status', 1)
+            ->where('status', 'completed')
+            ->count();
+    }
+
+    public static function findUserBooking(int $userId, int $bookingId): ?self
+    {
+        return static::userBookingsQuery($userId)
+            ->find($bookingId);
     }
 
     // Reports Query

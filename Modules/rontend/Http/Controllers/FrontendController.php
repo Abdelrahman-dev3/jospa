@@ -2,15 +2,12 @@
 
 namespace Modules\Frontend\Http\Controllers;
 
-use App\Models\Wheel;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Modules\Package\Models\Package;
 use Modules\Service\Models\Service;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Modules\Category\Models\Category;
-use Modules\Affiliate\Models\Affiliate;
 
 class FrontendController extends Controller
 {

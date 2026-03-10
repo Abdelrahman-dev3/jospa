@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $service->name }} - Service Details</title>
+    <title>{{ $service->name }} - {{ __('messagess.service_details') }}</title>
     <link rel="stylesheet" href="{{ mix('css/libs.min.css') }}">
     <link rel="stylesheet" href="{{ mix('css/backend.css') }}">
     <link rel="stylesheet" href="{{ asset('custom-css/frontend.css') }}">
@@ -111,7 +111,7 @@
 
     <!-- Hero/Header Section (like About page) -->
     <div class="position-relative" style="height: 35vh; min-height: 220px;">
-        <img src="{{ asset('images/frontend/slider1.webp') }}" alt="Service Hero" class="w-100 h-100" style="object-fit: cover;">
+        <img src="{{ asset('images/frontend/slider1.webp') }}" alt="{{ __('messagess.service_details') }}" class="w-100 h-100" style="object-fit: cover;">
         <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.35);"></div>
         @include('components.frontend.navbar')
     </div>
@@ -122,7 +122,7 @@
             <h1 class="service-title">{{ $service->name }}</h1>
             <a href="#" class="booking-btn">
                 <i class="fas fa-calendar-plus"></i>
-                Book This Service
+                {{ __('messagess.book_this_service') }}
             </a>
         </div>
 
@@ -132,8 +132,8 @@
                 <div class="details-section">
                     <img src="{{ $service->feature_image ?? asset('images/frontend/slider1.webp') }}" alt="{{ $service->name }}" class="details-img mb-3">
                     <div class="details-description">
-                        <span class="details-label"><i class="fas fa-info-circle me-2"></i>Description</span>
-                        <div class="details-value mt-2">{{ $service->description ?? 'No description available for this service.' }}</div>
+                        <span class="details-label"><i class="fas fa-info-circle me-2"></i>{{ __('messagess.description_label') }}</span>
+                        <div class="details-value mt-2">{{ $service->description ?? __('messagess.no_description_available') }}</div>
                     </div>
                 </div>
 
@@ -141,26 +141,26 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="details-card text-center">
-                            <div class="details-label mb-2"><i class="fas fa-money-bill-wave me-1"></i>Price</div>
+                            <div class="details-label mb-2"><i class="fas fa-money-bill-wave me-1"></i>{{ __('messagess.price') }}</div>
                             <div class="price-badge" data-bs-toggle="modal" data-bs-target="#pricingModal">SR {{ number_format($service->default_price ?? 0, 2) }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="details-card text-center">
-                            <div class="details-label mb-2"><i class="fas fa-clock me-1"></i>Duration</div>
-                            <div class="details-value">{{ $service->duration_min ?? 0 }} min</div>
+                            <div class="details-label mb-2"><i class="fas fa-clock me-1"></i>{{ __('messagess.duration') }}</div>
+                            <div class="details-value">{{ $service->duration_min ?? 0 }} {{ __('messagess.minutes') }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="details-card text-center">
-                            <div class="details-label mb-2"><i class="fas fa-tags me-1"></i>Category</div>
-                            <div class="details-value category-badge">{{ $service->category->name ?? 'General' }}</div>
+                            <div class="details-label mb-2"><i class="fas fa-tags me-1"></i>{{ __('messagess.category') }}</div>
+                            <div class="details-value category-badge">{{ $service->category->name ?? __('messagess.general') }}</div>
                         </div>
                     </div>
                     @if($service->sub_category)
                     <div class="col-md-6">
                         <div class="details-card text-center">
-                            <div class="details-label mb-2"><i class="fas fa-layer-group me-1"></i>Sub Category</div>
+                            <div class="details-label mb-2"><i class="fas fa-layer-group me-1"></i>{{ __('category.sub_category') }}</div>
                             <div class="details-value category-badge">{{ $service->sub_category->name }}</div>
                         </div>
                     </div>
@@ -168,19 +168,19 @@
                     @if($service->branches && $service->branches->count() > 0)
                     <div class="col-md-12">
                         <div class="details-card text-center">
-                            <div class="details-label mb-2"><i class="fas fa-map-marker-alt me-1"></i>Available at</div>
+                            <div class="details-label mb-2"><i class="fas fa-map-marker-alt me-1"></i>{{ __('messagess.available_at') }}</div>
                             <div class="details-value">{{ $service->branches->pluck('name')->implode(', ') }}</div>
                         </div>
                     </div>
                     @endif
                     <div class="col-md-12">
                         <div class="details-card text-center">
-                            <div class="details-label mb-2"><i class="fas fa-check-circle me-1"></i>Status</div>
+                            <div class="details-label mb-2"><i class="fas fa-check-circle me-1"></i>{{ __('messages.status') }}</div>
                             <div class="details-value">
                                 @if($service->status)
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="badge bg-success">{{ __('messages.active') }}</span>
                                 @else
-                                    <span class="badge bg-danger">Inactive</span>
+                                    <span class="badge bg-danger">{{ __('messages.inactive') }}</span>
                                 @endif
                             </div>
                         </div>
@@ -192,7 +192,7 @@
                 <!-- Quick Info Section -->
                 <div class="service-info-section">
                     <h5 class="mb-3" style="color: var(--primary-color);">
-                        <i class="fas fa-star me-2"></i>Quick Info
+                        <i class="fas fa-star me-2"></i>{{ __('messagess.quick_info') }}
                     </h5>
 
                     <div class="price-badge">
@@ -210,11 +210,11 @@
                     <div class="d-grid gap-2 mt-3">
                         <a href="#" class="booking-btn text-center">
                             <i class="fas fa-calendar-plus me-2"></i>
-                            Book This Service
+                            {{ __('messagess.book_this_service') }}
                         </a>
                         <button class="btn btn-outline-secondary">
                             <i class="fas fa-heart me-2"></i>
-                            Add to Favorites
+                            {{ __('messagess.add_to_favorites') }}
                         </button>
                     </div>
                 </div>
@@ -223,7 +223,7 @@
                 @if($relatedServices->count() > 0)
                 <div class="service-info-section">
                     <h5 class="mb-3" style="color: var(--primary-color);">
-                        <i class="fas fa-link me-2"></i>Related Services
+                        <i class="fas fa-link me-2"></i>{{ __('messagess.related_services') }}
                     </h5>
 
                     @foreach($relatedServices as $relatedService)
@@ -251,23 +251,23 @@
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="pricingModalLabel">Service Pricing</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title" id="pricingModalLabel">{{ __('messagess.service_pricing') }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('messages.close') }}"></button>
           </div>
           <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
             <table class="table table-striped">
               <thead>
                 <tr>
-                  <th>Service</th>
-                  <th>Category</th>
-                  <th>Price (SR)</th>
-                  <th>Duration (minutes)</th>
+                  <th>{{ __('messages.service') }}</th>
+                  <th>{{ __('messagess.category') }}</th>
+                  <th>{{ __('messagess.price_sr') }}</th>
+                  <th>{{ __('messagess.duration_minutes') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>{{ $service->name }}</td>
-                  <td>{{ $service->category->name ?? 'General' }}</td>
+                  <td>{{ $service->category->name ?? __('messagess.general') }}</td>
                   <td>{{ number_format($service->default_price, 2) }}</td>
                   <td>{{ $service->duration_min }}</td>
                 </tr>

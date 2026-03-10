@@ -70,7 +70,7 @@ class ServiceController extends Controller
         return response()->json([
             'status' => true,
             'data'   => $serviceBranches,
-            'message'=> 'ASSIGNED_BRANCH_LIST'
+            'message'=> __('service.branch_service'),
         ]);
     }
 
