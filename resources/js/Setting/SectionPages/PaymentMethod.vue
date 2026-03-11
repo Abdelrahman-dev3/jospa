@@ -13,6 +13,36 @@
         </div>
       </div>
     </div>
+    <div class="form-group ms-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <label class="form-label" for="payment_method_tap_card">{{ $t('setting_payment_method.lbl_visa_mastercard') }} </label>
+        <div class="form-check form-switch">
+          <input class="form-check-input" :true-value="1" :false-value="0" :value="tap_card_payment_method"
+            :checked="tap_card_payment_method == 1 ? true : false" name="tap_card_payment_method" id="payment_method_tap_card"
+            type="checkbox" v-model="tap_card_payment_method" :disabled="tap_payment_method != 1" />
+        </div>
+      </div>
+    </div>
+    <div class="form-group ms-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <label class="form-label" for="payment_method_tap_apple_pay">{{ $t('setting_payment_method.lbl_apple_pay') }} </label>
+        <div class="form-check form-switch">
+          <input class="form-check-input" :true-value="1" :false-value="0" :value="tap_apple_pay_payment_method"
+            :checked="tap_apple_pay_payment_method == 1 ? true : false" name="tap_apple_pay_payment_method" id="payment_method_tap_apple_pay"
+            type="checkbox" v-model="tap_apple_pay_payment_method" :disabled="tap_payment_method != 1" />
+        </div>
+      </div>
+    </div>
+    <div class="form-group ms-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <label class="form-label" for="payment_method_tap_mada">{{ $t('setting_payment_method.lbl_mada') }} </label>
+        <div class="form-check form-switch">
+          <input class="form-check-input" :true-value="1" :false-value="0" :value="tap_mada_payment_method"
+            :checked="tap_mada_payment_method == 1 ? true : false" name="tap_mada_payment_method" id="payment_method_tap_mada"
+            type="checkbox" v-model="tap_mada_payment_method" :disabled="tap_payment_method != 1" />
+        </div>
+      </div>
+    </div>
     <div class="form-group">
       <div class="d-flex justify-content-between align-items-center">
         <label class="form-label" for="payment_method_tabby">{{ $t('setting_payment_method.lbl_tabby') }} </label>
@@ -54,45 +84,48 @@ const IS_SUBMITED = ref(false)
 const setFormData = (data) => {
   resetForm({
     values: {
-      tap_payment_method: data.tap_payment_method || 1,
-      tabby_payment_method: data.tabby_payment_method || 1,
-      tamara_payment_method: data.tamara_payment_method || 1,
-      razor_payment_method: data.razor_payment_method || 0,
-      razorpay_secretkey: data.razorpay_secretkey || '',
-      razorpay_publickey: data.razorpay_publickey || '',
-      str_payment_method: data.str_payment_method || 0,
-      stripe_secretkey: data.stripe_secretkey || '',
-      stripe_publickey: data.stripe_publickey || '',
-      paystack_payment_method: data.paystack_payment_method || 0,
-      paystack_secretkey: data.paystack_secretkey || '',
-      paystack_publickey: data.paystack_publickey || '',
-      paypal_payment_method: data.paypal_payment_method || 0,
-      paypal_secretkey: data.paypal_secretkey || '',
-      paypal_clientid: data.paypal_clientid || '',
-      flutterwave_payment_method: data.flutterwave_payment_method || 0,
-      flutterwave_secretkey: data.flutterwave_secretkey || '',
-      flutterwave_publickey: data.flutterwave_publickey || '',
-      cinet_payment_method: data.cinet_payment_method || 0,
-      cinet_clientid: data.cinet_clientid || '',
-      cinet_apikey: data.cinet_apikey || '',
-      cinet_secretkey: data.cinet_secretkey || '',
-      sadad_payment_method: data.sadad_payment_method || 0,
-      sadad_clientid: data.sadad_clientid || '',
-      sadad_secretkey: data.sadad_secretkey || '',
-      sadad_domain: data.sadad_domain || '',
-      airtelmoney_payment_method: data.airtelmoney_payment_method || 0,
-      airtelmoney_is_status: data.airtelmoney_is_status || 0,
-      airtelmoney_clientid: data.airtelmoney_clientid || 0,
-      airtelmoney_secretkey: data.airtelmoney_secretkey || 0,
-      phonepay_payment_method: data.phonepay_payment_method || 0,
-      phonepay_is_status: data.phonepay_is_status || 0,
-      phonepay_appid: data.phonepay_appid || 0,
-      phonepay_merchentid: data.phonepay_merchentid || 0,
-      phonepay_saltid: data.phonepay_saltid || 0,
-      phonepay_saltkey: data.phonepay_saltkey || 0,
-      midtrans_payment_method: data.midtrans_payment_method || 0,
-      midtrans_is_status: data.midtrans_is_status || 0,
-      midtrans_clientid: data.midtrans_clientid || 0,
+      tap_payment_method: data.tap_payment_method ?? 1,
+      tap_card_payment_method: data.tap_card_payment_method ?? 1,
+      tap_apple_pay_payment_method: data.tap_apple_pay_payment_method ?? 1,
+      tap_mada_payment_method: data.tap_mada_payment_method ?? 1,
+      tabby_payment_method: data.tabby_payment_method ?? 1,
+      tamara_payment_method: data.tamara_payment_method ?? 1,
+      razor_payment_method: data.razor_payment_method ?? 0,
+      razorpay_secretkey: data.razorpay_secretkey ?? '',
+      razorpay_publickey: data.razorpay_publickey ?? '',
+      str_payment_method: data.str_payment_method ?? 0,
+      stripe_secretkey: data.stripe_secretkey ?? '',
+      stripe_publickey: data.stripe_publickey ?? '',
+      paystack_payment_method: data.paystack_payment_method ?? 0,
+      paystack_secretkey: data.paystack_secretkey ?? '',
+      paystack_publickey: data.paystack_publickey ?? '',
+      paypal_payment_method: data.paypal_payment_method ?? 0,
+      paypal_secretkey: data.paypal_secretkey ?? '',
+      paypal_clientid: data.paypal_clientid ?? '',
+      flutterwave_payment_method: data.flutterwave_payment_method ?? 0,
+      flutterwave_secretkey: data.flutterwave_secretkey ?? '',
+      flutterwave_publickey: data.flutterwave_publickey ?? '',
+      cinet_payment_method: data.cinet_payment_method ?? 0,
+      cinet_clientid: data.cinet_clientid ?? '',
+      cinet_apikey: data.cinet_apikey ?? '',
+      cinet_secretkey: data.cinet_secretkey ?? '',
+      sadad_payment_method: data.sadad_payment_method ?? 0,
+      sadad_clientid: data.sadad_clientid ?? '',
+      sadad_secretkey: data.sadad_secretkey ?? '',
+      sadad_domain: data.sadad_domain ?? '',
+      airtelmoney_payment_method: data.airtelmoney_payment_method ?? 0,
+      airtelmoney_is_status: data.airtelmoney_is_status ?? 0,
+      airtelmoney_clientid: data.airtelmoney_clientid ?? 0,
+      airtelmoney_secretkey: data.airtelmoney_secretkey ?? 0,
+      phonepay_payment_method: data.phonepay_payment_method ?? 0,
+      phonepay_is_status: data.phonepay_is_status ?? 0,
+      phonepay_appid: data.phonepay_appid ?? 0,
+      phonepay_merchentid: data.phonepay_merchentid ?? 0,
+      phonepay_saltid: data.phonepay_saltid ?? 0,
+      phonepay_saltkey: data.phonepay_saltkey ?? 0,
+      midtrans_payment_method: data.midtrans_payment_method ?? 0,
+      midtrans_is_status: data.midtrans_is_status ?? 0,
+      midtrans_clientid: data.midtrans_clientid ?? 0,
     }
   })
 }
@@ -255,6 +288,9 @@ const validationSchema = yup.object({
 const { handleSubmit, errors, resetForm } = useForm({ validationSchema })
 const errorMessages = ref({})
 const { value: tap_payment_method } = useField('tap_payment_method')
+const { value: tap_card_payment_method } = useField('tap_card_payment_method')
+const { value: tap_apple_pay_payment_method } = useField('tap_apple_pay_payment_method')
+const { value: tap_mada_payment_method } = useField('tap_mada_payment_method')
 const { value: tabby_payment_method } = useField('tabby_payment_method')
 const { value: tamara_payment_method } = useField('tamara_payment_method')
 const { value: razor_payment_method } = useField('razor_payment_method')
@@ -374,7 +410,7 @@ const display_submit_message = (res) => {
 }
 
 //fetch data
-const data = 'tap_payment_method,tabby_payment_method,tamara_payment_method,razor_payment_method,razorpay_secretkey,razorpay_publickey,str_payment_method,stripe_secretkey,stripe_publickey,paystack_payment_method,paystack_secretkey,paystack_publickey,paypal_payment_method,paypal_secretkey,paypal_clientid,flutterwave_payment_method,flutterwave_secretkey,flutterwave_publickey,cinet_payment_method,cinet_clientid,cinet_apikey,cinet_secretkey,sadad_payment_method,sadad_clientid,sadad_secretkey,sadad_domain,airtelmoney_payment_method,airtelmoney_is_status,airtelmoney_clientid,airtelmoney_secretkey,phonepay_payment_method,phonepay_is_status,phonepay_appid,phonepay_merchentid,phonepay_saltid,phonepay_saltkey,midtrans_payment_method,midtrans_is_status,midtrans_clientid'
+const data = 'tap_payment_method,tap_card_payment_method,tap_apple_pay_payment_method,tap_mada_payment_method,tabby_payment_method,tamara_payment_method,razor_payment_method,razorpay_secretkey,razorpay_publickey,str_payment_method,stripe_secretkey,stripe_publickey,paystack_payment_method,paystack_secretkey,paystack_publickey,paypal_payment_method,paypal_secretkey,paypal_clientid,flutterwave_payment_method,flutterwave_secretkey,flutterwave_publickey,cinet_payment_method,cinet_clientid,cinet_apikey,cinet_secretkey,sadad_payment_method,sadad_clientid,sadad_secretkey,sadad_domain,airtelmoney_payment_method,airtelmoney_is_status,airtelmoney_clientid,airtelmoney_secretkey,phonepay_payment_method,phonepay_is_status,phonepay_appid,phonepay_merchentid,phonepay_saltid,phonepay_saltkey,midtrans_payment_method,midtrans_is_status,midtrans_clientid'
 onMounted(() => {
   createRequest(GET_URL(data)).then((response) => {
     setFormData(response)

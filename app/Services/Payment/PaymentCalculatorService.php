@@ -21,13 +21,7 @@ class PaymentCalculatorService
         $productIds = [];
         
         if ($typePage === 'payment') {
-                $services = Booking::with('service.service')
-                    ->where('created_by', $userId)
-                    ->whereNotIn('status', ['completed', 'cancelled']) 
-                    ->where('payment_type', 'payment')
-                    ->where('payment_status', 0)
-                    ->whereNull('deleted_by')
-                    ->get();
+            $services = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service']);
 
             
             $cartIds = $services->pluck('id')->toArray();
@@ -36,13 +30,7 @@ class PaymentCalculatorService
                 ($item->service->service_price ?? 0) - ($item->service->discount_amount ?? 0)
             );
         } else {
-            $services = Booking::with('service.service')
-                ->where('created_by', $userId)
-                ->whereNotIn('status', ['completed', 'cancelled']) 
-                ->where('payment_type', 'cart')
-                ->where('payment_status', 0)
-                ->whereNull('deleted_by')
-                ->get();
+            $services = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service']);
 
             $products = Cart::with('product')->where('user_id', $userId)->get();
             $gifts    = GiftCard::where('user_id', $userId)->where('payment_status', 0)->get();

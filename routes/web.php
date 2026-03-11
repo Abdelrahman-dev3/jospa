@@ -10,7 +10,7 @@
     use App\Http\Controllers\{
         BookingsController,BookingCartController,GiftCardController,PackageBookingController,
         BookingController,LanguageController,FrontendLoyaltyController,
-        PaymentchanalController,PermissionController,RoleController,RolePermission,
+        PaymentController,PermissionController,RoleController,RolePermission,
         SearchController,PackageDetailsController,ProfileController,SystemUtilityController
     };
 
@@ -65,7 +65,7 @@
     });
 
     
-    Route::controller(PaymentchanalController::class)->group(function () {
+    Route::controller(PaymentController::class)->group(function () {
         Route::post('/payment-chanal', 'payment')->name('payment-chanal');
         Route::get('tabby/success/{invoice}', 'tabbySuccess')->name('tabby.success');
         Route::get('tabby/fail/{invoice}', 'tabbyFail')->name('tabby.fail');

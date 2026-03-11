@@ -39,7 +39,7 @@ class BookingCartController extends Controller
     {
         $userId = auth()->user()->id;
         
-        $services = Booking::with('service.service','service.employee')->where('created_by', $userId)->whereNotIn('status', ['cancelled', 'completed'])->where('payment_type', 'cart')->where('payment_status', 0)->whereNull('deleted_by')->get();
+        $services = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service', 'service.employee']);
 
         $servicePrice = $services->sum(function ($item) {
             return $item->service ? ($item->service->service_price ?? 0) : 0;
@@ -429,7 +429,7 @@ class BookingCartController extends Controller
             return response()->json(['status' => false, 'message' => 'Payment method not available.'], 422);
         }
         if ($paymentMethod !== 'card') {
-            return app(\App\Http\Controllers\PaymentchanalController::class)->payment($request);
+            return app(\App\Http\Controllers\PaymentController::class)->payment($request);
         }
         $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
         $clientDiscount = null;

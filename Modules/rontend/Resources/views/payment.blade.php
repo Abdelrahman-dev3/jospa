@@ -37,7 +37,9 @@
         :wallet="$wallet->amount ?? 0"
         :loyalty-balance="$loyaltyBalance ?? 0"
         :branches="$branches"  
+        :tapPaymentSources="$tapPaymentSources"
         :defaultPaymentMethod="$defaultPaymentMethod"  
+        :defaultPaymentSource="$defaultPaymentSource"
         :paymentMethods="$paymentMethods"  
     />
     <div class="position-relative" style="height: 19vh;"></div>

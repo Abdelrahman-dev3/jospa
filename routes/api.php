@@ -13,7 +13,7 @@ use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\PackageBookingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingCartController;
-use App\Http\Controllers\PaymentchanalController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SystemUtilityController;
 use App\Services\Payment\Strategies\TabbyPaymentStrategy;
 use App\Services\Payment\Strategies\TamaraPaymentStrategy;
@@ -238,7 +238,7 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
         Route::get('/loyallety', 'balance');
     });
 
-    Route::controller(PaymentchanalController::class)->group(function () {
+    Route::controller(PaymentController::class)->group(function () {
         Route::post('/payment-chanal', 'payment');
     });
 

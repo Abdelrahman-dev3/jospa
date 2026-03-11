@@ -6,6 +6,7 @@ use App\Models\BaseModel;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Modules\Package\Models\BookingPackages;
 use Modules\Package\Models\UserPackageServices;
 use Modules\Package\Models\BookingPackageService;
@@ -177,46 +178,56 @@ class Booking extends BaseModel
         }
     }
 
-    protected static function userBookingsQuery(int $userId, array $relations = []): Builder
+    public static function userBaseQuery(int $userId, array $relations = []): Builder
     {
-        return static::with($relations)
-            ->where('created_by', $userId)
-            ->whereNull('deleted_by');
+        return static::with($relations)->where('created_by', $userId)->whereNull('deleted_by');
+    }
+
+    public static function getUserIncompleteBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {
+        return static::userBaseQuery($userId, $relations)
+            ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
+            ->where('payment_status', 0)
+            ->whereNotIn('status', ['completed', 'cancelled', 'canceled'])
+            ->get();
+    }
+
+    public static function getCompletedBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {
+        return static::userBaseQuery($userId, $relations)
+            ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
+            ->where('payment_status', 1)
+            ->where('status', 'completed')
+            ->get();
     }
 
     public static function getUserBookings(int $userId, array $relations = ['service.service'])
     {
-        return static::userBookingsQuery($userId, $relations)
+        return static::userBaseQuery($userId, $relations)
             ->whereHas('services')
             ->get();
     }
 
     public static function getUserActiveBookings(int $userId, array $relations = ['service.service', 'service.employee'])
     {
-        return static::userBookingsQuery($userId, $relations)
-            ->whereNotIn('status', ['completed', 'canceled'])
-            ->get();
+        return static::getUserIncompleteBookings($userId, null, $relations);
     }
 
     public static function getUserCompletedBookings(int $userId, array $relations = ['service.service', 'service.employee'])
     {
-        return static::userBookingsQuery($userId, $relations)
-            ->where('payment_status', 1)
-            ->where('status', 'completed')
-            ->get();
+        return static::getCompletedBookings($userId, null, $relations);
     }
 
     public static function countUserActiveBookings(int $userId): int
     {
-        return static::userBookingsQuery($userId)
+        return static::userBaseQuery($userId)
             ->whereHas('service')
-            ->whereNotIn('status', ['completed', 'canceled'])
+            ->where('payment_status', 0)
+            ->whereNotIn('status', ['completed', 'cancelled', 'canceled'])
             ->count();
     }
 
     public static function countUserCompletedBookings(int $userId): int
     {
-        return static::userBookingsQuery($userId)
+        return static::userBaseQuery($userId)
             ->whereHas('service')
             ->where('payment_status', 1)
             ->where('status', 'completed')
@@ -225,7 +236,7 @@ class Booking extends BaseModel
 
     public static function findUserBooking(int $userId, int $bookingId): ?self
     {
-        return static::userBookingsQuery($userId)
+        return static::userBaseQuery($userId)
             ->find($bookingId);
     }
 

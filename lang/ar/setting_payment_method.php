@@ -1,10 +1,13 @@
 <?php
 
 return [
-  'lbl_tap' => 'تاب (بطاقات)',
-  'lbl_tabby' => 'تابي',
-  'lbl_tamara' => 'تمارا',
-  'lbl_razorpay' => 'Razorpay',
+    'lbl_tap' => 'تاب (بطاقات)',
+    'lbl_visa_mastercard' => 'فيزا / ماستركارد',
+    'lbl_apple_pay' => 'Apple Pay',
+    'lbl_mada' => 'مدى',
+    'lbl_tabby' => 'تابي',
+    'lbl_tamara' => 'تمارا',
+    'lbl_razorpay' => 'Razorpay',
     'lbl_secret_key' => 'مفتاح السر',
     'lbl_app_key' => 'مفتاح التطبيق',
     'lbl_stripe' => 'Stripe',

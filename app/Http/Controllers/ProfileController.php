@@ -81,7 +81,7 @@ class ProfileController extends Controller
     {
         $reasons = reject::all();
 
-        $bookings = Booking::getUserActiveBookings(auth()->id());
+        $bookings = Booking::getUserIncompleteBookings(auth()->id());
 
         return view('frontend.account.bookings.index', compact('bookings', 'reasons'));
     }
@@ -109,7 +109,7 @@ class ProfileController extends Controller
 
     public function complateBookings()
     {
-        $bookings = Booking::getUserCompletedBookings(auth()->id());
+        $bookings = Booking::getCompletedBookings(auth()->id());
 
         return view('frontend.account.bookings.completed', compact('bookings'));
     }

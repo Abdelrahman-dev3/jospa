@@ -18,13 +18,7 @@ class MobileCartController extends Controller
     {
         $userId = $request->user()->id;
 
-        $bookings = Booking::with(['service.service', 'service.employee', 'services'])
-            ->where('created_by', $userId)
-            ->whereNotIn('status', ['cancelled', 'completed'])
-            ->where('payment_type', 'cart')
-            ->where('payment_status', 0)
-            ->whereNull('deleted_by')
-            ->get();
+        $bookings = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service', 'service.employee', 'services']);
 
         $products = Cart::with('product')
             ->where('user_id', $userId)

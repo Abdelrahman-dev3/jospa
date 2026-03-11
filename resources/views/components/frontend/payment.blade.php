@@ -7,7 +7,9 @@
         'loyaltyBalance' => 0,
         'branches' => [], 
         'defaultPaymentMethod' => '',
+        'defaultPaymentSource' => '',
         'paymentMethods' => [],
+        'tapPaymentSources' => [],
     ])
   <style>
     :root{
@@ -557,37 +559,43 @@
                                 <div class="row g-2">
                             
                                     <!-- Visa / MasterCard -->
+                                    @if(($tapPaymentSources['src_card'] ?? 1) == 1)
                                     <div class="col-12">
                                         <label class="payment-option">
-                                            <input type="radio" name="payment_source" value="src_card" checked>
+                                            <input class="tap-payment-source" type="radio" name="payment_source" value="src_card" {{ $defaultPaymentSource === 'src_card' ? 'checked' : '' }}>
                                             <div class="payment-box">
                                                 <img src="{{ asset('images/icons/visa (2).png') }}" alt="Visa">
                                                 <span>Visa / MasterCard</span>
                                             </div>
                                         </label>
                                     </div>
+                                    @endif
                             
                                     <!-- Apple Pay -->
+                                    @if(($tapPaymentSources['src_apple_pay'] ?? 1) == 1)
                                     <div class="col-12">
                                         <label class="payment-option">
-                                            <input type="radio" name="payment_source" value="src_apple_pay">
+                                            <input class="tap-payment-source" type="radio" name="payment_source" value="src_apple_pay" {{ $defaultPaymentSource === 'src_apple_pay' ? 'checked' : '' }}>
                                             <div class="payment-box">
                                                 <img src="{{ asset('images/icons/applepay.png') }}" alt="Apple Pay">
                                                 <span>Apple Pay</span>
                                             </div>
                                         </label>
                                     </div>
+                                    @endif
                             
                                     <!-- Mada -->
+                                    @if(($tapPaymentSources['src_sa.mada'] ?? 1) == 1)
                                     <div class="col-12">
                                         <label class="payment-option">
-                                            <input type="radio" name="payment_source" value="src_sa.mada">
+                                            <input class="tap-payment-source" type="radio" name="payment_source" value="src_sa.mada" {{ $defaultPaymentSource === 'src_sa.mada' ? 'checked' : '' }}>
                                             <div class="payment-box">
                                                 <img src="{{ asset('images/icons/mada (2).png') }}" alt="Mada">
                                                 <span>Mada</span>
                                             </div>
                                         </label>
                                     </div>
+                                    @endif
                             
                                 </div>
                             </div>

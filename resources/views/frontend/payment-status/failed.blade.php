@@ -78,7 +78,9 @@
         </svg>
         <div class="capture-title" style="color:#e53935">{{ $message }}</div>
         <div class="capture-message">{{ $sub ?? ''}}</div>
-        <button class="back-btn" onclick="window.location.href='{{ $redirect ?? '/' }}'">{{ $redirect ? 'العوده للدفع' : __('messagess.back_to_home')  }}</button>
+            <button class="back-btn" onclick="window.location.href='{{ $redirect ?? '/' }}'">
+                {{ isset($redirect) ? 'العوده للدفع' : __('messagess.back_to_home') }}
+            </button>
     </div>
 </body>
 </html>

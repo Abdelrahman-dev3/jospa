@@ -7,6 +7,7 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use App\Services\TapPaymentService;
+use App\Support\FrontendPaymentSettings;
 use Modules\Booking\Models\Booking;
 use App\Models\GiftCard;
 use Illuminate\Support\Facades\URL;
@@ -15,6 +16,19 @@ class CardPaymentStrategy
 {
     public function pay(Request $request, string $typePage)
     {
+        $selectedPaymentSource = $request->payment_source ?: FrontendPaymentSettings::defaultTapPaymentSource();
+
+        if (! FrontendPaymentSettings::isEnabledTapSource($selectedPaymentSource)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => __('messages.invalid_payment_method'),
+                ], 422);
+            }
+
+            return redirect()->back()->with('error', __('messages.invalid_payment_method'));
+        }
+
         $data = [
             'user_id' => auth()->id(),
             'page' => $typePage,
@@ -25,7 +39,7 @@ class CardPaymentStrategy
                 'loyalty' => (bool) $request->loyalty,
                 'gift_code' => $request->gift_code,
             ],
-            'payment_source' => $request->payment_source,
+            'payment_source' => $selectedPaymentSource,
             'final_before_sub' => $request->total ?? 0,
             'discountAmount' => $request->discountAmount ?? 0,
             'cart_ids' => [],

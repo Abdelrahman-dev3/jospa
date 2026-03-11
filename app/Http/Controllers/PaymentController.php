@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Modules\Booking\Models\Booking;
 use Modules\Product\Models\Cart;
 use App\Models\GiftCard;
 use Modules\Wallet\Models\Wallet;
 use App\Models\LoyaltyPoint;
 use App\Models\Setting;
+use App\Services\Payment\Strategies\CardPaymentStrategy;
+use App\Services\Payment\Strategies\TabbyPaymentStrategy;
+use App\Services\Payment\Strategies\TamaraPaymentStrategy;
+use App\Support\FrontendPaymentSettings;
 
 class PaymentController extends Controller
 {
@@ -22,29 +27,9 @@ class PaymentController extends Controller
         $GiftPrice = 0;
         
         if($type_page == 'payment'){
-            $cartservice = Booking::with([
-                    'service.service',
-                    'service.employee',
-                    'branch:id,name,description'
-                ])
-                ->where('created_by', $userId)
-                ->whereNotIn('status', ['cancelled', 'completed'])
-                ->where('payment_type', 'payment')
-                ->where('payment_status', 0)
-                ->whereNull('deleted_by')
-                ->get();
+            $cartservice = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service','service.employee','branch:id,name,description',]);
         }else{
-            $cartservice = Booking::with([
-                    'service.service',
-                    'service.employee',
-                    'branch:id,name,description'
-                ])
-                ->where('created_by', $userId)
-                ->whereNotIn('status', ['cancelled', 'completed'])
-                ->where('payment_type', 'cart')
-                ->where('payment_status', 0)
-                ->whereNull('deleted_by')
-                ->get();
+            $cartservice = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service','service.employee','branch:id,name,description',]);
             $cartproduct = Cart::with('product')->where(['user_id' => $userId])->get();
             $productPrice = $cartproduct->sum(function ($item) {
                 $price = $item->product->max_price ?? $item->product->min_price ?? 0;
@@ -89,24 +74,67 @@ class PaymentController extends Controller
             ];
         })->unique('branch_id')->values();   
 
-        $paymentMethods = [
-            'card' => (int) (Setting::get('tap_payment_method', 1)),
-            'tabby' => (int) (Setting::get('tabby_payment_method', 1)),
-            'tamara' => (int) (Setting::get('tamara_payment_method', 1)),
-        ];
+        $paymentMethods = FrontendPaymentSettings::paymentMethods();
+        $tapPaymentSources = FrontendPaymentSettings::tapPaymentSources();
+        $defaultPaymentMethod = FrontendPaymentSettings::defaultPaymentMethod($paymentMethods);
+        $defaultPaymentSource = FrontendPaymentSettings::defaultTapPaymentSource($tapPaymentSources);
 
-        $defaultPaymentMethod = 'card';
-        if (($paymentMethods['card'] ?? 0) !== 1) {
-            $defaultPaymentMethod = null;
-            foreach (['tabby', 'tamara'] as $method) {
-                if (($paymentMethods[$method] ?? 0) === 1) {
-                    $defaultPaymentMethod = $method;
-                    break;
-                }
+        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'tapPaymentSources', 'defaultPaymentMethod', 'defaultPaymentSource'));
+    }
+
+    public function payment(Request $request)
+    {
+        $method = $request->get('paymentMethod');
+        $typePage = $request->ids ? 'payment' : 'cart';
+
+        if (! $this->isPaymentMethodEnabled($method)) {
+            $message = __('messages.invalid_payment_method');
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => $message], 422);
             }
-            $defaultPaymentMethod = $defaultPaymentMethod ?? 'card';
+
+            throw ValidationException::withMessages([
+                'paymentMethod' => $message,
+            ]);
         }
 
-        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'defaultPaymentMethod'));
+        $strategy = match ($method) {
+            'card' => app(CardPaymentStrategy::class),
+            'tabby' => app(TabbyPaymentStrategy::class),
+            'tamara' => app(TamaraPaymentStrategy::class),
+            default => throw ValidationException::withMessages([
+                'paymentMethod' => __('messages.invalid_payment_method'),
+            ]),
+        };
+
+        return $strategy->pay($request, $typePage);
+    }
+
+    public function tabbySuccess(Request $request, $invoice = null)
+    {
+        return app(TabbyPaymentStrategy::class)->callback($request);
+    }
+
+    public function tabbyFail($invoice = null)
+    {
+        session()->forget('tabby_payment');
+
+        return view('frontend.payment-status.failed', ['message' => __('messages.payment_failed')]);
+    }
+
+    public function tabbyCancel($invoice = null)
+    {
+        session()->forget('tabby_payment');
+
+        return view('frontend.payment-status.failed', ['message' => __('messages.payment_cancelled')]);
+    }
+
+    private function isPaymentMethodEnabled(?string $method): bool
+    {
+        if (! $method) {
+            return false;
+        }
+
+        return (FrontendPaymentSettings::paymentMethods()[$method] ?? 0) === 1;
     }
 }

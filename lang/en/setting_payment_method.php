@@ -2,6 +2,9 @@
 
 return [
     'lbl_tap' => 'Tap (Cards)',
+    'lbl_visa_mastercard' => 'Visa / MasterCard',
+    'lbl_apple_pay' => 'Apple Pay',
+    'lbl_mada' => 'Mada',
     'lbl_tabby' => 'Tabby',
     'lbl_tamara' => 'Tamara',
     'lbl_razorpay' => 'Razorpay',

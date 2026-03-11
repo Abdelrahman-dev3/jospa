@@ -3,9 +3,9 @@
 namespace App\View\Components\frontend;
 
 use Closure;
+use App\Support\FrontendPaymentSettings;
 use Illuminate\Contracts\View\View;
 use Illuminate\View\Component;
-use App\Models\Setting;
 
 class Payment extends Component
 {
@@ -21,29 +21,25 @@ class Payment extends Component
         public float $loyaltyBalance = 0,
         public $branches = [],
         public ?array $paymentMethods = null,
-        public ?string $defaultPaymentMethod = null
+        public ?array $tapPaymentSources = null,
+        public ?string $defaultPaymentMethod = null,
+        public ?string $defaultPaymentSource = null
     )
     {
         if ($this->paymentMethods === null) {
-            $this->paymentMethods = [
-                'card' => (int) Setting::get('tap_payment_method', 1),
-                'tabby' => (int) Setting::get('tabby_payment_method', 1),
-                'tamara' => (int) Setting::get('tamara_payment_method', 1),
-            ];
+            $this->paymentMethods = FrontendPaymentSettings::paymentMethods();
+        }
+
+        if ($this->tapPaymentSources === null) {
+            $this->tapPaymentSources = FrontendPaymentSettings::tapPaymentSources();
         }
 
         if ($this->defaultPaymentMethod === null) {
-            $this->defaultPaymentMethod = 'card';
-            if (($this->paymentMethods['card'] ?? 0) !== 1) {
-                $this->defaultPaymentMethod = null;
-                foreach (['tabby', 'tamara'] as $method) {
-                    if (($this->paymentMethods[$method] ?? 0) === 1) {
-                        $this->defaultPaymentMethod = $method;
-                        break;
-                    }
-                }
-                $this->defaultPaymentMethod = $this->defaultPaymentMethod ?? 'card';
-            }
+            $this->defaultPaymentMethod = FrontendPaymentSettings::defaultPaymentMethod($this->paymentMethods);
+        }
+
+        if ($this->defaultPaymentSource === null) {
+            $this->defaultPaymentSource = FrontendPaymentSettings::defaultTapPaymentSource($this->tapPaymentSources);
         }
     }
 

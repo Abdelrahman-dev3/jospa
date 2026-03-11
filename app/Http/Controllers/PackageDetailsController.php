@@ -78,13 +78,11 @@ class PackageDetailsController extends Controller
     public function getUserCart()
     {
         $user = auth()->user();
-        $cartItems = Booking::with('service.service', 'products.product', 'service.employee')
-            ->where('created_by', $user->id)
-            ->where('status', 'pending')
-            ->where('payment_type', 'payment')
-            ->whereNull('deleted_by')
-            ->where('payment_status', 0)
-            ->get();
+        $cartItems = Booking::getUserIncompleteBookings($user->id, 'payment', [
+            'service.service',
+            'products.product',
+            'service.employee',
+        ]);
 
         return response()->json($cartItems);
     }
