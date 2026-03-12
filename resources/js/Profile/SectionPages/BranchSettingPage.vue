@@ -252,6 +252,28 @@ const defaultData = () => {
   }
 }
 
+const getDisplayAddressValue = (translatedValue, fallbackValue) => {
+  if (translatedValue) {
+    return translatedValue
+  }
+
+  if (typeof fallbackValue === 'string') {
+    try {
+      const parsedValue = JSON.parse(fallbackValue)
+
+      if (parsedValue && typeof parsedValue === 'object') {
+        const locale = document.documentElement.lang || 'ar'
+
+        return parsedValue[locale] || Object.values(parsedValue)[0] || fallbackValue
+      }
+    } catch (e) {
+      return fallbackValue
+    }
+  }
+
+  return fallbackValue || ''
+}
+
 //  Reset Form
 const setFormData = (data) => {
   // Check if data is not undefined or null
@@ -265,11 +287,11 @@ const setFormData = (data) => {
         feature_image: data.feature_image,
         address: {
           postal_code: data.address.postal_code,
-          city: data.address.city,
+          city: getDisplayAddressValue(data.address.city_name, data.address.city),
           latitude: data.address.latitude,
           longitude: data.address.longitude,
-          state: data.address.state,
-          country: data.address.country,
+          state: getDisplayAddressValue(data.address.state_name, data.address.state),
+          country: getDisplayAddressValue(data.address.country_name, data.address.country),
           address_line_1: data.address.address_line_1,
           address_line_2: data.address.address_line_2
         },

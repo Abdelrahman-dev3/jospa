@@ -360,7 +360,7 @@ class BranchController extends Controller
      */
     public function edit($id)
     {
-        $data = Branch::with('address')->findOrFail($id);
+        $data = Branch::with('address.city_data', 'address.state_data', 'address.country_data')->findOrFail($id);
 
         $service_id = ServiceBranches::where('branch_id', $data->id)->get()->pluck('service_id');
 
@@ -373,6 +373,7 @@ class BranchController extends Controller
             $custom_field_data = $data->withCustomFields();
             $data['custom_field_data'] = $custom_field_data->custom_fields_data->toArray();
         }
+        $this->appendAddressDisplayNames($data);
         $data['status'] = $data->status ? true : false;
 
         return response()->json(['data' => $data, 'status' => true]);
@@ -585,7 +586,9 @@ class BranchController extends Controller
     public function branchData()
     {
         if (Auth::user()->hasRole('manager')) {
-            $data = Branch::where('id', auth()->user()->branch->branch_id)->with('address')->first();
+            $data = Branch::where('id', auth()->user()->branch->branch_id)
+                ->with('address.city_data', 'address.state_data', 'address.country_data')
+                ->first();
 
             $service_id = ServiceBranches::where('branch_id', $data->id)->get()->pluck('service_id');
 
@@ -595,6 +598,8 @@ class BranchController extends Controller
                 $custom_field_data = $data->withCustomFields();
                 $data['custom_field_data'] = $custom_field_data->custom_fields_data->toArray();
             }
+
+            $this->appendAddressDisplayNames($data);
 
             return response()->json(['data' => $data, 'status' => true]);
         } else {
@@ -655,6 +660,38 @@ class BranchController extends Controller
     {
         json_decode($string);
         return json_last_error() === JSON_ERROR_NONE;
+    }
+
+    private function appendAddressDisplayNames(Branch $branch): void
+    {
+        if (!$branch->relationLoaded('address') || is_null($branch->address)) {
+            return;
+        }
+
+        $address = $branch->address;
+
+        $address->setAttribute('city_name', $this->resolveAddressDisplayValue(optional($address->city_data)->name, $address->city));
+        $address->setAttribute('state_name', $this->resolveAddressDisplayValue(optional($address->state_data)->name, $address->state));
+        $address->setAttribute('country_name', $this->resolveAddressDisplayValue(optional($address->country_data)->name, $address->country));
+    }
+
+    private function resolveAddressDisplayValue($translatedValue, $fallbackValue)
+    {
+        if (!empty($translatedValue)) {
+            return $translatedValue;
+        }
+
+        if (is_string($fallbackValue) && $this->isJson($fallbackValue)) {
+            $decodedValue = json_decode($fallbackValue, true);
+
+            if (is_array($decodedValue) && !empty($decodedValue)) {
+                $locale = app()->getLocale();
+
+                return $decodedValue[$locale] ?? reset($decodedValue) ?? $fallbackValue;
+            }
+        }
+
+        return $fallbackValue ?? '';
     }
 
 }

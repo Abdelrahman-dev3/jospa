@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
 use Modules\Booking\Models\BookingTransaction;
+use Modules\Booking\Trait\BookingTrait;
 use App\Models\LoyaltyPointTransaction;
 use Modules\Promotion\Models\Coupon;
 use Modules\Promotion\Models\UserCouponRedeem;
@@ -27,6 +28,8 @@ use Illuminate\Support\Str;
 
 class PaymentFinalizerService
 {
+    use BookingTrait;
+
     /**
      * Finalize payment: save invoice, transactions, loyalty points, update orders and carts
      *
@@ -55,6 +58,7 @@ class PaymentFinalizerService
 
         DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments) {
             $product_ids = [];
+            $bookingIdsToNotify = [];
             
             if($pageType == 'cart'){
                 //  Convert Cart to Orders (if any)
@@ -77,8 +81,16 @@ class PaymentFinalizerService
             $this->createTransactions( $cartIds ,  'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
 
             //  Update payment status
+            if ($pageType === 'cart') {
+                $bookingIdsToNotify = Booking::whereIn('id', $cartIds)
+                    ->where('payment_status', 0)
+                    ->pluck('id')
+                    ->all();
+            }
+
             Booking::whereIn('id', $cartIds)->update(['payment_status' => 1]);
             $this->createBookingCommissions($cartIds);
+            $this->sendPaidCartBookingNotifications($bookingIdsToNotify);
             if (!empty($giftIds)) {
                 GiftCard::whereIn('id', $giftIds)->update(['payment_status' => 1]);
                 
@@ -98,6 +110,41 @@ class PaymentFinalizerService
         }
 
         return $invoiceId;
+    }
+
+    private function sendPaidCartBookingNotifications(array $bookingIds): void
+    {
+        if (empty($bookingIds)) {
+            return;
+        }
+
+        $bookings = Booking::with([
+            'branch.address.city_data',
+            'branch.address.state_data',
+            'branch.address.country_data',
+            'branch.employee',
+            'user',
+            'services.employee',
+            'products',
+            'packages',
+            'mainServices',
+            'payment',
+            'userCouponRedeem',
+        ])->whereIn('id', $bookingIds)->get();
+
+        foreach ($bookings as $booking) {
+            try {
+                $notifyMessage = str_replace(
+                    '[[booking_id]]',
+                    $booking->id,
+                    'New booking #[[booking_id]] has been paid successfully.'
+                );
+
+                $this->sendNotificationOnBookingUpdate('new_booking', $notifyMessage, $booking);
+            } catch (\Throwable $e) {
+                \Log::error($e->getMessage());
+            }
+        }
     }
 
     /**
