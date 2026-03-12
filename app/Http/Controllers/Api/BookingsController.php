@@ -78,14 +78,12 @@ public function getServicesByGroup($serviceGroupId, $branchId)
         ->where('category_id', $serviceGroupId)
         ->where('status', 1)
         ->where('is_visible', 0)
-        ->whereNull('deleted_at')
         ->get();
     }else{
     $services = DB::table('services')
         ->where('category_id', $serviceGroupId)
         ->where('status', 1)
         ->where('is_visible', 1)
-        ->whereNull('deleted_at')
         ->get();
     }
     return response()->json($services);

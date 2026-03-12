@@ -131,11 +131,6 @@
                 title: "{{ __('report.lbl_taxes') }}",
             },
             {
-                data: 'total_tip_amount',
-                name: 'total_tip_amount',
-                title:  "{{ __('report.lbl_tips') }}",
-            },
-            {
                 data: 'total_amount',
                 name: 'total_amount',
                 title:  "{{ __('report.lbl_tot_amt') }}",

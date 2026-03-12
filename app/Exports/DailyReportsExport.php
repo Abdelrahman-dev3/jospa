@@ -62,10 +62,6 @@ class DailyReportsExport implements FromCollection, WithHeadings,WithStyles
                         $selectedData[$column] = Currency::format($row->total_tax_amount ?? 0);
                         break;
 
-                    case 'total_tip_amount':
-                        $selectedData[$column] = Currency::format($row->total_tip_amount ?? 0);
-                        break;
-
                     case 'total_amount':
                         $selectedData[$column] = Currency::format($row->total_amount ?? 0);
                         break;

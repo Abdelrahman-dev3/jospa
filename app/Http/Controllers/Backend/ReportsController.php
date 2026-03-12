@@ -69,10 +69,6 @@ class ReportsController extends Controller
                 'text' => 'Tax Amount',
             ],
             [
-                'value' => 'total_tip_amount',
-                'text' => 'Tips Amount',
-            ],
-            [
                 'value' => 'total_amount',
                 'text' => 'Final Amount',
             ],
@@ -572,13 +568,6 @@ class ReportsController extends Controller
             ->editColumn('total_tax_amount', function ($data) {
                 return Currency::format($data->total_tax_amount ?? 0);
             })
-            ->editColumn('total_tip_amount', function ($data) {
-                $totalTipAmount = Booking::tipamount()
-                ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
-                ->first();
-
-            return Currency::format($totalTipAmount->total_tip_amount ?? 0);
-            })
             ->editColumn('total_amount', function ($data) {
                 $totalTipAmount = Booking::tipamount()
                 ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
@@ -627,10 +616,6 @@ class ReportsController extends Controller
             [
                 'value' => 'total_tax_amount',
                 'text' => 'Taxes',
-            ],
-            [
-                'value' => 'total_tip_amount',
-                'text' => 'Tips',
             ],
             [
                 'value' => 'total_amount',
@@ -714,9 +699,6 @@ class ReportsController extends Controller
             ->editColumn('total_tax_amount', function ($data) {
                 return Currency::format($data->total_tax_amount ?? 0);
             })
-            ->editColumn('total_tip_amount', function ($data) {
-                return Currency::format($data->total_tip_amount);
-            })
             ->editColumn('total_amount', function ($data) {
                 return Currency::format($data->total_amount);
             })
@@ -747,10 +729,6 @@ class ReportsController extends Controller
             [
                 'value' => 'commission_amount',
                 'text' => 'Commission Amount',
-            ],
-            [
-                'value' => 'tip_amount',
-                'text' => 'Tips Amount',
             ],
             [
                 'value' => 'payment_type',

@@ -48,11 +48,15 @@ class FrontendController extends Controller
             ->get();
 
         // Fetch active packages for the homepage
-        $packages = Package::with(['service', 'service.services', 'media'])
+        $packages = Package::with(['service', 'service.services', 'media', 'branch'])
             ->where('status', 1)
             ->whereDate('end_date', '>=', now())
+            ->whereHas('branch', function ($q) {
+                $q->where('status', 1);
+            })
             ->take(6)
             ->get();
+            
 
         return view('frontend::index', compact('services', 'categories', 'packages' , 'products'));
     }

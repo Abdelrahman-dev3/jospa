@@ -62,10 +62,6 @@ class StaffPayoutReportExport implements FromCollection, WithHeadings,  WithStyl
                         $selectedData[$column] = Currency::format($row->commission_amount ?? 0);
                         break;
 
-                    case 'tip_amount':
-                        $selectedData[$column] = Currency::format($row->tip_amount ?? 0);
-                        break;
-
                     case 'total_pay':
                         $selectedData[$column] = Currency::format($row->total_amount ?? 0);
                         break;
