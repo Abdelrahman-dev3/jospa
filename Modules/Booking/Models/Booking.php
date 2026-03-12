@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Modules\Commission\Trait\CommissionTrait;
 use Modules\Service\Models\Service;
-use Modules\Tip\Trait\TipTrait;
 use Modules\Package\Models\UserPackageRedeem;
 use Modules\Package\Models\UserPackage;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +25,6 @@ class Booking extends BaseModel
     use CommissionTrait;
     use HasFactory;
     use SoftDeletes;
-    use TipTrait;
 
     protected $table = 'bookings';
 
@@ -94,19 +92,6 @@ class Booking extends BaseModel
             ->selectRaw('IFNULL(CONCAT(products.name, " - ", booking_products.variation_name), products.name) as product_name, booking_products.*')
             ->with('employee')->with('product.media');
     }
-
-    //     public function services()
-    //    {
-    //     return $this->hasMany(BookingService::class, 'booking_id')
-    //         ->with('employee')
-    //         ->leftJoin('services', 'booking_services.service_id', 'services.id')
-    //         ->leftJoin('media', function ($join) {
-    //             $join->on('services.id', '=', 'media.model_id')
-    //                  ->where('media.model_type', '=', 'Modules\Service\Models\Service')
-    //                  ->where('media.collection_name', '=', 'feature_image');
-    //         })
-    //         ->select('services.name as service_name', 'booking_services.*', 'media.file_name as service_image','media.id as media_id');
-    //      }
 
     public function booking_service()
     {
@@ -247,7 +232,6 @@ class Booking extends BaseModel
             DB::raw('DATE(bookings.start_date_time) AS start_date_time'),
             DB::raw('COUNT(DISTINCT bookings.id) AS total_booking'),
             DB::raw('COUNT(DISTINCT CONCAT(booking_services.booking_id, "-", booking_services.service_id)) AS total_service'),
-            DB::raw('COALESCE(SUM( tip_earnings.tip_amount), 0) AS total_tip_amount'),
             DB::raw('SUM(CASE WHEN booking_services.service_id = (SELECT   service_id FROM booking_services AS bs2 WHERE bs2.booking_id = bookings.id LIMIT 1) THEN booking_services.service_price ELSE 0 END) AS total_service_amount_per_service'),
             DB::raw('SUM(CASE
               WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'percent\' THEN booking_services.service_price * JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.percent\')) / 100
@@ -262,15 +246,9 @@ class Booking extends BaseModel
               WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'fixed\'
               THEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.tax_amount\'))
               ELSE 0
-          END) +
-          COALESCE(SUM( tip_earnings.tip_amount), 0)
-          AS total_amount')
+          END) AS total_amount')
         )
             ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
-            ->leftJoin('tip_earnings', function ($join) {
-                $join->on('bookings.id', '=', 'tip_earnings.tippable_id')
-                    ->where('tip_earnings.tippable_type', '=', 'Modules\\Booking\\Models\\Booking');
-            })
             ->leftJoin(DB::raw('(SELECT
                   booking_id,
                   CONCAT(
@@ -293,7 +271,7 @@ class Booking extends BaseModel
             ->groupBy('start_date_time');
     }
 
-    public static function totalservice($taxAmount, $tipAmount)
+    public static function totalservice($taxAmount)
 {
     return self::select(
         DB::raw('DATE(bookings.start_date_time) AS start_date_time'),
@@ -301,27 +279,11 @@ class Booking extends BaseModel
         DB::raw('COALESCE(SUM(booking_services.service_price), 0) as total_service_amount'),
         DB::raw('
             COALESCE(SUM(booking_services.service_price), 0) +
-            ' . $taxAmount . ' +
-            ' . $tipAmount . ' AS total_amount')
+            ' . $taxAmount . ' AS total_amount')
     )
         ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
         ->where('bookings.status', 'completed')
         ->groupBy(DB::raw('DATE(bookings.start_date_time)'));
-}
-public static function tipamount()
-{
-    return self::select(
-        DB::raw('DATE(bookings.start_date_time) AS start_date_time'),
-        DB::raw('COUNT(DISTINCT bookings.id) AS total_bookings'),
-        DB::raw('COALESCE(SUM(tip_earnings.tip_amount), 0) AS total_tip_amount')
-    )
-    ->leftJoin('tip_earnings', function ($join) {
-        $join->on('bookings.id', '=', 'tip_earnings.tippable_id')
-            ->where('tip_earnings.tippable_type', '=', 'Modules\\Booking\\Models\\Booking');
-    })
-    ->where('bookings.status', 'completed')
-    ->groupBy(DB::raw('DATE(bookings.start_date_time)'));
-
 }
 
     public static function overallReport()
@@ -341,14 +303,9 @@ public static function tipamount()
               WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'percent\' THEN booking_services.service_price * JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.percent\')) / 100
               WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'fixed\' THEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.tax_amount\'))
               ELSE 0
-          END) + COALESCE(SUM(DISTINCT tip_earnings.tip_amount), 0) AS total_amount'),
-            DB::raw('COALESCE(SUM(DISTINCT tip_earnings.tip_amount), 0) AS total_tip_amount'),
+          END) AS total_amount'),
             'bookings.start_date_time'
         )
-            ->leftJoin('tip_earnings', function ($join) {
-                $join->on('bookings.id', '=', 'tip_earnings.tippable_id')
-                    ->where('tip_earnings.tippable_type', '=', 'Modules\\Booking\\Models\\Booking');
-            })
             ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
             ->leftJoin(DB::raw('(SELECT
                   booking_id,

@@ -66,7 +66,7 @@ class BookingListResource extends JsonResource
             'sumOfServicePrices' => $this->booking_service ? $this->booking_service->sum('service_price') : 0,
             'sumOfProductPrices' => $this->products ? $this->products->sum('discounted_price') : 0,
             'tax_amount' => $tax_details['total_tax_amount'],
-            'total_amount' => ( ($primaryAmount + ($this->products ? $this->products->sum('discounted_price') : 0) + $tax_details['total_tax_amount'] + ($this->payment ? $this->payment->tip_amount : 0)))-$couponAmount,
+            'total_amount' => (($primaryAmount + ($this->products ? $this->products->sum('discounted_price') : 0) + $tax_details['total_tax_amount'])) - $couponAmount,
             'coupon_amount' => $couponAmount ?? 0,
             'sumOfPackagesPrices'=>$this->bookingPackages ? $this->bookingPackages->sum('package_price') : 0,
             'packages' => $this->bookingPackages->isNotEmpty()

@@ -151,7 +151,7 @@
             initDatatable({
                 url: '{{ route('backend.reports.overall-booking-report.index_data') }}',
                 finalColumns,
-                orderColumn: [[ 9, "desc" ]],
+                orderColumn: [[ 8, "desc" ]],
                 advanceFilter: () => {
                     return {
                         booking_date: $('#booking_date').val(),

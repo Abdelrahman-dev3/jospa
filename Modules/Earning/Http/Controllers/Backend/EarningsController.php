@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Modules\Commission\Models\CommissionEarning;
 use Modules\Earning\Models\EmployeeEarning;
 use Modules\Earning\Trait\EarningTrait;
-use Modules\Tip\Models\TipEarning;
 use Yajra\DataTables\DataTables;
 use Modules\Wallet\Models\Wallet;
 use Modules\Wallet\Models\WalletHistory;
@@ -113,8 +112,7 @@ class EarningsController extends Controller
         return $datatable->eloquent($query)
             ->addColumn('action', function ($data) use ($module_name) {
                 $commissionAmount = $data->commission_earning->where('commission_status', 'unpaid')->sum('commission_amount');
-                $tipAmount = $data->tip_earning->where('tip_status', 'unpaid')->sum('tip_amount');
-                $data['total_pay'] = $commissionAmount + $tipAmount;
+                $data['total_pay'] = $commissionAmount;
 
                 return view('earning::backend.earnings.action_column', compact('module_name', 'data'));
             })
@@ -143,9 +141,6 @@ class EarningsController extends Controller
             ->editColumn('total_commission_earn', function ($data) {
                 return Currency::format($this->getUnpaidAmount($data, 'commission'));
             })
-            ->editColumn('total_tips_earn', function ($data) {
-                return Currency::format($this->getUnpaidAmount($data, 'tip'));
-            })
             ->editColumn('total_pay', function ($data) {
                 return Currency::format($this->getUnpaidAmount($data)->total_pay);
             })
@@ -157,9 +152,6 @@ class EarningsController extends Controller
             }, 1)
             ->orderColumn('total_commission_earn', function ($query, $order) {
                 $query->orderByRaw('(SELECT SUM(commission_amount) FROM commission_earnings WHERE employee_id = users.id)', $order);
-            }, 1)
-            ->orderColumn('total_tips_earn', function ($query, $order) {
-                $query->orderByRaw('(SELECT SUM(tip_amount) FROM tip_earnings WHERE employee_id = users.id)', $order);
             }, 1)
             ->addIndexColumn()
             ->rawColumns(['action'])
@@ -204,7 +196,6 @@ class EarningsController extends Controller
                 }
             ])
             ->with('commission_earning')
-            ->with('tip_earning')
             ->with('employeeEarnings')
             ->whereHas('commission_earning', function ($q) {
                 $q->where('commission_status', 'unpaid');
@@ -219,7 +210,7 @@ class EarningsController extends Controller
             'profile_image' => $query->profile_image,
             'description' => '',
             'commission_earn' => Currency::format($unpaidAmount->total_commission_earn),
-            'tip_earn' => Currency::format($unpaidAmount->total_tips_earn),
+            'tip_earn' => Currency::format(0),
             'amount' => Currency::format($unpaidAmount->total_pay),
             'payment_method' => '',
         ];
@@ -237,7 +228,7 @@ class EarningsController extends Controller
     {
         $data = $request->all();
 
-        $query = User::role('employee')->with('commission_earning', 'tip_earning')->find($id);
+        $query = User::role('employee')->with('commission_earning')->find($id);
 
         $unpaidAmount = $this->getUnpaidAmount($query);
 
@@ -273,15 +264,13 @@ class EarningsController extends Controller
             'payment_date' => Carbon::now(),
             'payment_type' => $data['payment_method'],
             'description' => $data['description'],
-            'tip_amount' => $unpaidAmount->total_tips_earn,
+            'tip_amount' => 0,
             'commission_amount' => $unpaidAmount->total_commission_earn,
         ];
 
         $earning_data = EmployeeEarning::create($earning_data);
 
         CommissionEarning::where('employee_id', $id)->update(['commission_status' => 'paid']);
-        TipEarning::where('employee_id', $id)->update(['tip_status' => 'paid']);
-
         $message = __('messages.payment_done');
 
         return response()->json(['message' => $message, 'status' => true], 200);

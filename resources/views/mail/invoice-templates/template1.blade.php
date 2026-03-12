@@ -185,10 +185,6 @@
           <td class="text-end currency-font">{{ \Currency::format($data['serviceAmount'] + $data['product_price'] + $data['package_price'] - $data['coupon_discount']) }}</td>
         </tr>
         <tr>
-          <td colspan="3" class="text-end"><strong>Tips:</strong></td>
-          <td class="text-end currency-font">{{ \Currency::format($data['tip_amount']) }}</td>
-        </tr>
-        <tr>
           <td colspan="3" class="text-end"><strong>TAX:</strong></td>
           <td class="text-end currency-font">{{ \Currency::format($data['tax_amount']) }}</td>
         </tr>

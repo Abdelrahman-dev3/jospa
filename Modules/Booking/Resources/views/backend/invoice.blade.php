@@ -291,16 +291,7 @@
                             <td width="10%">
                                 <strong>{{ \Currency::format($data->services_total_amount + $productPrice + $data->package_amount - $data->coupon_discount)}}</strong></td>
                             </tr>
-                        <tr>
-
-                            <td colspan="3">
-                                <h6 class="d-inline-block me-3">{{ __('booking.tips') }}: </h6>
-                            </td>
-                            <td width="10%" class="text-end">
-                                <strong>
-                                    {{ \Currency::format(optional($data->booking_transaction)->tip_amount) }}
-                                    ({{ optional($data->booking_transaction)->tip_type === 'percent' ? 'Percent' : 'Fixed' }})
-                                </strong>                        @php
+                        @php
                             // Decode the tax_percentage field
                             $taxDetails = $data->booking_transaction['tax_percentage']??[];
                             $serviceTotalAmount = $data->services_total_amount + $productPrice + $data->package_amount - $data->coupon_discount;

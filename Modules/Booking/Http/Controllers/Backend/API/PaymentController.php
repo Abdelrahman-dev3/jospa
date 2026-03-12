@@ -10,7 +10,6 @@ use Modules\Booking\Trait\PaymentTrait;
 use Modules\Commission\Models\CommissionEarning;
 use Modules\Package\Models\BookingPackages;
 use Modules\Package\Models\UserPackage;
-use Modules\Tip\Models\TipEarning;
 use Modules\Wallet\Models\Wallet;
 use Modules\Wallet\Models\WalletHistory;
 use Illuminate\Support\Facades\Log;
@@ -30,7 +29,7 @@ class PaymentController extends Controller
 {
     try {
         $data = $request->all();
-        $data['tip_amount'] = $data['tip'] ?? 0;
+        $data['tip_amount'] = 0;
 
         $booking = Booking::where('id', $data['booking_id'])->first();
 
@@ -44,7 +43,7 @@ class PaymentController extends Controller
         $payment = BookingTransaction::create($data);
 
         if ($data['transaction_type'] == 'wallet') {
-            $total_amount = $this->getTotalAmount($data['booking_id'], $data['tax_percentage'], $data['tip']);
+            $total_amount = $this->getTotalAmount($data['booking_id'], $data['tax_percentage']);
             $user_id = Booking::find($data['booking_id'])->user_id;
 
             if (!$user_id) {
@@ -104,15 +103,6 @@ class PaymentController extends Controller
 
         if (isset($earning_data['commission_data']) && $earning_data['commission_data'] != null) {
             $booking->commission()->save(new CommissionEarning($earning_data['commission_data']));
-        }
-
-        if ($data['tip_amount'] > 0) {
-            $booking->tip()->save(new TipEarning([
-                'employee_id' => $earning_data['employee_id'],
-                'tip_amount' => number_format($data['tip_amount'], 2),
-                'tip_status' => 'unpaid',
-                'payment_date' => null,
-            ]));
         }
 
         return response()->json([

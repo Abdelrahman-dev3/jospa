@@ -48,7 +48,7 @@ trait ProductTrait
             'shipping_address_id' => $address_id,
             'billing_address_id' => $address_id,
             'type' => 'booking',
-            'tips' => $booking_details['payment']->tip_amount,
+            'tips' => 0,
             'payment_method' => $booking_details['payment']->transaction_type,
             'alternative_phone' => $mobile,
             'phone' => $mobile,
@@ -94,7 +94,7 @@ trait ProductTrait
             //  $logisticZone = LogisticZone::where('id', $data['chosen_logistic_zone_id'])->first();
             // todo::[for eCommerce] handle exceptions for standard & express
             $orderGroup->total_shipping_cost = 0;  //$logisticZone->standard_delivery_charge
-            $orderGroup->total_tips_amount = $data['tips'];
+            $orderGroup->total_tips_amount = 0;
 
             $orderGroup->grand_total_amount = $orderGroup->sub_total_amount + $orderGroup->total_tax_amount + $orderGroup->total_shipping_cost + $orderGroup->total_tips_amount - $orderGroup->total_coupon_discount_amount;
             $orderGroup->save();
@@ -112,7 +112,7 @@ trait ProductTrait
             // $order->logistic_name = optional($logisticZone->logistic)->name;
 
             $order->shipping_cost = $orderGroup->total_shipping_cost; // todo::[update version] calculate for each vendors
-            $order->tips_amount = $orderGroup->total_tips_amount; // todo::[update version] calculate for each vendors
+            $order->tips_amount = 0; // todo::[update version] calculate for each vendors
 
             $order->save();
 

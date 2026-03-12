@@ -559,7 +559,7 @@ class ReportsController extends Controller
                 return $data->total_service ?? 0;
             })
             ->editColumn('total_service_amount', function ($data) {
-                $totalServiceAmount = Booking::totalservice($data->total_tax_amount ?? 0, $data->total_tip_amount ?? 0)
+                $totalServiceAmount = Booking::totalservice($data->total_tax_amount ?? 0)
                 ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
                 ->first();
 
@@ -569,11 +569,7 @@ class ReportsController extends Controller
                 return Currency::format($data->total_tax_amount ?? 0);
             })
             ->editColumn('total_amount', function ($data) {
-                $totalTipAmount = Booking::tipamount()
-                ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
-                ->first();
-                
-                $totalServiceAmount = Booking::totalservice($data->total_tax_amount ?? 0, $totalTipAmount->total_tip_amount ?? 0)
+                $totalServiceAmount = Booking::totalservice($data->total_tax_amount ?? 0)
                 ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
                 ->first();
 
@@ -843,10 +839,6 @@ class ReportsController extends Controller
                 'text' => 'Commission Earn',
             ],
             [
-                'value' => 'total_tip_earn',
-                'text' => 'Tips Earn',
-            ],
-            [
                 'value' => 'total_earning',
                 'text' => 'Total Earning',
             ],
@@ -984,11 +976,8 @@ class ReportsController extends Controller
             ->editColumn('total_commission_earn', function ($data) {
                 return Currency::format($data->commission_earning_sum_commission_amount ?? 0);
             })
-            ->editColumn('total_tip_earn', function ($data) {
-                return Currency::format($data->tip_earning_sum_tip_amount ?? 0);
-            })
             ->editColumn('total_earning', function ($data) {
-                return Currency::format( $data->commission_earning_sum_commission_amount + $data->tip_earning_sum_tip_amount);
+                return Currency::format($data->commission_earning_sum_commission_amount ?? 0);
             })
             ->editColumn('updated_at', function ($data) {
                 $module_name = $this->module_name;
@@ -1019,11 +1008,6 @@ class ReportsController extends Controller
             ->orderColumn('total_commission_earn', function ($data, $order) {
                 $data->selectRaw('(SELECT SUM(commission_amount) FROM commission_earnings WHERE employee_id = users.id) as total_commission_earn')
                     ->orderBy('total_commission_earn', $order);
-            })
-
-            ->orderColumn('total_tip_earn', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(tip_amount) FROM tip_earnings WHERE employee_id = users.id) as total_tip_earn')
-                    ->orderBy('total_tip_earn', $order);
             })
 
             ->orderColumn('total_earning', function ($data, $order) {

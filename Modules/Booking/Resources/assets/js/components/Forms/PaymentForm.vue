@@ -25,21 +25,6 @@
         <strong>+ {{ formatCurrencyVue(tax.value) }}</strong>
       </template>
     </div>
-    <div class="form-group row">
-      <div class="col-8">
-        <label for="">Tips: <span class="gap-1" @click="addTip(18)">18%</span> <span class="gap-1" @click="addTip(20)">20%</span> <span class="gap-1" @click="addTip(22)">22%</span></label>
-      </div>
-      <div class="col-4">
-        <div class="row">
-          <div class="col-md-9 p-0"><input type="number" min="0" @input="checkTip" class="form-control" pattern="[0-9]+" v-model="data.tip" max="999999" step="any" /></div>
-          <div class="col-md-1 p-2">
-            <strong>{{ currency_symbol }}</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-    <hr />
-
     <div class="form-group d-flex align-items-center justify-content-between">
       <label for="">Final Total: </label>
       <strong class="text-success">{{ formatCurrencyVue(finalAmount) }}</strong>
@@ -97,7 +82,6 @@ const data = reactive({
   booking_amount: 0,
   payment_method: 'cash',
   final_amount: 0,
-  tip: 0,
   coupon_code: '',
   coupon_discount_type: '',
   coupon_discount_value: 0,
@@ -108,14 +92,6 @@ const data = reactive({
   packageService:props.packageService
 })
 const PAYMENT_METHODS_OPTIONS = ref([])
-const addTip = (tipPercentage) => {
-  data.tip = calculatePercentAmount(tipPercentage)
-}
-const checkTip = (value) => {
-  if (Number(value.target.value) < 0) {
-    return (data.tip = 0)
-  }
-}
 
 const formatCurrencyVue = (value) => {
   if (window.currencyFormat !== undefined) {
@@ -164,10 +140,6 @@ const subtotal = computed(() => {
 const couponsubtotal = computed(() => {
   return data.booking_amount + data.package_amount;
 })
-const currency_symbol = computed(() => {
-  return data.currency
-})
-
 const taxAmount = computed(() => {
   let totalTaxAmount = 0
   for (const tax of data.taxes) {
@@ -180,18 +152,10 @@ const taxAmount = computed(() => {
 
   return totalTaxAmount.toFixed(2)
 })
-// const finalAmount = computed(() => {
-//   const tip_amount = String(data.tip).replace('$', '')
-//   submitPayment()
-//   const val = Number(finalsubtotal.value) + Number(taxAmount.value) + Number(tip_amount) || 0
-//   return val
-// })
-
 const finalAmount = computed(() => {
   const discountedSubtotal = check_coupon.value ? subtotal.value - check_coupon.value.discount: subtotal.value - coupondiscount.value;
-  const tip_amount = String(data.tip).replace('$', '')  
   submitPayment()
-  const val = Number(discountedSubtotal > 0 ? discountedSubtotal : 0) + Number(taxAmount.value) +  Number(tip_amount);
+  const val = Number(discountedSubtotal > 0 ? discountedSubtotal : 0) + Number(taxAmount.value);
   return val;
 });
 

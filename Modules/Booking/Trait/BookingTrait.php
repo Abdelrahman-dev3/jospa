@@ -377,7 +377,7 @@ trait BookingTrait
             'branch_email' => optional($booking->branch)->contact_email ?? default_user_name(),
 
             'package_price' => isset($booking->packages[0]['package_price']) ? $booking->packages[0]['package_price'] : 0,
-            'tip_amount' => optional($booking->payment)->tip_amount ?? 'default_value',
+            'tip_amount' => 0,
             'tax_amount' => $booking->detail['tax_amount'] ?? 0,
             'grand_total' => $booking->detail['grand_total'] ?? 0,
             'coupon_discount' => $booking->userCouponRedeem['discount'] ?? 0,

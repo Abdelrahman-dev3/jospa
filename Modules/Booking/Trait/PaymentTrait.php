@@ -17,7 +17,6 @@ use Modules\Currency\Models\Currency;
 use Modules\Package\Models\UserPackageServices;
 use Modules\Promotion\Models\Coupon;
 use Modules\Promotion\Models\UserCouponRedeem;
-use Modules\Tip\Models\TipEarning;
 use Modules\Package\Models\BookingPackageService;
 use Razorpay\Api\Api;
 use Modules\Promotion\Models\Promotion;
@@ -29,7 +28,7 @@ trait PaymentTrait
 
         $data['booking_id'] = $booking_id;
         $data['transaction_type'] = $data['payment_method'];
-        $data['tip_amount'] = $data['tip'] ?? 0;
+        $data['tip_amount'] = 0;
         $data['tax_percentage'] = $data['taxes'];
         $data['coupon_code'] = $data['coupon_code'];
 
@@ -54,17 +53,9 @@ trait PaymentTrait
                 $booking->commission()->save(new CommissionEarning($earning_data['commission_data']));
             }
 
-            if ($data['tip_amount'] > 0) {
-                $booking->tip()->save(new TipEarning([
-                    'employee_id' => $earning_data['employee_id'],
-                    'tip_amount' => $data['tip_amount'],
-                    'tip_status' => 'unpaid',
-                    'payment_date' => null,
-                ]));
-            }
         }
         
-        $total_amount = $this->getTotalAmount($data['booking_id'], $data['taxes'], $data['tip'], $data['coupon_code']);
+        $total_amount = $this->getTotalAmount($data['booking_id'], $data['taxes']);
         if (isset($data['coupondiscount'])) {
             $couponDiscountamount = $data['coupondiscount']; 
         } else {
@@ -122,7 +113,7 @@ trait PaymentTrait
 
     //GET TOTAL AMOUNT
 
-    public function getTotalAmount($booking_id, $tax = [], $tip_amount = 0)
+    public function getTotalAmount($booking_id, $tax = [])
     {
         $booking_services = BookingService::where('booking_id', $booking_id)->get();
         $total_service_amount = $booking_services->sum('service_price');
@@ -148,7 +139,7 @@ trait PaymentTrait
                 }
             }
         }
-        $total_amount = $total_service_amount + $tax_amount + $tip_amount + $product_amount + $total_package_amount;
+        $total_amount = $total_service_amount + $tax_amount + $product_amount + $total_package_amount;
         $total_amount = number_format($total_amount, 2, '.', '');
 
         return $total_amount;
@@ -559,7 +550,6 @@ trait PaymentTrait
         $packageAmount = $booking->packages->sum('package_price');
 
         $tax_amount = 0;
-        $tip_amount = 0;
         if (!empty($bookingTransaction)) {
             foreach ($bookingTransaction->tax_percentage as $key => $tax) {
                 if ($tax['type'] == 'percent') {
@@ -568,7 +558,6 @@ trait PaymentTrait
                     $tax_amount += $tax['tax_amount'];
                 }
             }
-            $tip_amount = $bookingTransaction->tip_amount;
         }
 
         return [
@@ -578,7 +567,7 @@ trait PaymentTrait
             'tax_amount' => $tax_amount,
             'coupon_discount' => $coupon_discount,
             'packageAmount' => $packageAmount,
-            'grand_total' => ($tax_amount + $total_product_amount + $serviceAmount + $tip_amount + $packageAmount) - $coupon_discount,
+            'grand_total' => ($tax_amount + $total_product_amount + $serviceAmount + $packageAmount) - $coupon_discount,
         ];
     }
 

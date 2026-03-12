@@ -89,7 +89,7 @@ class OrdersController extends Controller
             $logisticZone = LogisticZone::where('id', $request['chosen_logistic_zone_id'])->first();
             // todo::[for eCommerce] handle exceptions for standard & express
             $orderGroup->total_shipping_cost = $logisticZone->standard_delivery_charge ?? 0;
-            $orderGroup->total_tips_amount = $request['tips'] ?? 0;
+            $orderGroup->total_tips_amount = 0;
 
             $orderGroup->grand_total_amount = $orderGroup->sub_total_amount + $orderGroup->total_tax_amount + $orderGroup->total_shipping_cost + $orderGroup->total_tips_amount - $orderGroup->total_coupon_discount_amount;
 
@@ -135,7 +135,7 @@ class OrdersController extends Controller
             // $order->shipping_delivery_type          = $request['shipping_delivery_type'];
             $order->payment_status = $request['payment_status'];
             $order->shipping_cost = $orderGroup->total_shipping_cost; // todo::[update version] calculate for each vendors
-            $order->tips_amount = $orderGroup->total_tips_amount; // todo::[update version] calculate for each vendors
+            $order->tips_amount = 0; // todo::[update version] calculate for each vendors
 
             $order->save();
 

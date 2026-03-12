@@ -99,11 +99,6 @@
                 title: "{{ __('report.lbl_commissions_earn') }}"
             },
             {
-                data: 'total_tip_earn',
-                name: 'total_tip_earn',
-                title: "{{ __('report.lbl_tips_earn') }}"
-            },
-            {
                 data: 'total_earning',
                 name: 'total_earning',
                 title: "{{ __('report.lbl_total_earning') }}"
@@ -124,7 +119,7 @@
             initDatatable({
                 url: '{{ route('backend.reports.staff-report.index_data') }}',
                 finalColumns,
-                orderColumn: [[ 7, "desc" ]],
+                orderColumn: [[ 6, "desc" ]],
                 advanceFilter: () => {
                     return {
 

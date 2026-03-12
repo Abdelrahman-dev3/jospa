@@ -262,16 +262,6 @@
                             <td width="10%">
                                 <strong>{{ \Currency::format($order->orderGroup->sub_total_amount) }}</strong></td>
                         </tr>
-                        @if ($order->orderGroup->total_tips_amount > 0)
-                            <tr>
-                                <td colspan="4">
-                                    <h6 class="d-inline-block me-3">Tips: </h6>
-                                </td>
-                                <td width="10%" class="text-end">
-                                    <strong>{{ \Currency::format($order->orderGroup->total_tips_amount) }}</strong>
-                                </td>
-                            </tr>
-                        @endif
                         <tr>
                             <td colspan="4">
                                 <h6 class="d-inline-block me-3">Tax: </h6>

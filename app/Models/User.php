@@ -21,7 +21,6 @@ use Modules\Employee\Models\EmployeeRating;
 use Modules\Package\Models\BookingPackages;
 use Modules\Service\Models\ServiceEmployee;
 use Modules\Subscriptions\Models\Subscription;
-use Modules\Tip\Models\TipEarning;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\Permission\Traits\HasRoles;
 use Modules\Wallet\Models\Wallet;
@@ -178,11 +177,6 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         return $this->hasMany(CommissionEarning::class, 'employee_id');
     }
 
-    public function tip_earning()
-    {
-        return $this->hasMany(TipEarning::class, 'employee_id');
-    }
-
     public function branches()
     {
         return $this->hasMany(BranchEmployee::class, 'employee_id');
@@ -286,8 +280,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         return self::role(['manager', 'employee'])->select('users.id', 'users.first_name', 'users.last_name', 'users.email', 'users.mobile', 'users.updated_at')
             ->withCount('employeeBooking')
             ->withSum('employeeBooking', 'service_price')
-            ->withSum('commission_earning', 'commission_amount')
-            ->withSum('tip_earning', 'tip_amount');
+            ->withSum('commission_earning', 'commission_amount');
     }
 
     public function scopeWithTotalUnpaidServiceAmount($query)

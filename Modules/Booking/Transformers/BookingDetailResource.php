@@ -71,7 +71,7 @@ class BookingDetailResource extends JsonResource
             'updated_at' => date('D, M Y', strtotime($this->updated_at)),
             'customer_review' => new EmployeeReviewResource(EmployeeRating::where('user_id', auth()->user()->id)->where('employee_id', $employee_id)->first()),
             'discount' => $this->discount_percentage,
-            'tip' => !empty($this->payment) ? $this->payment->tip_amount : 0,
+            'tip' => 0,
             'payment' => $this->payment,
             'products' => BookingProductResource::collection($this->products),
             'discout_amount' => $this->discount_amount,
@@ -79,7 +79,7 @@ class BookingDetailResource extends JsonResource
             'sumOfProductPrices' => $this->products ? $this->products->sum('discounted_price') : 0,
             'tax_amount' => $tax_details['total_tax_amount'],
             'tax_details' => $tax_details['tax_details'],
-            'total_amount' => ($primaryAmount + ($this->products ? $this->products->sum('discounted_price') : 0) + $tax_details['total_tax_amount'] + ($this->payment ? $this->payment->tip_amount : 0)) - $couponAmount,
+            'total_amount' => ($primaryAmount + ($this->products ? $this->products->sum('discounted_price') : 0) + $tax_details['total_tax_amount']) - $couponAmount,
             'coupon_amount' => $couponAmount ?? 0,
             'packages' => $this->bookingPackages->isNotEmpty()
                 ? BookingPackageResource::collection($this->bookingPackages)

@@ -71,7 +71,7 @@ function sendNotification($data)
                 $data['branch_number'] = $booking['branch_number'];
                 $data['branch_email'] = $booking['branch_email'];
                 // $data['product_amount'] = $data['product_amount'];
-                $data['tip_amount'] = $booking['tip_amount'];
+                $data['tip_amount'] = 0;
                 $data['tax_amount'] = $booking['tax_amount'];
                 $data['grand_total'] = $booking['grand_total'];
                 $data['discount'] = $booking['coupon_discount'];

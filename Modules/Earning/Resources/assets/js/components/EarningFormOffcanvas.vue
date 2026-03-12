@@ -50,10 +50,6 @@
               <span>{{ $t('earning.commission_earn') }}</span>
               <strong>{{ commission_earn }}</strong>
             </div>
-            <div class="d-flex justify-content-between align-items-center">
-              <span>{{ $t('earning.tip_earn') }}</span>
-              <strong>{{ tip_earn }}</strong>
-            </div>
             <div class="d-flex justify-content-between align-items-center border-top py-3 mt-3">
               <span class="flex-grow-1">{{ $t('earning.total_pay') }}</span>
               <h6><strong>{{ amount }}</strong></h6>
@@ -141,7 +137,6 @@ const setFormData = (data) => {
       profile_image: data.profile_image,
       description: '',
       commission_earn: data.commission_earn,
-      tip_earn: data.tip_earn,
       amount: data.amount,
       payment_method: data.payment_method
     }
@@ -182,7 +177,6 @@ const fieldMappings = {
   profile_image: useField('profile_image'),
   description: useField('description'),
   commission_earn: useField('commission_earn'),
-  tip_earn: useField('tip_earn'),
   amount: useField('amount'),
   payment_method: useField('payment_method')
 };
@@ -195,7 +189,6 @@ const { value: mobile } = fieldMappings.mobile;
 const { value: profile_image } = fieldMappings.profile_image;
 const { value: description } = fieldMappings.description;
 const { value: commission_earn } = fieldMappings.commission_earn;
-const { value: tip_earn } = fieldMappings.tip_earn;
 const { value: amount } = fieldMappings.amount;
 const { value: payment_method } = fieldMappings.payment_method;
 

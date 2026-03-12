@@ -122,12 +122,6 @@
             >
           </template>
         </div>
-        <div class="d-flex justify-content-between align-items-center">
-          <span>{{ $t('booking.tip_amount') }}</span>
-          <span
-            ><strong>{{ formatCurrencyVue(bookingTransaction.tip_amount) }}</strong></span
-          >
-        </div>
       </div>
       
       <div>
@@ -217,7 +211,7 @@ const taxAmount = computed(() => {
   return totalTaxAmount.toFixed(2)
 })
 const finalAmount = computed(() => {
-  return Number(servicesTotal.value) + Number(productTotal.value) + Number(taxAmount.value) + Number(packageTotal.value) + Number(bookingTransaction.value.tip_amount)
+  return Number(servicesTotal.value) + Number(productTotal.value) + Number(taxAmount.value) + Number(packageTotal.value)
 })
 onMounted(() => {
   getRequest({ url: BOOKING_DETAIL, id: props.booking_id }).then((res) => {
