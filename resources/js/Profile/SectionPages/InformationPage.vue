@@ -12,7 +12,7 @@
             <InputField class="col-md-6" :is-required="true" :label="$t('profile.lbl_email')" :value="email" v-model="email" :placeholder="$t('profile.enter_email')" :error-message="errors['email']"></InputField>
             <div class="form-group col-md-6">
               <label class="form-label"> {{ $t('profile.lbl_contact_number') }} <span class="text-danger">*</span> </label>
-              <vue-tel-input type="number" :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
+              <vue-tel-input type="number" :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
               <span class="text-danger">{{ errors['mobile'] }}</span>
             </div>
           </div>

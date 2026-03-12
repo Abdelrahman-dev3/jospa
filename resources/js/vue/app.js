@@ -11,7 +11,11 @@ import 'vue3-tel-input/dist/vue3-tel-input.css'
 
 const app = InitApp()
 
-app.use(VueTelInput)
+app.use(VueTelInput, {
+  mode: 'international',
+  defaultCountry: 'SA',
+  preferredCountries: ['SA']
+})
 app.component('assign-branch-employee-offcanvas', AssignBranchEmployeeOffcanvas)
 app.component('branch-form-offcanvas', BranchFormOffcanvas)
 app.component('branch-gallery-offcanvas', BranchGalleryOffcanvas)

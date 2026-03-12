@@ -3,14 +3,18 @@
 namespace App\Services\Payment;
 
 use App\Models\Invoice;
+use App\Models\User;
 use App\Services\OdooBookingSyncService;
+use Illuminate\Support\Collection;
 use Modules\Booking\Models\Booking;
+use Modules\Booking\Models\BookingService;
 use Modules\Booking\Models\BookingTransaction;
 use App\Models\LoyaltyPointTransaction;
 use Modules\Promotion\Models\Coupon;
 use Modules\Promotion\Models\UserCouponRedeem;
 use Modules\Wallet\Models\Wallet;
 use App\Models\LoyaltyPoint;
+use Modules\Package\Models\BookingPackages;
 use Modules\Product\Models\Cart;
 use Modules\Product\Models\Order;
 use Modules\Product\Models\OrderGroup;
@@ -74,6 +78,7 @@ class PaymentFinalizerService
 
             //  Update payment status
             Booking::whereIn('id', $cartIds)->update(['payment_status' => 1]);
+            $this->createBookingCommissions($cartIds);
             if (!empty($giftIds)) {
                 GiftCard::whereIn('id', $giftIds)->update(['payment_status' => 1]);
                 
@@ -155,6 +160,106 @@ class PaymentFinalizerService
                 'payment_status' => 1,
             ]);
         }
+    }
+
+    private function createBookingCommissions(array $cartIds): void
+    {
+        if (empty($cartIds)) {
+            return;
+        }
+
+        $bookings = Booking::with(['commission'])
+            ->whereIn('id', $cartIds)
+            ->get();
+
+        if ($bookings->isEmpty()) {
+            return;
+        }
+
+        $serviceRows = BookingService::whereIn('booking_id', $cartIds)
+            ->get(['booking_id', 'employee_id', 'service_price'])
+            ->groupBy('booking_id');
+
+        $employeeIds = collect()
+            ->merge($serviceRows->flatten(1)->pluck('employee_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($employeeIds->isEmpty()) {
+            return;
+        }
+
+        $employees = User::role('employee')
+            ->whereIn('id', $employeeIds)
+            ->with('commissions.mainCommission')
+            ->get()
+            ->keyBy('id');
+
+        foreach ($bookings as $booking) {
+            if ($booking->commission) {
+                continue;
+            }
+
+            $commissionData = $this->buildCommissionData(
+                $serviceRows->get($booking->id, collect()),
+                $employees
+            );
+
+            if ($commissionData === null) {
+                continue;
+            }
+
+            $booking->commission()->create($commissionData);
+        }
+    }
+
+    private function buildCommissionData(Collection $serviceRows, Collection $employees): ?array
+    {
+        $employeeId = (int) ($serviceRows->first()->employee_id ?? 0);
+
+        if ($employeeId <= 0) {
+            return null;
+        }
+
+        $employee = $employees->get($employeeId);
+
+        if (! $employee) {
+            return null;
+        }
+
+        $totalAmount = $serviceRows->sum('service_price');
+
+        $commissionAmount = 0.0;
+        $hasRules = false;
+
+        foreach ($employee->commissions as $employeeCommission) {
+            $rule = $employeeCommission->mainCommission;
+
+            if (! $rule) {
+                continue;
+            }
+
+            $hasRules = true;
+
+            if ($rule->commission_type === 'fixed') {
+                $commissionAmount += (float) $rule->commission_value;
+                continue;
+            }
+
+            $commissionAmount += ((float) $rule->commission_value * $totalAmount) / 100;
+        }
+
+        if (! $hasRules || $commissionAmount <= 0) {
+            return null;
+        }
+
+        return [
+            'employee_id' => $employeeId,
+            'commission_amount' => $commissionAmount,
+            'commission_status' => 'unpaid',
+            'payment_date' => null,
+        ];
     }
 
     /**

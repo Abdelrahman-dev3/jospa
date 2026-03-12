@@ -35,7 +35,7 @@
         </div>
         <div class="form-group col-md-6">
           <label class="form-label"> {{ $t('branch.lbl_contact_number') }} <span class="text-danger">*</span> </label>
-          <vue-tel-input type="number" :value="contact_number" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
+          <vue-tel-input type="number" :value="contact_number" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
           <span class="text-danger">{{ errors['contact_number'] }}</span>
         </div>
         <InputField class="col-md-6" :is-required="true" :label="$t('branch.lbl_contact_email')" placeholder="" v-model="contact_email" :error-message="errors.contact_email"></InputField>

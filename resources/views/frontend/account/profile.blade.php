@@ -37,7 +37,7 @@
                     <div class="col-md-6" style="margin-bottom: 20px;">
                         <label class="form-label">{{ __('profile.mobile_number') }} :</label>
                         <div class="input-group">
-                            <span class="input-group-text">+965</span>
+                            <span class="input-group-text">+966</span>
                             <input type="text" class="form-control" value="{{ $user->mobile }}" readonly>
                         </div>
                     </div>
@@ -245,7 +245,7 @@
                 </div>
                 <div class="mb-3 col-6">
                   <label class="form-label">{{ __('profile.mobile_number') }}</label>
-                  <input type="text" name="mobile" class="form-control" value="{{ $user->mobile }}">
+                  <input type="text" name="mobile" class="form-control" value="{{ $user->mobile }}" placeholder="+9665XXXXXXXX">
                 </div>
                 <div class="mb-3 col-6">
                   <label class="form-label">{{ __('profile.email') }}</label>

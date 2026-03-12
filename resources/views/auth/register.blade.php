@@ -66,8 +66,8 @@
             <div style="margin-bottom:15px;">
                 <label for="mobile" style="display:block;margin-bottom:6px;font-weight:500;font-size:14px;">{{ __('auth.mobile') }}</label>
                 <input id="mobile" type="text" name="mobile"
-                    value="{{ old('mobile') }}" required
-                    placeholder="{{ __('auth.enter_mobile') }}"
+                    value="{{ old('mobile', '+966') }}" required inputmode="tel" dir="ltr"
+                    placeholder="+9665XXXXXXXX"
                     style="
                         width:100%;
                         border:1px solid #ddd;
@@ -78,7 +78,7 @@
                         box-sizing:border-box;
                         font-style:italic !important;
                         transition:border-color 0.3s,box-shadow 0.3s;
-                        text-align:{{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
+                        text-align:left;
                     ">
             </div>
 
