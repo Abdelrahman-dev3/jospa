@@ -17,6 +17,17 @@ class BranchListCheck
     public function handle(Request $request, Closure $next)
     {
         if (auth()->check()) {
+            $routeName = $request->route()?->getName() ?? '';
+            $isBackendRequest = $request->is('admin')
+                || $request->is('app')
+                || $request->is('app/*')
+                || str_starts_with($routeName, 'backend.')
+                || str_starts_with($routeName, 'app.');
+
+            if (! $isBackendRequest) {
+                return $next($request);
+            }
+
             if (auth()->user()->hasRole('user')) {
                 \Auth::logout();
                 abort(403, 'Unauthorized action.');

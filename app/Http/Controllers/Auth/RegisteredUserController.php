@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Auth\Trait\AuthTrait;
 use App\Http\Controllers\Controller;
-use App\Providers\RouteServiceProvider;
+use App\Support\AuthRedirect;
 use Auth;
 use Illuminate\Http\Request;
 
@@ -35,6 +35,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(RouteServiceProvider::HOME);
+        return redirect()->to(AuthRedirect::path($user));
     }
 }

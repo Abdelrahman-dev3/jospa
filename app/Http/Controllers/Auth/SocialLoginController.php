@@ -6,7 +6,7 @@ use App\Events\Frontend\UserRegistered;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserProvider;
-use App\Providers\RouteServiceProvider;
+use App\Support\AuthRedirect;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +26,7 @@ class SocialLoginController extends Controller
         if ($redirectTo) {
             return $redirectTo;
         } else {
-            return RouteServiceProvider::HOME;
+            return AuthRedirect::path();
         }
     }
 
@@ -57,7 +57,7 @@ class SocialLoginController extends Controller
             return redirect('/');
         }
 
-        return redirect()->intended(RouteServiceProvider::HOME);
+        return redirect()->intended(AuthRedirect::path($authUser));
     }
 
     /**
@@ -94,7 +94,7 @@ class SocialLoginController extends Controller
 
                 flash('Email address is required!')->error()->important();
 
-                return redirect()->intended(RouteServiceProvider::HOME);
+                return redirect()->intended(AuthRedirect::path());
             }
 
             $user = User::create([

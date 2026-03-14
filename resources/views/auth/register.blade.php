@@ -66,8 +66,8 @@
             <div style="margin-bottom:15px;">
                 <label for="mobile" style="display:block;margin-bottom:6px;font-weight:500;font-size:14px;">{{ __('auth.mobile') }}</label>
                 <input id="mobile" type="text" name="mobile"
-                    value="{{ old('mobile', '+966') }}" required inputmode="tel" dir="ltr"
-                    placeholder="+9665XXXXXXXX"
+                    value="{{ old('mobile') }}" required inputmode="tel" dir="ltr"
+                    placeholder="05XXXXXXXX"
                     style="
                         width:100%;
                         border:1px solid #ddd;

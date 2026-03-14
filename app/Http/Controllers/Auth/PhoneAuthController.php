@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyPoint;
 use App\Models\User;
+use App\Support\AuthRedirect;
 use App\Services\TaqnyatSmsService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -202,7 +203,7 @@ class PhoneAuthController extends Controller
     private function redirectIfAuthenticated(): ?RedirectResponse
     {
         if (Auth::check()) {
-            return redirect('/');
+            return redirect()->to(AuthRedirect::path(Auth::user()));
         }
         return null;
     }
@@ -307,13 +308,7 @@ class PhoneAuthController extends Controller
             return $this->completeTempBookingAndRedirect($request);
         }
 
-        $user = $request->user();
-
-        if ($user && ($user->hasRole('admin') || $user->hasRole('employee'))) {
-            return redirect('/app')->with('success', $successMessage);
-        }
-
-        return redirect('/')->with('success', $successMessage);
+        return redirect()->to(AuthRedirect::path($request->user()))->with('success', $successMessage);
     }
 
     private function completeTempBookingAndRedirect(Request $request): RedirectResponse

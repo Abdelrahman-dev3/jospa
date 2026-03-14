@@ -245,7 +245,7 @@
                 </div>
                 <div class="mb-3 col-6">
                   <label class="form-label">{{ __('profile.mobile_number') }}</label>
-                  <input type="text" name="mobile" class="form-control" value="{{ $user->mobile }}" placeholder="+9665XXXXXXXX">
+                  <input type="text" name="mobile" class="form-control" value="{{ $user->mobile }}" placeholder="05XXXXXXXX">
                 </div>
                 <div class="mb-3 col-6">
                   <label class="form-label">{{ __('profile.email') }}</label>
