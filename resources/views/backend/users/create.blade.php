@@ -12,6 +12,15 @@
     </div>
 @endif
 
+@if(session('flash_warning'))
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ session('flash_warning') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+@include('backend.includes.errors')
+
 <div class="card">
     <div class="card-body">
         <x-backend.section-header>
@@ -37,10 +46,13 @@
                     {{ html()->label(__('labels.backend.users.fields.first_name'))->class('col-sm-2 form-control-label')->for('first_name') }}
                     <div class="col-sm-10">
                         {{ html()->text('first_name')
-                                ->class('form-control')
+                                ->class('form-control'.($errors->has('first_name') ? ' is-invalid' : ''))
                                 ->placeholder(__('labels.backend.users.fields.first_name'))
                                 ->attribute('maxlength', 191)
                                 ->required() }}
+                        @if ($errors->has('first_name'))
+                            <small class="invalid-feedback d-block">{{ $errors->first('first_name') }}</small>
+                        @endif
                     </div>
                 </div>
 
@@ -48,10 +60,13 @@
                     {{ html()->label(__('labels.backend.users.fields.last_name'))->class('col-sm-2 form-control-label')->for('last_name') }}
                     <div class="col-sm-10">
                         {{ html()->text('last_name')
-                                ->class('form-control')
+                                ->class('form-control'.($errors->has('last_name') ? ' is-invalid' : ''))
                                 ->placeholder(__('labels.backend.users.fields.last_name'))
                                 ->attribute('maxlength', 191)
                                 ->required() }}
+                        @if ($errors->has('last_name'))
+                            <small class="invalid-feedback d-block">{{ $errors->first('last_name') }}</small>
+                        @endif
                     </div>
                 </div>
 
@@ -60,10 +75,13 @@
 
                     <div class="col-sm-10">
                         {{ html()->email('email')
-                                ->class('form-control')
+                                ->class('form-control'.($errors->has('email') ? ' is-invalid' : ''))
                                 ->placeholder(__('labels.backend.users.fields.email'))
                                 ->attribute('maxlength', 191)
                                 ->required() }}
+                        @if ($errors->has('email'))
+                            <small class="invalid-feedback d-block">{{ $errors->first('email') }}</small>
+                        @endif
                     </div>
                 </div>
 
@@ -72,32 +90,13 @@
 
                     <div class="col-sm-10">
                         {{ html()->text('mobile')
-                                ->class('form-control')
+                                ->class('form-control'.($errors->has('mobile') ? ' is-invalid' : ''))
                                 ->placeholder(__('labels.backend.users.fields.mobile'))
                                 ->attribute('maxlength', 20)
                                 ->required() }}
-                    </div>
-                </div>
-
-                <div class="form-group row">
-                    {{ html()->label(__('labels.backend.users.fields.password'))->class('col-sm-2 form-control-label')->for('password') }}
-
-                    <div class="col-sm-10">
-                        {{ html()->password('password')
-                                ->class('form-control')
-                                ->placeholder(__('labels.backend.users.fields.password'))
-                                ->required() }}
-                    </div>
-                </div>
-
-                <div class="form-group row">
-                    {{ html()->label(__('labels.backend.users.fields.password_confirmation'))->class('col-sm-2 form-control-label')->for('password_confirmation') }}
-
-                    <div class="col-sm-10">
-                        {{ html()->password('password_confirmation')
-                                ->class('form-control')
-                                ->placeholder(__('labels.backend.users.fields.password_confirmation'))
-                                ->required() }}
+                        @if ($errors->has('mobile'))
+                            <small class="invalid-feedback d-block">{{ $errors->first('mobile') }}</small>
+                        @endif
                     </div>
                 </div>
 
@@ -122,6 +121,9 @@
 
                     <div class="col-6 col-sm-10">
                         {{ html()->checkbox('email_credentials', true, '1') }} {{ __('users.email_credentials') }}
+                        <div class="form-text text-muted mt-1">
+                            {{ __('users.login_credentials_hint') }}
+                        </div>
                     </div>
                 </div>
 

@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Notifications\UserAccountCreated;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class UsersController extends Controller
 {
@@ -49,7 +48,14 @@ class UsersController extends Controller
             'last_name' => 'required|min:2|max:191',
             'email' => 'required|email|max:191|unique:users',
             'mobile' => 'required|string|max:20|unique:users,mobile',
-            'password' => 'required|min:6|confirmed',
+        ], [
+            'first_name.required' => __('users.first_name_required'),
+            'last_name.required' => __('users.last_name_required'),
+            'email.required' => __('users.email_required'),
+            'email.email' => __('users.email_invalid'),
+            'email.unique' => __('users.email_already_exists'),
+            'mobile.required' => __('users.mobile_required'),
+            'mobile.unique' => __('users.mobile_already_exists'),
         ]);
 
         $data = $request->only([
@@ -61,7 +67,6 @@ class UsersController extends Controller
         ]);
 
         $data['status'] = $request->has('status') ? 1 : 0;
-        $data['password'] = Hash::make($request->password);
         $data['email_verified_at'] = $request->has('confirmed') ? Carbon::now() : null;
         $user = User::create($data);
 
@@ -78,14 +83,23 @@ class UsersController extends Controller
 
         \Artisan::call('cache:clear');
 
+        $flashData = [
+            'flash_success' => __('users.user_created'),
+        ];
+
         if ($request->has('email_credentials')) {
             try {
-                $user->notify(new UserAccountCreated(['password' => $request->password]));
-            } catch (\Exception $e) {
+                $user->notifyNow(new UserAccountCreated([
+                    'login_url' => route('signin'),
+                ]));
+
+                $flashData['flash_success'] .= ' ' . __('users.account_crdential');
+            } catch (\Throwable $e) {
                 \Log::error($e->getMessage());
+                $flashData['flash_warning'] = __('users.account_crdential_failed');
             }
         }
 
-        return redirect()->route('backend.users.create')->with('flash_success', __('users.user_created'));
+        return redirect()->route('backend.users.create')->with($flashData);
     }
 }
