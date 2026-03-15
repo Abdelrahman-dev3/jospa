@@ -60,17 +60,13 @@ class PaymentCalculatorService
 
         if ($couponCode  && $couponCode != '') {
             $coupon = Coupon::where('coupon_code', $couponCode)->where('is_expired', 0)->first();
-            if (! $coupon || ! $coupon->isWithinActiveDateRange() || ! $coupon->hasRemainingUses()) {
-                if ($coupon) {
-                    $coupon->syncExpirationStatus();
-                }
-
+            if (!$coupon) {
                 return [
                     'error' => __('messages.invalid_coupon')
                 ];
             }
             
-            $discount = $coupon->discount_type === 'percent'
+            $discount = $coupon->type === 'percent'
                 ? ($finalTotal * $coupon->discount_percentage) / 100
                 : $coupon->discount_amount;
 
