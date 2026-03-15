@@ -12,7 +12,7 @@ class CouponController extends Controller
 {
     public function availableCoupons(Request $request)
     {
-        $coupons = Coupon::with('promotion')->where('is_expired', 0)->where('use_limit', '>=', 1)->get();
+        $coupons = Coupon::with('promotion')->usable()->get();
         
         return response()->json([
             'status' => true,
@@ -27,9 +27,9 @@ class CouponController extends Controller
         $serviceId = $request->query('service_id');
         $bookingId = $request->query('booking_id');
 
-        $coupon = Coupon::where('coupon_code', $couponCode)
-            ->where('is_expired', 0)
-            ->where('use_limit', '>=', 1)
+        $coupon = Coupon::query()
+            ->where('coupon_code', $couponCode)
+            ->usable()
             ->first();
 
         $services = $this->normalizeServices($coupon?->services ?? []);
@@ -52,8 +52,6 @@ class CouponController extends Controller
                 'discount_amount' => $discountAmount,
             ]);
 
-            $coupon->decrement('use_limit');
-
             UserCouponRedeem::create([
                 'user_id' => auth()->id(),
                 'coupon_code' => $couponCode,
@@ -61,6 +59,8 @@ class CouponController extends Controller
                 'coupon_id' => $coupon->id,
                 'booking_id' => $bookingId,
             ]);
+
+            $coupon->syncExpiredState();
 
             return response()->json(['valid' => true]);
         }
@@ -72,9 +72,9 @@ class CouponController extends Controller
     {
         $couponCode = $request->query('coupon_code');
 
-        $coupon = Coupon::where('coupon_code', $couponCode)
-            ->where('is_expired', 0)
-            ->where('use_limit', '>=', 1)
+        $coupon = Coupon::query()
+            ->where('coupon_code', $couponCode)
+            ->usable()
             ->first();
 
         if (!$coupon) {

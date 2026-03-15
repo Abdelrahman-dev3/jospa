@@ -64,8 +64,13 @@ class BookingsController extends Controller
         $booking = Booking::create($data);
       
         if (!empty($data['coupon_code'])) {
-            $coupon = UserCouponRedeem::where('coupon_code', $data['coupon_code'])->first();
             $coupon_data = Coupon::where('coupon_code', $data['coupon_code'])->first();
+
+            if (! $coupon_data) {
+                return response()->json(['message' => 'Coupon not found.', 'status' => false], 200);
+            }
+
+            $coupon_data->syncExpiredState();
 
             $totalPrice = 0;
 
@@ -79,56 +84,28 @@ class BookingsController extends Controller
             if ($data['couponDiscountamount'] > $totalPrice) {
                 return response()->json(['valid' => false, 'message' => 'Discount exceeds the total price', 'status' => false], 200);
             }
-            if (!$coupon) {
-                if ($coupon_data->is_expired == 1) {
-                    $message = 'Coupon has expired.';
-                    return response()->json(['message' => $message, 'status' => false], 200);
-                } else {
-                    $redeemCoupon = [
-                        'coupon_code' => $data['coupon_code'],
-                        'discount' => $data['couponDiscountamount'],
-                        'user_id' => $data['user_id'],
-                        'coupon_id' => $coupon_data->id,
-                        'booking_id' => $booking->id,
-                    ];
-
-                    $user_coupon = UserCouponRedeem::create($redeemCoupon);
-
-                    $couponRedemptionsCount = UserCouponRedeem::where('coupon_id', $user_coupon->coupon_id)->count();
-                    if ($coupon_data->use_limit && $couponRedemptionsCount >= $coupon_data->use_limit) {
-                        Coupon::where('coupon_code', $data['coupon_code'])->update(['is_expired' => 1]);
-                        if ($coupon = Coupon::where('coupon_code', $data['coupon_code'])->first()) {
-                            Promotion::where('id', $coupon->promotion_id)->update(['status' => 0]);
-                        }
-                    }
-                }
+            if ($coupon_data->isCurrentlyExpired()) {
+                $message = 'Coupon has expired.';
+                return response()->json(['message' => $message, 'status' => false], 200);
             } else {
-                if ($coupon_data->is_expired == 1) {
-                    $message = 'Coupon has expired.';
+                if ($coupon_data->hasReachedUseLimit()) {
+                    $message = 'Your coupon limit has been reached.';
                     return response()->json(['message' => $message, 'status' => false], 200);
-                } else {
-                    $couponRedemptionsCount = UserCouponRedeem::where('coupon_id', $coupon->coupon_id)->count();
-                    if ($coupon_data->use_limit && $couponRedemptionsCount >= $coupon_data->use_limit) {
-                        $message = 'Your coupon limit has been reached.';
-                        return response()->json(['message' => $message, 'status' => false], 200);
-                    } else {
-                        $redeemCoupon = [
-                            'coupon_code' => $data['coupon_code'],
-                            'discount' => $data['couponDiscountamount'],
-                            'user_id' => $data['user_id'],
-                            'coupon_id' => $coupon_data->id,
-                            'booking_id' => $booking->id,
-                        ];
-                  
-                        UserCouponRedeem::create($redeemCoupon);
-                        $total_coupon = UserCouponRedeem::where('coupon_code', $data['coupon_code'])->count();
-                        if ($total_coupon == $coupon_data->use_limit) {
-                            Coupon::where('coupon_code', $data['coupon_code'])->update(['is_expired' => 1]);
-                            if ($coupon = Coupon::where('coupon_code', $data['coupon_code'])->first()) {
-                                Promotion::where('id', $coupon->promotion_id)->update(['status' => 0]);
-                            }
-                        }
-                    }
+                }
+
+                $redeemCoupon = [
+                    'coupon_code' => $data['coupon_code'],
+                    'discount' => $data['couponDiscountamount'],
+                    'user_id' => $data['user_id'],
+                    'coupon_id' => $coupon_data->id,
+                    'booking_id' => $booking->id,
+                ];
+
+                UserCouponRedeem::create($redeemCoupon);
+                $coupon_data->syncExpiredState();
+
+                if ($coupon_data->is_expired) {
+                    Promotion::where('id', $coupon_data->promotion_id)->update(['status' => 0]);
                 }
             }
         }

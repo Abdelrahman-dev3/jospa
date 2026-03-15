@@ -28,6 +28,8 @@ use App\Services\TapPaymentService;
 use Illuminate\Support\Facades\URL;
 use App\Models\User;
 use App\Models\Setting;
+use Modules\Promotion\Models\Coupon;
+use Modules\Promotion\Models\UserCouponRedeem;
 
 
 
@@ -619,7 +621,7 @@ class BookingCartController extends Controller
 
     private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds , $gift_ids = null, $couponCode = null, $giftCode = null)
     {
-        Invoice::create([
+        $invoice = Invoice::create([
             'user_id' => $userId,
             'cart_ids' => json_encode($cartIds),
             'gift_ids' => json_encode($gift_ids),
@@ -628,6 +630,40 @@ class BookingCartController extends Controller
             'discount_amount' => $discountAmount,
             'loyalty_points_discount' => $loyaltyDiscount,
             'final_total' => $finalTotal,
+        ]);
+
+        $this->syncCouponRedeemInvoice((int) $userId,(string) ($couponCode ?? ''),(float) $discountAmount,(array) $cartIds,(int) $invoice->id);
+
+        return $invoice->id;
+    }
+
+    private function syncCouponRedeemInvoice(int $userId, string $couponCode, float $discountAmount, array $cartIds, int $invoiceId): void
+    {
+        if ($couponCode === '' || $discountAmount <= 0 || $invoiceId <= 0) {
+            return;
+        }
+
+        $coupon = Coupon::where('coupon_code', $couponCode)->first();
+        if (! $coupon) {
+            return;
+        }
+
+        $updatedRows = 0;
+
+        if (! empty($cartIds)) {
+            $updatedRows = UserCouponRedeem::query()->where('user_id', $userId)->where('coupon_id', $coupon->id)->whereIn('booking_id', $cartIds)->whereNull('invoice_id')->update(['invoice_id' => $invoiceId,]);
+        }
+
+        if ($updatedRows > 0) {
+            return;
+        }
+
+        UserCouponRedeem::create([
+            'user_id' => $userId,
+            'coupon_code' => $coupon->coupon_code,
+            'discount' => $discountAmount,
+            'coupon_id' => $coupon->id,
+            'invoice_id' => $invoiceId,
         ]);
     }
 

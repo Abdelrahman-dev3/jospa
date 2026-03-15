@@ -14,13 +14,10 @@ class PromotionsController extends Controller
     public function getCouponsList(Request $request)
     {
         $perPage = $request->input('per_page', 10);
-        $today_date = date('Y-m-d');
         $coupons = Promotion::with('coupon')
             ->where('status', 1)
-            ->whereHas('coupon', function ($query) use ($today_date) {
-                $query->where('is_expired', 0)
-                    ->where('end_date_time', '>=', $today_date)
-                    ->where('start_date_time', '<=', $today_date);
+            ->whereHas('coupon', function ($query) {
+                $query->usable();
             });
 
         $coupons = $coupons->paginate($perPage);

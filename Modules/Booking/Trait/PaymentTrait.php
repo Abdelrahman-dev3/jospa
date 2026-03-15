@@ -147,7 +147,11 @@ trait PaymentTrait
 
     public function couponDiscount($total_amount, $coupon_code, $booking_id)
     {
-        $coupon = Coupon::where('coupon_code', $coupon_code)->first();
+        $coupon = Coupon::query()
+            ->where('coupon_code', $coupon_code)
+            ->usable()
+            ->first();
+
         $couponDiscountamount = 0;
         if ($coupon) {
             $couponDiscountamount = $coupon->discount_type == 'percent' ? $total_amount * ($coupon->discount_percentage / 100) : $coupon->discount_amount;
@@ -161,17 +165,23 @@ trait PaymentTrait
         $coupon = Coupon::where('coupon_code', $coupon_code)->first();
         $user_id = Booking::where('id', $booking_id)->first();
         if ($coupon) {
+            if ($coupon->isCurrentlyExpired()) {
+                return;
+            }
+
             $redeemCoupon['coupon_code'] = $coupon_code;
             $redeemCoupon['discount'] = $couponDiscountamount;
             $redeemCoupon['user_id'] = $user_id->user_id;
             $redeemCoupon['coupon_id'] = $coupon->id;
             $redeemCoupon['booking_id'] = $booking_id;
             UserCouponRedeem::create($redeemCoupon);
-            if (UserCouponRedeem::where('coupon_code', $coupon_code)->count() == $coupon->use_limit) {
-                Coupon::where('coupon_code', $coupon_code)->update(['is_expired' => 1]);
+
+            $coupon->syncExpiredState();
+
+            if ($coupon->is_expired) {
 
                 $allCouponsExpired = Coupon::where('promotion_id', $coupon->promotion_id)
-                    ->where('is_expired', 0)
+                    ->usable()
                     ->doesntExist();
 
                 // Update promotion status if all coupons are expired
@@ -573,15 +583,13 @@ trait PaymentTrait
 
     public function ExpireCoupon($data)
     {
-        $coupon = UserCouponRedeem::where('coupon_code', $data['coupon_code'])->first();
+        $couponData = Coupon::where('coupon_code', $data['coupon_code'])->first();
 
-        if ($coupon) {
-            $coupon_data = Coupon::find($coupon->coupon_id);
-
-            if ($coupon_data->is_expired == 1) {
+        if ($couponData) {
+            if ($couponData->isCurrentlyExpired()) {
                 $message = 'Coupon has expired.';
                 return response()->json(['message' => $message, 'status' => false], 200);
-            } elseif ($coupon_data->use_limit && $coupon->count() >= $coupon_data->use_limit) {
+            } elseif ($couponData->hasReachedUseLimit()) {
                 $message = 'Your coupon limit has been reached.';
                 return response()->json(['message' => $message, 'status' => false], 200);
             } else {
@@ -589,15 +597,12 @@ trait PaymentTrait
                     'coupon_code' => $data['coupon_code'],
                     'discount' => $data['couponDiscountamount'],
                     'user_id' => $data['user_id'],
-                    'coupon_id' => $coupon_data->id,
+                    'coupon_id' => $couponData->id,
                     'booking_id' => $data['booking_id'],
                 ];
 
                 UserCouponRedeem::create($redeemCoupon);
-                if ($coupon->count() == $coupon_data->use_limit) {
-                    $expired['is_expired'] = 1;
-                    Coupon::where('coupon_code', $data['coupon_code'])->update($expired);
-                }
+                $couponData->syncExpiredState();
                 return response()->json(['message' => 'Coupon redeemed successfully', 'status' => true, 'data' => $redeemCoupon], 200);
             }
         } else {

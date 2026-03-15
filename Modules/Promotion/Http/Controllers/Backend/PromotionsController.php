@@ -408,10 +408,9 @@ class PromotionsController extends Controller
 
     public function couponValidate(Request $request)
     {
-        $now = now();
-        $coupon = Coupon::where('coupon_code', $request->coupon_code)
-            ->where('end_date_time', '>=', $now)
-            ->where('is_expired', '!=', '1')
+        $coupon = Coupon::query()
+            ->where('coupon_code', $request->coupon_code)
+            ->usable()
             ->whereHas('promotion', function ($query) {
                 $query->where('status', '!=', '0');
             })
@@ -423,6 +422,8 @@ class PromotionsController extends Controller
 
             return ['valid' => false, 'message' => $message, 'status' => false];
         }
+
+        $coupon->syncExpiredState();
 
         $servicePrice = $request->service_price;
 

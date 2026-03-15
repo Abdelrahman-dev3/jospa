@@ -2,6 +2,7 @@
 
 namespace Modules\Promotion\Models;
 
+use App\Models\Invoice;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ class UserCouponRedeem extends Model
     /**
      * The attributes that are mass assignable.
      */
-    protected $fillable = ['user_id', 'coupon_code', 'discount', 'coupon_id', 'booking_id'];
+    protected $fillable = ['user_id', 'coupon_code', 'discount', 'coupon_id', 'booking_id', 'invoice_id'];
 
     // protected static function newFactory(): UserCouponRedeemFactory
     // {
@@ -30,5 +31,10 @@ class UserCouponRedeem extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 }

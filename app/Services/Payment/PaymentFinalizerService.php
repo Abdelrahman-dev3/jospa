@@ -190,7 +190,7 @@ class PaymentFinalizerService
             'loyalty_points_discount' => 0,
             'final_total' => $finalTotal,
         ]);
-        $this->recordInvoiceCouponRedeem($userId, $couponCode, $discountAmount, $cartIds);
+        $this->recordInvoiceCouponRedeem($invoice->id, $userId, $couponCode, $discountAmount, $cartIds);
         return $invoice->id;
     }
 
@@ -402,7 +402,7 @@ class PaymentFinalizerService
     }
     
     
-    private function recordInvoiceCouponRedeem($userId, $couponCode, $discountAmount, $cartIds): void
+    private function recordInvoiceCouponRedeem(int $invoiceId, int $userId, string $couponCode, float $discountAmount, array $cartIds): void
     {
         if (empty($couponCode) || $discountAmount <= 0) {
             return;
@@ -412,15 +412,33 @@ class PaymentFinalizerService
         if (! $coupon) {
             return;
         }
-        
-        $coupon->decrement('use_limit');
-        
+
+        $updatedRows = 0;
+
+        if (! empty($cartIds)) {
+            $updatedRows = UserCouponRedeem::query()
+                ->where('user_id', $userId)
+                ->where('coupon_id', $coupon->id)
+                ->whereIn('booking_id', $cartIds)
+                ->whereNull('invoice_id')
+                ->update([
+                    'invoice_id' => $invoiceId,
+                ]);
+        }
+
+        if ($updatedRows > 0) {
+            $coupon->syncExpiredState();
+            return;
+        }
 
         UserCouponRedeem::create([
             'user_id' => $userId,
             'coupon_code' => $coupon->coupon_code,
             'discount' => $discountAmount,
             'coupon_id' => $coupon->id,
+            'invoice_id' => $invoiceId,
         ]);
+
+        $coupon->syncExpiredState();
     }
 }

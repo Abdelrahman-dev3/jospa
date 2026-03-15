@@ -264,7 +264,7 @@ class ReportsController extends Controller
 
     public function coupon_report_index_data(Datatables $datatable, Request $request)
     {
-        $query = UserCouponRedeem::with(['user', 'coupon.promotion']);
+        $query = UserCouponRedeem::with(['user', 'coupon.promotion', 'invoice']);
 
         $filter = $request->filter;
 
@@ -310,7 +310,7 @@ class ReportsController extends Controller
                 ';
             })
             ->addColumn('invoice_id', function ($data) {
-                $invoice = $this->resolveCouponRedeemInvoice($data);
+                $invoice = $data->invoice ?: $this->resolveCouponRedeemInvoice($data);
 
                 if (! $invoice) {
                     return '-';

@@ -20,7 +20,7 @@ class ProfileController extends Controller
         $pending = Booking::countUserActiveBookings($user->id);
         $completed = Booking::countUserCompletedBookings($user->id);
         $completedGift = GiftCard::where('user_id', $user->id)->count();
-        $coupons = Coupon::with('promotion')->where('is_expired', 0)->where('use_limit', '>=', 1)->count();
+        $coupons = Coupon::with('promotion')->usable()->count();
 
         $wallet = Wallet::where('user_id', $user->id)->first();
         $balance = $wallet ? $wallet->amount : 0.00;
@@ -72,7 +72,7 @@ class ProfileController extends Controller
 
     public function coupon()
     {
-        $coupons = Coupon::with('promotion')->where('is_expired', 0)->where('use_limit', '>=', 1)->get();
+        $coupons = Coupon::with('promotion')->usable()->get();
 
         return view('frontend.account.coupons', compact('coupons'));
     }
