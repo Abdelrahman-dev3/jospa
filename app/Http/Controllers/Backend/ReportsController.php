@@ -300,11 +300,11 @@ class ReportsController extends Controller
                 return '
                     <div class="d-flex align-items-center text-decoration-none" style="color:#c39b61;">
                         <div class="me-3">
-                            <img src="'.$Profile_image.'" class="avatar avatar-md rounded-circle" alt="'.$name.'" width="40" height="40">
+                            <img src="' . $Profile_image . '" class="avatar avatar-md rounded-circle" alt="' . $name . '" width="40" height="40">
                         </div>
                         <div class="d-flex flex-column">
-                            <span class="fw-bold">'.$name.'</span>
-                            <small class="text-muted">'.$phone.'</small>
+                            <span class="fw-bold">' . $name . '</span>
+                            <small class="text-muted">' . $phone . '</small>
                         </div>
                     </div>
                 ';
@@ -316,7 +316,7 @@ class ReportsController extends Controller
                     return '-';
                 }
 
-                $url = route('app.invoice', ['invoice_id' => $invoice->id]).'#invoice-card-'.$invoice->id;
+                $url = route('app.invoice', ['invoice_id' => $invoice->id]) . '#invoice-card-' . $invoice->id;
 
                 return '<a href="' . $url . '">INV-' . $invoice->id . '</a>';
             })
@@ -324,6 +324,12 @@ class ReportsController extends Controller
                 return Currency::format($data->discount ?? 0);
             })
             ->addColumn('note', function ($data) {
+                $invoice = $data->invoice ?: $this->resolveCouponRedeemInvoice($data);
+
+                if (! $invoice) {
+                    return __('report.lbl_coupon_note_single_service');
+                }
+
                 return ! $data->booking_id
                     ? __('report.lbl_coupon_note_products_gifts')
                     : '-';
@@ -415,11 +421,11 @@ class ReportsController extends Controller
                 return '
                     <div class="d-flex align-items-center text-decoration-none" style="color:#c39b61;">
                         <div class="me-3">
-                            <img src="'.$Profile_image.'" class="avatar avatar-md rounded-circle" alt="'.$name.'" width="40" height="40">
+                            <img src="' . $Profile_image . '" class="avatar avatar-md rounded-circle" alt="' . $name . '" width="40" height="40">
                         </div>
                         <div class="d-flex flex-column">
-                            <span class="fw-bold">'.$name.'</span>
-                            <small class="text-muted">'.$phone.'</small>
+                            <span class="fw-bold">' . $name . '</span>
+                            <small class="text-muted">' . $phone . '</small>
                         </div>
                     </div>
                 ';
@@ -477,10 +483,10 @@ class ReportsController extends Controller
     }
 
 
- public function order_report_index_data(DataTables $datatable, Request $request)
+    public function order_report_index_data(DataTables $datatable, Request $request)
     {
-        $bookings = Booking::with('booking_service.employee', 'booking_service.service' , 'user');
-        
+        $bookings = Booking::with('booking_service.employee', 'booking_service.service', 'user');
+
 
         $filter = $request->filter;
 
@@ -520,7 +526,7 @@ class ReportsController extends Controller
                 return customDate($data->created_at);
             })
             ->editColumn('items', function ($data) {
-        return $data->booking_service->pluck('service.name')->join(', ');
+                return $data->booking_service->pluck('service.name')->join(', ');
             })
             ->editColumn('payment', function ($data) {
                 return $data->payment_status == 1 ? __('order_report.paid') : __('order_report.unpaid');
@@ -538,8 +544,8 @@ class ReportsController extends Controller
             ->filterColumn('customer_name', function ($query, $keyword) {
                 $query->whereHas('user', function ($q) use ($keyword) {
                     $q->where('first_name', 'like', "%{$keyword}%")
-                      ->orWhere('last_name', 'like', "%{$keyword}%")
-                      ->orWhere('mobile', 'like', "%{$keyword}%");
+                        ->orWhere('last_name', 'like', "%{$keyword}%")
+                        ->orWhere('mobile', 'like', "%{$keyword}%");
                 });
             })
             ->filterColumn('phone', function ($query, $keyword) {
@@ -559,17 +565,17 @@ class ReportsController extends Controller
     public function daily_booking_report_index_data(Datatables $datatable, Request $request)
     {
         $query = Booking::dailyReport();
-        
+
         $data = $request->all();
-    
+
         $filter = $request->filter;
         if (isset($filter['booking_date'])) {
             $bookingDates = explode(' to ', $filter['booking_date']);
-    
+
             if (count($bookingDates) >= 2) {
                 $startDate = date('Y-m-d 00:00:00', strtotime($bookingDates[0]));
                 $endDate = date('Y-m-d 23:59:59', strtotime($bookingDates[1]));
-    
+
                 $query->where('bookings.start_date_time', '>=', $startDate)
                     ->where('bookings.start_date_time', '<=', $endDate);
             } elseif (count($bookingDates) === 1) {
@@ -579,7 +585,7 @@ class ReportsController extends Controller
                 $query->whereBetween('bookings.start_date_time', [$startDate, $endDate]);
             }
         }
-    
+
         return $datatable->eloquent($query)
             ->editColumn('start_date_time', function ($data) {
                 return customDate($data->start_date_time);
@@ -592,27 +598,26 @@ class ReportsController extends Controller
             })
             ->editColumn('total_service_amount', function ($data) {
                 $totalServiceAmount = Booking::totalservice($data->total_tax_amount ?? 0)
-                ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
-                ->first();
+                    ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
+                    ->first();
 
-            return Currency::format($totalServiceAmount->total_service_amount ?? 0);
-        })
+                return Currency::format($totalServiceAmount->total_service_amount ?? 0);
+            })
             ->editColumn('total_tax_amount', function ($data) {
                 return Currency::format($data->total_tax_amount ?? 0);
             })
             ->editColumn('total_amount', function ($data) {
                 $totalServiceAmount = Booking::totalservice($data->total_tax_amount ?? 0)
-                ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
-                ->first();
+                    ->whereDate('bookings.start_date_time', '=', $data->start_date_time)
+                    ->first();
 
-            return Currency::format($totalServiceAmount->total_amount ?? 0);
-       
+                return Currency::format($totalServiceAmount->total_amount ?? 0);
             })
             ->addIndexColumn()
             ->rawColumns([])
             ->toJson();
     }
-    
+
 
     public function overall_booking_report(Request $request)
     {
@@ -927,11 +932,11 @@ class ReportsController extends Controller
                 return '
                     <div class="d-flex align-items-center text-decoration-none" style="color:#c39b61;">
                         <div class="me-3">
-                            <img src="'.$Profile_image.'" class="avatar avatar-md rounded-circle" alt="'.$name.'" width="40" height="40">
+                            <img src="' . $Profile_image . '" class="avatar avatar-md rounded-circle" alt="' . $name . '" width="40" height="40">
                         </div>
                         <div class="d-flex flex-column">
-                            <span class="fw-bold">'.$name.'</span>
-                            <small class="text-muted">'.$phone.'</small>
+                            <span class="fw-bold">' . $name . '</span>
+                            <small class="text-muted">' . $phone . '</small>
                         </div>
                     </div>
                 ';
@@ -974,7 +979,7 @@ class ReportsController extends Controller
             ->toJson();
     }
 
-    
+
     public function staff_report_index_data(Datatables $datatable, Request $request)
     {
         $query = User::staffReport();
@@ -1086,5 +1091,4 @@ class ReportsController extends Controller
 
         return $this->export($request);
     }
-
 }
