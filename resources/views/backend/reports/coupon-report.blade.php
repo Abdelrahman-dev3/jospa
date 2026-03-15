@@ -7,7 +7,7 @@
         <div class="card-body">
             <x-backend.section-header>
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="input-group gap-2 flex-nowrap">
                             <input type="text" name="coupon_date" id="coupon_date" placeholder="Select Date" class="coupon-report-date-range form-control" readonly />
                             <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="Reset">

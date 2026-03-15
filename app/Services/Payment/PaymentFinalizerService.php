@@ -412,14 +412,20 @@ class PaymentFinalizerService
         if (! $coupon) {
             return;
         }
-        
-        $coupon->decrement('use_limit');
-        
+
+        if (! $coupon->isWithinActiveDateRange() || ! $coupon->hasRemainingUses()) {
+            $coupon->syncExpirationStatus();
+
+            return;
+        }
+
         UserCouponRedeem::create([
             'user_id' => $userId,
             'coupon_code' => $coupon->coupon_code,
             'discount' => $discountAmount,
             'coupon_id' => $coupon->id,
         ]);
+
+        $coupon->syncExpirationStatus();
     }
 }

@@ -6,14 +6,25 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Booking\Models\BookingService;
 use Modules\Promotion\Models\Coupon;
-use Modules\Promotion\Models\UserCouponRedeem;
 
 class CouponController extends Controller
 {
     public function availableCoupons(Request $request)
     {
-        $coupons = Coupon::with('promotion')->where('is_expired', 0)->where('use_limit', '>=', 1)->get();
-        
+        $coupons = Coupon::with('promotion')
+            ->where('is_expired', 0)
+            ->get()
+            ->filter(function (Coupon $coupon) {
+                if (! $coupon->isWithinActiveDateRange() || ! $coupon->hasRemainingUses()) {
+                    $coupon->syncExpirationStatus();
+
+                    return false;
+                }
+
+                return true;
+            })
+            ->values();
+
         return response()->json([
             'status' => true,
             'data' => $coupons,
@@ -24,21 +35,30 @@ class CouponController extends Controller
     public function validateCoupon(Request $request)
     {
         $couponCode = $request->query('coupon_code');
-        $serviceId = $request->query('service_id');
+        $serviceId = (int) $request->query('service_id');
         $bookingId = $request->query('booking_id');
 
         $coupon = Coupon::where('coupon_code', $couponCode)
             ->where('is_expired', 0)
-            ->where('use_limit', '>=', 1)
             ->first();
 
-        $services = $this->normalizeServices($coupon?->services ?? []);
-        $serviceId = (int) $serviceId;
+        if (! $coupon || ! $coupon->isWithinActiveDateRange() || ! $coupon->hasRemainingUses()) {
+            if ($coupon) {
+                $coupon->syncExpirationStatus();
+            }
 
-        if ($coupon && in_array($serviceId, $services, true)) {
-            $bookingService = BookingService::where('booking_id', $bookingId)->whereNull('coupon_code')->first();
+            return response()->json(['valid' => false]);
+        }
 
-            if (!$bookingService) {
+        $services = $this->normalizeServices($coupon->services ?? []);
+
+        if (in_array($serviceId, $services, true)) {
+            $bookingService = BookingService::where('booking_id', $bookingId)
+                ->where('service_id', $serviceId)
+                ->whereNull('coupon_code')
+                ->first();
+
+            if (! $bookingService) {
                 return response()->json(['valid' => false]);
             }
 
@@ -50,16 +70,6 @@ class CouponController extends Controller
             $bookingService->update([
                 'coupon_code' => $coupon->coupon_code,
                 'discount_amount' => $discountAmount,
-            ]);
-
-            $coupon->decrement('use_limit');
-
-            UserCouponRedeem::create([
-                'user_id' => auth()->id(),
-                'coupon_code' => $couponCode,
-                'discount' => $discountAmount,
-                'coupon_id' => $coupon->id,
-                'booking_id' => $bookingId,
             ]);
 
             return response()->json(['valid' => true]);
@@ -74,15 +84,19 @@ class CouponController extends Controller
 
         $coupon = Coupon::where('coupon_code', $couponCode)
             ->where('is_expired', 0)
-            ->where('use_limit', '>=', 1)
             ->first();
 
-        if (!$coupon) {
+        if (! $coupon || ! $coupon->isWithinActiveDateRange() || ! $coupon->hasRemainingUses()) {
+            if ($coupon) {
+                $coupon->syncExpirationStatus();
+            }
+
             return response()->json(['valid' => false]);
         }
 
         $services = $this->normalizeServices($coupon->services);
-        if (!in_array(0, $services, true)) {
+
+        if (! in_array(0, $services, true)) {
             return response()->json(['valid' => false]);
         }
 
@@ -102,6 +116,7 @@ class CouponController extends Controller
 
         if (is_string($services)) {
             $decoded = json_decode($services, true);
+
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                 return $decoded;
             }
