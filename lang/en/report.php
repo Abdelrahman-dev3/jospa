@@ -47,6 +47,7 @@ return [
     'lbl_payment_method' => 'Payment Method',
     'lbl_transaction_id' => 'Transaction ID',
     'lbl_booking_id' => 'Booking ID',
+    'lbl_invoice_id' => 'Invoice ID',
     'lbl_customer' => 'Customer',
     'lbl_discount_amt' => 'Discount Amount',
     'lbl_tip_amt' => 'Tip Amount',

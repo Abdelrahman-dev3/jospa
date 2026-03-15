@@ -21,6 +21,10 @@ class InvoiceController extends Controller
 
         $query = Invoice::query()->with('user');
 
+        if ($request->filled('invoice_id')) {
+            $query->where('id', $request->invoice_id);
+        }
+
         if ($request->filled('customer_name')) {
             $query->whereHas('user', function ($q) use ($request) {
                 $search = '%' . $request->customer_name . '%';

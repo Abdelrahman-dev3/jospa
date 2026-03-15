@@ -124,7 +124,7 @@ class PromotionsController extends Controller
     public function index_data(Request $request)
     {
         $module_name = $this->module_name;
-        $query = Promotion::query()->with(['coupon']);
+        $query = Promotion::query()->with(['coupon'])->whereHas('coupon');
 
         $filter = $request->filter;
 
@@ -153,7 +153,7 @@ class PromotionsController extends Controller
 
             })
             ->editColumn('coupon_type', function ($data) {
-                return $data->coupon->first()->coupon_type;
+                return optional($data->coupon->first())->coupon_type ?? '-';
             })
             ->filterColumn('coupon_type', function ($query, $keyword) {
                 $query->whereHas('coupon', function ($query) use ($keyword) {
@@ -166,16 +166,23 @@ class PromotionsController extends Controller
                     ->orderBy('coupon.coupon_type', $order); // Order by coupon_type
             }, 2)
             ->editColumn('coupon_price', function ($data) {
+                $coupon = $data->coupon->first();
 
-                if ($data->coupon->first()->discount_type === 'fixed') {
-                    $value = \Currency::format($data->coupon->first()->discount_amount ?? 0);
+                if (! $coupon) {
+                    return '-';
+                }
+
+                if ($coupon->discount_type === 'fixed') {
+                    $value = \Currency::format($coupon->discount_amount ?? 0);
                     return $value;
                 }
-                if ($data->coupon->first()->discount_type === 'percent') {
-                    $value = $data->coupon->first()->discount_percentage . '%';
+                if ($coupon->discount_type === 'percent') {
+                    $value = $coupon->discount_percentage . '%';
 
                     return $value;
                 }
+
+                return '-';
             })
             ->orderColumn('coupon_price', function ($query, $order) {
                 $query->select('promotions.*')
@@ -186,7 +193,7 @@ class PromotionsController extends Controller
                         END $order"); // Conditional ordering based on discount_type
             }, 3)
             ->editColumn('use_limit', function ($data) {
-                return $data->coupon->first()->use_limit;
+                return optional($data->coupon->first())->use_limit ?? 0;
             })
             ->orderColumn('use_limit', function ($query, $order) {
                 $query->select('promotions.*')

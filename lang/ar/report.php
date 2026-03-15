@@ -37,6 +37,7 @@ return [
     'lbl_payment_method' => 'طريقة الدفع',
     'lbl_transaction_id' => 'رقم العملية',
     'lbl_booking_id' => 'رقم الحجز',
+    'lbl_invoice_id' => 'رقم الفاتورة',
     'lbl_customer' => 'العميل',
     'lbl_discount_amt' => 'قيمة الخصم',
     'lbl_tip_amt' => 'قيمة الإكرامية',

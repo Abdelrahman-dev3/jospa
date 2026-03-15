@@ -5,7 +5,6 @@ namespace Modules\Promotion\Models;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Modules\Promotion\Database\factories\UserCouponRedeemFactory;
 
 class UserCouponRedeem extends Model
 {

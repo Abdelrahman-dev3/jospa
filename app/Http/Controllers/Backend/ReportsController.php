@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\GiftCard;
+use App\Models\Invoice;
 use App\Models\User;
 use Carbon\Carbon;
 use Currency;
@@ -308,12 +309,16 @@ class ReportsController extends Controller
                     </div>
                 ';
             })
-            ->addColumn('booking_id', function ($data) {
-                if (! $data->booking_id) {
+            ->addColumn('invoice_id', function ($data) {
+                $invoice = $this->resolveCouponRedeemInvoice($data);
+
+                if (! $invoice) {
                     return '-';
                 }
-                $url = url('app/bookings?booking_id=' . $data->booking_id);
-                return '<a href="' . $url . '">' . $data->booking_id . '</a>';
+
+                $url = route('app.invoice', ['invoice_id' => $invoice->id]).'#invoice-card-'.$invoice->id;
+
+                return '<a href="' . $url . '">INV-' . $invoice->id . '</a>';
             })
             ->addColumn('discount_amount', function ($data) {
                 return Currency::format($data->discount ?? 0);
@@ -326,8 +331,35 @@ class ReportsController extends Controller
             ->editColumn('created_at', function ($data) {
                 return customDate($data->created_at);
             })
-            ->rawColumns(['customer_name', 'booking_id'])
+            ->rawColumns(['customer_name', 'invoice_id'])
             ->toJson();
+    }
+
+    private function resolveCouponRedeemInvoice(UserCouponRedeem $redeem): ?Invoice
+    {
+        if ($redeem->booking_id) {
+            $invoice = Invoice::query()
+                ->where(function ($query) use ($redeem) {
+                    $query->whereJsonContains('cart_ids', (int) $redeem->booking_id)
+                        ->orWhereJsonContains('cart_ids', (string) $redeem->booking_id);
+                })
+                ->latest('id')
+                ->first();
+
+            if ($invoice) {
+                return $invoice;
+            }
+        }
+
+        if ($redeem->user_id && $redeem->coupon_code) {
+            return Invoice::query()
+                ->where('user_id', $redeem->user_id)
+                ->where('coupon_code', $redeem->coupon_code)
+                ->latest('id')
+                ->first();
+        }
+
+        return null;
     }
 
     public function promotion_report(Request $request)
