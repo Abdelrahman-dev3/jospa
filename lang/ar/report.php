@@ -58,7 +58,5 @@ return [
     'lbl_custom_range' => 'حسب تاريخ',
     'lbl_all_period' => 'الكل',
     'lbl_note' => 'ملاحظة',
-    'lbl_coupon_note_products_gifts' => 'تم استخدامه للخصم في المنتجات والجيفت كارد',
-
     'lbl_coupon_note_single_service' => 'خصم علي خدمه فرديه',
 ];

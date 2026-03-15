@@ -68,7 +68,6 @@ return [
     'lbl_custom_range' => 'Custom Range',
     'lbl_all_period' => 'All',
     'lbl_note' => 'Note',
-    'lbl_coupon_note_products_gifts' => 'Used for products and gift cards discount',
     'lbl_coupon_note_single_service' => 'Discount on a single service',
 
 ];

@@ -329,10 +329,6 @@ class ReportsController extends Controller
                 if (! $invoice) {
                     return __('report.lbl_coupon_note_single_service');
                 }
-
-                return ! $data->booking_id
-                    ? __('report.lbl_coupon_note_products_gifts')
-                    : '-';
             })
             ->editColumn('created_at', function ($data) {
                 return customDate($data->created_at);
