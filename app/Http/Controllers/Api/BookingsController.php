@@ -36,7 +36,6 @@ public function branchs($id)
     return response()->json($branches);
 }
 
-
 public function getServiceGroups(Request $request)
 {
     $is_home = (int) $request->get('is_home');
@@ -137,164 +136,158 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         return response()->json([]);
     }
 
-    $branchId = optional($user->branch)->branch_id;
-    $shift = optional($user->shift)->shift_id;
     $dayName = strtolower($dateObj->format('l'));
     $serve_book_min = (int) $request->query('Increasing', 30);
     $min_minutes = max(1, $serve_book_min);
 
+    $branchId = optional($user->branch)->branch_id;
     if ($branchId && Holiday::where('branch_id', $branchId)->whereDate('date', $date)->exists()) {
         return response()->json([]);
     }
 
-    $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)->where('day_of_week', $dayName)->orderBy('id', 'desc')->first();
-
-    if ($staffWorkingHours) {
-
-    if ($staffWorkingHours->is_holiday) {
-        return response()->json([]);
-    }
-
-    $start = Carbon::createFromFormat('H:i', $staffWorkingHours->start_time);
-    $end = Carbon::createFromFormat('H:i', $staffWorkingHours->end_time);
-    if ($end->lte($start)) {
+    $workingConfig = $this->resolveWorkingConfig($user, $staffId, $dayName);
+    if (!$workingConfig) {
         return response()->json([]);
     }
 
     $bookedTimes = $this->buildBookedTimes($staffId, $date, $min_minutes);
 
-    $breaks = json_decode($staffWorkingHours->breaks, true) ?? [];
-    if (!is_array($breaks)) {
-        $breaks = [];
-    }
+    $availableTimes = $this->buildAvailableTimes(
+        $date,
+        $workingConfig['start_time'],
+        $workingConfig['end_time'],
+        $workingConfig['breaks'],
+        $bookedTimes,
+        $min_minutes
+    );
 
-    $availableTimes = [];
-
-    $current = Carbon::parse($date . ' ' . $start->format('H:i'), 'Asia/Riyadh');
-    $end = Carbon::parse($date . ' ' . $end->format('H:i'), 'Asia/Riyadh');
-
-    $isToday = Carbon::createFromFormat('Y-m-d', $date)->isToday();
-    $now = Carbon::now('Asia/Riyadh')->startOfMinute();
-
-    while ($current <= $end) {
-    $candidateEnd = $current->copy()->addMinutes($min_minutes);
-    if ($candidateEnd->gt($end)) {
-        break;
-    }
-    $timeStr = $current->format('H:i');
-
-    if ($isToday && $current->lt($now)) {
-        $current->addMinute();
-        continue;
-    }
-
-    $isInBreak = false;
-    foreach ($breaks as $break) {
-        if (!is_array($break) || empty($break['start_break']) || empty($break['end_break'])) {
-            continue;
-        }
-        try {
-            $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
-            $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
-        } catch (\Throwable $e) {
-            continue;
-        }
-
-        if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
-            $isInBreak = true;
-            break;
-        }
-    }
-
-    if (!$isInBreak && !in_array($timeStr, $bookedTimes)) {
-        $availableTimes[] = $timeStr;
-    }
-
-    $current->addMinute();
+    return response()->json($availableTimes);
 }
 
-    $availableTimes2 = $this->filterAvailableTimes($availableTimes, $min_minutes);
+    private function resolveWorkingConfig(User $user, int $staffId, string $dayName): ?array
+    {
+        $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)
+            ->where('day_of_week', $dayName)
+            ->orderBy('id', 'desc')
+            ->first();
 
-    $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $min_minutes);
+        if ($staffWorkingHours) {
+            if ($staffWorkingHours->is_holiday) {
+                return null;
+            }
 
+            return $this->makeWorkingConfig(
+                $staffWorkingHours->start_time,
+                $staffWorkingHours->end_time,
+                $staffWorkingHours->breaks
+            );
+        }
 
-    return response()->json($availableTimes3);
+        $branchId = optional($user->branch)->branch_id;
+        $shiftId = optional($user->shift)->shift_id;
+        if (!$branchId) {
+            return null;
+        }
 
-    }
-    else{
-        $workingHours = BussinessHour::where('branch_id', $branchId)->where('day', $dayName)->where('is_holiday', 0)->where('shift_id', $shift)->orderBy('id', 'desc')->first();
+        $workingHours = BussinessHour::where('branch_id', $branchId)
+            ->where('day', $dayName)
+            ->where('is_holiday', 0)
+            ->where('shift_id', $shiftId)
+            ->orderBy('id', 'desc')
+            ->first();
 
         if (!$workingHours) {
-            return response()->json([]);
+            return null;
         }
 
-        $start = Carbon::createFromFormat('H:i', $workingHours->start_time);
-        $end = Carbon::createFromFormat('H:i', $workingHours->end_time);
+        return $this->makeWorkingConfig(
+            $workingHours->start_time,
+            $workingHours->end_time,
+            $workingHours->breaks
+        );
+    }
+
+    private function makeWorkingConfig(?string $startTime, ?string $endTime, $breaks): ?array
+    {
+        try {
+            $start = Carbon::createFromFormat('H:i', (string) $startTime);
+            $end = Carbon::createFromFormat('H:i', (string) $endTime);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
         if ($end->lte($start)) {
-            return response()->json([]);
+            return null;
         }
 
-        $bookedTimes = $this->buildBookedTimes($staffId, $date, $min_minutes);
+        return [
+            'start_time' => $start->format('H:i'),
+            'end_time' => $end->format('H:i'),
+            'breaks' => $this->normalizeBreaks($breaks),
+        ];
+    }
 
-        $breaks = json_decode($workingHours->breaks, true) ?? [];
-        if (!is_array($breaks)) {
-            $breaks = [];
+    private function normalizeBreaks($breaks): array
+    {
+        if (is_string($breaks)) {
+            $breaks = json_decode($breaks, true);
         }
 
+        return is_array($breaks) ? $breaks : [];
+    }
+
+    private function buildAvailableTimes(string $date,string $startTime,string $endTime,array $breaks,array $bookedTimes,int $minMinutes): array {
         $availableTimes = [];
-
-        $current = Carbon::parse($date . ' ' . $start->format('H:i'), 'Asia/Riyadh');
-        $end = Carbon::parse($date . ' ' . $end->format('H:i'), 'Asia/Riyadh');
-
+        $current = Carbon::parse($date . ' ' . $startTime, 'Asia/Riyadh');
+        $end = Carbon::parse($date . ' ' . $endTime, 'Asia/Riyadh');
         $isToday = Carbon::createFromFormat('Y-m-d', $date)->isToday();
         $now = Carbon::now('Asia/Riyadh')->startOfMinute();
 
         while (true) {
-            $candidateEnd = $current->copy()->addMinutes($min_minutes);
+            $candidateEnd = $current->copy()->addMinutes($minMinutes);
             if ($candidateEnd->gt($end)) {
                 break;
             }
-            $timeStr = $current->format('H:i');
 
+            $timeStr = $current->format('H:i');
             if ($isToday && $current->lt($now)) {
                 $current->addMinute();
-                if ($current->gt($end)) break;
                 continue;
             }
 
-            $isInBreak = false;
-            foreach ($breaks as $break) {
-                if (!is_array($break) || empty($break['start_break']) || empty($break['end_break'])) {
-                    continue;
-                }
-                try {
-                    $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
-                    $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
-                } catch (\Throwable $e) {
-                    continue;
-                }
-
-                if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
-                    $isInBreak = true;
-                    break;
-                }
-            }
-
-            if (!$isInBreak && !in_array($timeStr, $bookedTimes)) {
+            if (! $this->overlapsBreaks($date, $current, $candidateEnd, $breaks) && !in_array($timeStr, $bookedTimes)) {
                 $availableTimes[] = $timeStr;
             }
 
             $current->addMinute();
-
-            if ($current->gt($end)) break;
         }
 
-        $availableTimes2 = $this->filterAvailableTimes($availableTimes, $min_minutes);
-        $availableTimes3 = $this->filterAvailableTimesNotConf($availableTimes2, $bookedTimes, $min_minutes);
+        $availableTimes = $this->filterAvailableTimes($availableTimes, $minMinutes);
 
-        return response()->json($availableTimes3);
+        return $this->filterAvailableTimesNotConf($availableTimes, $bookedTimes, $minMinutes);
     }
-}
+
+    private function overlapsBreaks(string $date, Carbon $current, Carbon $candidateEnd, array $breaks): bool
+    {
+        foreach ($breaks as $break) {
+            if (!is_array($break) || empty($break['start_break']) || empty($break['end_break'])) {
+                continue;
+            }
+
+            try {
+                $breakStart = Carbon::parse($date . ' ' . $break['start_break'], 'Asia/Riyadh');
+                $breakEnd = Carbon::parse($date . ' ' . $break['end_break'], 'Asia/Riyadh');
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            if ($current->lt($breakEnd) && $candidateEnd->gt($breakStart)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /*-----------------------Helper function to filter time---------------------------*/
     function filterAvailableTimes($availableTimes, $serviceDuration) {

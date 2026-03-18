@@ -42,7 +42,7 @@ class BookingResource extends JsonResource
             'user_profile_image' => optional($this->user)->profile_image ?? default_user_avatar(),
             'user_created' => optional($this->user)->created_at ?? '-',
             'status' => $this->status,
-            'is_paid' => $this->payment->payment_status ?? 0,
+            'is_paid' => $this->bookingTransaction ? 1 : 0,
             'created_by_name' => optional($this->createdUser)->full_name ?? default_user_name(),
             'updated_by_name' => optional($this->updatedUser)->full_name ?? default_user_name(),
             'created_at' => date('d, M Y', strtotime($this->created_at)),

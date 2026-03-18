@@ -4,108 +4,30 @@ namespace App\Services\Payment\Strategies;
 
 use Illuminate\Http\Request;
 use App\Services\Payment\PaymentCalculatorService;
-use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
-use Modules\Booking\Models\Booking;
-use App\Models\GiftCard;
 use App\Models\User;
 
-class TamaraPaymentStrategy
+class TamaraPaymentStrategy extends BasePaymentStrategy
 {
     public function pay(Request $request, $typePage)
     {
-        $data = [
-            'user_id' => auth()->id(),
-            'page' => $typePage,
-            'payment_method' => 'tamara',
-            'couponCode' => $request->invoiceCopon ?? '',
-            'submethods' => [
-                'wallet' => (bool) $request->wallet,
-                'loyalty' => (bool) $request->loyalty,
-                'gift_code' => $request->gift_code,
-            ],
-            'final_before_sub' => $request->total ?? 0,
-            'discountAmount' => $request->discountAmount ?? 0,
-            'cart_ids' => [],
-            'gift_ids' => [],
-        ];
-
-        $calculator = app(PaymentCalculatorService::class);
-        $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon);
-        if (isset($totalData['error'])) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => $totalData['error'],
-                ], 422);
-            }
-            return redirect()->back()->with('error', $totalData['error']);
+        $prepared = $this->preparePaymentFlow($request, $typePage, 'tamara');
+        if (isset($prepared['response'])) {
+            return $prepared['response'];
         }
 
-        
-        $data['final_before_sub'] = $totalData['total'];
-        $data['discountAmount'] = $totalData['discountAmount'];
-        $data['tax'] = $totalData['tax'];
-        $data['cart_ids'] = $totalData['cart_ids'];
-        $data['gift_ids'] = $totalData['gift_ids'];
-
-        
-        $subMethodService = app(PaymentSubMethodsService::class);
-        $subResult = $subMethodService->apply($data['user_id'], $request, $data['final_before_sub']);
-
-        if (isset($subResult['error'])) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => $subResult['error'],
-                ], 422);
-            }
-            return redirect()->back()->with('error', $totalData['error']);
-        }
-
-        $remainingAmount = $subResult['remaining_amount'];
+        $data = $prepared['data'];
+        $subResult = $prepared['subResult'];
+        $remainingAmount = $prepared['remainingAmount'];
 
         if ($remainingAmount <= 0) {
             try {
-                $finalizer = app(PaymentFinalizerService::class);
-                $subPayments = array_merge($subResult ?? [], [
-                    'gift_code' => $request->get('gift_code'),
-                ]);
-                $invoiceId = $finalizer->finalizePayment(
-                    $data['user_id'],
-                    $data['final_before_sub'],
-                    $data['tax'],
-                    $data['discountAmount'],
-                    $typePage,
-                    $totalData['cart_ids'] ?? [],
-                    $totalData['gift_ids'] ?? [],
-                    $data['payment_method'] ?? "Sub Methods",
-                    $data['couponCode'] ?? "",
-                    true,
-                    $subPayments
-                );
-                $subMethodService->apply($data['user_id'], $request, $data['final_before_sub'] , true);
-
-                if ($request->expectsJson()) {
-                    return response()->json([
-                        'status' => true,
-                        'message' => 'Payment completed using sub methods.',
-                        'data' => [
-                            'paid' => true,
-                            'amount' => $data['final_before_sub'],
-                            'payment_method' => $data['payment_method'],
-                        ],
-                    ]);
-                }
-
-                return view('frontend.payment-status.captured');
-            } catch (\Exception $e) {
-                if ($request->expectsJson()) {
-                    return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
-                }
-                return redirect()->back()->with('error', $e->getMessage());
+                $this->commitFinalizedPayment($data['user_id'], $request, $data, $subResult);
+                return $this->respondSubMethodOnlySuccess($request, $data);
+            } catch (\Throwable $e) {
+                return $this->respondPayException($request, $e);
             }
         }
 
@@ -277,29 +199,7 @@ class TamaraPaymentStrategy
                 session()->forget('tamara_payment');
                 return $this->respondFailure($request, $subResult['error'], 422);
             }
-            $subPayments = array_merge($subResult ?? [], [
-                'gift_code' => $data['submethods']['gift_code'] ?? null,
-            ]);
-            app(PaymentFinalizerService::class)->finalizePayment(
-                auth()->id(),
-                $data['final_before_sub'],
-                $data['tax'],
-                $data['discountAmount'],
-                $data['page'],
-                $data['cart_ids'],
-                $data['gift_ids'],
-                $data['payment_method'] ?? "Sub Methods",
-                $data['couponCode'] ?? "",
-                true,
-                $subPayments
-            );
-
-            $subMethodService->apply(
-                auth()->id(),
-                $fakeRequest,
-                $data['final_before_sub'],
-                true
-            );
+            $this->commitFinalizedPayment(auth()->id(), $fakeRequest, $data, $subResult);
 
             session()->forget('tamara_payment');
 
@@ -340,29 +240,16 @@ class TamaraPaymentStrategy
         if (isset($subResult['error'])) {
             return $this->respondFailure($request, $subResult['error'], 422);
         }
-        $subPayments = array_merge($subResult ?? [], [
-            'gift_code' => $context['gift_code'],
-        ]);
-        app(PaymentFinalizerService::class)->finalizePayment(
-            $user->id,
-            $totalData['total'],
-            $totalData['tax'],
-            $totalData['discountAmount'],
-            $context['page'],
-            $totalData['cart_ids'] ?? [],
-            $totalData['gift_ids'] ?? [],
-            'tamara',
-            $context['couponCode'] ?? "",
-            true,
-            $subPayments
-        );
-
-        $subMethodService->apply(
-            $user->id,
-            $fakeRequest,
-            $totalData['total'],
-            true
-        );
+        $this->commitFinalizedPayment($user->id, $fakeRequest, [
+            'final_before_sub' => $totalData['total'],
+            'tax' => $totalData['tax'],
+            'discountAmount' => $totalData['discountAmount'],
+            'page' => $context['page'],
+            'cart_ids' => $totalData['cart_ids'] ?? [],
+            'gift_ids' => $totalData['gift_ids'] ?? [],
+            'payment_method' => 'tamara',
+            'couponCode' => $context['couponCode'] ?? '',
+        ], $subResult);
 
         return $this->respondSuccess($request, 'Payment captured successfully.');
     }
@@ -379,29 +266,6 @@ class TamaraPaymentStrategy
         session()->forget('tamara_payment');
 
         return $this->respondFailure(request(), __('messages.payment_cancelled'), 400);
-    }
-
-    private function isAlreadyFinalized(array $cartIds, array $giftIds): bool
-    {
-        if (empty($cartIds) && empty($giftIds)) {
-            return false;
-        }
-
-        if (!empty($cartIds)) {
-            $paid = Booking::whereIn('id', $cartIds)->where('payment_status', 1)->count();
-            if ($paid !== count($cartIds)) {
-                return false;
-            }
-        }
-
-        if (!empty($giftIds)) {
-            $paidGifts = GiftCard::whereIn('id', $giftIds)->where('payment_status', 1)->count();
-            if ($paidGifts !== count($giftIds)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
@@ -461,45 +325,6 @@ class TamaraPaymentStrategy
             'gift_code' => $request->get('gift_code'),
             'discount_amount' => $discount,
         ];
-    }
-
-    private function isClientDiscountMatching(?float $clientDiscount, float $expectedDiscount): bool
-    {
-        if ($clientDiscount === null) {
-            return true;
-        }
-
-        return abs($clientDiscount - $expectedDiscount) <= 0.01;
-    }
-
-    private function wantsJson(Request $request): bool
-    {
-        return $request->expectsJson() || $request->wantsJson() || $request->is('api/*');
-    }
-
-    private function respondSuccess(Request $request, string $message, array $data = [])
-    {
-        if ($this->wantsJson($request)) {
-            return response()->json([
-                'status' => true,
-                'message' => $message,
-                'data' => $data,
-            ]);
-        }
-
-        return view('frontend.payment-status.captured');
-    }
-
-    private function respondFailure(Request $request, string $message, int $status = 400)
-    {
-        if ($this->wantsJson($request)) {
-            return response()->json([
-                'status' => false,
-                'message' => $message,
-            ], $status);
-        }
-
-        return view('frontend.payment-status.failed', ['message' => $message]);
     }
 
 }

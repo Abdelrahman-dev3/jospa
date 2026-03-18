@@ -85,9 +85,7 @@
                     <div class="form-group">
                         <label class="top-label"> 
                             {{ __('messagess.select_branch') }} 
-                            <span class="step-help-btn"
-                                  data-step="step1"
-                                  data-help='@json(trans("steps.step1"))'>
+                            <span class="step-help-btn" data-step="step1" data-help='@json(trans("steps.step1"))'>
                                 <i class="bi bi-question-circle"></i>
                             </span>
                         </label>
@@ -263,7 +261,6 @@
         });
         
         function initializeApp() {
-
             const urlParams = new URLSearchParams(window.location.search);
             const branchId = urlParams.get('branch_id');
 
@@ -273,7 +270,6 @@
                 updateUI();
                 fetchServiceGroups();
             }
-
             updateUI();
             setupEventListeners();
             setupAutoNavigation();
@@ -340,17 +336,17 @@
         const eveningTimes = document.getElementById('afternoon-grid');
         
         morningBtn.addEventListener('click', () => {
-          morningBtn.classList.add('active');
-          eveningBtn.classList.remove('active');
-          morningTimes.style.display = 'flex';
-          eveningTimes.style.display = 'none';
+            morningBtn.classList.add('active');
+            eveningBtn.classList.remove('active');
+            morningTimes.style.display = 'flex';
+            eveningTimes.style.display = 'none';
         });
         
         eveningBtn.addEventListener('click', () => {
-          eveningBtn.classList.add('active');
-          morningBtn.classList.remove('active');
-          eveningTimes.style.display = 'flex';
-          morningTimes.style.display = 'none';
+            eveningBtn.classList.add('active');
+            morningBtn.classList.remove('active');
+            eveningTimes.style.display = 'flex';
+            morningTimes.style.display = 'none';
         });
 
         function showLoader() {

@@ -3,11 +3,8 @@
 namespace App\Services\Payment;
 use Modules\Booking\Models\Booking;
 use Modules\Product\Models\Cart;
-use App\Models\LoyaltyPoint;
 use App\Models\GiftCard;
 use Modules\Promotion\Models\Coupon;
-use Illuminate\Support\Facades\DB;
-use App\Models\Setting;
 
 class PaymentCalculatorService
 {

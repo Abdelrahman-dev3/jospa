@@ -3,7 +3,6 @@
 namespace Modules\Booking\Models;
 
 use App\Models\BaseModel;
-use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -29,10 +28,8 @@ class Booking extends BaseModel
     protected $table = 'bookings';
 
     protected $casts = [
-
         'user_id' => 'integer',
         'branch_id' => 'integer',
-
     ];
 
     /**
@@ -49,14 +46,17 @@ class Booking extends BaseModel
     {
         return $this->belongsTo(\App\Models\Branch::class, 'branch_id')->withTrashed();
     }
- public function createdBy()
+
+    public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
     public function updatedBy()
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
     public function deletedBy()
     {
         return $this->belongsTo(User::class, 'deleted_by');
@@ -71,7 +71,8 @@ class Booking extends BaseModel
                             JSON_UNQUOTE(JSON_EXTRACT(services.name, '$.\"$locale\"')) as service_name,
                             'services.*',
                             booking_services.*
-                        ");    }
+                        ");    
+    }
 
     public function packages()
     {
@@ -79,6 +80,7 @@ class Booking extends BaseModel
             ->leftJoin('packages', 'booking_packages.package_id', 'packages.id')
             ->select('packages.name as name', 'packages.description', 'booking_packages.*');
     }
+
     public function userPackageReddem()
     {
         return $this->hasMany(userPackageRedeem::class)->with('package');
@@ -116,12 +118,17 @@ class Booking extends BaseModel
 
     public function bookingTransaction()
     {
-        return $this->hasOne(BookingTransaction::class)->where('payment_status', 1);
+        return $this->hasOne(BookingTransaction::class)->where('payment_status', 1)->latest('id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(BookingTransaction::class);
     }
 
     public function payment()
     {
-        return $this->hasOne(BookingTransaction::class);
+        return $this->hasOne(BookingTransaction::class)->latest('id');
     }
 
     public function bookingService()
@@ -163,6 +170,20 @@ class Booking extends BaseModel
         }
     }
 
+    public function scopePaid(Builder $query): Builder
+    {
+        return $query->whereHas('transactions', function (Builder $transactionQuery) {
+            $transactionQuery->where('payment_status', 1);
+        });
+    }
+
+    public function scopeUnpaid(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('transactions', function (Builder $transactionQuery) {
+            $transactionQuery->where('payment_status', 1);
+        });
+    }
+
     public static function userBaseQuery(int $userId, array $relations = []): Builder
     {
         return static::with($relations)->where('created_by', $userId)->whereNull('deleted_by');
@@ -171,7 +192,7 @@ class Booking extends BaseModel
     public static function getUserIncompleteBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {
         return static::userBaseQuery($userId, $relations)
             ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
-            ->where('payment_status', 0)
+            ->unpaid()
             ->whereNotIn('status', ['completed', 'cancelled', 'canceled'])
             ->get();
     }
@@ -179,50 +200,9 @@ class Booking extends BaseModel
     public static function getCompletedBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {
         return static::userBaseQuery($userId, $relations)
             ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
-            ->where('payment_status', 1)
+            ->paid()
             ->where('status', 'completed')
             ->get();
-    }
-
-    public static function getUserBookings(int $userId, array $relations = ['service.service'])
-    {
-        return static::userBaseQuery($userId, $relations)
-            ->whereHas('services')
-            ->get();
-    }
-
-    public static function getUserActiveBookings(int $userId, array $relations = ['service.service', 'service.employee'])
-    {
-        return static::getUserIncompleteBookings($userId, null, $relations);
-    }
-
-    public static function getUserCompletedBookings(int $userId, array $relations = ['service.service', 'service.employee'])
-    {
-        return static::getCompletedBookings($userId, null, $relations);
-    }
-
-    public static function countUserActiveBookings(int $userId): int
-    {
-        return static::userBaseQuery($userId)
-            ->whereHas('service')
-            ->where('payment_status', 0)
-            ->whereNotIn('status', ['completed', 'cancelled', 'canceled'])
-            ->count();
-    }
-
-    public static function countUserCompletedBookings(int $userId): int
-    {
-        return static::userBaseQuery($userId)
-            ->whereHas('service')
-            ->where('payment_status', 1)
-            ->where('status', 'completed')
-            ->count();
-    }
-
-    public static function findUserBooking(int $userId, int $bookingId): ?self
-    {
-        return static::userBaseQuery($userId)
-            ->find($bookingId);
     }
 
     // Reports Query
@@ -272,19 +252,19 @@ class Booking extends BaseModel
     }
 
     public static function totalservice($taxAmount)
-{
-    return self::select(
-        DB::raw('DATE(bookings.start_date_time) AS start_date_time'),
-        DB::raw('COUNT(DISTINCT bookings.id) AS total_bookings'),
-        DB::raw('COALESCE(SUM(booking_services.service_price), 0) as total_service_amount'),
-        DB::raw('
-            COALESCE(SUM(booking_services.service_price), 0) +
-            ' . $taxAmount . ' AS total_amount')
-    )
-        ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
-        ->where('bookings.status', 'completed')
-        ->groupBy(DB::raw('DATE(bookings.start_date_time)'));
-}
+    {
+        return self::select(
+            DB::raw('DATE(bookings.start_date_time) AS start_date_time'),
+            DB::raw('COUNT(DISTINCT bookings.id) AS total_bookings'),
+            DB::raw('COALESCE(SUM(booking_services.service_price), 0) as total_service_amount'),
+            DB::raw('
+                COALESCE(SUM(booking_services.service_price), 0) +
+                ' . $taxAmount . ' AS total_amount')
+        )
+            ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
+            ->where('bookings.status', 'completed')
+            ->groupBy(DB::raw('DATE(bookings.start_date_time)'));
+    }
 
     public static function overallReport()
     {

@@ -18,22 +18,22 @@ use App\Support\FrontendPaymentSettings;
 class PaymentController extends Controller
 {
     public function index(Request $request){
-        $type_page = $request->has('ids') ? 'payment' : 'cart';
-        $userId = auth()->user()->id;
-        $cartproduct = [];
-        $productPrice = 0;
-        $productCount = 0;
-        $GifttCount = 0;
-        $GiftPrice = 0;
         
-        if($type_page == 'payment'){
+        $isPayNow = $request->has('ids') ? 'payment' : 'cart';
+        
+        $userId = auth()->user()->id;
+        
+        $productPrice = $productCount = $GifttCount = $GiftPrice = 0;
+        
+        $cartproduct = [];
+        
+        if($isPayNow == 'payment'){
             $cartservice = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service','service.employee','branch:id,name,description',]);
         }else{
             $cartservice = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service','service.employee','branch:id,name,description',]);
             $cartproduct = Cart::with('product')->where(['user_id' => $userId])->get();
             $productPrice = $cartproduct->sum(function ($item) {
                 $price = $item->product->max_price ?? $item->product->min_price ?? 0;
-            
                 return $price * ($item->qty ?? 1);
             });
             $productCount = $cartproduct->count();
@@ -85,7 +85,7 @@ class PaymentController extends Controller
     public function payment(Request $request)
     {
         $method = $request->get('paymentMethod');
-        $typePage = $request->ids ? 'payment' : 'cart';
+        $isPayNow = $request->ids ? 'payment' : 'cart';
 
         if (! $this->isPaymentMethodEnabled($method)) {
             $message = __('messages.invalid_payment_method');
@@ -107,7 +107,7 @@ class PaymentController extends Controller
             ]),
         };
 
-        return $strategy->pay($request, $typePage);
+        return $strategy->pay($request, $isPayNow);
     }
 
     public function tabbySuccess(Request $request, $invoice = null)

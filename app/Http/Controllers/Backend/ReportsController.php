@@ -481,14 +481,18 @@ class ReportsController extends Controller
 
     public function order_report_index_data(DataTables $datatable, Request $request)
     {
-        $bookings = Booking::with('booking_service.employee', 'booking_service.service', 'user');
+        $bookings = Booking::with('booking_service.employee', 'booking_service.service', 'user', 'bookingTransaction');
 
 
         $filter = $request->filter;
 
         if (isset($filter)) {
             if (isset($filter['payment_status']) && $filter['payment_status'] !== '') {
-                $bookings->where('payment_status', $filter['payment_status']);
+                if ((int) $filter['payment_status'] === 1) {
+                    $bookings->paid();
+                } else {
+                    $bookings->unpaid();
+                }
             }
 
             if (isset($filter['order_date'][0])) {
@@ -525,7 +529,7 @@ class ReportsController extends Controller
                 return $data->booking_service->pluck('service.name')->join(', ');
             })
             ->editColumn('payment', function ($data) {
-                return $data->payment_status == 1 ? __('order_report.paid') : __('order_report.unpaid');
+                return $data->bookingTransaction ? __('order_report.paid') : __('order_report.unpaid');
             })
             ->editColumn('status', function ($data) {
                 return $data->booking_service->pluck('discount_amount')->join(', ');

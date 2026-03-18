@@ -1,19 +1,14 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\BookingCart;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
-use Modules\Booking\Models\BookingProduct;
 use Modules\Wallet\Models\Wallet;
 use App\Models\LoyaltyPoint;
-use App\Models\LoyaltyPointTransaction;
 use App\Services\TaqnyatSmsService;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
 use Modules\Booking\Models\BookingTransaction;
 use Carbon\Carbon;
@@ -67,8 +62,8 @@ class BookingCartController extends Controller
 
         $finalPrice = $cartTotal - $discountTotal;
         
+        // counting services and products
         $serviceCount = $services->sum(fn($item) => $item->service ? 1 : 0);
-
         $productCount = $products->count();
 
         return view('frontend.cart.index', compact('services' , 'products' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount', 'gifts'));
@@ -79,7 +74,6 @@ class BookingCartController extends Controller
         $user = auth()->user();
         $data = $request->all();
         $btn_value = $request->btn_value;
-        $branch = $data['branch'];
         if (!$user) {
             session()->put('temp_booking', [
                 'data' => $data,
@@ -92,6 +86,41 @@ class BookingCartController extends Controller
                 'message' => 'يرجى تسجيل الدخول لإكمال الحجز.'
             ], 200);
         }
+        $pendingSlots = [];
+        foreach ($data['services'] ?? [] as $service) {
+            foreach ($service['subServices'] ?? [] as $sub) {
+                $slotData = $this->prepareSlotData($sub);
+                if (!$slotData) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('messages.invalid_data')
+                    ], 422);
+                }
+
+                if ($this->hasSlotConflict($slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('branch.branch_reserved')
+                    ], 409);
+                }
+
+                if ($this->hasPendingSlotConflict($pendingSlots, $slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('branch.branch_reserved')
+                    ], 409);
+                }
+
+                $pendingSlots[] = [
+                    'staff_id' => $slotData['staff_id'],
+                    'start_date_time' => $slotData['start_date_time']->copy(),
+                    'duration' => $slotData['duration'],
+                ];
+            }
+        }
+
+        DB::beginTransaction();
+        try {
             if (!empty($data['services'])) {
                 foreach ($data['services'] as $service) {
                     if (!empty($service['subServices'])) {
@@ -141,10 +170,85 @@ class BookingCartController extends Controller
                     }
                 }
             }
+            DB::commit();
             return response()->json([
                 'success' => true,
                 'message' => __('messages.booking_added_to_cart')
             ], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+    
+    private function prepareSlotData(array $sub): ?array
+    {
+        $serviceId = (int) ($sub['id'] ?? 0);
+        $staffId = (int) ($sub['staffId'] ?? 0);
+        $date = $sub['date'] ?? null;
+        $time = $sub['time'] ?? null;
+        $duration = max(1, (int) ($sub['duration'] ?? 0));
+
+        if (!$serviceId || !$staffId || !$date || !$time) {
+            return null;
+        }
+
+        try {
+            $startDateTime = Carbon::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return [
+            'service_id' => $serviceId,
+            'staff_id' => $staffId,
+            'start_date_time' => $startDateTime,
+            'duration' => $duration,
+        ];
+    }
+
+    private function hasSlotConflict(int $staffId, Carbon $startDateTime, int $duration): bool
+    {
+        $requestedEnd = $startDateTime->copy()->addMinutes(max(1, $duration));
+
+        $existingSlots = BookingService::where('employee_id', $staffId)
+            ->whereDate('start_date_time', $startDateTime->toDateString())
+            ->whereHas('booking', function ($query) {
+                $query->whereIn('status', ['pending', 'confirmed', 'check_in']);
+            })
+            ->get(['start_date_time', 'duration_min']);
+
+        foreach ($existingSlots as $slot) {
+            $existingStart = Carbon::parse($slot->start_date_time);
+            $existingDuration = max(1, (int) ($slot->duration_min ?? 0));
+            $existingEnd = $existingStart->copy()->addMinutes($existingDuration);
+
+            if ($existingStart->lt($requestedEnd) && $existingEnd->gt($startDateTime)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function hasPendingSlotConflict(array $pendingSlots, int $staffId, Carbon $startDateTime, int $duration): bool
+    {
+        $requestedEnd = $startDateTime->copy()->addMinutes(max(1, $duration));
+
+        foreach ($pendingSlots as $slot) {
+            if (($slot['staff_id'] ?? 0) !== $staffId) {
+                continue;
+            }
+
+            $existingStart = $slot['start_date_time'];
+            $existingEnd = $existingStart->copy()->addMinutes(max(1, (int) ($slot['duration'] ?? 0)));
+
+            if ($existingStart->lt($requestedEnd) && $existingEnd->gt($startDateTime)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     
@@ -192,7 +296,10 @@ class BookingCartController extends Controller
     {
         $user = auth()->user();
         
-        $bookings = Booking::with('services')->where('created_by', $user->id)->where('payment_status', 0)->get();
+        $bookings = Booking::with('services')
+            ->where('created_by', $user->id)
+            ->unpaid()
+            ->get();
         
         foreach ($bookings as $booking) {
             $booking->bookingService()->delete();
@@ -285,7 +392,7 @@ class BookingCartController extends Controller
             $finalTotal = session('finalTotal', 0);
 
             $cartIds = Booking::where('user_id', $user->id)
-                ->where('payment_status', 0)
+                ->unpaid()
                 ->pluck('id')
                 ->toArray();
 
@@ -306,10 +413,6 @@ class BookingCartController extends Controller
             $giftCode = $request->get('gift_code');
             $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode);
             $this->paymentSuccess($cartIds, 'card', $tapId);
-
-            Booking::where('user_id', $user->id)
-                ->where('payment_status', 0)
-                ->update(['payment_status' => 1]);
 
             $this->activateGiftCards($user->id);
 

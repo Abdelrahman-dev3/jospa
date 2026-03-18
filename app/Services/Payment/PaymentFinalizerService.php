@@ -74,21 +74,19 @@ class PaymentFinalizerService
             $this->addLoyaltyPoints($userId, $paidAmount);
 
 
+            if ($pageType === 'cart') {
+                $bookingIdsToNotify = Booking::whereIn('id', $cartIds)
+                    ->unpaid()
+                    ->pluck('id')
+                    ->all();
+            }
+
             // Create Invoice
             $invoiceId = $this->storeInvoice($userId, $discountAmount,$tax ,$paidAmount, $cartIds , $giftIds , $product_ids , $couponCode, $subPayments);
 
             //  Create Booking Transactions
             $this->createTransactions( $cartIds ,  'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
 
-            //  Update payment status
-            if ($pageType === 'cart') {
-                $bookingIdsToNotify = Booking::whereIn('id', $cartIds)
-                    ->where('payment_status', 0)
-                    ->pluck('id')
-                    ->all();
-            }
-
-            Booking::whereIn('id', $cartIds)->update(['payment_status' => 1]);
             $this->createBookingCommissions($cartIds);
             $this->sendPaidCartBookingNotifications($bookingIdsToNotify);
             if (!empty($giftIds)) {

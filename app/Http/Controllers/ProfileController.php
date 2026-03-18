@@ -17,8 +17,8 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        $pending = Booking::countUserActiveBookings($user->id);
-        $completed = Booking::countUserCompletedBookings($user->id);
+        $pending = Booking::userBaseQuery($user->id)->whereHas('service')->unpaid()->whereNotIn('status', ['completed', 'cancelled', 'canceled'])->count();
+        $completed = Booking::userBaseQuery($user->id)->whereHas('service')->paid()->where('status', 'completed')->count();
         $completedGift = GiftCard::where('user_id', $user->id)->count();
         $coupons = Coupon::with('promotion')->usable()->count();
 
@@ -26,7 +26,7 @@ class ProfileController extends Controller
         $balance = $wallet ? $wallet->amount : 0.00;
         $points = LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0;
 
-        $bookings = Booking::getUserBookings($user->id);
+        $bookings = Booking::userBaseQuery($user->id, ['service.service'])->whereHas('services')->get();
 
         return view('frontend.account.profile', compact('user', 'balance', 'points', 'bookings', 'pending', 'completed', 'coupons', 'completedGift'));
     }
@@ -88,7 +88,8 @@ class ProfileController extends Controller
 
     public function destroy_myBooking(Request $request, $id)
     {
-        $booking = Booking::findUserBooking(auth()->id(), (int) $id);
+        $booking = Booking::userBaseQuery(auth()->id())
+            ->find((int) $id);
 
         if (!$booking) {
             return back()->with('error', 'الـ Booking غير موجود');

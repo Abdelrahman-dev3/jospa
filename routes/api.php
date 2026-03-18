@@ -105,6 +105,7 @@ Route::prefix('branches')->group(function () {
         Route::get('{id}/available-dates', 'getAvailableDates');
     });
 });
+
 Route::controller(BranchController::class)->group(function () {
     Route::post('verify-slot', 'verifySlot');
 });
