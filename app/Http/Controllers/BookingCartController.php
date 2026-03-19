@@ -411,8 +411,8 @@ class BookingCartController extends Controller
             $this->addLoyaltyPoints($user->id, $charge['amount']);
             $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
             $giftCode = $request->get('gift_code');
-            $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode);
-            $this->paymentSuccess($cartIds, 'card', $tapId);
+            $invoiceId = $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode);
+            $this->paymentSuccess($cartIds, 'card', $tapId, $invoiceId);
 
             $this->activateGiftCards($user->id);
 
@@ -780,11 +780,12 @@ class BookingCartController extends Controller
         ]);
     }
 
-    private function paymentSuccess(array $cartIds, $paymentMethod, $tapId = null): void
+    private function paymentSuccess(array $cartIds, $paymentMethod, $tapId = null, $invoiceId = null): void
     {
         foreach ($cartIds as $bookingId) {
             BookingTransaction::create([
                 'booking_id'     => $bookingId,
+                'invoice_id' => $invoiceId,
                 'external_transaction_id' => $tapId,
                 'transaction_type' => $paymentMethod,
                 'payment_status' => 1,

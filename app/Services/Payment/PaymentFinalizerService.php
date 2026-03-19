@@ -85,7 +85,7 @@ class PaymentFinalizerService
             $invoiceId = $this->storeInvoice($userId, $discountAmount,$tax ,$paidAmount, $cartIds , $giftIds , $product_ids , $couponCode, $subPayments);
 
             //  Create Booking Transactions
-            $this->createTransactions( $cartIds ,  'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
+            $this->createTransactions($cartIds, $invoiceId, 'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
 
             $this->createBookingCommissions($cartIds);
             $this->sendPaidCartBookingNotifications($bookingIdsToNotify);
@@ -195,11 +195,12 @@ class PaymentFinalizerService
     /**
      * Create Booking transactions
      */
-    private function createTransactions(array $cartIds, string $transactionId, string $paymentMethod): void
+    private function createTransactions(array $cartIds, int $invoiceId, string $transactionId, string $paymentMethod): void
     {
         foreach ($cartIds as $id) {
             BookingTransaction::create([
                 'booking_id' => $id,
+                'invoice_id' => $invoiceId,
                 'external_transaction_id' => $transactionId,
                 'transaction_type' => $paymentMethod,
                 'payment_status' => 1,

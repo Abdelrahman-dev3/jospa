@@ -11,11 +11,12 @@ class BookingTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['booking_id', 'external_transaction_id', 'transaction_type', 'discount_percentage', 'discount_amount', 'tip_amount', 'tax_percentage', 'payment_status'];
+    protected $fillable = ['booking_id', 'invoice_id', 'external_transaction_id', 'transaction_type', 'discount_percentage', 'discount_amount', 'tip_amount', 'tax_percentage', 'payment_status'];
 
     protected $casts = [
         'tax_percentage' => 'array',
         'booking_id' => 'integer',
+        'invoice_id' => 'integer',
         'discount_percentage' => 'double',
         'discount_amount' => 'double',
         'tip_amount' => 'double',
@@ -29,6 +30,11 @@ class BookingTransaction extends Model
     public function booking()
     {
         return $this->belongsTo(Booking::class)->with('services');
+    }
+
+    public function invoice()
+    {
+        return $this->belongsTo(\App\Models\Invoice::class, 'invoice_id');
     }
 
     public function commissions()

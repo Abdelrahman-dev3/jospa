@@ -985,6 +985,14 @@ class ReportsController extends Controller
 
     private function resolveBookingTransactionInvoice(BookingTransaction $transaction): ?Invoice
     {
+        if ($transaction->invoice_id) {
+            $invoice = Invoice::query()->find($transaction->invoice_id);
+
+            if ($invoice) {
+                return $invoice;
+            }
+        }
+
         if (! $transaction->booking_id) {
             return null;
         }
