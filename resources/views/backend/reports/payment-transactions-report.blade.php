@@ -95,9 +95,9 @@
             searchable: false,
         },
         {
-            data: 'booking_id',
-            name: 'booking_id',
-            title: "{{ __('report.lbl_booking_id') }}",
+            data: 'invoice_id',
+            name: 'invoice_id',
+            title: "{{ __('report.lbl_invoice_id') }}",
             orderable: false,
             searchable: false,
         },

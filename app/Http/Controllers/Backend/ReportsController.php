@@ -941,12 +941,16 @@ class ReportsController extends Controller
                     </div>
                 ';
             })
-            ->addColumn('booking_id', function ($data) {
-                if (! $data->booking_id) {
+            ->addColumn('invoice_id', function ($data) {
+                $invoice = $this->resolveBookingTransactionInvoice($data);
+
+                if (! $invoice) {
                     return '-';
                 }
-                $url = url('app/bookings?booking_id=' . $data->booking_id);
-                return '<a href="' . $url . '">' . $data->booking_id . '</a>';
+
+                $url = route('app.invoice', ['invoice_id' => $invoice->id]) . '#invoice-card-' . $invoice->id;
+
+                return '<a href="' . $url . '">INV-' . $invoice->id . '</a>';
             })
             ->editColumn('transaction_id', function ($data) {
                 return $data->external_transaction_id ?? '-';
@@ -975,8 +979,23 @@ class ReportsController extends Controller
             ->editColumn('created_at', function ($data) {
                 return customDate($data->created_at);
             })
-            ->rawColumns(['customer_name', 'booking_id'])
+            ->rawColumns(['customer_name', 'invoice_id'])
             ->toJson();
+    }
+
+    private function resolveBookingTransactionInvoice(BookingTransaction $transaction): ?Invoice
+    {
+        if (! $transaction->booking_id) {
+            return null;
+        }
+
+        return Invoice::query()
+            ->where(function ($query) use ($transaction) {
+                $query->whereJsonContains('cart_ids', (int) $transaction->booking_id)
+                    ->orWhereJsonContains('cart_ids', (string) $transaction->booking_id);
+            })
+            ->latest('id')
+            ->first();
     }
 
 

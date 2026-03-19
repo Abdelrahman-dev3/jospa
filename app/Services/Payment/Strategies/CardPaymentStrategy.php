@@ -12,9 +12,9 @@ class CardPaymentStrategy extends BasePaymentStrategy
 {
     public function pay(Request $request, string $typePage)
     {
-        $selectedPaymentSource = $request->payment_source ?: FrontendPaymentSettings::defaultTapPaymentSource();
+        $PaymentSource = $request->payment_source ?? 'src_card';
 
-        if (! FrontendPaymentSettings::isEnabledTapSource($selectedPaymentSource)) {
+        if (! FrontendPaymentSettings::isEnabledTapSource($PaymentSource)) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'status' => false,
@@ -32,7 +32,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
         }
 
         $data = $prepared['data'];
-        $data['payment_source'] = $selectedPaymentSource;
+        $data['payment_source'] = $PaymentSource;
         $subResult = $prepared['subResult'];
         $remainingAmount = $prepared['remainingAmount'];
 
