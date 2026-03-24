@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Currency;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Modules\Booking\Models\Booking;
 use Modules\Earning\Models\EmployeeEarning;
 use Modules\Product\Models\Order;
@@ -890,97 +891,250 @@ class ReportsController extends Controller
         $module_title = __('report.title_payment_transactions_report');
         $module_name = 'payment-transactions-report';
 
-        $payment_methods = BookingTransaction::query()
-            ->select('transaction_type')
-            ->whereNotNull('transaction_type')
-            ->distinct()
-            ->orderBy('transaction_type')
-            ->pluck('transaction_type');
+        $payment_methods = collect();
+
+        if (Schema::hasColumn('invoices', 'payment_method')) {
+            $payment_methods = Invoice::query()
+                ->select('payment_method')
+                ->whereNotNull('payment_method')
+                ->distinct()
+                ->pluck('payment_method');
+        }
+
+        $payment_methods = $payment_methods
+            ->merge(
+                BookingTransaction::query()
+                    ->select('transaction_type')
+                    ->whereNotNull('transaction_type')
+                    ->distinct()
+                    ->pluck('transaction_type')
+            )
+            ->merge(
+                OrderGroup::query()
+                    ->select('payment_method')
+                    ->where('payment_status', 'paid')
+                    ->whereNotNull('payment_method')
+                    ->distinct()
+                    ->pluck('payment_method')
+            )
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         return view('backend.reports.payment-transactions-report', compact('module_title', 'module_name', 'payment_methods'));
     }
 
     public function payment_transactions_report_index_data(Datatables $datatable, Request $request)
     {
-        $query = BookingTransaction::with(['booking.user', 'booking.services']);
-
         $filter = $request->filter;
+        [$startDate, $endDate] = $this->parseDateRange($filter['payment_date'] ?? []);
+        $selectedPaymentMethod = $filter['payment_method'] ?? '';
 
-        if (isset($filter['payment_method']) && $filter['payment_method'] !== '') {
-            $query->where('transaction_type', $filter['payment_method']);
+        $invoiceQuery = Invoice::with('user');
+        if ($startDate) {
+            $invoiceQuery->whereDate('created_at', '>=', $startDate->toDateString());
+        }
+        if ($endDate) {
+            $invoiceQuery->whereDate('created_at', '<=', $endDate->toDateString());
         }
 
-        if (isset($filter['payment_date'][0]) && $filter['payment_date'][0] !== '') {
-            $startDate = $filter['payment_date'][0];
-            $endDate = $filter['payment_date'][1] ?? null;
+        $invoiceRows = $invoiceQuery->get()->map(function (Invoice $invoice) {
+            $paymentMethod = $this->resolveInvoicePaymentMethod($invoice);
 
-            if ($endDate) {
-                $query->whereDate('created_at', '>=', date('Y-m-d', strtotime($startDate)));
-                $query->whereDate('created_at', '<=', date('Y-m-d', strtotime($endDate)));
-            } else {
-                $query->whereDate('created_at', date('Y-m-d', strtotime($startDate)));
+            return [
+                'created_at_raw' => optional($invoice->created_at)->timestamp ?? 0,
+                'created_at' => customDate($invoice->created_at),
+                'invoice_id' => $this->formatInvoiceLink($invoice),
+                'customer_name' => $this->formatCustomerCell($invoice->user),
+                'transaction_id' => $this->resolveInvoiceTransactionId($invoice),
+                'payment_method_raw' => $paymentMethod,
+                'payment_method' => $this->formatPaymentMethod($paymentMethod),
+                'payment_status' => __('messages.paid'),
+                'service_amount' => Currency::format($this->resolveInvoiceSubtotalAmount($invoice)),
+                'discount_amount' => Currency::format((float) ($invoice->discount_amount ?? 0)),
+                'total_amount' => Currency::format((float) ($invoice->final_total ?? 0)),
+            ];
+        });
+
+        $bookingQuery = BookingTransaction::with(['booking.user', 'booking.services']);
+        if ($selectedPaymentMethod !== '') {
+            $bookingQuery->where('transaction_type', $selectedPaymentMethod);
+        }
+        if ($startDate) {
+            $bookingQuery->whereDate('created_at', '>=', $startDate->toDateString());
+        }
+        if ($endDate) {
+            $bookingQuery->whereDate('created_at', '<=', $endDate->toDateString());
+        }
+
+        $resolvedInvoiceByBooking = [];
+        $standaloneBookingRows = $bookingQuery->get()
+            ->filter(function (BookingTransaction $transaction) use (&$resolvedInvoiceByBooking) {
+                if ($transaction->invoice_id) {
+                    return false;
+                }
+
+                $bookingId = (int) ($transaction->booking_id ?? 0);
+                if (! array_key_exists($bookingId, $resolvedInvoiceByBooking)) {
+                    $resolvedInvoiceByBooking[$bookingId] = optional($this->resolveBookingTransactionInvoice($transaction))->id;
+                }
+
+                return $resolvedInvoiceByBooking[$bookingId] === null;
+            })
+            ->map(function (BookingTransaction $data) {
+                $services = optional($data->booking)->services;
+                $serviceAmount = $services ? $services->sum('service_price') : 0;
+                $discount = (float) ($data->discount_amount ?? 0);
+
+                return [
+                    'created_at_raw' => optional($data->created_at)->timestamp ?? 0,
+                    'created_at' => customDate($data->created_at),
+                    'invoice_id' => '-',
+                    'customer_name' => $this->formatCustomerCell(optional($data->booking)->user),
+                    'transaction_id' => $data->external_transaction_id ?? '-',
+                    'payment_method_raw' => $data->transaction_type,
+                    'payment_method' => $this->formatPaymentMethod($data->transaction_type),
+                    'payment_status' => $data->payment_status == 1 ? __('messages.paid') : __('messages.unpaid'),
+                    'service_amount' => Currency::format($serviceAmount),
+                    'discount_amount' => Currency::format($discount),
+                    'total_amount' => Currency::format($serviceAmount - $discount),
+                ];
+            });
+
+        $rows = $invoiceRows
+            ->merge($standaloneBookingRows)
+            ->filter(function (array $row) use ($selectedPaymentMethod) {
+                if ($selectedPaymentMethod === '') {
+                    return true;
+                }
+
+                return ($row['payment_method_raw'] ?? null) === $selectedPaymentMethod;
+            })
+            ->sortByDesc('created_at_raw')
+            ->values();
+
+        return $datatable->collection($rows)
+            ->addIndexColumn()
+            ->rawColumns(['customer_name', 'invoice_id'])
+            ->toJson();
+    }
+
+    private function formatCustomerCell($user): string
+    {
+        $profileImage = optional($user)->profile_image ?? default_user_avatar();
+        $name = optional($user)->full_name ?? default_user_name();
+        $phone = optional($user)->mobile ?? '--';
+
+        return '
+            <div class="d-flex align-items-center text-decoration-none" style="color:#c39b61;">
+                <div class="me-3">
+                    <img src="' . $profileImage . '" class="avatar avatar-md rounded-circle" alt="' . $name . '" width="40" height="40">
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fw-bold">' . $name . '</span>
+                    <small class="text-muted">' . $phone . '</small>
+                </div>
+            </div>
+        ';
+    }
+
+    private function formatInvoiceLink(Invoice $invoice): string
+    {
+        $url = route('app.invoice', ['invoice_id' => $invoice->id]) . '#invoice-card-' . $invoice->id;
+
+        return '<a href="' . $url . '">INV-' . $invoice->id . '</a>';
+    }
+
+    private function formatPaymentMethod(?string $paymentMethod): string
+    {
+        return $paymentMethod ? ucwords(str_replace('_', ' ', $paymentMethod)) : '-';
+    }
+
+    private function resolveInvoicePaymentMethod(Invoice $invoice): ?string
+    {
+        if ($invoice->payment_method) {
+            return $invoice->payment_method;
+        }
+
+        $bookingTransaction = null;
+
+        if (Schema::hasColumn('booking_transactions', 'invoice_id')) {
+            $bookingTransaction = BookingTransaction::query()
+                ->where('invoice_id', $invoice->id)
+                ->whereNotNull('transaction_type')
+                ->latest('id')
+                ->first();
+        }
+
+        if ($bookingTransaction?->transaction_type) {
+            return $bookingTransaction->transaction_type;
+        }
+
+        if (! empty($invoice->product_ids)) {
+            $orderGroup = OrderGroup::query()
+                ->whereIn('id', (array) $invoice->product_ids)
+                ->whereNotNull('payment_method')
+                ->latest('id')
+                ->first();
+
+            if ($orderGroup?->payment_method) {
+                return $orderGroup->payment_method;
             }
         }
 
-        return $datatable->eloquent($query)
-            ->addIndexColumn()
-            ->addColumn('customer_name', function ($data) {
-                $user = optional($data->booking)->user;
-                $Profile_image = optional($user)->profile_image ?? default_user_avatar();
-                $name = optional($user)->full_name ?? default_user_name();
-                $phone = optional($user)->mobile ?? '--';
-                return '
-                    <div class="d-flex align-items-center text-decoration-none" style="color:#c39b61;">
-                        <div class="me-3">
-                            <img src="' . $Profile_image . '" class="avatar avatar-md rounded-circle" alt="' . $name . '" width="40" height="40">
-                        </div>
-                        <div class="d-flex flex-column">
-                            <span class="fw-bold">' . $name . '</span>
-                            <small class="text-muted">' . $phone . '</small>
-                        </div>
-                    </div>
-                ';
-            })
-            ->addColumn('invoice_id', function ($data) {
-                $invoice = $this->resolveBookingTransactionInvoice($data);
+        if (! empty($invoice->cart_ids)) {
+            $fallbackTransaction = BookingTransaction::query()
+                ->whereIn('booking_id', (array) $invoice->cart_ids)
+                ->whereNotNull('transaction_type')
+                ->latest('id')
+                ->first();
 
-                if (! $invoice) {
-                    return '-';
-                }
+            if ($fallbackTransaction?->transaction_type) {
+                return $fallbackTransaction->transaction_type;
+            }
+        }
 
-                $url = route('app.invoice', ['invoice_id' => $invoice->id]) . '#invoice-card-' . $invoice->id;
+        return null;
+    }
 
-                return '<a href="' . $url . '">INV-' . $invoice->id . '</a>';
-            })
-            ->editColumn('transaction_id', function ($data) {
-                return $data->external_transaction_id ?? '-';
-            })
-            ->editColumn('payment_method', function ($data) {
-                return $data->transaction_type ? ucwords(str_replace('_', ' ', $data->transaction_type)) : '-';
-            })
-            ->editColumn('payment_status', function ($data) {
-                return $data->payment_status == 1 ? __('messages.paid') : __('messages.unpaid');
-            })
-            ->addColumn('service_amount', function ($data) {
-                $services = optional($data->booking)->services;
-                $amount = $services ? $services->sum('service_price') : 0;
-                return Currency::format($amount);
-            })
-            ->addColumn('discount_amount', function ($data) {
-                return Currency::format($data->discount_amount ?? 0);
-            })
-            ->addColumn('total_amount', function ($data) {
-                $services = optional($data->booking)->services;
-                $serviceAmount = $services ? $services->sum('service_price') : 0;
-                $discount = $data->discount_amount ?? 0;
-                $total = $serviceAmount - $discount;
-                return Currency::format($total);
-            })
-            ->editColumn('created_at', function ($data) {
-                return customDate($data->created_at);
-            })
-            ->rawColumns(['customer_name', 'invoice_id'])
-            ->toJson();
+    private function resolveInvoiceTransactionId(Invoice $invoice): string
+    {
+        $bookingTransaction = null;
+
+        if (Schema::hasColumn('booking_transactions', 'invoice_id')) {
+            $bookingTransaction = BookingTransaction::query()
+                ->where('invoice_id', $invoice->id)
+                ->whereNotNull('external_transaction_id')
+                ->latest('id')
+                ->first();
+        }
+
+        if ($bookingTransaction?->external_transaction_id) {
+            return $bookingTransaction->external_transaction_id;
+        }
+
+        if (! empty($invoice->cart_ids)) {
+            $fallbackTransaction = BookingTransaction::query()
+                ->whereIn('booking_id', (array) $invoice->cart_ids)
+                ->whereNotNull('external_transaction_id')
+                ->latest('id')
+                ->first();
+
+            if ($fallbackTransaction?->external_transaction_id) {
+                return $fallbackTransaction->external_transaction_id;
+            }
+        }
+
+        return '-';
+    }
+
+    private function resolveInvoiceSubtotalAmount(Invoice $invoice): float
+    {
+        return (float) ($invoice->final_total ?? 0)
+            + (float) ($invoice->discount_amount ?? 0)
+            + (float) ($invoice->loyalty_points_discount ?? 0)
+            + (float) ($invoice->gift_amount ?? 0);
     }
 
     private function resolveBookingTransactionInvoice(BookingTransaction $transaction): ?Invoice

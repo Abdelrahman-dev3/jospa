@@ -82,7 +82,7 @@ class PaymentFinalizerService
             }
 
             // Create Invoice
-            $invoiceId = $this->storeInvoice($userId, $discountAmount,$tax ,$paidAmount, $cartIds , $giftIds , $product_ids , $couponCode, $subPayments);
+            $invoiceId = $this->storeInvoice($userId, $discountAmount, $tax, $paidAmount, $cartIds, $giftIds, $product_ids, $couponCode, $paymentMethod ?? 'Sub Methods', $subPayments);
 
             //  Create Booking Transactions
             $this->createTransactions($cartIds, $invoiceId, 'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
@@ -171,7 +171,7 @@ class PaymentFinalizerService
     /**
      * Store invoice
      */
-    private function storeInvoice(int $userId, float $discountAmount,float $tax , float $finalTotal, array $cartIds, array $giftIds, array $product_ids , string $couponCode, array $subPayments = []): int
+    private function storeInvoice(int $userId, float $discountAmount, float $tax, float $finalTotal, array $cartIds, array $giftIds, array $product_ids, string $couponCode, string $paymentMethod, array $subPayments = []): int
     {
         $giftCode = $subPayments['gift_code'] ?? null;
         $giftAmount = (float) ($subPayments['used_gift'] ?? 0);
@@ -183,6 +183,7 @@ class PaymentFinalizerService
             'coupon_code' => $couponCode ?: null,
             'gift_code' => $giftCode ?: null,
             'gift_amount' => $giftAmount,
+            'payment_method' => $paymentMethod ?: null,
             'discount_amount' => $discountAmount,
             'taxs_service' => $tax,
             'loyalty_points_discount' => 0,

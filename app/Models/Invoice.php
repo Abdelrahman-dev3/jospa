@@ -18,6 +18,7 @@ class Invoice extends Model
         'coupon_code',
         'gift_code',
         'gift_amount',
+        'payment_method',
         'discount_amount',
         'taxs_service',
         'loyalty_points_discount',
