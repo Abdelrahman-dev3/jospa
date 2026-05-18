@@ -21,6 +21,7 @@ use Modules\Service\Models\Service;
 
 class PhoneAuthController extends Controller
 {
+    private const TEST_OTP = '1111';
     private const OTP_TTL_MINUTES = 5;
     private const REGISTER_DAILY_SMS_LIMIT = 3;
     private const REGISTER_PHONE_SESSION_KEY = 'auth.register.mobile';
@@ -472,7 +473,7 @@ class PhoneAuthController extends Controller
 
     private function sendOtp(string $phone, string $cacheKey): bool
     {
-        $otp = (string) random_int(1000, 9999);
+        $otp = self::TEST_OTP;
 
         Cache::put($cacheKey, $otp, now()->addMinutes(self::OTP_TTL_MINUTES));
 

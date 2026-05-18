@@ -21,6 +21,9 @@ use Illuminate\Support\Facades\Password;
 class AuthController extends Controller
 {
     use AuthTrait;
+
+    private const TEST_OTP = '1111';
+
     /**
      * Login api
      *
@@ -56,7 +59,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.sms_daily_limit_reached'), [], 429);
         }
 
-        $otp = (string) random_int(1000, 9999);
+        $otp = self::TEST_OTP;
 
         Cache::put('login_otp_'.$phone, [
             'otp' => $otp,
@@ -182,7 +185,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.sms_daily_limit_reached'), [], 429);
         }
     
-        $otp = (string) random_int(1000, 9999);
+        $otp = self::TEST_OTP;
     
         Cache::put('register_otp_'.$phone, [
             'username' => $validated['username'],

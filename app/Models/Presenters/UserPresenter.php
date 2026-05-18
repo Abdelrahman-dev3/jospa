@@ -49,7 +49,7 @@ trait UserPresenter
     /**
      * Cache Permissions Query.
      */
-    public function getPermissionsAttribute()
+    public function getCachedPermissionsAttribute()
     {
         $permissions = Cache::rememberForever('permissions_cache', function () {
             return Permission::select('permissions.*', 'model_has_permissions.*')
@@ -63,7 +63,7 @@ trait UserPresenter
     /**
      * Cache Roles Query.
      */
-    public function getRolesAttribute()
+    public function getCachedRolesAttribute()
     {
         $roles = Cache::rememberForever('roles_cache', function () {
             return Role::select('roles.*', 'model_has_roles.*')
