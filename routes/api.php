@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\VartextController;
 use App\Http\Controllers\Api\CategoriesController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\JavnaWebhookController;
 use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\MobileCartController;
 use App\Http\Controllers\Api\PackagesController;
@@ -42,6 +43,8 @@ use Modules\Service\Http\Controllers\Backend\API\ServiceController;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
+Route::post('/webhooks/javna/whatsapp', [JavnaWebhookController::class, 'whatsapp'])->name('webhooks.javna.whatsapp');
 
 Route::prefix('var')->group(function () {
     Route::controller(AdController::class)->group(function () {

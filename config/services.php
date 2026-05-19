@@ -64,5 +64,11 @@ return [
         'timeout' => env('ODOO_TIMEOUT', 15),
     ],
 
+    'javna' => [
+        'enabled' => env('JAVNA_WEBHOOK_ENABLED', true),
+        'webhook_secret' => env('JAVNA_WEBHOOK_SECRET'),
+        'log_payloads' => env('JAVNA_WEBHOOK_LOG_PAYLOADS', true),
+    ],
+
 
 ];
