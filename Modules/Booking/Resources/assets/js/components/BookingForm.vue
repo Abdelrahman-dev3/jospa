@@ -721,7 +721,7 @@ watch(
     } else {
       store.updateStep('MAIN')
       setFormData(defaultData())
-      branch_id.value = value.branch_id
+      branch_id.value = Number(value.branch_id) > 0 ? value.branch_id : null
       employee_id.value = value.employee_id
       start_date_time.value = moment(value.start_date_time).format('YYYY-MM-DD HH:mm:ss')
       if (value.start_date_time) {
@@ -729,7 +729,7 @@ watch(
       } else {
         current_date.value = moment().format('YYYY-MM-DD')
       }
-      branchSelect(value.branch_id)
+      branchSelect(branch_id.value)
       employeeSelect(employee_id.value)
     }
   },
@@ -739,7 +739,7 @@ watch(
 // Vee-Validation Validations
 const validationSchema = yup.object({
   start_date_time: yup.string().required('Start Date Time is required'),
-  branch_id: yup.string().required('Branch is required'),
+  branch_id: yup.string().required('Branch is required').notOneOf(['0', 0], 'Branch is required'),
   employee_id: yup.string().required('Employee is required'),
   services_id: yup.array().required('Services is required'),
   user_id: yup.string().required('User is required')
@@ -774,7 +774,7 @@ const defaultData = () => {
   selectedPackageService.value = []
   return {
     id: null,
-    branch_id: props.bookingData.branch_id || null,
+    branch_id: Number(props.bookingData.branch_id) > 0 ? props.bookingData.branch_id : null,
     note: '',
     start_date_time: null,
     employee_id: props.bookingData.employee_id || null,
@@ -894,7 +894,7 @@ useOnOffcanvasShow('booking-form', () => {
   useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }).then((data) => {
     branch.value = data
   })
-  branch_id.value = props.bookingData.branch_id
+  branch_id.value = Number(props.bookingData.branch_id) > 0 ? props.bookingData.branch_id : null
   getCustomers()
   branchSelect(branch_id.value)
   getProducts()
@@ -934,7 +934,11 @@ const getSlots = () => {
 const branchSelect = (value) => {
   useSelect({ url: EMPLOYEE_LIST, data: { branch_id: value } }, { value: 'id', label: 'name' }).then((data) => (employee.value = data))
 
-  fetchHolidays(value)
+  if (value) {
+    fetchHolidays(value)
+  } else {
+    holidays.value = []
+  }
   getSlots()
 }
 
@@ -977,7 +981,7 @@ const customerSelect = (value) => {
       first_name: value.split(' ')[0] || '',
       last_name: value.split(' ')[1] || ''
     }
-    bootstrap.Modal.getOrCreateInstance($('#exampleModal')).show()
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('exampleModal')).show()
     user_id.value = null
   }
 }

@@ -106,4 +106,5 @@ return [
     'client_since'=>'عميل منذ ',
     'coupon_discount'=>'خصم الكوبون',
     'lbl_appointment_id'=>'رقم الموعد',
+    'add_customer_label' => 'إضافة عميل جديد',
 ];

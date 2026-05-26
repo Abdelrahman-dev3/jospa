@@ -19,7 +19,7 @@ class CustomerRequest extends FormRequest
                 return [
                     'first_name' => 'required|string|max:255',
                     'last_name' => 'required|string',
-                    'email' => 'required|string|unique:users,email',
+                    'email' => 'nullable|string|unique:users,email',
                     'mobile' => 'required|string',
                     'gender' => 'string',
                 ];
@@ -29,7 +29,7 @@ class CustomerRequest extends FormRequest
                 return [
                     'first_name' => 'required|string|max:255',
                     'last_name' => 'required|string',
-                    'email' => ['required', 'string', Rule::unique('users', 'email')->ignore($this->id)->whereNull('deleted_at')],
+                    'email' => ['nullable', 'string', Rule::unique('users', 'email')->ignore($this->id)->whereNull('deleted_at')],
                     'mobile' => 'required|string',
                     'gender' => 'string',
                 ];

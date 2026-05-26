@@ -5,39 +5,43 @@
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="exampleModalLabel">Create Customer</h1>
+                        <h1 class="modal-title fs-5" id="exampleModalLabel">{{ $t('messages.create') }} {{ $t('messages.customer')}}</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row" id="form-offcanvas">
                             <div class="form-group col-md-6">
-                                <label for="first_name">First Name</label>
+                                <label for="first_name">{{ $t('customer.lbl_first_name') }} <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" :placeholder="$t('employee.first_name')" v-model="first_name" />
+                                <small v-if="errors.first_name" class="text-danger">{{ errors.first_name }}</small>
                             </div>
                             <div class="form-group col-md-6">
-                                <label for="last_name">Last Name</label>
+                                <label for="last_name">{{ $t('customer.lbl_last_name') }} <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" :placeholder="$t('employee.last_name')" v-model="last_name" />
+                                <small v-if="errors.last_name" class="text-danger">{{ errors.last_name }}</small>
                             </div>
                             <div class="form-group col-md-12">
-                                <label for="e-mail">E-mail</label>
+                                <label for="e-mail">{{ $t('customer.lbl_Email') }}</label>
                                 <input type="text" class="form-control" :placeholder="$t('customer.email_address')" v-model="email" />
+                                <small v-if="errors.email" class="text-danger">{{ errors.email }}</small>
                             </div>
                             <div class="form-group col-md-12">
-                                <label for="e-mail">Phone Number</label>
+                                <label for="mobile">{{ $t('customer.lbl_phone_number') }} <span class="text-danger">*</span></label>
                                 <input type="text" :placeholder="$t('messages.placeholder_phone')" class="form-control" v-model="mobile" />
+                                <small v-if="errors.mobile" class="text-danger">{{ errors.mobile }}</small>
                             </div>
                             <div class="form-group col-md-12">
-                              <label for="" class="w-100">Gender</label>
+                              <label for="" class="w-100">{{ $t('customer.lbl_gender') }}</label>
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="gender" v-model="gender" id="male" value="male">
                                   <label class="form-check-label" for="male">
-                                    Male
+                                    {{ $t('messages.male') }}
                                   </label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                   <input class="form-check-input" type="radio" name="gender" v-model="gender" id="female" value="female">
                                   <label class="form-check-label" for="female">
-                                    Female
+                                    {{ $t('messages.female') }}
                                   </label>
                                 </div>
 
@@ -51,8 +55,8 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                      <button type="submit" class="btn btn-primary">Save changes</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                      <button type="submit" class="btn btn-primary">{{ $t('messages.save_changes') }}</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ $t('messages.close') }}</button>
                     </div>
                 </div>
             </div>
@@ -115,7 +119,7 @@ const setFormData = (data) => {
 const validationSchema = yup.object({
     first_name: yup.string().required(),
     last_name: yup.string().required(),
-    email: yup.string().required(),
+    email: yup.string().nullable().email(),
     mobile: yup.string().required(),
 })
 

@@ -37,10 +37,16 @@ class BranchListCheck
             $selected_branch = $branches->where('id', $branchId)->first();
             $auth = auth()->user();
 
+            $allowAllBranchesForCalendar = in_array($routeName, [
+                'backend.bookings.index',
+                'backend.bookings.index_list',
+            ], true);
+
             if (auth()->user()->hasRole('admin')) {
                 if (str_contains($request->route()->getName(), 'backend.bookings')
                       && $request->route()->getName() !== 'backend.bookings.index_data'
                       && $request->route()->getName() !== 'backend.bookings.datatable_view'
+                      && ! $allowAllBranchesForCalendar
                 ) {
                     if (! isset($selected_branch) && count($branches) > 0) {
                         $selected_branch = $branches[0];

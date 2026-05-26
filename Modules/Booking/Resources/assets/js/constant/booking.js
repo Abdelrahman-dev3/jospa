@@ -1,10 +1,16 @@
 export const MODULE = 'bookings'
 // export const INDEX_URL = () => {return {path: `${MODULE}/index_list`, method: 'GET'}}
-export const INDEX_URL = ({ user_type, page = 1, per_page = 8, employee_id = null }) => {
+export const INDEX_URL = ({ user_type, page = 1, per_page = 8, employee_id = null, branch_id = null, date = null }) => {
   let path = `${MODULE}/index_list?page=${page}&per_page=${per_page}`;
   
   if (employee_id) {
     path += `&employee_id=${employee_id}`;
+  }
+  if (branch_id !== null && branch_id !== undefined && branch_id !== '') {
+    path += `&branch_id=${branch_id}`;
+  }
+  if (date) {
+    path += `&date=${date}`;
   }
 
   return {

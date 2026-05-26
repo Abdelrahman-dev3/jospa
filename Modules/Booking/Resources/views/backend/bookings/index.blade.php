@@ -19,7 +19,7 @@
         <calendar-view
           slot-duration="{{ setting('slot_duration') }}"
           status="{{ json_encode($statusList) }}"
-          :branch-id="{{ $selected_branch->id ?? 1 }}"
+          :branch-id="{{ $selected_branch->id ?? 0 }}"
           date={{$date}}
           ></calendar-view>
       </div>

@@ -106,6 +106,58 @@ const DEFAULT_RESOURCE_WIDTH = 180
 const RESIZE_HANDLE_SIZE = 6
 let resizeHandlersAttached = false
 let detachResizeHandlers = null
+let detachTopScroll = null
+let topScrollState = null
+let fixedTimeColumnFrame = null
+
+const getHorizontalScrollTargets = () => {
+  if (!calenderRef.value) return []
+  return Array.from(calenderRef.value.querySelectorAll('.ec-header, .ec-all-day, .ec-body'))
+}
+
+const getFixedTimeColumns = () => {
+  if (!calenderRef.value) return []
+  return Array.from(calenderRef.value.querySelectorAll(
+    '.ec-header > .ec-sidebar, .ec-all-day > .ec-sidebar, .ec-body > .ec-content > .ec-sidebar'
+  ))
+}
+
+const updateFixedTimeColumns = () => {
+  const root = calenderRef.value
+  if (!root) return
+
+  const rootRect = root.getBoundingClientRect()
+  const direction = getComputedStyle(root).direction || document.dir || 'ltr'
+  const isRtl = direction === 'rtl'
+
+  getFixedTimeColumns().forEach((column) => {
+    column.style.transform = 'none'
+    const columnRect = column.getBoundingClientRect()
+    const offset = isRtl ? rootRect.right - columnRect.right : rootRect.left - columnRect.left
+    column.style.transform = `translateX(${offset}px)`
+  })
+}
+
+const scheduleFixedTimeColumnsUpdate = () => {
+  if (fixedTimeColumnFrame) {
+    cancelAnimationFrame(fixedTimeColumnFrame)
+  }
+
+  fixedTimeColumnFrame = requestAnimationFrame(() => {
+    fixedTimeColumnFrame = null
+    updateFixedTimeColumns()
+  })
+}
+
+const resetFixedTimeColumns = () => {
+  if (fixedTimeColumnFrame) {
+    cancelAnimationFrame(fixedTimeColumnFrame)
+    fixedTimeColumnFrame = null
+  }
+  getFixedTimeColumns().forEach((column) => {
+    column.style.transform = ''
+  })
+}
 
 const refreshPage = () => {
   window.location.reload();
@@ -121,6 +173,7 @@ const showBookingForm = (info) => {
   bookingType.value = 'CALENDER_BOOKING'
   const elem = document.getElementById('booking-form')
   setBooking(info)
+  bookingData.branch_id = props.branchId
   const form = bootstrap.Offcanvas.getOrCreateInstance(elem)
   form.show()
   document.querySelector('.offcanvas-backdrop')?.remove()
@@ -159,6 +212,87 @@ const filterByEmployee = (employee) => {
   // إعادة تحميل الـ events بعد الاختيار
   calenderInit.value.refetchEvents()
   refreshResourceSizing()
+}
+
+const syncTopHorizontalScroll = () => {
+  const root = calenderRef.value
+  if (!root) return
+
+  const scrollTargets = getHorizontalScrollTargets()
+  if (!scrollTargets.length) return
+
+  if (topScrollState) {
+    topScrollState.scrollTargets.forEach((target) => {
+      target.removeEventListener('scroll', topScrollState.onTargetScroll)
+    })
+    topScrollState.scrollTargets = scrollTargets
+    topScrollState.scrollTargets.forEach((target) => {
+      target.addEventListener('scroll', topScrollState.onTargetScroll)
+    })
+    updateTopScrollbarWidth()
+    scheduleFixedTimeColumnsUpdate()
+    return
+  }
+
+  const scrollbar = document.createElement('div')
+  const spacer = document.createElement('div')
+  scrollbar.className = 'booking-calendar-scrollbar'
+  spacer.className = 'booking-calendar-scrollbar-spacer'
+  scrollbar.appendChild(spacer)
+  root.insertBefore(scrollbar, root.firstChild)
+
+  let syncing = false
+  const updateSpacer = () => {
+    const width = Math.max(...topScrollState.scrollTargets.map((target) => target.scrollWidth))
+    spacer.style.width = `${width}px`
+    scheduleFixedTimeColumnsUpdate()
+  }
+  const onTopScroll = () => {
+    if (syncing) return
+    syncing = true
+    topScrollState.scrollTargets.forEach((target) => {
+      target.scrollLeft = scrollbar.scrollLeft
+    })
+    scheduleFixedTimeColumnsUpdate()
+    syncing = false
+  }
+  const onTargetScroll = (event) => {
+    if (syncing) return
+    syncing = true
+    scrollbar.scrollLeft = event.target.scrollLeft
+    topScrollState.scrollTargets.forEach((target) => {
+      if (target !== event.target) {
+        target.scrollLeft = event.target.scrollLeft
+      }
+    })
+    scheduleFixedTimeColumnsUpdate()
+    syncing = false
+  }
+
+  scrollbar.addEventListener('scroll', onTopScroll)
+  scrollTargets.forEach((target) => {
+    target.addEventListener('scroll', onTargetScroll)
+  })
+  window.addEventListener('resize', updateSpacer)
+
+  topScrollState = { scrollbar, spacer, scrollTargets, updateSpacer, onTargetScroll }
+  updateSpacer()
+
+  detachTopScroll = () => {
+    scrollbar.removeEventListener('scroll', onTopScroll)
+    topScrollState.scrollTargets.forEach((target) => {
+      target.removeEventListener('scroll', onTargetScroll)
+    })
+    window.removeEventListener('resize', updateSpacer)
+    scrollbar.remove()
+    topScrollState = null
+    resetFixedTimeColumns()
+  }
+}
+
+const updateTopScrollbarWidth = () => {
+  if (!topScrollState) return
+  topScrollState.updateSpacer()
 }
 
 const clampResourceWidth = (value) => {
@@ -259,6 +393,8 @@ const refreshResourceSizing = () => {
   requestAnimationFrame(() => {
     applyResourceWidths()
     attachResizeHandlers()
+    syncTopHorizontalScroll()
+    updateTopScrollbarWidth()
   })
 }
 
@@ -354,6 +490,10 @@ onUnmounted(() => {
     detachResizeHandlers = null
     resizeHandlersAttached = false
   }
+  if (detachTopScroll) {
+    detachTopScroll()
+    detachTopScroll = null
+  }
   document.body.classList.remove('ec-resizing')
 })
 onMounted(() => {
@@ -423,12 +563,14 @@ onMounted(() => {
           },
           eventSources: [
             {
-              events: async function () {
+              events: async function (fetchInfo) {
+                const visibleDate = fetchInfo && fetchInfo.start ? fetchInfo.start : props.date
                 const params = {
-                    employee_id: selectedEmployeeId.value
+                    employee_id: selectedEmployeeId.value,
+                    branch_id: props.branchId,
+                    date: moment(visibleDate).format('YYYY-MM-DD')
                 };
               const events = await createRequest(INDEX_URL(params)).then((res) => {
-                    console.log("API Response:", res)
                   const { employees, data } = res
                   totalEmployees.value = res.total_count
                   EMPLOYEE_LIST.value = employees
@@ -525,11 +667,63 @@ body {
 .ec-icon.ec-prev:after, .ec-icon.ec-next:after {
   border-color: var(--bs-body-color);
 }
-.ec-body {
-    width: fit-content !important;
+.calendar-root {
+  position: relative;
+  overflow-x: hidden;
+}
+.calendar-root .ec-header,
+.calendar-root .ec-all-day,
+.calendar-root .ec-body {
+    overflow-x: hidden !important;
+    scrollbar-width: none;
+}
+.calendar-root .ec-header::-webkit-scrollbar,
+.calendar-root .ec-all-day::-webkit-scrollbar,
+.calendar-root .ec-body::-webkit-scrollbar {
+    display: none;
+}
+.calendar-root .ec-hidden-scroll,
+.calendar-root .ec-body > .ec-scroll {
+    overflow-x: hidden !important;
+    scrollbar-width: none;
+}
+.calendar-root .ec-hidden-scroll::-webkit-scrollbar,
+.calendar-root .ec-body > .ec-scroll::-webkit-scrollbar {
+    display: none;
 }
 body.ec-resizing {
   user-select: none;
   cursor: col-resize;
+}
+.booking-calendar-scrollbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 16px;
+  margin-bottom: 8px;
+}
+.booking-calendar-scrollbar-spacer {
+  height: 1px;
+}
+.calendar-root .ec-sidebar,
+.calendar-root .ec-time,
+.calendar-root .ec-line-time {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 5;
+  background: var(--bs-body-bg);
+}
+.calendar-root .ec-sidebar {
+  flex-shrink: 0;
+  will-change: transform;
+}
+.calendar-root .ec-header .ec-sidebar,
+.calendar-root .ec-header .ec-time {
+  z-index: 8;
+}
+[dir='rtl'] .calendar-root .ec-sidebar,
+[dir='rtl'] .calendar-root .ec-time,
+[dir='rtl'] .calendar-root .ec-line-time {
+  right: 0;
+  left: auto;
 }
 </style>

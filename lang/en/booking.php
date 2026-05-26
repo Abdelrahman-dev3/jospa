@@ -53,6 +53,7 @@ return [
     'lbl_booking_date' => 'Booking Date',
     'lbl_booking_time' => 'Booking Time',
     'lbl_appointment_id' => 'Appointment Id',
+    'add_customer_label' => 'Add new customer',
 
     'lbl_payment_status' => 'Payment Status',
     'download_invoice' => 'Invoice',

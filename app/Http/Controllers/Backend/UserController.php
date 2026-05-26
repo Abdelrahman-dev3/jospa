@@ -145,10 +145,12 @@ class UserController extends Controller
         $request->validate([
             'first_name' => 'required|min:3|max:191',
             'last_name' => 'required|min:3|max:191',
-            'email' => 'required|email|regex:/(.+)@(.+)\.(.+)/i|max:191|unique:users',
+            'email' => 'nullable|email|regex:/(.+)@(.+)\.(.+)/i|max:191|unique:users,email',
+            'mobile' => 'required|string|max:20|unique:users,mobile',
         ]);
 
         $data_array = $request->except('_token', 'roles', 'permissions', 'password_confirmation');
+        $data_array['email'] = $request->filled('email') ? $request->email : null;
         $data_array['name'] = $request->first_name . ' ' . $request->last_name;
 
         if ($request->confirmed == 1) {

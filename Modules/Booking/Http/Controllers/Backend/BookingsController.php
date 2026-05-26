@@ -118,16 +118,20 @@ class BookingsController extends Controller
      */
 public function index_list(Request $request)
 {
-    $date = $request->date;
+    $date = $request->date ? Carbon::parse($request->date)->toDateString() : Carbon::today()->toDateString();
     $employeeId  = $request->get('employee_id');
+    $branchId = (int) $request->get('branch_id', 0);
 
     // ----------------------------
     // Booking Services
     // ----------------------------
-    $data = BookingService::with('booking', 'employee', 'service')
-        ->whereHas('booking', function ($q) use ($date) {
+    $data = BookingService::with('booking.user', 'booking.branch', 'employee', 'service')
+        ->whereHas('booking', function ($q) use ($date, $branchId) {
             if (!empty($date)) {
                 $q->whereDate('start_date_time', $date);
+            }
+            if ($branchId > 0) {
+                $q->where('branch_id', $branchId);
             }
             $q->where('status', '!=', 'cancelled');
         })
@@ -139,10 +143,13 @@ public function index_list(Request $request)
     // ----------------------------
     // Booking Packages
     // ----------------------------
-    $package = BookingPackages::with('booking', 'employee', 'services')
-        ->whereHas('booking', function ($q) use ($date) {
+    $package = BookingPackages::with('booking.user', 'booking.branch', 'employee', 'services', 'package')
+        ->whereHas('booking', function ($q) use ($date, $branchId) {
             if (!empty($date)) {
                 $q->whereDate('start_date_time', $date);
+            }
+            if ($branchId > 0) {
+                $q->where('branch_id', $branchId);
             }
             $q->where('status', '!=', 'cancelled');
         })
@@ -163,6 +170,7 @@ public function index_list(Request $request)
 
         $serviceName = $value->service->name ?? '';
         $customerName = $value->booking->user->full_name ?? 'Anonymous';
+        $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
 
         $service_updated[$key] = [
             'id' => $value->booking_id,
@@ -170,7 +178,7 @@ public function index_list(Request $request)
             'end' => customDate($endTime, 'Y-m-d H:i'),
             'resourceId' => $value->employee_id,
             'title' => $serviceName,
-            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName'))->render(),
+            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
         ];
     }
@@ -186,6 +194,7 @@ public function index_list(Request $request)
 
         $serviceName = $value->package->name ?? '';
         $customerName = $value->booking->user->full_name ?? 'Anonymous';
+        $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
 
         $package_updated[$key] = [
             'id' => $value->booking_id,
@@ -193,7 +202,7 @@ public function index_list(Request $request)
             'end' => customDate($endTime, 'Y-m-d H:i'),
             'resourceId' => $value->employee_id,
             'title' => $serviceName,
-            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName'))->render(),
+            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
         ];
     }
@@ -203,7 +212,19 @@ public function index_list(Request $request)
     // ----------------------------
     // Employees
     // ----------------------------
-    $employeesQuery = User::bookingEmployeesList()->where('is_manager', 0);
+    $employeesQuery = User::select('users.*')
+        ->active()
+        ->varified()
+        ->calenderResource()
+        ->employee()
+        ->where('is_manager', 0)
+        ->orderBy('id', 'ASC');
+
+    if ($branchId > 0) {
+        $employeesQuery->whereHas('branches', function ($q) use ($branchId) {
+            $q->where('branch_id', $branchId);
+        });
+    }
 
     if ($employeeId) {
         $employeesQuery->where('users.id', $employeeId);
