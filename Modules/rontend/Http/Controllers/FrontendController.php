@@ -40,10 +40,13 @@ class FrontendController extends Controller
             })
             ->take(6)
             ->get();
-
+dd("here");
         return view('frontend::index', compact('services', 'categories', 'packages'));
     }
-
+    public function privacyPolicy()
+    {
+        return view('frontend::privacy-policy');
+    }
     /**
      * Display the about page.
      */

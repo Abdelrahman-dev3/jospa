@@ -16,6 +16,7 @@ use Modules\Frontend\Http\Controllers\FrontendController;
 
 Route::group(['prefix' => ''], function () {
     Route::get('/', [FrontendController::class, 'index'])->name('frontend.home');
+    Route::get('/privacy-policy', [FrontendController::class, 'privacyPolicy'])->name('frontend.privacy.policy');
     Route::get('/about', [FrontendController::class, 'about'])->name('frontend.about');
     Route::get('/services', [FrontendController::class, 'services'])->name('frontend.services');
     Route::get('/services/category/{id}', [FrontendController::class, 'categoryDetails'])->name('frontend.category.details');

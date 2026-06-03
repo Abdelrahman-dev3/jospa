@@ -11,7 +11,8 @@
         BookingsController,BookingCartController,GiftCardController,PackageBookingController,
         BookingController,LanguageController,FrontendLoyaltyController,
         PaymentController,PermissionController,RoleController,RolePermission,
-        SearchController,PackageDetailsController,ProfileController,SystemUtilityController
+        SearchController,PackageDetailsController,ProfileController,SystemUtilityController,
+        PrivacyPolicyController
     };
 
     use App\Services\Payment\Strategies\{
@@ -20,7 +21,7 @@
 
     use Illuminate\Support\Facades\Route;
 
-    
+
     use Modules\Employee\Http\Controllers\Backend\EmployeesController;
     use App\Http\Controllers\Auth\PhoneAuthController;
 
@@ -60,11 +61,15 @@
         Route::get('/gift-cards', 'store')->name('gift.create');
     });
 
+//    Route::controller(PrivacyPolicyController::class)->group(function () {
+//        Route::get('/privacy-policy', 'index')->name('privacy.policy');
+//    });
+
     Route::controller(PackageDetailsController::class)->group(function () {
         Route::get('/details/{id}', 'show')->name('home.details');
     });
 
-    
+
     Route::controller(PaymentController::class)->group(function () {
         Route::post('/payment-chanal', 'payment')->name('payment-chanal');
         Route::get('tabby/success/{invoice}', 'tabbySuccess')->name('tabby.success');
@@ -146,7 +151,7 @@
 
     // Auth Routes
     require __DIR__.'/auth.php';
-    
+
     Route::controller(SystemUtilityController::class)->middleware('auth')->group(function () {
         Route::get('/admin', 'adminRedirect');
     });

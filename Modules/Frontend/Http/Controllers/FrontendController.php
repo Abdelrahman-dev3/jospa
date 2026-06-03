@@ -23,12 +23,13 @@ class FrontendController extends Controller
      */
     public function index()
     {
+//        dd("here");
         // Fetch active services for the homepage
         $services = Service::with(['category', 'media'])
             ->where('status', 1)
             ->take(6)
             ->get();
-        
+
 
         // Fetch active products for the homepage
         $products = Product::with(['media' , 'categories'])
@@ -56,11 +57,14 @@ class FrontendController extends Controller
             })
             ->take(6)
             ->get();
-            
+
 
         return view('frontend::index', compact('services', 'categories', 'packages' , 'products'));
     }
-
+    public function privacyPolicy()
+    {
+        return view('frontend::privacy-policy');
+    }
     /**
      * Display the about page.
      */

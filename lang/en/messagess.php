@@ -607,4 +607,108 @@ return [
   'book_now' => 'Book Now',
   'SAR' => 'SAR',
   'navItems' => 'Navigation Items',
+
+    // ========================================
+    // Privacy Policy Page
+    // ========================================
+    'privacy_page_title' => 'Privacy Policy',
+    'privacy_meta_description' => 'Privacy Policy for Jospa Center - Learn how we collect, use, and protect your personal data',
+    'privacy_hero_subtitle' => 'At Jospa Center, we are committed to protecting your privacy and the security of your personal information.',
+    'privacy_last_updated' => 'Last Updated',
+    'privacy_june' => 'June',
+    'privacy_back_to_top' => 'Back to Top',
+
+    // Section 1
+    'privacy_s1_title' => 'Information We Collect',
+    'privacy_s1_intro' => 'We may collect the following information from you:',
+    'privacy_s1a_title' => 'Personal Information',
+    'privacy_s1a_item1' => 'Identification Details: Full name, phone number, email address, age or date of birth (if requested).',
+    'privacy_s1a_item2' => 'Booking Information: Appointment preferences, requested service type, special notes or prior requests.',
+    'privacy_s1a_item3' => 'Payment Information: Credit card details or other payment information (processed securely through certified payment service providers).',
+    'privacy_s1b_title' => 'Account Information (for Package Subscribers)',
+    'privacy_s1b_item1' => 'Login credentials and passwords.',
+    'privacy_s1b_item2' => 'Subscription history for premium packages.',
+    'privacy_s1b_item3' => 'Service usage history and eligible discounts.',
+    'privacy_s1c_title' => 'Automatically Collected Information (via Cookies and Similar Technologies)',
+    'privacy_s1c_item1' => 'Internet Protocol (IP) address, browser type, and operating system.',
+    'privacy_s1c_item2' => 'Site pages visited and time spent on them.',
+    'privacy_s1c_item3' => 'Device used (computer, smartphone, tablet).',
+    'privacy_s1c_item4' => 'Usage statistics to improve user experience.',
+
+    // Section 2
+    'privacy_s2_title' => 'How We Use Your Information',
+    'privacy_s2_intro' => 'We use your personal information for the following purposes:',
+    'privacy_s2_th_purpose' => 'Purpose',
+    'privacy_s2_th_explanation' => 'Explanation',
+    'privacy_s2_r1_purpose' => 'Service Delivery',
+    'privacy_s2_r1_explanation' => 'Booking and confirming appointments, providing hair, skin, massage, and Moroccan bath services.',
+    'privacy_s2_r2_purpose' => 'Communication',
+    'privacy_s2_r2_explanation' => 'Sending booking confirmations, appointment reminders, and responding to inquiries.',
+    'privacy_s2_r3_purpose' => 'Packages & Memberships',
+    'privacy_s2_r3_explanation' => 'Managing premium packages and tracking discounts and eligible benefits.',
+    'privacy_s2_r4_purpose' => 'Service Improvement',
+    'privacy_s2_r4_explanation' => 'Analyzing customer preferences to enhance service quality and offers.',
+    'privacy_s2_r5_purpose' => 'Gifts',
+    'privacy_s2_r5_explanation' => 'Activating and managing the gift purchase service for your loved ones (giffte).',
+    'privacy_s2_r6_purpose' => 'Security & Compliance',
+    'privacy_s2_r6_explanation' => 'Protecting our rights and complying with legal obligations.',
+
+    // Section 3
+    'privacy_s3_title' => 'Cookies',
+    'privacy_s3_intro' => 'The Jospa website uses cookies and similar technologies to enhance your browsing experience. These files help us to:',
+    'privacy_s3_item1' => 'Remember your preferences (such as chosen language).',
+    'privacy_s3_item2' => 'Maintain login sessions for subscribers of premium packages.',
+    'privacy_s3_item3' => 'Analyze traffic to improve site performance.',
+    'privacy_s3_note' => 'You may adjust your browser settings to refuse cookies; however, this may affect some site functionalities.',
+
+    // Section 4
+    'privacy_s4_title' => 'Information Sharing',
+    'privacy_s4_intro' => 'We do not sell your personal information to any third party. We may share your data with:',
+    'privacy_s4_item1' => 'Payment Service Providers: To process financial transactions securely.',
+    'privacy_s4_item2' => 'Hosting and Technology Providers: (such as City2tec) to maintain and improve the website.',
+    'privacy_s4_item3' => 'Legal Authorities: When required by law or to protect our legal rights.',
+    'privacy_s4_note' => 'All third parties are bound by confidentiality agreements that protect your data.',
+
+    // Section 5
+    'privacy_s5_title' => 'Data Protection',
+    'privacy_s5_intro' => 'We implement appropriate technical and organizational security measures to protect your information from:',
+    'privacy_s5_threat1' => 'Unauthorized access.',
+    'privacy_s5_threat2' => 'Accidental modification or disclosure.',
+    'privacy_s5_threat3' => 'Loss or destruction.',
+    'privacy_s5_measures_intro' => 'These measures include:',
+    'privacy_s5_measure1' => 'Encryption of sensitive data in transit (SSL/TLS).',
+    'privacy_s5_measure2' => 'Restricting access to personal data to authorized employees only.',
+    'privacy_s5_measure3' => 'Periodic security system reviews.',
+
+    // Section 6
+    'privacy_s6_title' => 'Data Retention',
+    'privacy_s6_intro' => 'We retain your personal information only for as long as necessary to fulfill the purposes outlined in this policy:',
+    'privacy_s6_item1' => 'Booking Data: Retained for up to 3 years for accounting and archiving purposes.',
+    'privacy_s6_item2' => 'Subscription Data: Retained throughout the active membership period and beyond to comply with legal obligations.',
+    'privacy_s6_item3' => 'Communication Data: Retained for a reasonable period to allow response to future inquiries.',
+
+    // Section 7
+    'privacy_s7_title' => 'Your Rights',
+    'privacy_s7_intro' => 'Under applicable data protection laws, you have the following rights:',
+    'privacy_s7_right1' => 'Right to Access: Request a copy of the personal data we hold about you.',
+    'privacy_s7_right2' => 'Right to Rectification: Request correction of any inaccurate or incomplete information.',
+    'privacy_s7_right3' => 'Right to Erasure: Request deletion of your data under certain circumstances ("right to be forgotten").',
+    'privacy_s7_right4' => 'Right to Restrict Processing: Request restriction on how we use your data.',
+    'privacy_s7_right5' => 'Right to Object: Object to the processing of your data for marketing or analytical purposes.',
+    'privacy_s7_right6' => 'Right to Data Portability: Request transfer of your data to another party in a structured format.',
+
+    // Section 8
+    'privacy_s8_title' => 'Links to External Sites',
+    'privacy_s8_text' => 'Our site may contain links to external websites (such as social media platforms). We are not responsible for the privacy practices or content of these sites. We recommend reading the privacy policies of any external site you visit.',
+
+    // Section 9
+    'privacy_s9_title' => 'Changes to This Privacy Policy',
+    'privacy_s9_text' => 'We may update this Privacy Policy from time to time to reflect changes in our practices or legal requirements. Any changes will be posted on this page with an updated "Last Updated" date. We encourage you to review this policy periodically.',
+
+    // Consent
+    'privacy_consent_title' => 'Your Consent',
+    'privacy_consent_text' => 'By using the Jospa website and its services, you agree to the terms outlined in this Privacy Policy.',
+
+    // Footer link
+    'privacy_footer_link' => 'Privacy Policy',
 ];

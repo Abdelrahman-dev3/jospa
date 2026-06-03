@@ -32,7 +32,9 @@
 
     <header class="shadow">
             <x-frontend.navbar />
+        @unless(View::hasSection('hide-screen-hero'))
             <x-frontend.slider-hero />
+        @endunless
     </header>
 
     <main>

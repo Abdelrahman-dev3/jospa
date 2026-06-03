@@ -38,6 +38,12 @@
             <a href="https://x.com/Jospa_sa" target="_blank"><i class="bi bi-twitter"></i></a>
             <a href="https://www.instagram.com/jospa_sa/#" target="_blank"><i class="bi bi-instagram"></i></a>
         </div>
+
+        <div class="footer-links">
+            <a href="{{ route('frontend.privacy.policy') }}" class="footer-link-item">
+                <i class="bi bi-shield-lock"></i> {{ __('messagess.privacy_footer_link') }}
+            </a>
+        </div>
         
     </div>
 </footer>

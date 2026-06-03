@@ -159,6 +159,36 @@
     transform: scale(1.1);
 }
 
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.footer-link-item {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.footer-link-item:hover {
+    color: #fff;
+    background: rgba(191, 148, 86, 0.3);
+    border-color: rgba(191, 148, 86, 0.5);
+}
+
+.footer-link-item i {
+    margin-left: 6px;
+    font-size: 0.8rem;
+}
+
 .footer-copyright {
     padding-top: 25px;
     border-top: 1px solid rgba(232, 211, 196, 0.2);
