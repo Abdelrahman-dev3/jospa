@@ -13,13 +13,14 @@
             </div>
         </div>
 
-        <form action="{{ route('staff.working-hours.store',  $userId ) }}" method="POST">
+        <form action="{{ route('backend.staff.working-hours.store',  $userId ) }}" method="POST">
             @csrf
             
 
 
             @php
             $savedWorkingHours = App\Models\StaffWorkingHour::where('staff_id', $userId)->get()->keyBy('day_of_week');
+            $leavePeriods = App\Models\StaffLeavePeriod::where('staff_id', $userId)->orderBy('start_date')->get();
                 $days = [
                     1 => 'saturday',
                     2 => 'sunday',
@@ -178,6 +179,41 @@
 </ul>
             @endif
 
+            <div class="mt-4 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-calendar-days"></i> إجازات الموظف المحددة بتاريخ</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-leave-period">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> إضافة إجازة
+                    </button>
+                </div>
+
+                @if($leavePeriods->count() > 0)
+                    <div class="mb-3">
+                        @foreach($leavePeriods as $leave)
+                            <div class="row align-items-center g-2 mb-2">
+                                <div class="col-md-3">
+                                    <input class="form-control" type="date" value="{{ $leave->start_date->format('Y-m-d') }}" disabled>
+                                </div>
+                                <div class="col-md-3">
+                                    <input class="form-control" type="date" value="{{ $leave->end_date->format('Y-m-d') }}" disabled>
+                                </div>
+                                <div class="col-md-4">
+                                    <input class="form-control" type="text" value="{{ $leave->reason }}" disabled>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="delete_leave_periods[]" value="{{ $leave->id }}" id="delete-leave-{{ $leave->id }}">
+                                        <label class="form-check-label" for="delete-leave-{{ $leave->id }}">حذف</label>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <div id="leave-periods-container"></div>
+            </div>
+
                 <div data-v-50fdd42d="" class="d-grid d-md-block setting-footer"><button data-v-50fdd42d="" class="btn btn-primary" name="submit"><i data-v-50fdd42d="" class="fa-solid fa-floppy-disk"></i> {{ __('employee.submit') }}</button></div>
         </form>
     </div>
@@ -185,6 +221,8 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const addBreakLinks = document.querySelectorAll(".clickable-text");
+    const addLeaveButton = document.getElementById("add-leave-period");
+    const leavePeriodsContainer = document.getElementById("leave-periods-container");
 
     addBreakLinks.forEach((link) => {
         link.addEventListener("click", function () {
@@ -215,6 +253,38 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     });
+
+    if (addLeaveButton && leavePeriodsContainer) {
+        addLeaveButton.addEventListener("click", function () {
+            const leaveIndex = leavePeriodsContainer.querySelectorAll(".leave-period-row").length;
+            const leaveRow = document.createElement("div");
+            leaveRow.classList.add("row", "align-items-end", "g-2", "mb-2", "leave-period-row");
+
+            leaveRow.innerHTML = `
+                <div class="col-md-3">
+                    <label class="form-label">من تاريخ</label>
+                    <input class="form-control" type="date" name="leave_periods[${leaveIndex}][start_date]" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">إلى تاريخ</label>
+                    <input class="form-control" type="date" name="leave_periods[${leaveIndex}][end_date]" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">السبب</label>
+                    <input class="form-control" type="text" name="leave_periods[${leaveIndex}][reason]" maxlength="255">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger remove-leave-period">{{ __('employee.remove') }}</button>
+                </div>
+            `;
+
+            leavePeriodsContainer.appendChild(leaveRow);
+
+            leaveRow.querySelector(".remove-leave-period").addEventListener("click", function () {
+                leaveRow.remove();
+            });
+        });
+    }
 });
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>

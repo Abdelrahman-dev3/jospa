@@ -231,8 +231,12 @@
         window.currencyFormat = currencyFormat
         window.defaultCurrencySymbol = @json(Currency::defaultSymbol())
     </script>
-    <script src="{{ mix('js/booking-form.min.js') }}"></script>
-    <script src="{{ mix('js/import-export.min.js') }}"></script>
+    @if (!isset($global_booking))
+        <script src="{{ mix('js/booking-form.min.js') }}"></script>
+    @endif
+    @if (isset($export_import) && $export_import)
+        <script src="{{ mix('js/import-export.min.js') }}"></script>
+    @endif
     @if (isset($assets) && (in_array('textarea', $assets) || in_array('editor', $assets)))
         <script src="{{ asset('vendor/tinymce/js/tinymce/tinymce.min.js') }}"></script>
         <script src="{{ asset('vendor/tinymce/js/tinymce/jquery.tinymce.min.js') }}"></script>

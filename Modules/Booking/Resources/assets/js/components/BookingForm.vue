@@ -1,7 +1,13 @@
 <template>
   <form>
     <div :class="`offcanvas offcanvas-end`" data-bs-scroll="true" tabindex="-1" id="booking-form" aria-labelledby="offcanvasBookingForm">
-      <template v-if="SINLGE_STEP == 'MAIN' && status == 'completed'">
+      <template v-if="SINLGE_STEP == 'LOADER'">
+        <div class="booking-loader">
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span>جاري تجهيز بيانات الموعد...</span>
+        </div>
+      </template>
+      <template v-else-if="SINLGE_STEP == 'MAIN' && status == 'completed'">
         <InvoiceComponent :booking_id="id"></InvoiceComponent>
       </template>
       <template v-else-if="SINLGE_STEP == 'MAIN' && status != 'checkout'">
@@ -29,21 +35,18 @@
           <div class="form-group" v-if="!['check_in', 'checkout', 'confirmed'].includes(status)">
             <Multiselect id="branch_id" placeholder="Select Branch" v-model="branch_id" :disabled="is_paid || filterStatus(status).is_disabled" :value="branch_id" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" @change="removeBranch" class="form-group"></Multiselect>
           </div>
-          <!-- <div class="form-group" v-if="bookingType !== 'CALENDER_BOOKING' && branch_id"> -->
-          <div class="form-group" v-if="!['check_in', 'checkout', 'confirmed'].includes(status)">
-            <Multiselect id="employee_id" placeholder="Select Staff" v-model="employee_id" :value="employee_id" :disabled="is_paid || filterStatus(status).is_disabled" v-bind="singleSelectOption" :options="employee.options" @select="employeeSelect" @change="removeEmployee" class="form-group"></Multiselect>
-          </div>
           <div class="row">
-            <!-- <div class="form-group col-6" v-if="bookingType !== 'CALENDER_BOOKING' && employee_id"> -->
             <div class="form-group col-6" v-if="!['check_in', 'checkout', 'confirmed'].includes(status)" >
               <div class="booking-datepicker">
                 <flat-pickr v-model="current_date" :disabled="is_paid || filterStatus(status).is_disabled" placeholder="Select Date" @change="dateChange" :config="config" class="form-control" />
               </div>
             </div>
-            <!-- <div class="form-group col-6" v-if="bookingType !== 'CALENDER_BOOKING' && current_date && employee_id"> -->
             <div class="form-group col-6"  v-if="!['check_in', 'checkout', 'confirmed'].includes(status)">
               <Multiselect id="star_time" placeholder="Select Time" v-model="start_date_time" :disabled="is_paid || filterStatus(status).is_disabled" :value="start_date_time" v-bind="singleSelectOption" :options="slots" @select="slotSelect" @change="removeSlot" class="form-group"></Multiselect>
             </div>
+          </div>
+          <div class="form-group" v-if="!['check_in', 'checkout', 'confirmed'].includes(status) && start_date_time">
+            <Multiselect id="employee_id" placeholder="Select Staff" v-model="employee_id" :value="employee_id" :disabled="is_paid || filterStatus(status).is_disabled" v-bind="singleSelectOption" :options="employee.options" @select="employeeSelect" @change="removeEmployee" class="form-group"></Multiselect>
           </div>
           <div class="form-group border-bottom">
             <div v-if="selectedCustomer">
@@ -621,7 +624,7 @@ import { ref, reactive, watch, onMounted, computed } from 'vue'
 import FlatPickr from 'vue-flatpickr-component'
 import { useBookingStore } from '../store/booking'
 // Select Options List Request
-import { EMPLOYEE_LIST, CUSTOMER_LIST, SERVICE_LIST, SLOT_LIST, PAYMENT_PUT_URL, UPDATE_PAYMENT_DATA, CHECKOUT_URL, STRIPE_PAYMENT_DATA, EDIT_URL, STORE_URL, UPDATE_URL, UPDATE_STATUS, PRODUCT_LIST, PACKAGE_LIST, USER_PACKAGE_LIST } from '../constant/booking'
+import { INDEX_URL, CUSTOMER_LIST, SERVICE_LIST, SLOT_LIST, PAYMENT_PUT_URL, UPDATE_PAYMENT_DATA, CHECKOUT_URL, STRIPE_PAYMENT_DATA, EDIT_URL, STORE_URL, UPDATE_URL, UPDATE_STATUS, PRODUCT_LIST, PACKAGE_LIST, USER_PACKAGE_LIST } from '../constant/booking'
 import { BRANCH_LIST, IS_HOLIDAY } from '@/vue/constants/branch'
 
 import { useField, useForm } from 'vee-validate'
@@ -644,6 +647,7 @@ import moment from 'moment'
 const shownServiceIds = ref([])
 
 const { getRequest, storeRequest, updateRequest, listingRequest } = useRequest()
+const store = useBookingStore()
 // Event Emits
 const emit = defineEmits(['onSubmit'])
 
@@ -680,7 +684,6 @@ const current_date = ref(moment().format('YYYY-MM-DD'))
 const config = ref({
   dateFormat: 'Y-m-d',
   defaultDate: 'today',
-  minDate: new Date(),
   static: true,
   disable: holidays.value
 })
@@ -712,25 +715,31 @@ watch(
             couponRedeem.value = res.data.coupon_redeem // Assuming you have a reactive couponRedeem
           }
 
-          branchSelect(res.data.branch_id)
+          branchSelect(res.data.branch_id, true)
           employeeSelect(res.data.employee_id)
           getUserPackages(res.data.user_id)
           console.log(res.data);
         }
       })
     } else {
-      store.updateStep('MAIN')
       setFormData(defaultData())
       branch_id.value = Number(value.branch_id) > 0 ? value.branch_id : null
       employee_id.value = value.employee_id
-      start_date_time.value = moment(value.start_date_time).format('YYYY-MM-DD HH:mm:ss')
+      start_date_time.value = value.start_date_time && moment(value.start_date_time).isValid()
+        ? moment(value.start_date_time).format('YYYY-MM-DD HH:mm:ss')
+        : null
       if (value.start_date_time) {
         current_date.value = moment(value.start_date_time).format('YYYY-MM-DD')
       } else {
         current_date.value = moment().format('YYYY-MM-DD')
       }
-      branchSelect(branch_id.value)
+      ensureCalendarPresetOptions()
+      branchSelect(branch_id.value, true)
       employeeSelect(employee_id.value)
+      window.setTimeout(() => {
+        store.updateStep('MAIN')
+        ensureCalendarPresetOptions()
+      }, 200)
     }
   },
   { deep: true }
@@ -889,14 +898,51 @@ const service = ref({ options: [], list: [] })
 
 const slots = ref([])
 
+const ensureSelectOption = (selectRef, option) => {
+  if (!option?.value) return
+
+  if (!selectRef.value.options.some((item) => String(item.value) === String(option.value))) {
+    selectRef.value.options.unshift(option)
+  }
+
+  if (!selectRef.value.list.some((item) => String(item.id) === String(option.value))) {
+    selectRef.value.list.unshift({ id: option.value, name: option.label, full_name: option.label })
+  }
+}
+
+const ensureCalendarPresetOptions = () => {
+  if (props.bookingType !== 'CALENDER_BOOKING' || props.bookingData.id) return
+
+  const selectedBranch = branch.value.list.find((item) => String(item.id) === String(branch_id.value))
+  ensureSelectOption(branch, {
+    value: branch_id.value,
+    label: selectedBranch?.name || selectedBranch?.label || `Branch #${branch_id.value}`
+  })
+
+  const selectedEmployee = employee.value.list.find((item) => String(item.id) === String(employee_id.value))
+  ensureSelectOption(employee, {
+    value: employee_id.value,
+    label: selectedEmployee?.name || selectedEmployee?.full_name || props.bookingData.employee_name || `Employee #${employee_id.value}`
+  })
+
+  if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value))) {
+    slots.value.unshift({
+      value: start_date_time.value,
+      label: moment(start_date_time.value).format('hh:mm A'),
+      disabled: false
+    })
+  }
+}
+
 useOnOffcanvasHide('booking-form', () => setFormData(defaultData()))
 useOnOffcanvasShow('booking-form', () => {
   useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }).then((data) => {
     branch.value = data
+    ensureCalendarPresetOptions()
   })
   branch_id.value = Number(props.bookingData.branch_id) > 0 ? props.bookingData.branch_id : null
   getCustomers()
-  branchSelect(branch_id.value)
+  branchSelect(branch_id.value, Boolean(props.bookingData.start_date_time))
   getProducts()
   getpackages(branch_id.value)
 })
@@ -910,36 +956,96 @@ const getCustomers = (cb) =>
   })
 
 const dateChange = () => {
-  getSlots()
   start_date_time.value = null
+  employee_id.value = null
+  service.value = { options: [], list: [] }
+  resetServices()
+  setEmployeeOptions([])
+  getSlots()
 }
 
 const getSlots = () => {
-  listingRequest({ url: SLOT_LIST, data: { 
+  if (!branch_id.value || !current_date.value) {
+    slots.value = []
+    return Promise.resolve()
+  }
+
+  return listingRequest({ url: SLOT_LIST, data: { 
       branch_id: branch_id.value,
       date: current_date.value,
-      employee_id: employee_id.value, // Add employee_id
-      serviceDuration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0 // Add service duration
+      employee_id: null,
+      service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0 // Add service duration
     }  }).then((res) => {
     if (res.status) {
-      const now = new Date()
-      slots.value = res.data.filter((slot) => {
-        const slotDate = new Date(slot.value)
-        return slotDate > now
-      })
+      slots.value = res.data || []
+      ensureCalendarPresetOptions()
     }
   })
 }
-// On Select
-const branchSelect = (value) => {
-  useSelect({ url: EMPLOYEE_LIST, data: { branch_id: value } }, { value: 'id', label: 'name' }).then((data) => (employee.value = data))
 
+const setEmployeeOptions = (employees) => {
+  employee.value = {
+    options: employees.map((item) => ({ value: item.id, label: item.title || item.name })),
+    list: employees.map((item) => ({
+      ...item,
+      name: item.title || item.name,
+      full_name: item.title || item.name
+    }))
+  }
+}
+
+const loadAvailableEmployees = () => {
+  if (!branch_id.value || !current_date.value || !start_date_time.value) {
+    setEmployeeOptions([])
+    return Promise.resolve()
+  }
+
+  return listingRequest({
+    url: INDEX_URL,
+    data: {
+      branch_id: branch_id.value,
+      date: current_date.value,
+      start_date_time: start_date_time.value,
+      service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0,
+      per_page: 1000
+    }
+  }).then((res) => {
+    const availability = res.availability || {}
+    const availableEmployees = (res.employees || []).filter((item) => {
+      const ranges = availability[item.id] || availability[String(item.id)] || []
+      return ranges.length > 0
+    })
+
+    setEmployeeOptions(availableEmployees)
+
+    if (employee_id.value && !availableEmployees.some((item) => String(item.id) === String(employee_id.value))) {
+      employee_id.value = null
+      service.value = { options: [], list: [] }
+      slots.value = []
+      resetServices()
+    }
+
+    ensureCalendarPresetOptions()
+  })
+}
+// On Select
+const branchSelect = (value, preserveSelection = false) => {
+  branch_id.value = Number(value) > 0 ? value : null
+  if (preserveSelection) {
+    loadAvailableEmployees()
+  } else {
+    employee_id.value = null
+    start_date_time.value = null
+    service.value = { options: [], list: [] }
+    setEmployeeOptions([])
+    resetServices()
+  }
+  getSlots()
   if (value) {
     fetchHolidays(value)
   } else {
     holidays.value = []
   }
-  getSlots()
 }
 
 function fetchHolidays(value) {
@@ -963,14 +1069,21 @@ function fetchHolidays(value) {
 const removeBranch = (value) => {
   employee_id.value = null
   start_date_time.value = null
+  slots.value = []
+  service.value = { options: [], list: [] }
+  setEmployeeOptions([])
   user_id.value = null
-  selectedCustomer.value = null
   resetServices()
 }
 const employeeSelect = (value) => {
-  useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, { value: 'service_id', label: 'service_name' }).then((data) => (service.value = data))
+  employee_id.value = value
+  useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, { value: 'service_id', label: 'service_name' }).then((data) => {
+    service.value = data
+    ensureCalendarPresetOptions()
+  })
 }
 const removeEmployee = () => {
+  service.value = { options: [], list: [] }
   resetServices()
 }
 const newCustomerData = ref(null)
@@ -986,9 +1099,17 @@ const customerSelect = (value) => {
   }
 }
 const slotSelect = () => {
+  employee_id.value = null
+  service.value = { options: [], list: [] }
+  resetServices()
+  loadAvailableEmployees()
   resetServiceTime()
 }
 const removeSlot = () => {
+  employee_id.value = null
+  service.value = { options: [], list: [] }
+  setEmployeeOptions([])
+  resetServices()
   resetServiceTime()
 }
 
@@ -1156,7 +1277,6 @@ const removeProduct = (id) => {
 
 const payment_data = ref(null)
 const stripe_payment_data = ref(null)
-const store = useBookingStore()
 const SINLGE_STEP = computed(() => store.singleStep)
 var SUB_TOTAL_SERVICE_AMOUNT = computed(() =>
   selectedService.value.reduce((total, service) => total + service.service_price, 0) +
@@ -1623,6 +1743,15 @@ const isServiceInFilteredPackages = (serviceId) => {
 <style scoped>
 .offcanvas {
   box-shadow: none;
+}
+.booking-loader {
+  min-height: 220px;
+  padding: 32px 24px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  color: var(--bs-body-color);
 }
 .service-duration {
   position: absolute;

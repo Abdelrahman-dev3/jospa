@@ -21,6 +21,7 @@ use Modules\Employee\Models\EmployeeRating;
 use Modules\Service\Models\ServiceEmployee;
 use Yajra\DataTables\DataTables;
 use Modules\Wallet\Models\Wallet;
+use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
 
 
@@ -139,7 +140,14 @@ class EmployeesController extends Controller
 
     public function store_working_houer(Request $request , $id)
     {
-     $workingHours = $request->input('working_hours', []);
+        $workingHours = $request->input('working_hours', []);
+
+        foreach ($workingHours as $dayName => $data) {
+            $error = $this->validateWorkingHourRow($dayName, $data);
+            if ($error) {
+                return back()->withInput()->with('error', $error);
+            }
+        }
     
         foreach ($workingHours as $dayName => $data) {
     
@@ -158,8 +166,112 @@ class EmployeesController extends Controller
                 ]
             );
         }
+
+        StaffLeavePeriod::where('staff_id', $id)
+            ->whereIn('id', $request->input('delete_leave_periods', []))
+            ->delete();
+
+        foreach ($request->input('leave_periods', []) as $leave) {
+            $startDate = $leave['start_date'] ?? null;
+            $endDate = $leave['end_date'] ?? null;
+
+            if (!$startDate && !$endDate) {
+                continue;
+            }
+
+            if (!$this->isValidDate($startDate) || !$this->isValidDate($endDate)) {
+                return back()->withInput()->with('error', 'تأكد من إدخال تاريخ بداية ونهاية الإجازة بشكل صحيح');
+            }
+
+            if (Carbon::parse($endDate)->lt(Carbon::parse($startDate))) {
+                return back()->withInput()->with('error', 'تاريخ نهاية الإجازة يجب أن يكون بعد تاريخ البداية أو مساوياً له');
+            }
+
+            StaffLeavePeriod::create([
+                'staff_id' => $id,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'reason' => $leave['reason'] ?? null,
+            ]);
+        }
     
         return back()->with('success', 'تم حفظ ساعات العمل بنجاح');;
+    }
+
+    private function validateWorkingHourRow(string $dayName, array $data): ?string
+    {
+        $isHoliday = isset($data['is_holiday']) && $data['is_holiday'] == '1';
+        if ($isHoliday) {
+            return null;
+        }
+
+        $start = $this->timeToMinutes($data['start'] ?? null);
+        $end = $this->timeToMinutes($data['end'] ?? null);
+
+        if ($start === null || $end === null) {
+            return "تأكد من وقت بداية ونهاية يوم {$dayName}";
+        }
+
+        if ($end <= $start) {
+            return "وقت نهاية يوم {$dayName} يجب أن يكون بعد وقت البداية";
+        }
+
+        $breakRanges = [];
+        foreach (($data['breaks'] ?? []) as $break) {
+            $breakStart = $this->timeToMinutes($break['start_break'] ?? null);
+            $breakEnd = $this->timeToMinutes($break['end_break'] ?? null);
+
+            if ($breakStart === null || $breakEnd === null) {
+                return "تأكد من أوقات الاستراحة في يوم {$dayName}";
+            }
+
+            if ($breakEnd <= $breakStart) {
+                return "وقت نهاية الاستراحة في يوم {$dayName} يجب أن يكون بعد بدايتها";
+            }
+
+            if ($breakStart < $start || $breakEnd > $end) {
+                return "الاستراحة في يوم {$dayName} يجب أن تكون داخل وقت الدوام";
+            }
+
+            foreach ($breakRanges as $range) {
+                if ($breakStart < $range['end'] && $breakEnd > $range['start']) {
+                    return "يوجد تداخل بين الاستراحات في يوم {$dayName}";
+                }
+            }
+
+            $breakRanges[] = ['start' => $breakStart, 'end' => $breakEnd];
+        }
+
+        return null;
+    }
+
+    private function timeToMinutes(?string $time): ?int
+    {
+        if (!is_string($time) || !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $time)) {
+            return null;
+        }
+
+        [$hour, $minute] = array_map('intval', array_slice(explode(':', $time), 0, 2));
+
+        if ($hour > 23 || $minute > 59) {
+            return null;
+        }
+
+        return ($hour * 60) + $minute;
+    }
+
+    private function isValidDate(?string $date): bool
+    {
+        if (!is_string($date)) {
+            return false;
+        }
+
+        try {
+            $parsed = Carbon::createFromFormat('Y-m-d', $date);
+            return $parsed && $parsed->format('Y-m-d') === $date;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     public function employee_list(Request $request)
@@ -605,7 +717,7 @@ class EmployeesController extends Controller
             BranchEmployee::create($branch_data);
         }
 
-        if ($request->has('service_id')) {
+        if ($request->boolean('services_edited')) {
             $serviceIds = $this->extractServiceIds($request->service_id);
             $serviceQuery = ServiceEmployee::where('employee_id', $employee_id);
 

@@ -4,6 +4,8 @@ namespace Modules\Booking\Http\Controllers\Backend;
 
 use App\Authorizable;
 use App\Http\Controllers\Controller;
+use App\Models\StaffLeavePeriod;
+use App\Models\StaffWorkingHour;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Expression;
@@ -18,7 +20,9 @@ use Modules\Booking\Models\BookingTransaction;
 use Modules\Booking\Trait\BookingTrait;
 use Modules\Booking\Trait\PaymentTrait;
 use Modules\Booking\Transformers\BookingResource;
+use Modules\BussinessHour\Models\BussinessHour;
 use Modules\Constant\Models\Constant;
+use Modules\Holiday\Models\Holiday;
 use Modules\Product\Trait\ProductTrait;
 use Modules\Service\Models\Service;
 use Modules\Tax\Models\Tax;
@@ -75,8 +79,9 @@ class BookingsController extends Controller
         $booking = Booking::find(request()->booking_id);
 
         $date = $booking->start_date_time ?? date('Y-m-d');
+        $global_booking = false;
 
-        return view('booking::backend.bookings.index', compact('module_action', 'statusList', 'date'));
+        return view('booking::backend.bookings.index', compact('module_action', 'statusList', 'date', 'global_booking'));
     }
 
     public function statusList()
@@ -180,6 +185,10 @@ public function index_list(Request $request)
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
+            'extendedProps' => [
+                'booking_id' => $value->booking_id,
+                'branch_id' => $value->booking->branch_id,
+            ],
         ];
     }
 
@@ -204,6 +213,10 @@ public function index_list(Request $request)
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
+            'extendedProps' => [
+                'booking_id' => $value->booking_id,
+                'branch_id' => $value->booking->branch_id,
+            ],
         ];
     }
 
@@ -213,6 +226,7 @@ public function index_list(Request $request)
     // Employees
     // ----------------------------
     $employeesQuery = User::select('users.*')
+        ->with('branches', 'media')
         ->active()
         ->varified()
         ->calenderResource()
@@ -232,24 +246,226 @@ public function index_list(Request $request)
 
     $employees = $employeesQuery->get();
 
+    $requestedStartDateTime = $request->get('start_date_time');
+    $requestedServiceDuration = max(0, (int) $request->get('service_duration', 0));
+    if ($requestedStartDateTime) {
+        $requestedStartDateTime = Carbon::parse($requestedStartDateTime)->format('Y-m-d H:i:s');
+        $employees = $employees->filter(function ($employee) use ($branchId, $date, $requestedStartDateTime, $requestedServiceDuration) {
+            $employeeBranchId = $this->effectiveEmployeeBranchId($employee, $branchId);
+            if ($employeeBranchId <= 0) {
+                return false;
+            }
+
+            return collect($this->buildBookingSlotsForEmployee($employee, $date, $employeeBranchId, $requestedServiceDuration))
+                ->contains(fn ($slot) => $slot['value'] === $requestedStartDateTime);
+        })->values();
+    }
+
+    $dayName = strtolower(Carbon::parse($date)->format('l'));
+    $employeeIds = $employees->pluck('id')->all();
+    $employeeBranchIds = $employees->mapWithKeys(function ($employee) use ($branchId) {
+        return [$employee->id => $this->effectiveEmployeeBranchId($employee, $branchId)];
+    });
+    $branchIds = $employeeBranchIds->filter()->unique()->values()->all();
+
+    $availabilityContext = [
+        'day_name' => $dayName,
+        'holiday_branch_ids' => Holiday::whereIn('branch_id', $branchIds)
+            ->whereDate('date', $date)
+            ->pluck('branch_id')
+            ->mapWithKeys(fn ($id) => [(int) $id => true])
+            ->all(),
+        'leave_staff_ids' => StaffLeavePeriod::whereIn('staff_id', $employeeIds)
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->pluck('staff_id')
+            ->mapWithKeys(fn ($id) => [(int) $id => true])
+            ->all(),
+        'staff_working_hours' => StaffWorkingHour::whereIn('staff_id', $employeeIds)
+            ->where('day_of_week', $dayName)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->unique('staff_id')
+            ->keyBy('staff_id'),
+        'business_hours' => BussinessHour::whereIn('branch_id', $branchIds)
+            ->where('day', $dayName)
+            ->where('is_holiday', 0)
+            ->orderBy('id', 'desc')
+            ->get(),
+    ];
+
     $resource = [];
+    $availabilityEvents = [];
+    $availability = [];
     foreach ($employees as $employee) {
+        $employeeBranchId = (int) $employeeBranchIds->get($employee->id);
         $resource[] = [
             'id' => $employee->id,
+            'branch_id' => $employeeBranchId,
+            'extendedProps' => [
+                'branch_id' => $employeeBranchId,
+            ],
             'title' => $employee->full_name,
             'titleHTML' => '<div class="d-flex gap-3 justify-content-center align-items-center py-3">
                 <img src="' . $employee->profile_image . '" class="avatar avatar-40 rounded-pill" alt="employee" />
                 ' . $employee->full_name . '
             </div>',
         ];
+
+        $employeeAvailability = $this->buildEmployeeAvailability($employee, $date, $employeeBranchId, $availabilityContext);
+        $availability[$employee->id] = $employeeAvailability['ranges'];
+        $availabilityEvents = array_merge($availabilityEvents, $employeeAvailability['events']);
     }
 
     return response()->json([
-        'data' => $updated_data,
+        'data' => array_merge($availabilityEvents, $updated_data),
         'employees' => $resource,
+        'availability' => $availability,
         'total_count' => count($employees),
     ]);
 }
+
+    private function effectiveEmployeeBranchId(User $employee, int $branchId): int
+    {
+        if ($branchId > 0) {
+            return $branchId;
+        }
+
+        return (int) optional($employee->branches->first())->branch_id;
+    }
+
+    private function buildEmployeeAvailability(User $employee, string $date, int $branchId, array $context): array
+    {
+        $resourceId = $employee->id;
+        $dayName = $context['day_name'];
+        $dayStart = "{$date} 00:00:00";
+        $dayEnd = "{$date} 23:59:59";
+
+        $events = [
+            [
+                'id' => "staff-unavailable-{$resourceId}-day",
+                'start' => $dayStart,
+                'end' => $dayEnd,
+                'resourceId' => $resourceId,
+                'display' => 'background',
+                'backgroundColor' => '#e5e7eb',
+                'editable' => false,
+            ],
+        ];
+
+        if ($branchId > 0 && isset($context['holiday_branch_ids'][$branchId])) {
+            return ['events' => $events, 'ranges' => []];
+        }
+
+        if (isset($context['leave_staff_ids'][(int) $resourceId])) {
+            return ['events' => $events, 'ranges' => []];
+        }
+
+        $workingConfig = $this->resolveEmployeeWorkingConfig($employee, $branchId, $dayName, $context);
+        if (!$workingConfig) {
+            return ['events' => $events, 'ranges' => []];
+        }
+
+        $availableStart = "{$date} {$workingConfig['start_time']}";
+        $availableEnd = "{$date} {$workingConfig['end_time']}";
+        $events[] = [
+            'id' => "staff-available-{$resourceId}",
+            'start' => $availableStart,
+            'end' => $availableEnd,
+            'resourceId' => $resourceId,
+            'display' => 'background',
+            'backgroundColor' => '#ffffff',
+            'editable' => false,
+        ];
+
+        foreach ($workingConfig['breaks'] as $index => $break) {
+            if (empty($break['start_break']) || empty($break['end_break'])) {
+                continue;
+            }
+
+            $events[] = [
+                'id' => "staff-break-{$resourceId}-{$index}",
+                'start' => "{$date} {$this->normalizeTime($break['start_break'])}",
+                'end' => "{$date} {$this->normalizeTime($break['end_break'])}",
+                'resourceId' => $resourceId,
+                'display' => 'background',
+                'backgroundColor' => '#e5e7eb',
+                'editable' => false,
+            ];
+        }
+
+        return [
+            'events' => $events,
+            'ranges' => [
+                [
+                    'start' => $availableStart,
+                    'end' => $availableEnd,
+                    'breaks' => array_values(array_filter(array_map(function ($break) use ($date) {
+                        if (empty($break['start_break']) || empty($break['end_break'])) {
+                            return null;
+                        }
+
+                        return [
+                            'start' => "{$date} {$this->normalizeTime($break['start_break'])}",
+                            'end' => "{$date} {$this->normalizeTime($break['end_break'])}",
+                        ];
+                    }, $workingConfig['breaks']))),
+                ],
+            ],
+        ];
+    }
+
+    private function resolveEmployeeWorkingConfig(User $employee, int $branchId, string $dayName, array $context): ?array
+    {
+        $staffWorkingHours = $context['staff_working_hours']->get($employee->id);
+
+        if ($staffWorkingHours) {
+            if ($staffWorkingHours->is_holiday) {
+                return null;
+            }
+
+            return [
+                'start_time' => $this->normalizeTime($staffWorkingHours->start_time),
+                'end_time' => $this->normalizeTime($staffWorkingHours->end_time),
+                'breaks' => $this->normalizeBreaks($staffWorkingHours->breaks),
+            ];
+        }
+
+        $branchEmployee = $employee->branches->firstWhere('branch_id', $branchId);
+        $shiftId = $branchEmployee->shift_id ?? null;
+
+        $workingHours = $context['business_hours']->first(function ($hours) use ($branchId, $shiftId) {
+            if ((int) $hours->branch_id !== (int) $branchId) {
+                return false;
+            }
+
+            return $shiftId ? (int) $hours->shift_id === (int) $shiftId : true;
+        });
+
+        if (!$workingHours) {
+            return null;
+        }
+
+        return [
+            'start_time' => $this->normalizeTime($workingHours->start_time),
+            'end_time' => $this->normalizeTime($workingHours->end_time),
+            'breaks' => $this->normalizeBreaks($workingHours->breaks),
+        ];
+    }
+
+    private function normalizeBreaks($breaks): array
+    {
+        if (is_string($breaks)) {
+            $breaks = json_decode($breaks, true);
+        }
+
+        return is_array($breaks) ? $breaks : [];
+    }
+
+    private function normalizeTime(?string $time): string
+    {
+        return Carbon::parse((string) $time)->format('H:i:s');
+    }
 
 
     public function services_index_list(Request $request)
@@ -727,14 +943,214 @@ public function index_list(Request $request)
 
     public function booking_slots(Request $request)
     {
-        $day = date('l', strtotime($request->date));
+        try {
+            $date = Carbon::parse($request->date)->toDateString();
+        } catch (\Throwable $e) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
 
-        $branch_id = $request->branch_id;
-        $employee_id = $request->employee_id;
-        $serviceDuration = $request->service_duration ?? 0; // default to 0 if not provided
-        $slots = $this->getSlots($request->date, $day, $branch_id, $serviceDuration, $employee_id);
+        $branchId = (int) $request->branch_id;
+        $employeeId = (int) $request->employee_id;
+        $serviceDuration = max(0, (int) $request->service_duration);
+
+        if ($employeeId <= 0) {
+            if ($branchId <= 0) {
+                return response()->json(['status' => true, 'data' => []]);
+            }
+
+            $employees = User::with('branches')
+                ->active()
+                ->varified()
+                ->calenderResource()
+                ->employee()
+                ->where('is_manager', 0)
+                ->whereHas('branches', function ($q) use ($branchId) {
+                    $q->where('branch_id', $branchId);
+                })
+                ->get();
+
+            $slots = $employees
+                ->flatMap(fn ($employee) => $this->buildBookingSlotsForEmployee($employee, $date, $branchId, $serviceDuration))
+                ->unique('value')
+                ->sortBy('value')
+                ->values()
+                ->all();
+
+            return response()->json(['status' => true, 'data' => $slots]);
+        }
+
+        $employee = User::with('branches')
+            ->active()
+            ->varified()
+            ->calenderResource()
+            ->employee()
+            ->where('is_manager', 0)
+            ->find($employeeId);
+
+        if (!$employee) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        if ($branchId > 0 && !$employee->branches->contains('branch_id', $branchId)) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        $effectiveBranchId = $this->effectiveEmployeeBranchId($employee, $branchId);
+        if ($effectiveBranchId <= 0) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        $slots = $this->buildBookingSlotsForEmployee($employee, $date, $effectiveBranchId, $serviceDuration);
 
         return response()->json(['status' => true, 'data' => $slots]);
+    }
+
+    private function buildBookingSlotsForEmployee(User $employee, string $date, int $branchId, int $serviceDuration): array
+    {
+        $dayName = strtolower(Carbon::parse($date)->format('l'));
+        $context = [
+            'day_name' => $dayName,
+            'holiday_branch_ids' => Holiday::where('branch_id', $branchId)
+                ->whereDate('date', $date)
+                ->pluck('branch_id')
+                ->mapWithKeys(fn ($id) => [(int) $id => true])
+                ->all(),
+            'leave_staff_ids' => StaffLeavePeriod::where('staff_id', $employee->id)
+                ->whereDate('start_date', '<=', $date)
+                ->whereDate('end_date', '>=', $date)
+                ->pluck('staff_id')
+                ->mapWithKeys(fn ($id) => [(int) $id => true])
+                ->all(),
+            'staff_working_hours' => StaffWorkingHour::where('staff_id', $employee->id)
+                ->where('day_of_week', $dayName)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->unique('staff_id')
+                ->keyBy('staff_id'),
+            'business_hours' => BussinessHour::where('branch_id', $branchId)
+                ->where('day', $dayName)
+                ->where('is_holiday', 0)
+                ->orderBy('id', 'desc')
+                ->get(),
+        ];
+
+        if (isset($context['holiday_branch_ids'][$branchId]) || isset($context['leave_staff_ids'][(int) $employee->id])) {
+            return [];
+        }
+
+        $workingConfig = $this->resolveEmployeeWorkingConfig($employee, $branchId, $dayName, $context);
+        if (!$workingConfig) {
+            return [];
+        }
+
+        $slotInterval = $this->slotIntervalMinutes();
+        $duration = $serviceDuration > 0 ? $serviceDuration : $slotInterval;
+        $start = Carbon::parse("{$date} {$workingConfig['start_time']}");
+        $end = Carbon::parse("{$date} {$workingConfig['end_time']}");
+
+        if ($end->lessThanOrEqualTo($start)) {
+            return [];
+        }
+
+        $breakRanges = $this->slotBreakRanges($date, $workingConfig['breaks']);
+        $busyRanges = $this->employeeBusyRanges($employee->id, $branchId, $date);
+        $slots = [];
+
+        for ($cursor = $start->copy(); $cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($end); $cursor->addMinutes($slotInterval)) {
+            $candidateEnd = $cursor->copy()->addMinutes($duration);
+
+            if ($this->rangeOverlapsAny($cursor, $candidateEnd, $breakRanges) || $this->rangeOverlapsAny($cursor, $candidateEnd, $busyRanges)) {
+                continue;
+            }
+
+            $slots[] = [
+                'value' => $cursor->format('Y-m-d H:i:s'),
+                'label' => $cursor->format('h:i A'),
+                'disabled' => false,
+            ];
+        }
+
+        return $slots;
+    }
+
+    private function slotIntervalMinutes(): int
+    {
+        $slotDuration = (string) setting('slot_duration');
+        $parts = explode(':', $slotDuration);
+        $hours = (int) ($parts[0] ?? 0);
+        $minutes = (int) ($parts[1] ?? 15);
+        $totalMinutes = ($hours * 60) + $minutes;
+
+        return $totalMinutes > 0 ? $totalMinutes : 15;
+    }
+
+    private function slotBreakRanges(string $date, array $breaks): array
+    {
+        return array_values(array_filter(array_map(function ($break) use ($date) {
+            if (empty($break['start_break']) || empty($break['end_break'])) {
+                return null;
+            }
+
+            $start = Carbon::parse("{$date} {$this->normalizeTime($break['start_break'])}");
+            $end = Carbon::parse("{$date} {$this->normalizeTime($break['end_break'])}");
+
+            if ($end->lessThanOrEqualTo($start)) {
+                return null;
+            }
+
+            return ['start' => $start, 'end' => $end];
+        }, $breaks)));
+    }
+
+    private function employeeBusyRanges(int $employeeId, int $branchId, string $date): array
+    {
+        $serviceRanges = BookingService::with('booking')
+            ->where('employee_id', $employeeId)
+            ->whereHas('booking', function ($q) use ($branchId, $date) {
+                $q->where('branch_id', $branchId)
+                    ->whereDate('start_date_time', $date)
+                    ->where('status', '!=', 'cancelled');
+            })
+            ->get()
+            ->map(function ($service) {
+                $start = Carbon::parse($service->start_date_time);
+                return [
+                    'start' => $start,
+                    'end' => $start->copy()->addMinutes((int) $service->duration_min),
+                ];
+            })
+            ->all();
+
+        $packageRanges = BookingPackages::with('booking', 'services')
+            ->where('employee_id', $employeeId)
+            ->whereHas('booking', function ($q) use ($branchId, $date) {
+                $q->where('branch_id', $branchId)
+                    ->whereDate('start_date_time', $date)
+                    ->where('status', '!=', 'cancelled');
+            })
+            ->get()
+            ->map(function ($package) {
+                $duration = (int) $package->services->sum('duration_min');
+                $start = Carbon::parse($package->booking->start_date_time);
+                return [
+                    'start' => $start,
+                    'end' => $start->copy()->addMinutes($duration),
+                ];
+            })
+            ->all();
+
+        return array_merge($serviceRanges, $packageRanges);
+    }
+
+    private function rangeOverlapsAny(Carbon $start, Carbon $end, array $ranges): bool
+    {
+        foreach ($ranges as $range) {
+            if ($start->lt($range['end']) && $end->gt($range['start'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function payment_create(Request $request)

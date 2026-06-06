@@ -7,6 +7,9 @@
 
 @endpush
 @section('banner-button')
+@hasPermission('add_booking')
+<button type="button" class="btn btn-primary" data-booking-create><i class="fa-solid fa-plus"></i> {{ __('booking.lbl_new_appointment') }}</button>
+@endhasPermission
 @hasPermission('booking_booking_tableview')
 <a href="{{route("backend.$module_name.datatable_view")}}" class="btn btn-dark"><i class="fa-solid fa-table"></i> {{ __('messages.datatable_view') }}</a>
 @endhasPermission
@@ -31,5 +34,14 @@
 @push ('after-scripts')
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="{{ mix("modules/booking/script.js") }}"></script>
+<script>
+document.addEventListener('click', function (event) {
+    if (!event.target.closest('[data-booking-create]')) {
+        return;
+    }
+
+    window.dispatchEvent(new CustomEvent('booking:create'));
+});
+</script>
 
 @endpush

@@ -3,7 +3,12 @@
     <div class="offcanvas offcanvas-end" tabindex="-1" id="form-offcanvas" aria-labelledby="form-offcanvasLabel">
       <FormHeader :currentId="currentId" :editTitle="editTitle" :createTitle="createTitle"></FormHeader>
       <div class="offcanvas-body">
-        <div class="row">
+        <div v-if="isFormLoading" class="employee-form-loader">
+          <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
+          <span>Loading employee data...</span>
+        </div>
+        <fieldset :disabled="isFormLoading" class="employee-form-fieldset">
+        <div class="row" :class="{ 'employee-form-loading': isFormLoading }">
           <div class="col-12 row">
             <div class="col-md-8">
               <div class="row">
@@ -88,7 +93,7 @@
                 </label>
               </div>
             </div>
-            <div class="form-group col-md-12" v-if="branch.options.length > 1 && selectedSessionBranchId == ''">
+            <div class="form-group col-md-12" v-if="branch.options.length > 1">
               <label class="form-label" for="branch">{{ $t('employee.lbl_select_branch') }}</label><span class="text-danger">*</span>
               <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch"
                 v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group">
@@ -138,7 +143,8 @@
             <div class="form-group">
               <label class="form-label" for="service">{{ $t('employee.lbl_select_service') }}</label>
               <Multiselect id="service_id" v-model="service_id" :multiple="true" :value="service_id"
-                placeholder="Select Service" v-bind="multiSelectOption" :options="services.options" class="form-group">
+                placeholder="Select Service" v-bind="multiSelectOption" :options="services.options" class="form-group"
+                @change="markServicesEdited" @select="markServicesEdited" @deselect="markServicesEdited" @clear="markServicesEdited">
               </Multiselect>
               <span v-if="errorMessages['service_id']">
                 <ul class="text-danger">
@@ -208,11 +214,12 @@
             </div>
           </div>
         </div>
+        </fieldset>
       </div>
 
-      <FormFooter :IS_SUBMITED="IS_SUBMITED"></FormFooter>
+      <FormFooter :IS_SUBMITED="IS_SUBMITED || isFormLoading"></FormFooter>
       
-<a :href="`/app/staff-working-hours/${currentId}`"   v-if="currentId" class="btn btn-primary" style="width: 31%;right: 20px;">
+<a :href="`/app/staff-working-hours/${currentId}`"   v-if="currentId && !isFormLoading" class="btn btn-primary" style="width: 31%;right: 20px;">
     {{ $t('employee.btn_edit_working_hours') }}
 </a>
 
@@ -266,41 +273,13 @@ const categorySelectOption = ref({
 })
 
 const { getRequest, storeRequest, updateRequest } = useRequest()
+const isFormLoading = ref(false)
+const isHydratingForm = ref(false)
+const servicesEdited = ref(false)
 
 // Edit Form Or Create Form
-const currentId = useModuleId(() => {
-  useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }).then((data) => {
-    branch.value = data
-    if(props.selectedSessionBranchId !== null) {
-      branch_id.value = props.selectedSessionBranchId
-    } else if (data.options.length === 1) {
-      branch_id.value = data.options[0].value
-      loadServicesForCurrentFilters()
-    }
-    loadServicesForCurrentFilters()
-  })
-  useSelect({ url: SHIFT_LIST }, { value: 'id', label: 'name' }).then((data) => {
-    shift.value = data
-    if(props.selectedSessionShiftId !== null) {
-      shift_id.value = props.selectedSessionShiftId
-    } else if (data.options.length === 1) {
-      shift_id.value = data.options[0].value
-      loadServicesForCurrentFilters()
-    }
-    loadServicesForCurrentFilters()
-  })
-  useSelect({ url: CATEGORY_LIST }, { value: 'id', label: 'name' }).then((data) => (categories.value = data))
-  useSelect({ url: COMMISSION_LIST }, { value: 'id', label: 'name' }).then((data) => (commissions.value = data))
-  if (currentId.value > 0) {
-    getRequest({ url: EDIT_URL, id: currentId.value }).then((res) => {
-      if (res.status && res.data) {
-        setFormData(res.data)
-        loadServicesForCurrentFilters()
-      }
-    })
-  } else {
-    setFormData(defaultData())
-  }
+const currentId = useModuleId(async () => {
+  await prepareForm(currentId.value)
 })
 
 const branch = ref({ options: [], list: [] })
@@ -313,6 +292,57 @@ const serviceCategoryMap = ref({})
 onMounted(() => {
   setFormData(defaultData())
 })
+
+const applyDefaultBranchAndShift = () => {
+  if (props.selectedSessionBranchId !== null && props.selectedSessionBranchId !== 0) {
+    branch_id.value = props.selectedSessionBranchId
+  } else if (branch.value.options.length === 1) {
+    branch_id.value = branch.value.options[0].value
+  }
+
+  if (props.selectedSessionShiftId !== null && props.selectedSessionShiftId !== 0) {
+    shift_id.value = props.selectedSessionShiftId
+  } else if (shift.value.options.length === 1) {
+    shift_id.value = shift.value.options[0].value
+  }
+}
+
+const prepareForm = async (formId) => {
+  isFormLoading.value = true
+  servicesEdited.value = false
+  isHydratingForm.value = true
+
+  try {
+    const [branchData, shiftData, categoryData, commissionData] = await Promise.all([
+      useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }),
+      useSelect({ url: SHIFT_LIST }, { value: 'id', label: 'name' }),
+      useSelect({ url: CATEGORY_LIST }, { value: 'id', label: 'name' }),
+      useSelect({ url: COMMISSION_LIST }, { value: 'id', label: 'name' }),
+    ])
+
+    branch.value = branchData
+    shift.value = shiftData
+    categories.value = categoryData
+    commissions.value = commissionData
+
+    if (formId > 0) {
+      const res = await getRequest({ url: EDIT_URL, id: formId })
+      if (res.status && res.data) {
+        setFormData(res.data)
+      }
+    } else {
+      setFormData(defaultData())
+      applyDefaultBranchAndShift()
+    }
+
+    await loadServicesForCurrentFilters()
+  } finally {
+    await nextTick()
+    isHydratingForm.value = false
+    servicesEdited.value = false
+    isFormLoading.value = false
+  }
+}
 
 const normalizeSingleId = (value) => {
   if (value === null || value === undefined || value === '') return null
@@ -350,6 +380,7 @@ const removeServicesForCategories = (removedCategoryIds = []) => {
   service_id.value = normalizeServiceIds(service_id.value).filter((selectedServiceId) => {
     return !categoryIds.includes(serviceCategoryMap.value[normalizeSingleId(selectedServiceId)])
   })
+  markServicesEdited()
 }
 
 const loadServicesForCurrentFilters = async ({ resetSelected = false } = {}) => {
@@ -371,11 +402,11 @@ const loadServicesForCurrentFilters = async ({ resetSelected = false } = {}) => 
 }
 
 const branchSelect = () => {
-  loadServicesForCurrentFilters({ resetSelected: true })
+  loadServicesForCurrentFilters()
 }
 
 const shiftSelect = () => {
-  loadServicesForCurrentFilters({ resetSelected: true })
+  loadServicesForCurrentFilters()
 }
 
 const handleCategorySelect = async () => {
@@ -391,8 +422,15 @@ const handleCategoryDeselect = async (removedCategory) => {
 
 const handleCategoryClear = async () => {
   service_id.value = []
+  markServicesEdited()
   await nextTick()
   loadServicesForCurrentFilters()
+}
+
+const markServicesEdited = () => {
+  if (!isHydratingForm.value) {
+    servicesEdited.value = true
+  }
 }
 
 // File Upload Function
@@ -483,6 +521,7 @@ const normalizeCategoryIds = (value) => {
 
 //  Reset Form
 const setFormData = (data) => {
+  isHydratingForm.value = true
   serviceCategoryMap.value = {}
   ImageViewer.value = data.profile_image
   resetForm({
@@ -513,6 +552,9 @@ const setFormData = (data) => {
       twitter_link: data.twitter_link,
       dribbble_link: data.dribbble_link,
     }
+  })
+  nextTick(() => {
+    isHydratingForm.value = false
   })
 }
 
@@ -637,6 +679,7 @@ const formSubmit = handleSubmit((values) => {
   if(IS_SUBMITED.value) return false
   IS_SUBMITED.value = true;
   values.show_in_home_booking = show_in_home_booking.value ? 1 : 0;
+  values.services_edited = servicesEdited.value ? 1 : 0;
   values.custom_fields_data = JSON.stringify(values.custom_fields_data)
   console.log("submit",values);
   if (currentId.value > 0) {
@@ -657,8 +700,35 @@ useOnOffcanvasHide('form-offcanvas', () => setFormData(defaultData()))
 }
 
 @media only screen and (min-width: 1280px) {
-  .offcanvas {
+.offcanvas {
     width: 60%;
   }
+}
+
+.employee-form-fieldset {
+  border: 0;
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.employee-form-loader {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid #e9ecef;
+  color: #495057;
+  display: flex;
+  gap: 0.75rem;
+  inset-inline: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.employee-form-loading {
+  opacity: 0.55;
+  pointer-events: none;
 }
 </style>

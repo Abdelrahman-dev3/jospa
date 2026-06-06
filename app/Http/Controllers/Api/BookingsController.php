@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
 use App\Models\Branch;
 use Modules\World\Models\State;
@@ -141,6 +142,13 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     $min_minutes = max(1, $serve_book_min);
 
     $branchId = optional($user->branch)->branch_id;
+    if (StaffLeavePeriod::where('staff_id', $staffId)
+        ->whereDate('start_date', '<=', $date)
+        ->whereDate('end_date', '>=', $date)
+        ->exists()) {
+        return response()->json([]);
+    }
+
     if ($branchId && Holiday::where('branch_id', $branchId)->whereDate('date', $date)->exists()) {
         return response()->json([]);
     }
@@ -210,8 +218,8 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     private function makeWorkingConfig(?string $startTime, ?string $endTime, $breaks): ?array
     {
         try {
-            $start = Carbon::createFromFormat('H:i', (string) $startTime);
-            $end = Carbon::createFromFormat('H:i', (string) $endTime);
+            $start = $this->parseTime((string) $startTime);
+            $end = $this->parseTime((string) $endTime);
         } catch (\Throwable $e) {
             return null;
         }
@@ -225,6 +233,14 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
             'end_time' => $end->format('H:i'),
             'breaks' => $this->normalizeBreaks($breaks),
         ];
+    }
+
+    private function parseTime(string $time): Carbon
+    {
+        $time = trim($time);
+        $format = substr_count($time, ':') === 2 ? 'H:i:s' : 'H:i';
+
+        return Carbon::createFromFormat($format, $time);
     }
 
     private function normalizeBreaks($breaks): array

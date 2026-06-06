@@ -55,7 +55,7 @@
                 :booking-data="bookingData"></booking-form>
 </template>
 <script setup>
-import { reactive, ref, onMounted, onUnmounted } from 'vue'
+import { reactive, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { createRequest } from '@/helpers/utilities'
 
 import Calendar from '@event-calendar/core'
@@ -86,11 +86,13 @@ const EMPLOYEE_LIST = ref([])   // دي هتتملي من API (employees)
 const selectedEmployeeId = ref(null) // ID الموظف المختار
 const selectedEmployeeName = ref(null) // اسم الموظف المختار
 
+const employeeAvailability = ref({})
 const bookingType = ref('')
 const bookingData = reactive({
   id: 0,
   start_date_time: null,
   employee_id: null,
+  employee_name: null,
   branch_id: props.branchId
 })
 const resourceWidths = ref([])
@@ -164,16 +166,87 @@ const refreshPage = () => {
 };
 
 const setBooking = (info) => {
+  const employeeId = getInfoEmployeeId(info)
+  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
   bookingData.id = info.id || 0
-  bookingData.employee_id = info?.resource?.id || null
-  bookingData.start_date_time = info.date || null
+  bookingData.employee_id = employeeId
+  bookingData.employee_name = employee?.title || null
+  bookingData.start_date_time = getInfoStartDate(info)
+  bookingData.branch_id = resolveBranchId(info)
 }
 
-const showBookingForm = (info) => {
-  bookingType.value = 'CALENDER_BOOKING'
-  const elem = document.getElementById('booking-form')
+const getInfoStartDate = (info) => {
+  return info?.date || info?.start || info?.event?.start || null
+}
+
+const getInfoEmployeeId = (info) => {
+  return info?.resource?.id || info?.resourceIds?.[0] || info?.event?.resourceIds?.[0] || null
+}
+
+const resolveBranchId = (info) => {
+  const resourceBranchId = info?.resource?.branch_id || info?.resource?.extendedProps?.branch_id
+  if (Number(resourceBranchId) > 0) {
+    return resourceBranchId
+  }
+
+  const employeeId = getInfoEmployeeId(info)
+  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+  if (Number(employee?.branch_id) > 0) {
+    return employee.branch_id
+  }
+
+  return props.branchId
+}
+
+const slotUnavailableMessage = () => {
+  const message = 'اختر موعد يكون الموظف متاح من خلاله'
+  if (window.errorSnackbar) {
+    window.errorSnackbar(message)
+    return
+  }
+
+  window.alert(message)
+}
+
+const isWithinRange = (date, range) => {
+  const clicked = moment(date)
+  const start = moment(range.start)
+  const end = moment(range.end)
+
+  return clicked.isSameOrAfter(start) && clicked.isBefore(end)
+}
+
+const isWithinBreak = (date, range) => {
+  return (range.breaks || []).some((staffBreak) => isWithinRange(date, staffBreak))
+}
+
+const isAvailableSlot = (info) => {
+  const employeeId = getInfoEmployeeId(info)
+  const startDate = getInfoStartDate(info)
+  if (!employeeId || !startDate) {
+    return false
+  }
+
+  const ranges = employeeAvailability.value[employeeId] || employeeAvailability.value[String(employeeId)] || []
+
+  return ranges.some((range) => isWithinRange(startDate, range) && !isWithinBreak(startDate, range))
+}
+
+const handleCalendarSlotClick = (info) => {
+  if (!isAvailableSlot(info)) {
+    slotUnavailableMessage()
+    return
+  }
+
+  showBookingForm(info)
+}
+
+const showBookingForm = async (info, type = 'CALENDER_BOOKING') => {
+  bookingType.value = type
   setBooking(info)
-  bookingData.branch_id = props.branchId
+  await nextTick()
+  const elem = document.getElementById('booking-form')
+  if (!elem) return
   const form = bootstrap.Offcanvas.getOrCreateInstance(elem)
   form.show()
   document.querySelector('.offcanvas-backdrop')?.remove()
@@ -196,8 +269,7 @@ const updateBodyClass = (value = 'hide') => {
 }
 
 const createBooking = () => {
-  bookingType.value = 'CREATE_BOOKING'
-  showBookingForm({})
+  showBookingForm({}, 'CREATE_BOOKING')
 }
 
 const filterByEmployee = (employee) => {
@@ -476,6 +548,7 @@ const attachResizeHandlers = () => {
 
 
 onUnmounted(() => {
+  window.removeEventListener('booking:create', createBooking)
   const elem = document.getElementById('booking-form')
   if(elem !== null) {
     updateBodyClass('hide')
@@ -497,6 +570,7 @@ onUnmounted(() => {
   document.body.classList.remove('ec-resizing')
 })
 onMounted(() => {
+  window.addEventListener('booking:create', createBooking)
   const elem = document.getElementById('booking-form')
   if(elem !== null) {
     elem.addEventListener('hide.bs.offcanvas', function() {
@@ -574,6 +648,7 @@ onMounted(() => {
                   const { employees, data } = res
                   totalEmployees.value = res.total_count
                   EMPLOYEE_LIST.value = employees
+                  employeeAvailability.value = res.availability || {}
                   calenderInit.value.setOption('resources', employees)
                   refreshResourceSizing()
                   return data
@@ -583,15 +658,24 @@ onMounted(() => {
             }
           ],
           dateClick: function (info) {
-            showBookingForm(info)
+            handleCalendarSlotClick(info)
           },
           select: function (info) {
-            showBookingForm(info)
+            handleCalendarSlotClick(info)
           },
           eventClick: function (info) {
+            if (info.event.display === 'background') {
+              return
+            }
+
+            const resourceId = info.event.resourceIds[0]
+            const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(resourceId))
             const updatedInfo = {
-              id: info.event.id,
-              resource: {id: info.event.resourceIds[0]},
+              id: info.event.extendedProps?.booking_id || info.event.id,
+              resource: {
+                id: resourceId,
+                branch_id: info.event.extendedProps?.branch_id || employee?.branch_id
+              },
               date: info.event.start
             }
             showBookingForm(updatedInfo)
@@ -646,14 +730,55 @@ body {
   border-bottom: 2px solid var(--bs-border-color);
   cursor: pointer;
 }
+.calendar-root .ec-bg-event {
+  opacity: 1;
+  pointer-events: none;
+}
+.calendar-root .ec-body .ec-day {
+  position: relative;
+}
+.calendar-root .ec-body .ec-day::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 23px,
+    rgba(17, 24, 39, 0.32) 23px,
+    rgba(17, 24, 39, 0.32) 24px
+  );
+}
+.calendar-root .ec-bg-events {
+  position: relative;
+  z-index: 0;
+}
+.calendar-root .ec-events {
+  position: relative;
+  z-index: 2;
+}
 .ec-body:not(.ec-compact) .ec-line:nth-child(even):after{
   border-bottom-style: solid;
 }
 .ec-line:not(:first-child):after {
-  border-color: var(--bs-border-color);
+  border-color: rgba(17, 24, 39, 0.28);
 }
 .ec-header,.ec-all-day,.ec-body,.ec-days,.ec-day{
-  border-color: var(--bs-border-color);
+  border-color: rgba(17, 24, 39, 0.32);
+}
+.calendar-root .ec-resource,
+.calendar-root .ec-sidebar,
+.calendar-root .ec-time,
+.calendar-root .ec-line-time,
+.calendar-root .ec-lines,
+.calendar-root .ec-days,
+.calendar-root .ec-day {
+  border-color: rgba(17, 24, 39, 0.32) !important;
+}
+.calendar-root .ec-body:not(.ec-compact) .ec-line:after {
+  border-bottom-color: rgba(17, 24, 39, 0.28) !important;
 }
 .ec-button, .ec-button:not(:disabled) {
   color: var(--bs-body-color);
