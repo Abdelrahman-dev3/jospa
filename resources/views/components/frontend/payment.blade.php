@@ -603,6 +603,19 @@
                         </div>
                     @endif
 
+                    @if(($paymentMethods['urpay'] ?? 0) == 1)
+                        <!-- METHOD: UrPay -->
+                        <div class="method d-flex" style="gap: 20px;" data-method="urpay" tabindex="0">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="urpay" {{ $defaultPaymentMethod === 'urpay' ? 'checked' : '' }}>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;min-width:88px;height:32px;padding:0 14px;border-radius:999px;background:#ecfff7;color:#00835f;font-weight:700;">UrPay</span>
+                            </div>
+                            <div class="flex-fill muted">{{ app()->getLocale() === 'ar' ? 'الدفع عبر محفظة urpay' : 'Pay with urpay wallet' }}</div>
+                        </div>
+                    @endif
+
                     @if(($paymentMethods['tabby'] ?? 1) == 1)
                         <!-- METHOD: Tabby -->
                         <div class="method d-flex" style="gap: 20px;" data-method="tabby" tabindex="0">

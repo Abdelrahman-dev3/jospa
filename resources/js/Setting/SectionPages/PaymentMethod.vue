@@ -45,6 +45,16 @@
     </div>
     <div class="form-group">
       <div class="d-flex justify-content-between align-items-center">
+        <label class="form-label" for="payment_method_urpay">{{ $t('setting_payment_method.lbl_urpay') }} </label>
+        <div class="form-check form-switch">
+          <input class="form-check-input" :true-value="1" :false-value="0" :value="urpay_payment_method"
+            :checked="urpay_payment_method == 1 ? true : false" name="urpay_payment_method" id="payment_method_urpay"
+            type="checkbox" v-model="urpay_payment_method" />
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="d-flex justify-content-between align-items-center">
         <label class="form-label" for="payment_method_tabby">{{ $t('setting_payment_method.lbl_tabby') }} </label>
         <div class="form-check form-switch">
           <input class="form-check-input" :true-value="1" :false-value="0" :value="tabby_payment_method"
@@ -88,6 +98,7 @@ const setFormData = (data) => {
       tap_card_payment_method: data.tap_card_payment_method ?? 1,
       tap_apple_pay_payment_method: data.tap_apple_pay_payment_method ?? 1,
       tap_mada_payment_method: data.tap_mada_payment_method ?? 1,
+      urpay_payment_method: data.urpay_payment_method ?? 0,
       tabby_payment_method: data.tabby_payment_method ?? 1,
       tamara_payment_method: data.tamara_payment_method ?? 1,
       razor_payment_method: data.razor_payment_method ?? 0,
@@ -291,6 +302,7 @@ const { value: tap_payment_method } = useField('tap_payment_method')
 const { value: tap_card_payment_method } = useField('tap_card_payment_method')
 const { value: tap_apple_pay_payment_method } = useField('tap_apple_pay_payment_method')
 const { value: tap_mada_payment_method } = useField('tap_mada_payment_method')
+const { value: urpay_payment_method } = useField('urpay_payment_method')
 const { value: tabby_payment_method } = useField('tabby_payment_method')
 const { value: tamara_payment_method } = useField('tamara_payment_method')
 const { value: razor_payment_method } = useField('razor_payment_method')
@@ -410,7 +422,7 @@ const display_submit_message = (res) => {
 }
 
 //fetch data
-const data = 'tap_payment_method,tap_card_payment_method,tap_apple_pay_payment_method,tap_mada_payment_method,tabby_payment_method,tamara_payment_method,razor_payment_method,razorpay_secretkey,razorpay_publickey,str_payment_method,stripe_secretkey,stripe_publickey,paystack_payment_method,paystack_secretkey,paystack_publickey,paypal_payment_method,paypal_secretkey,paypal_clientid,flutterwave_payment_method,flutterwave_secretkey,flutterwave_publickey,cinet_payment_method,cinet_clientid,cinet_apikey,cinet_secretkey,sadad_payment_method,sadad_clientid,sadad_secretkey,sadad_domain,airtelmoney_payment_method,airtelmoney_is_status,airtelmoney_clientid,airtelmoney_secretkey,phonepay_payment_method,phonepay_is_status,phonepay_appid,phonepay_merchentid,phonepay_saltid,phonepay_saltkey,midtrans_payment_method,midtrans_is_status,midtrans_clientid'
+const data = 'tap_payment_method,tap_card_payment_method,tap_apple_pay_payment_method,tap_mada_payment_method,urpay_payment_method,tabby_payment_method,tamara_payment_method,razor_payment_method,razorpay_secretkey,razorpay_publickey,str_payment_method,stripe_secretkey,stripe_publickey,paystack_payment_method,paystack_secretkey,paystack_publickey,paypal_payment_method,paypal_secretkey,paypal_clientid,flutterwave_payment_method,flutterwave_secretkey,flutterwave_publickey,cinet_payment_method,cinet_clientid,cinet_apikey,cinet_secretkey,sadad_payment_method,sadad_clientid,sadad_secretkey,sadad_domain,airtelmoney_payment_method,airtelmoney_is_status,airtelmoney_clientid,airtelmoney_secretkey,phonepay_payment_method,phonepay_is_status,phonepay_appid,phonepay_merchentid,phonepay_saltid,phonepay_saltkey,midtrans_payment_method,midtrans_is_status,midtrans_clientid'
 onMounted(() => {
   createRequest(GET_URL(data)).then((response) => {
     setFormData(response)

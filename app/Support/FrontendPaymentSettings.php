@@ -12,6 +12,7 @@ class FrontendPaymentSettings
 
         return [
             'card' => (int) (Setting::get('tap_payment_method', 1) && self::hasEnabledTapSource($tapSources)),
+            'urpay' => (int) Setting::get('urpay_payment_method', 0),
             'tabby' => (int) Setting::get('tabby_payment_method', 1),
             'tamara' => (int) Setting::get('tamara_payment_method', 1),
         ];
@@ -30,7 +31,7 @@ class FrontendPaymentSettings
     {
         $paymentMethods ??= self::paymentMethods();
 
-        foreach (['card', 'tabby', 'tamara'] as $method) {
+        foreach (['card', 'urpay', 'tabby', 'tamara'] as $method) {
             if (($paymentMethods[$method] ?? 0) === 1) {
                 return $method;
             }

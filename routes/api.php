@@ -17,6 +17,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SystemUtilityController;
 use App\Services\Payment\Strategies\TabbyPaymentStrategy;
 use App\Services\Payment\Strategies\TamaraPaymentStrategy;
+use App\Services\Payment\Strategies\UrPayPaymentStrategy;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PackageDetailsController;
 use App\Http\Controllers\Backend\UserController;
@@ -185,6 +186,9 @@ Route::controller(BookingCartController::class)->group(function () {
 Route::get('/payments/tabby/success/{invoice?}', [TabbyPaymentStrategy::class, 'callback'])->name('api.tabby.success');
 Route::get('/payments/tabby/fail/{invoice?}', [TabbyPaymentStrategy::class, 'fail'])->name('api.tabby.fail');
 Route::get('/payments/tabby/cancel/{invoice?}', [TabbyPaymentStrategy::class, 'cancel'])->name('api.tabby.cancel');
+Route::get('/payments/urpay/success', [UrPayPaymentStrategy::class, 'success'])->name('api.urpay.success');
+Route::get('/payments/urpay/failure', [UrPayPaymentStrategy::class, 'failure'])->name('api.urpay.failure');
+Route::get('/payments/urpay/cancel', [UrPayPaymentStrategy::class, 'cancel'])->name('api.urpay.cancel');
 Route::get('/payments/tamara/success', [TamaraPaymentStrategy::class, 'success'])->name('api.tamara.success');
 Route::get('/payments/tamara/failure', [TamaraPaymentStrategy::class, 'failure'])->name('api.tamara.failure');
 Route::get('/payments/tamara/cancel', [TamaraPaymentStrategy::class, 'cancel'])->name('api.tamara.cancel');

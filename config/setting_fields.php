@@ -866,6 +866,15 @@ return [
             [
                 'type' => 'checkbox',
                 'data' => 'boolean',
+                'name' => 'urpay_payment_method',
+                'label' => 'UrPay',
+                'rules' => '',
+                'class' => '',
+                'value' => '0',
+            ],
+            [
+                'type' => 'checkbox',
+                'data' => 'boolean',
                 'name' => 'tabby_payment_method',
                 'label' => 'Tabby',
                 'rules' => '',

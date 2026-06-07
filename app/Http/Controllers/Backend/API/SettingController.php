@@ -20,7 +20,7 @@ class SettingController extends Controller
         $response = [];
 
         // Define the specific names you want to include
-        $specificNames = ['app_name', 'footer_text', 'primary', 'tap_payment_method', 'tabby_payment_method', 'tamara_payment_method', 'razorpay_secretkey', 'razorpay_publickey', 'stripe_secretkey', 'stripe_publickey', 'paystack_secretkey', 'paystack_publickey', 'paypal_secretkey', 'paypal_clientid', 'flutterwave_secretkey', 'flutterwave_publickey','razorpay_secretkey', 'razorpay_publickey','cinet_clientid','cinet_apikey','cinet_secretkey','sadad_clientid','sadad_secretkey','sadad_domain','airtelmoney_is_status','airtelmoney_clientid','airtelmoney_secretkey','phonepay_is_status','phonepay_appid','phonepay_merchentid','phonepay_saltid','phonepay_saltkey','midtrans_is_status','midtrans_clientid', 'google_maps_key', 'helpline_number', 'copyright', 'inquriy_email', 'site_description', 'customer_app_play_store', 'customer_app_app_store', 'isForceUpdate', 'version_code'];
+        $specificNames = ['app_name', 'footer_text', 'primary', 'tap_payment_method', 'urpay_payment_method', 'tabby_payment_method', 'tamara_payment_method', 'razorpay_secretkey', 'razorpay_publickey', 'stripe_secretkey', 'stripe_publickey', 'paystack_secretkey', 'paystack_publickey', 'paypal_secretkey', 'paypal_clientid', 'flutterwave_secretkey', 'flutterwave_publickey','razorpay_secretkey', 'razorpay_publickey','cinet_clientid','cinet_apikey','cinet_secretkey','sadad_clientid','sadad_secretkey','sadad_domain','airtelmoney_is_status','airtelmoney_clientid','airtelmoney_secretkey','phonepay_is_status','phonepay_appid','phonepay_merchentid','phonepay_saltid','phonepay_saltkey','midtrans_is_status','midtrans_clientid', 'google_maps_key', 'helpline_number', 'copyright', 'inquriy_email', 'site_description', 'customer_app_play_store', 'customer_app_app_store', 'isForceUpdate', 'version_code'];
         foreach ($settings as $name => $value) {
             if (in_array($name, $specificNames)) {
                 if (strpos($name, 'razorpay_') === 0 && $request->is_authenticated == 1 && $settings['razor_payment_method'] == 1) {
@@ -167,6 +167,7 @@ class SettingController extends Controller
         $response['site_description'] = $settings['site_description'] ?? null;
         $response['payment_methods'] = [
             'card' => (int) ($settings['tap_payment_method'] ?? 1),
+            'urpay' => (int) ($settings['urpay_payment_method'] ?? 0),
             'tabby' => (int) ($settings['tabby_payment_method'] ?? 1),
             'tamara' => (int) ($settings['tamara_payment_method'] ?? 1),
         ];

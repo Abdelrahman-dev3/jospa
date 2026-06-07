@@ -103,8 +103,8 @@ class PaymentFinalizerService
             }
         });
 
-        if ($invoiceId > 0 && $pageType === 'cart' && ! empty($cartIds)) {
-            app(OdooBookingSyncService::class)->syncPaidCartBookings($invoiceId);
+        if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
+            app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
         }
 
         return $invoiceId;
