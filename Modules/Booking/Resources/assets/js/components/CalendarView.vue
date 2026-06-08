@@ -1,8 +1,34 @@
 <template>
             <div class="pagination-controls">
+              <div class="calendar-date-picker">
+                <label class="calendar-date-picker__label" for="calendarDatePicker">تاريخ التقويم</label>
+                <div class="calendar-date-picker__control">
+                  <i class="fa-regular fa-calendar-days"></i>
+                  <FlatPickr
+                    id="calendarDatePicker"
+                    v-model="selectedCalendarDate"
+                    class="form-control calendar-date-picker__input"
+                    :config="calendarDatePickerConfig"
+                    @on-change="handleCalendarDateChange"
+                  />
+                </div>
+              </div>
+              <div class="calendar-view-switcher" role="group" aria-label="خيارات عرض التقويم">
+                <button
+                  v-for="viewOption in calendarViewOptions"
+                  :key="viewOption.key"
+                  type="button"
+                  class="calendar-view-switcher__button"
+                  :class="{ active: selectedCalendarView === viewOption.key }"
+                  @click="changeCalendarView(viewOption.key)"
+                >
+                  <i :class="viewOption.icon"></i>
+                  <span>{{ viewOption.label }}</span>
+                </button>
+              </div>
                 <nav aria-label="Pagination">
                 <ul class="pagination justify-content-end">
-                <div class="dropdown ms-2"> <!-- إضافة مسافة بسيطة من زر الريفرش -->
+                <div v-if="!canReorder" class="dropdown ms-2"> <!-- إضافة مسافة بسيطة من زر الريفرش -->
                   <button
                     class="btn btn-secondary dropdown-toggle"
                     type="button"
@@ -36,6 +62,18 @@
                   </svg>
                 </button>
               </li>
+                  <li v-if="canReorder" class="px-2">
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary rounded"
+                      :disabled="!!selectedEmployeeId"
+                      :title="selectedEmployeeId ? 'اختر كل الموظفين لترتيب التقويم' : 'ترتيب الموظفين'"
+                      @click="toggleOrderPanel"
+                    >
+                      <i class="fa-solid fa-arrow-up-wide-short"></i>
+                      <span class="ms-1">ترتيب الموظفين</span>
+                    </button>
+                  </li>
                   <!-- Page Number Before Current -->
                   <li v-if="currentPage > 1" class="page-item">
                     <button @click="goToPage(currentPage - 1)" class="page-link">{{ currentPage - 1 }}</button>
@@ -48,14 +86,118 @@
               </nav>
 
             </div>
-  <div ref="calenderRef" class="calendar-root"></div>
+  <div v-if="canReorder" class="calendar-employee-filter">
+    <button
+      type="button"
+      class="calendar-employee-filter__chip"
+      :class="{ active: isAllCalendarEmployeesSelected }"
+      @click="showAllCalendarEmployees"
+    >
+      الكل
+    </button>
+    <button
+      v-for="employee in visibleCalendarEmployees"
+      :key="employee.id"
+      type="button"
+      class="calendar-employee-filter__chip"
+      :class="{ active: isCalendarEmployeeSelected(employee.id) }"
+      @click="toggleCalendarEmployee(employee.id)"
+    >
+      {{ employee.title }}
+    </button>
+  </div>
+  <div v-if="canReorder && orderPanelOpen" class="staff-order-panel">
+    <div class="staff-order-panel__header">
+      <div>
+        <h6 class="mb-1">ترتيب الموظفين في التقويم</h6>
+        <small class="text-muted">اسحب الاسم أو استخدم الأسهم ثم احفظ الترتيب.</small>
+      </div>
+      <button type="button" class="btn btn-sm btn-light" title="إغلاق" @click="orderPanelOpen = false">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <ul class="staff-order-list">
+      <li
+        v-for="(employee, index) in employeeOrderList"
+        :key="employee.id"
+        class="staff-order-item"
+        draggable="true"
+        @dragstart="handleOrderDragStart(index)"
+        @dragover.prevent
+        @drop="handleOrderDrop(index)"
+      >
+        <span class="staff-order-item__handle" title="اسحب لترتيب الموظف">
+          <i class="fa-solid fa-grip-vertical"></i>
+        </span>
+        <div class="staff-order-item__content">
+          <span class="staff-order-item__name">{{ employee.title }}</span>
+          <div class="staff-order-item__controls">
+            <label class="staff-order-item__visibility form-check form-switch" :title="employee.is_visible ? 'إخفاء من التقويم' : 'إظهار في التقويم'">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                :checked="employee.is_visible"
+                @change="toggleEmployeeVisibility(index)"
+              >
+              <span class="staff-order-item__visibility-text">{{ employee.is_visible ? 'ظاهر في التقويم' : 'مخفي من التقويم' }}</span>
+            </label>
+            <div class="staff-order-item__actions">
+              <button type="button" class="btn btn-sm btn-light" :disabled="index === 0" title="رفع" @click="moveEmployeeOrder(index, -1)">
+                <i class="fa-solid fa-chevron-up"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-light" :disabled="index === employeeOrderList.length - 1" title="خفض" @click="moveEmployeeOrder(index, 1)">
+                <i class="fa-solid fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </li>
+    </ul>
+    <div class="staff-order-panel__footer">
+      <span v-if="orderSaveState === 'saved'" class="text-success">تم حفظ الترتيب</span>
+      <span v-if="orderSaveState === 'error'" class="text-danger">تعذر حفظ الترتيب</span>
+      <button type="button" class="btn btn-primary" :disabled="orderSaveState === 'saving'" @click="saveEmployeeOrder">
+        <i class="fa-solid fa-floppy-disk me-1"></i>
+        {{ orderSaveState === 'saving' ? 'جار الحفظ...' : 'حفظ الترتيب' }}
+      </button>
+    </div>
+  </div>
+  <div v-if="selectedCalendarView === 'list'" class="booking-list-view">
+    <div
+      v-for="bookingEvent in bookingListEvents"
+      :key="`${bookingEvent.id}-${bookingEvent.start}-${bookingEvent.resourceId}`"
+      class="booking-list-card"
+      @click="openBookingListEvent(bookingEvent)"
+    >
+      <div class="booking-list-card__time">
+        <span>{{ formatEventTime(bookingEvent.start) }}</span>
+        <small>{{ formatEventDate(bookingEvent.start) }}</small>
+      </div>
+      <div class="booking-list-card__body">
+        <div class="booking-list-card__title-row">
+          <h6>{{ bookingEvent.title }}</h6>
+          <span class="booking-list-card__status">{{ bookingEvent.extendedProps?.status_title || bookingEvent.extendedProps?.status }}</span>
+        </div>
+        <div class="booking-list-card__details">
+          <span><i class="fa-regular fa-user"></i>{{ bookingEvent.extendedProps?.customer_name || 'عميل غير محدد' }}</span>
+          <span><i class="fa-solid fa-user-tie"></i>{{ bookingEvent.extendedProps?.employee_name || getEventEmployeeName(bookingEvent.resourceId) }}</span>
+          <span><i class="fa-regular fa-clock"></i>{{ bookingEvent.extendedProps?.duration || getEventDuration(bookingEvent) }} دقيقة</span>
+          <span v-if="bookingEvent.extendedProps?.branch_name"><i class="fa-solid fa-location-dot"></i>{{ bookingEvent.extendedProps.branch_name }}</span>
+        </div>
+      </div>
+    </div>
+    <div v-if="bookingListEvents.length === 0" class="booking-list-empty">
+      لا توجد حجوزات في اليوم المحدد
+    </div>
+  </div>
+  <div v-show="selectedCalendarView !== 'list'" ref="calenderRef" class="calendar-root"></div>
   <booking-form :booking-type="bookingType"
                 :status-list="bookingStatus"
                 @onSubmit="onSubmitEvent"
                 :booking-data="bookingData"></booking-form>
 </template>
 <script setup>
-import { reactive, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, reactive, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { createRequest } from '@/helpers/utilities'
 
 import Calendar from '@event-calendar/core'
@@ -64,17 +206,21 @@ import List from '@event-calendar/list'
 import TimeGrid from '@event-calendar/time-grid'
 import ResourceTimeGrid from '@event-calendar/resource-time-grid'
 import Interaction from '@event-calendar/interaction'
+import FlatPickr from 'vue-flatpickr-component'
+import { Arabic } from 'flatpickr/dist/l10n/ar.js'
 
 import BookingForm from './BookingForm.vue'
-import { INDEX_URL } from '../constant/booking'
+import { EMPLOYEE_ORDER_URL, INDEX_URL } from '../constant/booking'
 import * as moment from 'moment'
 const totalEmployees = ref(0)
 const props = defineProps({
   status: { type: String, required: true },
   slotDuration: { type: String },
   branchId: {type: [String , Number]},
+  canReorder: { type: Boolean, default: false },
   date: new Date()
 })
+const canReorder = props.canReorder
 let slotsDurations = '00:15'
 if(props.slotDuration !== '') {
   slotsDurations = props.slotDuration
@@ -82,10 +228,37 @@ if(props.slotDuration !== '') {
 const bookingStatus = ref(JSON.parse(props.status))
 const calenderRef = ref(null)
 const calenderInit = ref(null)
+const selectedCalendarDate = ref(moment(props.date).format('YYYY-MM-DD'))
+const calendarDatePickerConfig = {
+  dateFormat: 'Y-m-d',
+  altInput: true,
+  altFormat: 'd-m-Y',
+  locale: Arabic
+}
+const selectedCalendarView = ref('day')
+const calendarEventList = ref([])
+const calendarViewOptions = [
+  { key: 'day', label: 'اليوم', icon: 'fa-solid fa-calendar-day' },
+  { key: 'week', label: 'الأسبوع', icon: 'fa-solid fa-calendar-week' },
+  { key: 'month', label: 'الشهر', icon: 'fa-regular fa-calendar' },
+  { key: 'list', label: 'قائمة', icon: 'fa-solid fa-list-ul' }
+]
+const calendarViewMap = {
+  day: 'resourceTimeGridDay',
+  week: 'resourceTimeGridWeek',
+  month: 'dayGridMonth',
+  list: 'resourceTimeGridDay'
+}
 const EMPLOYEE_LIST = ref([])   // دي هتتملي من API (employees)
 const selectedEmployeeId = ref(null) // ID الموظف المختار
 const selectedEmployeeName = ref(null) // اسم الموظف المختار
 
+const ORDER_EMPLOYEE_LIST = ref([])
+const selectedCalendarEmployeeIds = ref([])
+const employeeOrderList = ref([])
+const orderPanelOpen = ref(false)
+const orderSaveState = ref('idle')
+const draggedOrderIndex = ref(null)
 const employeeAvailability = ref({})
 const bookingType = ref('')
 const bookingData = reactive({
@@ -103,14 +276,16 @@ const resizeState = reactive({
   startWidth: 0
 })
 const MIN_RESOURCE_WIDTH = 120
-const MAX_RESOURCE_WIDTH = 420
+const MAX_RESOURCE_WIDTH = 1200
 const DEFAULT_RESOURCE_WIDTH = 180
+const READABLE_RESOURCE_WIDTH = 220
 const RESIZE_HANDLE_SIZE = 6
 let resizeHandlersAttached = false
 let detachResizeHandlers = null
 let detachTopScroll = null
 let topScrollState = null
 let fixedTimeColumnFrame = null
+let lastResourceSizingWidth = 0
 
 const getHorizontalScrollTargets = () => {
   if (!calenderRef.value) return []
@@ -165,6 +340,218 @@ const refreshPage = () => {
   window.location.reload();
 };
 
+const getCalendarRange = (dateValue = selectedCalendarDate.value, viewKey = selectedCalendarView.value) => {
+  const baseDate = moment(dateValue)
+
+  if (viewKey === 'week') {
+    return {
+      start: baseDate.clone().startOf('week').format('YYYY-MM-DD'),
+      end: baseDate.clone().endOf('week').format('YYYY-MM-DD')
+    }
+  }
+
+  if (viewKey === 'month') {
+    return {
+      start: baseDate.clone().startOf('month').format('YYYY-MM-DD'),
+      end: baseDate.clone().endOf('month').format('YYYY-MM-DD')
+    }
+  }
+
+  return {
+    start: baseDate.format('YYYY-MM-DD'),
+    end: baseDate.format('YYYY-MM-DD')
+  }
+}
+
+const getFetchInfoRange = (fetchInfo) => {
+  if (!fetchInfo?.start || !fetchInfo?.end) {
+    return getCalendarRange(selectedCalendarDate.value, selectedCalendarView.value)
+  }
+
+  return {
+    start: moment(fetchInfo.start).format('YYYY-MM-DD'),
+    end: moment(fetchInfo.end).subtract(1, 'day').format('YYYY-MM-DD')
+  }
+}
+
+const reloadCalendarEvents = () => {
+  if (!calenderInit.value) return
+
+  resourceWidths.value = []
+  calenderInit.value.setOption('date', selectedCalendarDate.value)
+  calenderInit.value.refetchEvents()
+  refreshResourceSizing()
+}
+
+const handleCalendarDateChange = (selectedDates, dateStr) => {
+  const nextDate = dateStr || selectedCalendarDate.value
+  if (!nextDate || !calenderInit.value) return
+
+  selectedCalendarDate.value = moment(nextDate).format('YYYY-MM-DD')
+  reloadCalendarEvents()
+}
+
+const changeCalendarView = (viewKey) => {
+  if (!calendarViewMap[viewKey]) return
+
+  selectedCalendarView.value = viewKey
+  if (calenderInit.value) {
+    calenderInit.value.setOption('view', calendarViewMap[viewKey])
+  }
+  reloadCalendarEvents()
+}
+
+const normalizeOrderEmployee = (employee) => ({
+  ...employee,
+  is_visible: employee.is_visible !== false
+})
+
+const visibleCalendarEmployees = computed(() => {
+  return (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value)
+    .filter((employee) => employee.is_visible !== false)
+})
+
+const bookingListEvents = computed(() => {
+  return calendarEventList.value
+    .filter((event) => event.display !== 'background')
+    .filter((event) => moment(event.start).format('YYYY-MM-DD') === selectedCalendarDate.value)
+    .sort((firstEvent, secondEvent) => moment(firstEvent.start).valueOf() - moment(secondEvent.start).valueOf())
+})
+
+const formatEventDate = (dateValue) => moment(dateValue).format('YYYY-MM-DD')
+
+const formatEventTime = (dateValue) => moment(dateValue).format('hh:mm A')
+
+const getEventDuration = (event) => {
+  if (!event.start || !event.end) return 0
+  return Math.max(0, moment(event.end).diff(moment(event.start), 'minutes'))
+}
+
+const getEventEmployeeName = (employeeId) => {
+  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+  return employee?.title || ''
+}
+
+const openBookingListEvent = (event) => {
+  const updatedInfo = {
+    id: event.extendedProps?.booking_id || event.id,
+    resource: {
+      id: event.resourceId,
+      branch_id: event.extendedProps?.branch_id
+    },
+    date: event.start
+  }
+  showBookingForm(updatedInfo)
+}
+
+const isAllCalendarEmployeesSelected = computed(() => selectedCalendarEmployeeIds.value.length === 0)
+
+const isCalendarEmployeeSelected = (employeeId) => {
+  return selectedCalendarEmployeeIds.value.includes(Number(employeeId))
+}
+
+const showAllCalendarEmployees = () => {
+  selectedCalendarEmployeeIds.value = []
+  resourceWidths.value = []
+  calenderInit.value?.refetchEvents()
+  refreshResourceSizing()
+}
+
+const toggleCalendarEmployee = (employeeId) => {
+  const normalizedId = Number(employeeId)
+  const selected = selectedCalendarEmployeeIds.value
+
+  selectedCalendarEmployeeIds.value = selected.includes(normalizedId)
+    ? selected.filter((id) => id !== normalizedId)
+    : [...selected, normalizedId]
+
+  resourceWidths.value = []
+  calenderInit.value?.refetchEvents()
+  refreshResourceSizing()
+}
+
+const syncEmployeeOrderList = () => {
+  employeeOrderList.value = (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value)
+    .map((employee) => normalizeOrderEmployee(employee))
+}
+
+const toggleOrderPanel = () => {
+  orderPanelOpen.value = !orderPanelOpen.value
+  orderSaveState.value = 'idle'
+  if (orderPanelOpen.value) {
+    syncEmployeeOrderList()
+  }
+}
+
+const moveEmployeeOrder = (index, direction) => {
+  const nextIndex = index + direction
+  if (nextIndex < 0 || nextIndex >= employeeOrderList.value.length) return
+
+  const nextOrder = [...employeeOrderList.value]
+  const [employee] = nextOrder.splice(index, 1)
+  nextOrder.splice(nextIndex, 0, employee)
+  employeeOrderList.value = nextOrder
+  orderSaveState.value = 'idle'
+}
+
+const handleOrderDragStart = (index) => {
+  draggedOrderIndex.value = index
+}
+
+const handleOrderDrop = (index) => {
+  if (draggedOrderIndex.value === null || draggedOrderIndex.value === index) return
+
+  const nextOrder = [...employeeOrderList.value]
+  const [employee] = nextOrder.splice(draggedOrderIndex.value, 1)
+  nextOrder.splice(index, 0, employee)
+  employeeOrderList.value = nextOrder
+  draggedOrderIndex.value = null
+  orderSaveState.value = 'idle'
+}
+
+const toggleEmployeeVisibility = (index) => {
+  const employee = employeeOrderList.value[index]
+  if (!employee) return
+
+  employeeOrderList.value.splice(index, 1, {
+    ...employee,
+    is_visible: !employee.is_visible
+  })
+  orderSaveState.value = 'idle'
+}
+
+const saveEmployeeOrder = async () => {
+  if (!props.canReorder || employeeOrderList.value.length === 0) return
+
+  orderSaveState.value = 'saving'
+  try {
+    const response = await createRequest(EMPLOYEE_ORDER_URL(), {}, {
+      branch_id: props.branchId,
+      employees: employeeOrderList.value.map((employee) => ({
+        id: employee.id,
+        is_visible: employee.is_visible !== false
+      }))
+    })
+
+    if (response?.status === false) {
+      throw new Error(response.message || 'Unable to save employee order')
+    }
+
+    orderSaveState.value = 'saved'
+    selectedCalendarEmployeeIds.value = selectedCalendarEmployeeIds.value.filter((id) => {
+      const employee = employeeOrderList.value.find((item) => Number(item.id) === Number(id))
+      return employee?.is_visible !== false
+    })
+    calenderInit.value.refetchEvents()
+    refreshResourceSizing()
+  } catch (error) {
+    orderSaveState.value = 'error'
+    if (window.errorSnackbar) {
+      window.errorSnackbar('تعذر حفظ ترتيب الموظفين')
+    }
+  }
+}
+
 const setBooking = (info) => {
   const employeeId = getInfoEmployeeId(info)
   const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
@@ -180,7 +567,13 @@ const getInfoStartDate = (info) => {
 }
 
 const getInfoEmployeeId = (info) => {
-  return info?.resource?.id || info?.resourceIds?.[0] || info?.event?.resourceIds?.[0] || null
+  return info?.resource?.id
+    || info?.resourceIds?.[0]
+    || info?.event?.resourceIds?.[0]
+    || info?.event?.extendedProps?.employee_id
+    || (selectedCalendarEmployeeIds.value.length === 1 ? selectedCalendarEmployeeIds.value[0] : null)
+    || (EMPLOYEE_LIST.value.length === 1 ? EMPLOYEE_LIST.value[0].id : null)
+    || null
 }
 
 const resolveBranchId = (info) => {
@@ -233,6 +626,11 @@ const isAvailableSlot = (info) => {
 }
 
 const handleCalendarSlotClick = (info) => {
+  if (selectedCalendarView.value === 'month') {
+    showBookingForm(info)
+    return
+  }
+
   if (!isAvailableSlot(info)) {
     slotUnavailableMessage()
     return
@@ -394,25 +792,15 @@ const saveResourceWidths = () => {
 const syncResourceWidths = (count) => {
   if (count <= 0) return
 
-  if (resourceWidths.value.length === 0) {
-    const saved = loadResourceWidths()
-    if (saved.length === count) {
-      resourceWidths.value = saved
-      return
-    }
+  const root = calenderRef.value
+  const sidebar = root?.querySelector('.ec-header .ec-sidebar, .ec-all-day .ec-sidebar, .ec-body .ec-sidebar')
+  const sidebarWidth = sidebar?.getBoundingClientRect().width || 0
+  const availableWidth = Math.max(0, (root?.clientWidth || 0) - sidebarWidth)
+  const readableWidth = count <= 3 ? READABLE_RESOURCE_WIDTH : DEFAULT_RESOURCE_WIDTH
+  const adaptiveWidth = availableWidth > 0 ? Math.floor(availableWidth / count) : readableWidth
+  const nextWidth = Math.max(readableWidth, adaptiveWidth)
 
-    resourceWidths.value = Array.from({ length: count }, (_, index) =>
-      saved[index] ?? DEFAULT_RESOURCE_WIDTH
-    )
-    return
-  }
-
-  if (resourceWidths.value.length !== count) {
-    const next = Array.from({ length: count }, (_, index) =>
-      resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH
-    )
-    resourceWidths.value = next
-  }
+  resourceWidths.value = Array.from({ length: count }, () => nextWidth)
 }
 
 const setElementWidth = (element, width) => {
@@ -441,7 +829,11 @@ const applyResourceWidths = () => {
   )
 
   if (count === 0) return
-  syncResourceWidths(count)
+  const rootWidth = root.clientWidth || 0
+  if (!resizeState.active && (resourceWidths.value.length !== count || lastResourceSizingWidth !== rootWidth)) {
+    lastResourceSizingWidth = rootWidth
+    syncResourceWidths(count)
+  }
 
   headerResources.forEach((element, index) => {
     setElementWidth(element, resourceWidths.value[index] ?? DEFAULT_RESOURCE_WIDTH)
@@ -590,7 +982,7 @@ onMounted(() => {
       props: {
         plugins: [DayGrid, List, TimeGrid, ResourceTimeGrid, Interaction],
         options: {
-          date: props.date,
+          date: selectedCalendarDate.value,
           slotEventOverlap: false,
           dragScroll: false,
           view: 'resourceTimeGridDay',
@@ -598,12 +990,13 @@ onMounted(() => {
           headerToolbar: {
             start: 'prev,next today',
             center: 'title',
-            end: 'resourceTimeGridDay'
-            // dayGridMonth,timeGridWeek,timeGridDay,listWeek
+            end: ''
           },
           buttonText: function (texts) {
-            texts.resourceTimeGridDay = 'Day'
-            texts.resourceTimeGridWeek = 'Week'
+            texts.today = 'اليوم'
+            texts.resourceTimeGridDay = 'اليوم'
+            texts.resourceTimeGridWeek = 'الأسبوع'
+            texts.dayGridMonth = 'الشهر'
             return texts
           },
           eventContent: function (data) {
@@ -630,7 +1023,9 @@ onMounted(() => {
           resources: [],
           scrollTime: '09:00:00',
           events: [],
+          lazyFetching: false,
           views: {
+            dayGridMonth: { pointer: true },
             timeGridWeek: { pointer: true },
             resourceTimeGridWeek: { pointer: true },
             resourceTimeGridDay: { pointer: true }
@@ -638,17 +1033,32 @@ onMounted(() => {
           eventSources: [
             {
               events: async function (fetchInfo) {
-                const visibleDate = fetchInfo && fetchInfo.start ? fetchInfo.start : props.date
+                const visibleDate = fetchInfo && fetchInfo.start ? fetchInfo.start : selectedCalendarDate.value
+                if (selectedCalendarView.value !== 'list') {
+                  selectedCalendarDate.value = moment(visibleDate).format('YYYY-MM-DD')
+                }
+                const dateRange = getFetchInfoRange(fetchInfo)
                 const params = {
-                    employee_id: selectedEmployeeId.value,
+                    employee_id: props.canReorder ? null : selectedEmployeeId.value,
+                    employee_ids: props.canReorder && selectedCalendarEmployeeIds.value.length ? selectedCalendarEmployeeIds.value : null,
                     branch_id: props.branchId,
-                    date: moment(visibleDate).format('YYYY-MM-DD')
+                    date: selectedCalendarDate.value,
+                    date_start: dateRange.start,
+                    date_end: dateRange.end
                 };
               const events = await createRequest(INDEX_URL(params)).then((res) => {
                   const { employees, data } = res
                   totalEmployees.value = res.total_count
                   EMPLOYEE_LIST.value = employees
+                  ORDER_EMPLOYEE_LIST.value = (res.order_employees || employees).map((employee) => normalizeOrderEmployee(employee))
+                  selectedCalendarEmployeeIds.value = selectedCalendarEmployeeIds.value.filter((id) =>
+                    ORDER_EMPLOYEE_LIST.value.some((employee) => Number(employee.id) === Number(id) && employee.is_visible !== false)
+                  )
+                  if (!orderPanelOpen.value) {
+                    syncEmployeeOrderList()
+                  }
                   employeeAvailability.value = res.availability || {}
+                  calendarEventList.value = data || []
                   calenderInit.value.setOption('resources', employees)
                   refreshResourceSizing()
                   return data
@@ -668,7 +1078,7 @@ onMounted(() => {
               return
             }
 
-            const resourceId = info.event.resourceIds[0]
+            const resourceId = info.event.resourceIds?.[0] || info.event.extendedProps?.employee_id
             const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(resourceId))
             const updatedInfo = {
               id: info.event.extendedProps?.booking_id || info.event.id,
@@ -820,6 +1230,229 @@ body.ec-resizing {
   user-select: none;
   cursor: col-resize;
 }
+.pagination-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+.calendar-date-picker {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.calendar-date-picker__label {
+  color: var(--bs-secondary-color);
+  font-size: 0.84rem;
+  margin: 0;
+  white-space: nowrap;
+}
+.calendar-date-picker__control {
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+.calendar-date-picker__control i {
+  color: var(--bs-primary);
+  left: 12px;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+.calendar-date-picker__input,
+.calendar-date-picker__control .flatpickr-input {
+  font-size: 0.95rem;
+  font-weight: 600;
+  min-height: 38px;
+  min-width: 158px;
+  padding-left: 38px;
+  padding-right: 12px;
+  text-align: left;
+}
+.calendar-view-switcher {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 8px;
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+}
+.calendar-view-switcher__button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--bs-secondary-color);
+  display: inline-flex;
+  font-size: 0.88rem;
+  font-weight: 700;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.calendar-view-switcher__button:hover {
+  background: rgba(var(--bs-primary-rgb), 0.08);
+  color: var(--bs-primary);
+}
+.calendar-view-switcher__button.active {
+  background: var(--bs-primary);
+  color: #fff;
+}
+.calendar-root {
+  font-size: 0.94rem;
+  width: 100%;
+}
+.calendar-root .ec {
+  min-width: 100%;
+  width: 100%;
+}
+.calendar-root .ec-title,
+.calendar-root .ec-day-head,
+.calendar-root .ec-resource,
+.calendar-root .ec-time,
+.calendar-root .ec-button {
+  font-weight: 700;
+}
+.calendar-root .ec-event {
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+.calendar-root .ec-day {
+  background-color: var(--bs-body-bg);
+}
+.calendar-employee-filter {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 0 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 10px;
+  scrollbar-width: thin;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+.calendar-employee-filter__chip {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 50%;
+  color: var(--bs-body-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 74px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  height: 74px;
+  max-width: 74px;
+  min-height: 74px;
+  overflow-wrap: anywhere;
+  padding: 8px;
+  text-align: center;
+  white-space: normal;
+  word-break: normal;
+}
+.calendar-employee-filter__chip:hover {
+  border-color: var(--bs-primary);
+  color: var(--bs-primary);
+}
+.calendar-employee-filter__chip.active {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
+}
+.booking-list-view {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.booking-list-card {
+  align-items: stretch;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-inline-start: 4px solid var(--bs-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 112px 1fr;
+  padding: 12px;
+}
+.booking-list-card:hover {
+  border-color: var(--bs-primary);
+  box-shadow: 0 6px 18px rgba(17, 24, 39, 0.08);
+}
+.booking-list-card__time {
+  align-items: center;
+  background: rgba(var(--bs-primary-rgb), 0.08);
+  border-radius: 6px;
+  color: var(--bs-primary);
+  display: grid;
+  justify-items: center;
+  padding: 10px;
+  text-align: center;
+}
+.booking-list-card__time span {
+  font-size: 1rem;
+  font-weight: 800;
+}
+.booking-list-card__time small {
+  color: var(--bs-secondary-color);
+  font-weight: 700;
+}
+.booking-list-card__body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.booking-list-card__title-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+.booking-list-card__title-row h6 {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.booking-list-card__status {
+  background: rgba(var(--bs-primary-rgb), 0.1);
+  border-radius: 999px;
+  color: var(--bs-primary);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 4px 10px;
+}
+.booking-list-card__details {
+  color: var(--bs-secondary-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.booking-list-card__details span {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+.booking-list-empty {
+  border: 1px dashed var(--bs-border-color);
+  border-radius: 8px;
+  color: var(--bs-secondary-color);
+  font-weight: 700;
+  padding: 22px;
+  text-align: center;
+}
 .booking-calendar-scrollbar {
   overflow-x: auto;
   overflow-y: hidden;
@@ -850,5 +1483,123 @@ body.ec-resizing {
 [dir='rtl'] .calendar-root .ec-line-time {
   right: 0;
   left: auto;
+}
+.staff-order-panel {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 8px;
+  background: var(--bs-body-bg);
+  margin-bottom: 12px;
+  padding: 14px;
+}
+.staff-order-panel__header,
+.staff-order-panel__footer,
+.staff-order-item,
+.staff-order-item__actions {
+  display: flex;
+  align-items: center;
+}
+.staff-order-panel__header,
+.staff-order-panel__footer {
+  justify-content: space-between;
+  gap: 12px;
+}
+.staff-order-panel__footer {
+  margin-top: 12px;
+}
+.staff-order-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+.staff-order-item {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  background: var(--bs-body-bg);
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px;
+}
+.staff-order-item__handle {
+  color: var(--bs-secondary-color);
+  cursor: grab;
+  line-height: 1.6;
+  padding-top: 2px;
+}
+.staff-order-item__content {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+.staff-order-item__name {
+  color: var(--bs-body-color);
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: normal;
+}
+.staff-order-item__controls {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  min-width: 0;
+}
+.staff-order-item__visibility {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+.staff-order-item__visibility .form-check-input {
+  cursor: pointer;
+  margin: 0;
+}
+.staff-order-item__visibility-text {
+  color: var(--bs-secondary-color);
+  font-size: 0.82rem;
+}
+.staff-order-item__actions {
+  gap: 4px;
+  flex-shrink: 0;
+}
+@media (max-width: 575.98px) {
+  .pagination-controls {
+    align-items: stretch;
+    display: grid;
+  }
+  .calendar-date-picker {
+    align-items: flex-start;
+    display: grid;
+  }
+  .calendar-date-picker__input,
+  .calendar-date-picker__control,
+  .calendar-date-picker__control .flatpickr-input {
+    width: 100%;
+  }
+  .calendar-view-switcher {
+    overflow-x: auto;
+  }
+  .calendar-view-switcher__button {
+    flex: 0 0 auto;
+  }
+  .booking-list-card {
+    grid-template-columns: 1fr;
+  }
+  .booking-list-card__title-row {
+    align-items: flex-start;
+    display: grid;
+  }
+  .staff-order-item__controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>

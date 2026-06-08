@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Http\Request;
+use Modules\Employee\Models\BranchEmployee;
 use Modules\Booking\Http\Requests\BookingRequest;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingProduct;
@@ -124,24 +125,38 @@ class BookingsController extends Controller
 public function index_list(Request $request)
 {
     $date = $request->date ? Carbon::parse($request->date)->toDateString() : Carbon::today()->toDateString();
+    $dateStart = $request->date_start ? Carbon::parse($request->date_start)->toDateString() : $date;
+    $dateEnd = $request->date_end ? Carbon::parse($request->date_end)->toDateString() : $dateStart;
     $employeeId  = $request->get('employee_id');
+    $employeeIdsParam = $request->get('employee_ids');
+    $selectedEmployeeIds = [];
+    if (is_array($employeeIdsParam)) {
+        $selectedEmployeeIds = $employeeIdsParam;
+    } elseif (is_string($employeeIdsParam) && $employeeIdsParam !== '') {
+        $selectedEmployeeIds = explode(',', $employeeIdsParam);
+    }
+    $selectedEmployeeIds = array_values(array_unique(array_filter(array_map('intval', $selectedEmployeeIds))));
+    if ($employeeId && empty($selectedEmployeeIds)) {
+        $selectedEmployeeIds = [(int) $employeeId];
+    }
     $branchId = (int) $request->get('branch_id', 0);
 
     // ----------------------------
     // Booking Services
     // ----------------------------
     $data = BookingService::with('booking.user', 'booking.branch', 'employee', 'service')
-        ->whereHas('booking', function ($q) use ($date, $branchId) {
-            if (!empty($date)) {
-                $q->whereDate('start_date_time', $date);
+        ->whereHas('booking', function ($q) use ($dateStart, $dateEnd, $branchId) {
+            if (!empty($dateStart)) {
+                $q->whereDate('start_date_time', '>=', $dateStart)
+                    ->whereDate('start_date_time', '<=', $dateEnd);
             }
             if ($branchId > 0) {
                 $q->where('branch_id', $branchId);
             }
             $q->where('status', '!=', 'cancelled');
         })
-        ->when($employeeId, function ($q) use ($employeeId) {
-            $q->where('employee_id', $employeeId);
+        ->when(! empty($selectedEmployeeIds), function ($q) use ($selectedEmployeeIds) {
+            $q->whereIn('employee_id', $selectedEmployeeIds);
         })
         ->get();
 
@@ -149,17 +164,18 @@ public function index_list(Request $request)
     // Booking Packages
     // ----------------------------
     $package = BookingPackages::with('booking.user', 'booking.branch', 'employee', 'services', 'package')
-        ->whereHas('booking', function ($q) use ($date, $branchId) {
-            if (!empty($date)) {
-                $q->whereDate('start_date_time', $date);
+        ->whereHas('booking', function ($q) use ($dateStart, $dateEnd, $branchId) {
+            if (!empty($dateStart)) {
+                $q->whereDate('start_date_time', '>=', $dateStart)
+                    ->whereDate('start_date_time', '<=', $dateEnd);
             }
             if ($branchId > 0) {
                 $q->where('branch_id', $branchId);
             }
             $q->where('status', '!=', 'cancelled');
         })
-        ->when($employeeId, function ($q) use ($employeeId) {
-            $q->where('employee_id', $employeeId);
+        ->when(! empty($selectedEmployeeIds), function ($q) use ($selectedEmployeeIds) {
+            $q->whereIn('employee_id', $selectedEmployeeIds);
         })
         ->get();
 
@@ -176,18 +192,30 @@ public function index_list(Request $request)
         $serviceName = $value->service->name ?? '';
         $customerName = $value->booking->user->full_name ?? 'Anonymous';
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
+        $employeeName = $value->employee->full_name ?? '';
+        $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
 
         $service_updated[$key] = [
             'id' => $value->booking_id,
             'start' => customDate($startTime, 'Y-m-d H:i'),
             'end' => customDate($endTime, 'Y-m-d H:i'),
             'resourceId' => $value->employee_id,
+            'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
+                'employee_id' => $value->employee_id,
+                'branch_name' => $value->booking->branch->name ?? '',
+                'customer_name' => $customerName,
+                'employee_name' => $employeeName,
+                'service_name' => $serviceName,
+                'status' => $value->booking->status,
+                'status_title' => $statusTitle,
+                'duration' => $duration,
+                'type' => 'service',
             ],
         ];
     }
@@ -204,18 +232,30 @@ public function index_list(Request $request)
         $serviceName = $value->package->name ?? '';
         $customerName = $value->booking->user->full_name ?? 'Anonymous';
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
+        $employeeName = $value->employee->full_name ?? '';
+        $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
 
         $package_updated[$key] = [
             'id' => $value->booking_id,
             'start' => customDate($startTime, 'Y-m-d H:i'),
             'end' => customDate($endTime, 'Y-m-d H:i'),
             'resourceId' => $value->employee_id,
+            'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
+                'employee_id' => $value->employee_id,
+                'branch_name' => $value->booking->branch->name ?? '',
+                'customer_name' => $customerName,
+                'employee_name' => $employeeName,
+                'service_name' => $serviceName,
+                'status' => $value->booking->status,
+                'status_title' => $statusTitle,
+                'duration' => $duration,
+                'type' => 'package',
             ],
         ];
     }
@@ -225,26 +265,26 @@ public function index_list(Request $request)
     // ----------------------------
     // Employees
     // ----------------------------
-    $employeesQuery = User::select('users.*')
+    $orderEmployeesQuery = User::select('users.*')
         ->with('branches', 'media')
         ->active()
         ->varified()
-        ->calenderResource()
         ->employee()
         ->where('is_manager', 0)
         ->orderBy('id', 'ASC');
 
     if ($branchId > 0) {
-        $employeesQuery->whereHas('branches', function ($q) use ($branchId) {
+        $orderEmployeesQuery->whereHas('branches', function ($q) use ($branchId) {
             $q->where('branch_id', $branchId);
         });
     }
 
-    if ($employeeId) {
-        $employeesQuery->where('users.id', $employeeId);
-    }
+    $orderEmployees = $this->sortCalendarEmployees($orderEmployeesQuery->get(), $branchId);
+    $employees = $orderEmployees->where('show_in_calender', 1)->values();
 
-    $employees = $employeesQuery->get();
+    if (! empty($selectedEmployeeIds)) {
+        $employees = $employees->whereIn('id', $selectedEmployeeIds)->values();
+    }
 
     $requestedStartDateTime = $request->get('start_date_time');
     $requestedServiceDuration = max(0, (int) $request->get('service_duration', 0));
@@ -261,40 +301,31 @@ public function index_list(Request $request)
         })->values();
     }
 
-    $dayName = strtolower(Carbon::parse($date)->format('l'));
     $employeeIds = $employees->pluck('id')->all();
+    $visibleBookingEvents = array_values(array_filter($updated_data, function ($event) use ($employeeIds) {
+        return in_array((int) ($event['resourceId'] ?? 0), $employeeIds, true);
+    }));
     $employeeBranchIds = $employees->mapWithKeys(function ($employee) use ($branchId) {
         return [$employee->id => $this->effectiveEmployeeBranchId($employee, $branchId)];
     });
     $branchIds = $employeeBranchIds->filter()->unique()->values()->all();
-
-    $availabilityContext = [
-        'day_name' => $dayName,
-        'holiday_branch_ids' => Holiday::whereIn('branch_id', $branchIds)
-            ->whereDate('date', $date)
-            ->pluck('branch_id')
-            ->mapWithKeys(fn ($id) => [(int) $id => true])
-            ->all(),
-        'leave_staff_ids' => StaffLeavePeriod::whereIn('staff_id', $employeeIds)
-            ->whereDate('start_date', '<=', $date)
-            ->whereDate('end_date', '>=', $date)
-            ->pluck('staff_id')
-            ->mapWithKeys(fn ($id) => [(int) $id => true])
-            ->all(),
-        'staff_working_hours' => StaffWorkingHour::whereIn('staff_id', $employeeIds)
-            ->where('day_of_week', $dayName)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->unique('staff_id')
-            ->keyBy('staff_id'),
-        'business_hours' => BussinessHour::whereIn('branch_id', $branchIds)
-            ->where('day', $dayName)
-            ->where('is_holiday', 0)
-            ->orderBy('id', 'desc')
-            ->get(),
-    ];
+    $availabilityDates = collect();
+    for ($cursor = Carbon::parse($dateStart); $cursor->lte(Carbon::parse($dateEnd)); $cursor->addDay()) {
+        $availabilityDates->push($cursor->toDateString());
+    }
 
     $resource = [];
+    $orderResource = [];
+    foreach ($orderEmployees as $employee) {
+        $employeeBranchId = $this->effectiveEmployeeBranchId($employee, $branchId);
+        $orderResource[] = [
+            'id' => $employee->id,
+            'branch_id' => $employeeBranchId,
+            'is_visible' => (bool) $employee->show_in_calender,
+            'title' => $employee->full_name,
+        ];
+    }
+
     $availabilityEvents = [];
     $availability = [];
     foreach ($employees as $employee) {
@@ -312,18 +343,105 @@ public function index_list(Request $request)
             </div>',
         ];
 
-        $employeeAvailability = $this->buildEmployeeAvailability($employee, $date, $employeeBranchId, $availabilityContext);
-        $availability[$employee->id] = $employeeAvailability['ranges'];
-        $availabilityEvents = array_merge($availabilityEvents, $employeeAvailability['events']);
+        $availability[$employee->id] = [];
+        foreach ($availabilityDates as $availabilityDate) {
+            $availabilityContext = $this->availabilityContextForDate($availabilityDate, $branchIds, $employeeIds);
+            $employeeAvailability = $this->buildEmployeeAvailability($employee, $availabilityDate, $employeeBranchId, $availabilityContext);
+            $availability[$employee->id] = array_merge($availability[$employee->id], $employeeAvailability['ranges']);
+            $availabilityEvents = array_merge($availabilityEvents, $employeeAvailability['events']);
+        }
     }
 
     return response()->json([
-        'data' => array_merge($availabilityEvents, $updated_data),
+        'data' => array_merge($availabilityEvents, $visibleBookingEvents),
         'employees' => $resource,
+        'order_employees' => $orderResource,
         'availability' => $availability,
         'total_count' => count($employees),
     ]);
 }
+
+    public function updateEmployeeOrder(Request $request)
+    {
+        if (! $request->user()?->hasRole('admin')) {
+            return response()->json([
+                'status' => false,
+                'message' => __('messages.permission_denied'),
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'integer'],
+            'employees' => ['required', 'array', 'min:1'],
+            'employees.*.id' => ['required', 'integer', 'distinct'],
+            'employees.*.is_visible' => ['required', 'boolean'],
+        ]);
+
+        $branchId = (int) ($validated['branch_id'] ?? 0);
+        $employeeRows = array_values($validated['employees']);
+        $employeeIds = array_map(fn ($employee) => (int) $employee['id'], $employeeRows);
+
+        $employeesQuery = User::with('branches')
+            ->active()
+            ->varified()
+            ->employee()
+            ->where('is_manager', 0)
+            ->whereIn('id', $employeeIds);
+
+        if ($branchId > 0) {
+            $employeesQuery->whereHas('branches', function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId);
+            });
+        }
+
+        $employees = $employeesQuery->get()->keyBy('id');
+
+        foreach ($employeeRows as $index => $employeeRow) {
+            $employeeId = (int) $employeeRow['id'];
+            $employee = $employees->get($employeeId);
+            if (! $employee) {
+                continue;
+            }
+
+            $employeeBranchId = $branchId > 0
+                ? $branchId
+                : (int) optional($employee->branches->first())->branch_id;
+
+            if ($employeeBranchId <= 0) {
+                continue;
+            }
+
+            BranchEmployee::where('employee_id', $employeeId)
+                ->where('branch_id', $employeeBranchId)
+                ->update(['calendar_sort_order' => $index + 1]);
+
+            $employee->forceFill([
+                'show_in_calender' => (bool) $employeeRow['is_visible'] ? 1 : 0,
+            ])->save();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Employee order updated successfully.',
+        ]);
+    }
+
+    private function sortCalendarEmployees($employees, int $branchId)
+    {
+        return $employees->sort(function ($first, $second) use ($branchId) {
+            $firstBranch = $branchId > 0
+                ? $first->branches->firstWhere('branch_id', $branchId)
+                : $first->branches->first();
+            $secondBranch = $branchId > 0
+                ? $second->branches->firstWhere('branch_id', $branchId)
+                : $second->branches->first();
+
+            $firstOrder = $firstBranch?->calendar_sort_order ?? PHP_INT_MAX;
+            $secondOrder = $secondBranch?->calendar_sort_order ?? PHP_INT_MAX;
+
+            return ($firstOrder <=> $secondOrder) ?: ((int) $first->id <=> (int) $second->id);
+        })->values();
+    }
 
     private function effectiveEmployeeBranchId(User $employee, int $branchId): int
     {
@@ -334,21 +452,55 @@ public function index_list(Request $request)
         return (int) optional($employee->branches->first())->branch_id;
     }
 
+    private function availabilityContextForDate(string $date, array $branchIds, array $employeeIds): array
+    {
+        $dayName = strtolower(Carbon::parse($date)->format('l'));
+
+        return [
+            'day_name' => $dayName,
+            'holiday_branch_ids' => Holiday::whereIn('branch_id', $branchIds)
+                ->whereDate('date', $date)
+                ->pluck('branch_id')
+                ->mapWithKeys(fn ($id) => [(int) $id => true])
+                ->all(),
+            'leave_staff_ids' => StaffLeavePeriod::whereIn('staff_id', $employeeIds)
+                ->whereDate('start_date', '<=', $date)
+                ->whereDate('end_date', '>=', $date)
+                ->pluck('staff_id')
+                ->mapWithKeys(fn ($id) => [(int) $id => true])
+                ->all(),
+            'staff_working_hours' => StaffWorkingHour::whereIn('staff_id', $employeeIds)
+                ->where('day_of_week', $dayName)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->unique('staff_id')
+                ->keyBy('staff_id'),
+            'business_hours' => BussinessHour::whereIn('branch_id', $branchIds)
+                ->where('day', $dayName)
+                ->where('is_holiday', 0)
+                ->orderBy('id', 'desc')
+                ->get(),
+        ];
+    }
+
     private function buildEmployeeAvailability(User $employee, string $date, int $branchId, array $context): array
     {
         $resourceId = $employee->id;
+        $resourceIds = [(string) $resourceId];
         $dayName = $context['day_name'];
         $dayStart = "{$date} 00:00:00";
         $dayEnd = "{$date} 23:59:59";
 
         $events = [
             [
-                'id' => "staff-unavailable-{$resourceId}-day",
+                'id' => "staff-unavailable-{$resourceId}-{$date}",
                 'start' => $dayStart,
                 'end' => $dayEnd,
                 'resourceId' => $resourceId,
+                'resourceIds' => $resourceIds,
                 'display' => 'background',
                 'backgroundColor' => '#e5e7eb',
+                'color' => '#e5e7eb',
                 'editable' => false,
             ],
         ];
@@ -368,28 +520,48 @@ public function index_list(Request $request)
 
         $availableStart = "{$date} {$workingConfig['start_time']}";
         $availableEnd = "{$date} {$workingConfig['end_time']}";
+        if (Carbon::parse($availableEnd)->lessThanOrEqualTo(Carbon::parse($availableStart))) {
+            return ['events' => $events, 'ranges' => []];
+        }
+
         $events[] = [
-            'id' => "staff-available-{$resourceId}",
+            'id' => "staff-available-{$resourceId}-{$date}",
             'start' => $availableStart,
             'end' => $availableEnd,
             'resourceId' => $resourceId,
+            'resourceIds' => $resourceIds,
             'display' => 'background',
             'backgroundColor' => '#ffffff',
+            'color' => '#ffffff',
             'editable' => false,
         ];
 
+        $breakRanges = [];
         foreach ($workingConfig['breaks'] as $index => $break) {
             if (empty($break['start_break']) || empty($break['end_break'])) {
                 continue;
             }
 
+            $breakStart = "{$date} {$this->normalizeTime($break['start_break'])}";
+            $breakEnd = "{$date} {$this->normalizeTime($break['end_break'])}";
+            if (Carbon::parse($breakEnd)->lessThanOrEqualTo(Carbon::parse($breakStart))) {
+                continue;
+            }
+
+            $breakRanges[] = [
+                'start' => $breakStart,
+                'end' => $breakEnd,
+            ];
+
             $events[] = [
-                'id' => "staff-break-{$resourceId}-{$index}",
-                'start' => "{$date} {$this->normalizeTime($break['start_break'])}",
-                'end' => "{$date} {$this->normalizeTime($break['end_break'])}",
+                'id' => "staff-break-{$resourceId}-{$date}-{$index}",
+                'start' => $breakStart,
+                'end' => $breakEnd,
                 'resourceId' => $resourceId,
+                'resourceIds' => $resourceIds,
                 'display' => 'background',
                 'backgroundColor' => '#e5e7eb',
+                'color' => '#e5e7eb',
                 'editable' => false,
             ];
         }
@@ -400,16 +572,7 @@ public function index_list(Request $request)
                 [
                     'start' => $availableStart,
                     'end' => $availableEnd,
-                    'breaks' => array_values(array_filter(array_map(function ($break) use ($date) {
-                        if (empty($break['start_break']) || empty($break['end_break'])) {
-                            return null;
-                        }
-
-                        return [
-                            'start' => "{$date} {$this->normalizeTime($break['start_break'])}",
-                            'end' => "{$date} {$this->normalizeTime($break['end_break'])}",
-                        ];
-                    }, $workingConfig['breaks']))),
+                    'breaks' => $breakRanges,
                 ],
             ],
         ];

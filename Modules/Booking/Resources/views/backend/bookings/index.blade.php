@@ -23,7 +23,8 @@
           slot-duration="{{ setting('slot_duration') }}"
           status="{{ json_encode($statusList) }}"
           :branch-id="{{ $selected_branch->id ?? 0 }}"
-          date={{$date}}
+          :can-reorder="{{ auth()->user()->hasRole('admin') ? 'true' : 'false' }}"
+          date="{{ \Carbon\Carbon::parse($date)->toDateString() }}"
           ></calendar-view>
       </div>
     </div>
