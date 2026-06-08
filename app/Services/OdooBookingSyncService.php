@@ -92,13 +92,23 @@ class OdooBookingSyncService
         ];
 
         try {
+            $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            if ($jsonPayload === false) {
+                throw new \RuntimeException('Failed to encode Odoo payload to JSON.');
+            }
+
             $response = Http::timeout((int) config('services.odoo.timeout', 15))
+                ->acceptJson()
                 ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
                     'db' => $db,
                     'login' => $login,
                     'password' => $password,
                 ])
-                ->post($url, $payload);
+                ->withBody($jsonPayload, 'application/json')
+                ->send('POST', $url);
 
             if ($response->successful()) {
                 Log::info('Odoo booking sync completed.', [
@@ -107,6 +117,14 @@ class OdooBookingSyncService
                 ]);
 
                 return true;
+            }
+
+            if ($response->status() === 400 && str_contains(strtolower($response->body()), 'invalid csrf token')) {
+                Log::error('Odoo booking sync rejected by Odoo CSRF protection.', [
+                    'invoice_id' => $invoiceId,
+                    'url' => $url,
+                    'hint' => 'Configure the Odoo webhook route as csrf=False for external POST requests, or expose it as a JSON webhook endpoint.',
+                ]);
             }
 
             Log::error('Odoo booking sync failed.', [
@@ -158,7 +176,7 @@ class OdooBookingSyncService
 
         return [
             'id' => $invoice->id,
-            'user_id' => $invoice->user_id,
+            'user_id' => (int) $invoice->user_id,
             'coupon_code' => $invoice->coupon_code,
             'coupon_discount' => $bookingDiscount,
             'gift_coupon_discount' => $giftDiscount,
@@ -191,7 +209,7 @@ class OdooBookingSyncService
 
             return [
                 'id' => $booking->id,
-                'user_id' => $booking->user_id,
+                'user_id' => (int) $booking->user_id,
                 'bookingInfo_id' => $invoice->id,
                 'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
                 'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
@@ -252,7 +270,7 @@ class OdooBookingSyncService
             return [
                 'id' => $giftCard->id,
                 'invoice_id' => $invoice->id,
-                'user_id' => $giftCard->user_id,
+                'user_id' => (int) $giftCard->user_id,
                 'ref' => $giftCard->ref,
                 'buyer_name' => $user?->full_name,
                 'buyer_email' => $user?->email,
