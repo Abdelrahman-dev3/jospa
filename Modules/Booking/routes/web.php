@@ -44,6 +44,7 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::patch('/trashed/{id}', [BookingsController::class, 'restore'])->name('restore');
         Route::post('/update-status/{id}', [BookingsController::class, 'updateStatus'])->name('updateStatus');
         Route::post('/update-payment-status/{id}', [BookingsController::class, 'updatePaymentStatus'])->name('updatePaymentStatus');
+        Route::post('/employee-order', [BookingsController::class, 'updateEmployeeOrder'])->name('employee_order');
         Route::post('bulk-action', [BookingsController::class, 'bulk_action'])->name('bulk_action');
         Route::get('slots', [BookingsController::class, 'booking_slots'])->name('slots');
         Route::post('payment', [BookingsController::class, 'booking_payment'])->name('payment');
