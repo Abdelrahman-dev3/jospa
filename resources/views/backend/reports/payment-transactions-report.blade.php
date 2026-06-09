@@ -4,9 +4,6 @@
 
 @section('content')
     <div class="card">
-        <div id="giftAlert" class="alert alert-warning text-center" role="alert" style="display:none;">
-            {{ __('لاتشمل عمليات شراء الهدايا او المنتجات فرديا') }}
-        </div>
         <div class="card-body">
             <x-backend.section-header>
                 <div class="row">
@@ -176,15 +173,4 @@
         window.renderedDataTable.ajax.reload(null, false)
     })
 </script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const alertBox = document.getElementById('giftAlert');
-    alertBox.style.display = 'block';
-
-    setTimeout(() => {
-        alertBox.style.display = 'none';
-    }, 3000);
-});
-</script>
-
 @endpush

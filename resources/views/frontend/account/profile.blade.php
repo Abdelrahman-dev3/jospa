@@ -189,6 +189,7 @@
       @php
         $paymentMethods = [
           'card' => (int) \App\Models\Setting::get('tap_payment_method', 1),
+          'urpay' => (int) \App\Models\Setting::get('urpay_payment_method', 0),
           'tabby' => (int) \App\Models\Setting::get('tabby_payment_method', 1),
           'tamara' => (int) \App\Models\Setting::get('tamara_payment_method', 1),
         ];
@@ -207,6 +208,11 @@
           @if(($paymentMethods['tamara'] ?? 0) === 1)
             <div class="col-6">
               <img src="{{asset('images/icons/tamara.png')}}" alt="تمارا" class="img-fluid border rounded p-3" style="background: #F9F6F0;">
+            </div>
+          @endif
+          @if(($paymentMethods['urpay'] ?? 0) === 1)
+            <div class="col-6">
+              <div class="rounded p-3 d-flex align-items-center justify-content-center fw-bold" style="background:#ecfff7;color:#00835f;min-height:72px;">UrPay</div>
             </div>
           @endif
           @if(($paymentMethods['tabby'] ?? 0) === 1)

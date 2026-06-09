@@ -8,10 +8,9 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\LoginResource;
 use App\Http\Resources\RegisterResource;
 use App\Http\Resources\SocialLoginResource;
-use App\Models\UserProfile;
-use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Services\TaqnyatSmsService;
+use Illuminate\Support\Facades\Validator;
 use Auth;
 use Hash;
 use Illuminate\Http\Request;
@@ -31,9 +30,19 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'mobile' => ['required', 'string', 'max:20'],
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
 
         $smsService = new TaqnyatSmsService();
         $phone = $smsService->validatePhoneNumber($validated['mobile']);
@@ -44,7 +53,7 @@ class AuthController extends Controller
 
         $user = User::where('mobile', $phone)->first();
 
-        if ($user == null || !$user) {
+        if (! $user) {
             return $this->sendError(__('messages.register_before_login'));
         }
 
@@ -52,7 +61,7 @@ class AuthController extends Controller
             return $this->sendError(__('messages.login_error'));
         }
 
-        $dailyKey = 'login_otp_count_'.$phone.'_'.date('Y-m-d');
+        $dailyKey = 'login_otp_count_' . $phone . '_' . date('Y-m-d');
         $dailyCount = (int) Cache::get($dailyKey, 0);
 
         if ($dailyCount >= 711) {
@@ -61,10 +70,11 @@ class AuthController extends Controller
 
         $otp = self::TEST_OTP;
 
-        Cache::put('login_otp_'.$phone, [
+        Cache::put('login_otp_' . $phone, [
             'otp' => $otp,
             'user_id' => $user->id,
         ], now()->addMinutes(5));
+
         Cache::put($dailyKey, $dailyCount + 1, now()->endOfDay());
 
         if ((int) setting('is_taqnyat_sms') === 1) {
@@ -81,7 +91,6 @@ class AuthController extends Controller
             'expires_in' => 300,
         ], __('messages.otp_sent'));
     }
-
     public function resendLoginOtp(Request $request)
     {
         return $this->sendLoginOtp($request);

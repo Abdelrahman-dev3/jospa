@@ -1,10 +1,11 @@
 <?php
 
 return [
-    'lbl_tap' => 'تاب (بطاقات)',
+    'lbl_tap' => 'تاب (البطاقات)',
     'lbl_visa_mastercard' => 'فيزا / ماستركارد',
     'lbl_apple_pay' => 'Apple Pay',
     'lbl_mada' => 'مدى',
+    'lbl_urpay' => 'UrPay',
     'lbl_tabby' => 'تابي',
     'lbl_tamara' => 'تمارا',
     'lbl_razorpay' => 'Razorpay',

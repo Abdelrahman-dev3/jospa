@@ -13,6 +13,7 @@ use App\Models\Setting;
 use App\Services\Payment\Strategies\CardPaymentStrategy;
 use App\Services\Payment\Strategies\TabbyPaymentStrategy;
 use App\Services\Payment\Strategies\TamaraPaymentStrategy;
+use App\Services\Payment\Strategies\UrPayPaymentStrategy;
 use App\Support\FrontendPaymentSettings;
 
 class PaymentController extends Controller
@@ -100,6 +101,7 @@ class PaymentController extends Controller
 
         $strategy = match ($method) {
             'card' => app(CardPaymentStrategy::class),
+            'urpay' => app(UrPayPaymentStrategy::class),
             'tabby' => app(TabbyPaymentStrategy::class),
             'tamara' => app(TamaraPaymentStrategy::class),
             default => throw ValidationException::withMessages([
@@ -127,6 +129,21 @@ class PaymentController extends Controller
         session()->forget('tabby_payment');
 
         return view('frontend.payment-status.failed', ['message' => __('messages.payment_cancelled')]);
+    }
+
+    public function urpaySuccess(Request $request)
+    {
+        return app(UrPayPaymentStrategy::class)->success($request);
+    }
+
+    public function urpayFail(Request $request)
+    {
+        return app(UrPayPaymentStrategy::class)->failure($request);
+    }
+
+    public function urpayCancel(Request $request)
+    {
+        return app(UrPayPaymentStrategy::class)->cancel($request);
     }
 
     private function isPaymentMethodEnabled(?string $method): bool
