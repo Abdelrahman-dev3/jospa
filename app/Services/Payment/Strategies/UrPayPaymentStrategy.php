@@ -211,6 +211,10 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             throw new \RuntimeException('UrPay is not fully configured. Set URPAY_CHECKOUT_URL_TEMPLATE or the API endpoint settings first.');
         }
 
+        if ($this->isHostedPagePath($createOrderPath)) {
+            throw new \RuntimeException('تعذر بدء دفع URPAY لأن إعداد URPAY_CREATE_ORDER_PATH يشير إلى hosted.htm، وهو صفحة دفع مستضافة وليس مسار API لإنشاء العملية. يلزم تزويد مسار API الصحيح من البنك أو استخدام قالب تحويل يحتوي على المتغيرات المطلوبة.');
+        }
+
         $payload = [
             'merchant_id' => config('urpay.merchant_id'),
             'terminal_id' => config('urpay.terminal_id'),
@@ -465,5 +469,29 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return str_contains(strtolower($response->body()), "request method 'get' not supported");
+    }
+
+    protected function presentableErrorMessage(\Throwable $e): string
+    {
+        $message = trim($e->getMessage());
+
+        if ($message === '') {
+            return __('messages.payment_failed');
+        }
+
+        if (str_contains($message, 'UrPay checkout URL not found')) {
+            return 'تعذر إنشاء رابط دفع URPAY. الاستجابة القادمة من البوابة لا تحتوي على رابط تحويل صالح، وغالبًا أن إعدادات الربط الحالية غير مطابقة لمتطلبات البنك.';
+        }
+
+        if (str_contains($message, 'UrPay checkout failed:')) {
+            return 'فشل بدء عملية دفع URPAY من البوابة. يرجى مراجعة مسار الإنشاء وبيانات الربط المرسلة من البنك.';
+        }
+
+        return $message;
+    }
+
+    private function isHostedPagePath(string $path): bool
+    {
+        return str_ends_with(strtolower($path), 'hosted.htm');
     }
 }

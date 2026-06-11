@@ -51,7 +51,7 @@
         <script>
             createNotify({
                 title: 'خطأ',
-                desc: "{{ session('error') }}",
+                desc: @json(session('error')),
                 autoplay: true
             });
         </script>
@@ -61,7 +61,7 @@
         <script>
             createNotify({
                 title: 'نجاح',
-                desc: "{{ session('success') }}",
+                desc: @json(session('success')),
                 autoplay: true
             });
         </script>

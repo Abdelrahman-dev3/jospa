@@ -245,7 +245,27 @@
         flex-direction: column;
         gap: 22px;
     }
+    .payment-alert{
+      max-width: 1100px;
+      margin: 0 auto 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid #f1c5c5;
+      background: #fff3f3;
+      color: #8f2d2d;
+      box-shadow: 0 6px 20px rgba(143,45,45,0.08);
+      font-size: 15px;
+      line-height: 1.7;
+    }
   </style>
+  @php
+    $paymentError = session('error') ?: $errors->first('payment');
+  @endphp
+  @if($paymentError)
+    <div class="payment-alert" role="alert">
+      {{ $paymentError }}
+    </div>
+  @endif
             @if(request()->has('ids'))
         <style>
             /* wrapper */

@@ -105,19 +105,28 @@ abstract class BasePaymentStrategy
             ], $status);
         }
 
-        return redirect()->back()->with('error', $message);
+        return redirect()->back()
+            ->withInput()
+            ->withErrors(['payment' => $message])
+            ->with('error', $message);
     }
 
     protected function respondPayException(Request $request, \Throwable $e, int $status = 500)
     {
+        report($e);
+        $message = $this->presentableErrorMessage($e);
+
         if ($this->wantsJson($request)) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => $message,
             ], $status);
         }
 
-        return redirect()->back()->with('error', $e->getMessage());
+        return redirect()->back()
+            ->withInput()
+            ->withErrors(['payment' => $message])
+            ->with('error', $message);
     }
 
     protected function isAlreadyFinalized(array $cartIds, array $giftIds): bool
@@ -180,5 +189,10 @@ abstract class BasePaymentStrategy
         }
 
         return view('frontend.payment-status.failed', ['message' => $message]);
+    }
+
+    protected function presentableErrorMessage(\Throwable $e): string
+    {
+        return trim($e->getMessage()) !== '' ? $e->getMessage() : __('messages.payment_failed');
     }
 }
