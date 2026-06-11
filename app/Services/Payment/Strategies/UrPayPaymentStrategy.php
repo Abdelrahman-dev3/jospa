@@ -53,6 +53,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
             if ($checkout['type'] === 'redirect') {
                 $responseData['payment_url'] = $checkout['url'];
+            } elseif ($checkout['type'] === 'html') {
+                $responseData['payment_html'] = $checkout['html'];
             } else {
                 $responseData['payment_action'] = $checkout['action'];
                 $responseData['payment_method_http'] = $checkout['method'];
@@ -68,6 +70,12 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
         if ($checkout['type'] === 'redirect') {
             return redirect()->away($checkout['url']);
+        }
+
+        if ($checkout['type'] === 'html') {
+            return response($checkout['html'], 200, [
+                'Content-Type' => 'text/html; charset=ISO-8859-1',
+            ]);
         }
 
         return response()->view('frontend.payment-status.redirect-form', [
@@ -253,7 +261,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($this->isHostedPagePath($createOrderPath)) {
-            return $this->buildHostedCheckoutForm($baseUrl, $createOrderPath, $amount, $currency, $invoiceRef, $merchantUrls);
+            return $this->createHostedCheckoutDocument($baseUrl, $createOrderPath, $amount, $currency, $invoiceRef, $merchantUrls);
         }
 
         $payload = [
@@ -323,7 +331,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         ];
     }
 
-    private function buildHostedCheckoutForm(
+    private function createHostedCheckoutDocument(
         string $baseUrl,
         string $createOrderPath,
         float $amount,
@@ -333,35 +341,67 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     ): array {
         $tranportalId = trim((string) config('urpay.username'));
         $tranportalPassword = trim((string) config('urpay.password'));
+        $resourceKey = trim((string) config('urpay.token'));
+        $terminalId = trim((string) config('urpay.terminal_id'));
+        $merchantId = trim((string) config('urpay.merchant_id'));
 
         if ($tranportalId === '' || $tranportalPassword === '') {
             throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
         }
 
-        $actionPath = $this->resolveHostedFormActionPath($createOrderPath);
-        $actionUrl = $baseUrl . '/' . ltrim($actionPath, '/');
-        $fields = [
-            'id' => $tranportalId,
-            'password' => $tranportalPassword,
-            'action' => '1',
-            'langid' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
-            'currencycode' => $this->resolveCurrencyCode($currency),
-            'amt' => number_format($amount, 2, '.', ''),
-            'trackid' => $invoiceRef,
-            'responseURL' => $merchantUrls['success'],
-            'errorURL' => $merchantUrls['failure'],
-            'udf1' => $invoiceRef,
-            'udf5' => $merchantUrls['cancel'],
+        $payloadVariants = [
+            [
+                'id' => $tranportalId,
+                'password' => $tranportalPassword,
+                'action' => '1',
+                'langid' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
+                'currencycode' => $this->resolveCurrencyCode($currency),
+                'amt' => number_format($amount, 2, '.', ''),
+                'trackid' => $invoiceRef,
+                'responseURL' => $merchantUrls['success'],
+                'errorURL' => $merchantUrls['failure'],
+                'udf1' => $invoiceRef,
+                'udf5' => $merchantUrls['cancel'],
+                'merchantid' => $merchantId,
+                'terminalid' => $terminalId,
+                'resourcekey' => $resourceKey,
+            ],
+            [
+                'tranportalId' => $tranportalId,
+                'tranportalPassword' => $tranportalPassword,
+                'action' => '1',
+                'langid' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
+                'currencycode' => $this->resolveCurrencyCode($currency),
+                'amt' => number_format($amount, 2, '.', ''),
+                'trackid' => $invoiceRef,
+                'responseURL' => $merchantUrls['success'],
+                'errorURL' => $merchantUrls['failure'],
+                'udf1' => $invoiceRef,
+                'udf5' => $merchantUrls['cancel'],
+                'merchantId' => $merchantId,
+                'terminalId' => $terminalId,
+                'resourceKey' => $resourceKey,
+            ],
         ];
 
-        return [
-            'type' => 'form',
-            'action' => $actionUrl,
-            'method' => 'POST',
-            'fields' => array_filter($fields, static function ($value) {
-                return $value !== null && $value !== '';
-            }),
-        ];
+        $paths = array_values(array_unique(array_filter([
+            trim($createOrderPath, '/'),
+            trim((string) config('urpay.verify_order_path'), '/'),
+        ])));
+
+        foreach ($paths as $path) {
+            foreach ($payloadVariants as $payload) {
+                $html = $this->postHostedJsonRequest($baseUrl, $path, $payload);
+                if (! $this->isInvalidAccessResponse($html)) {
+                    return [
+                        'type' => 'html',
+                        'html' => $html,
+                    ];
+                }
+            }
+        }
+
+        throw new \RuntimeException('بوابة URPAY قبلت نوع الإرسال JSON لكنها أعادت صفحة InvalidAccess. هذا يعني أن صيغة التهيئة أو أسماء الحقول ما زالت لا تطابق مستند التكامل الرسمي من البنك.');
     }
 
     private function verifyPayment(Request $request, ?array $data): array
@@ -614,6 +654,30 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return $createOrderPath;
+    }
+
+    private function postHostedJsonRequest(string $baseUrl, string $path, array $payload): string
+    {
+        $response = Http::accept('text/html,application/xhtml+xml,application/json')
+            ->asJson()
+            ->post($baseUrl . '/' . ltrim($path, '/'), array_filter($payload, static function ($value) {
+                return $value !== null && $value !== '';
+            }));
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('UrPay hosted checkout failed: ' . $response->body());
+        }
+
+        return $response->body();
+    }
+
+    private function isInvalidAccessResponse(string $html): bool
+    {
+        $normalized = strtolower($html);
+
+        return str_contains($normalized, 'invalidaccess.htm')
+            || str_contains($normalized, 'removeexceptionsession')
+            || str_contains($normalized, 'forwardtologout()');
     }
 
     private function resolveHostedCallbackStatus(Request $request): ?string
