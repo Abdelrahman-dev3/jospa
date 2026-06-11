@@ -253,7 +253,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($this->isHostedPagePath($createOrderPath)) {
-            return $this->buildHostedCheckoutForm($baseUrl, $createOrderPath, $amount, $currency, $invoiceRef, $buyerName, $merchantUrls, $user);
+            return $this->buildHostedCheckoutForm($baseUrl, $createOrderPath, $amount, $currency, $invoiceRef, $merchantUrls);
         }
 
         $payload = [
@@ -329,9 +329,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         float $amount,
         string $currency,
         string $invoiceRef,
-        string $buyerName,
-        array $merchantUrls,
-        $user
+        array $merchantUrls
     ): array {
         $tranportalId = trim((string) config('urpay.username'));
         $tranportalPassword = trim((string) config('urpay.password'));
@@ -340,7 +338,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
         }
 
-        $actionUrl = $baseUrl . '/' . ltrim($createOrderPath, '/');
+        $actionPath = $this->resolveHostedFormActionPath($createOrderPath);
+        $actionUrl = $baseUrl . '/' . ltrim($actionPath, '/');
         $fields = [
             'id' => $tranportalId,
             'password' => $tranportalPassword,
@@ -351,16 +350,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'trackid' => $invoiceRef,
             'responseURL' => $merchantUrls['success'],
             'errorURL' => $merchantUrls['failure'],
-            'cancelURL' => $merchantUrls['cancel'],
             'udf1' => $invoiceRef,
-            'udf2' => (string) ($user->id ?? ''),
-            'udf3' => (string) ($user->mobile ?? ''),
-            'udf4' => (string) config('urpay.merchant_id'),
-            'udf5' => (string) config('urpay.terminal_id'),
-            'merchantid' => (string) config('urpay.merchant_id'),
-            'terminalid' => (string) config('urpay.terminal_id'),
-            'customer_name' => $buyerName,
-            'customer_phone' => (string) ($user->mobile ?? ''),
+            'udf5' => $merchantUrls['cancel'],
         ];
 
         return [
@@ -612,6 +603,17 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'OMR' => '512',
             default => strtoupper($currency),
         };
+    }
+
+    private function resolveHostedFormActionPath(string $createOrderPath): string
+    {
+        $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
+
+        if ($this->isHostedPagePath($createOrderPath) && $this->isTranportalPath($verifyOrderPath)) {
+            return $verifyOrderPath;
+        }
+
+        return $createOrderPath;
     }
 
     private function resolveHostedCallbackStatus(Request $request): ?string
