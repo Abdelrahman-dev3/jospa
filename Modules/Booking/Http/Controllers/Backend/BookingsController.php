@@ -979,7 +979,16 @@ public function index_list(Request $request)
      */
     public function update(BookingRequest $request, $id)
     {
-        $booking = Booking::findOrFail($id);
+        $booking = Booking::with('transactions')->findOrFail($id);
+
+        if ($booking->transactions->contains('payment_status', 1)) {
+            $this->updatePaidBookingSchedule($booking, $request);
+            $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
+
+            $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
+
+            return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+        }
 
         $booking->update($request->all());
 
@@ -990,6 +999,35 @@ public function index_list(Request $request)
         $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
 
         return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+    }
+
+    private function updatePaidBookingSchedule(Booking $booking, Request $request): void
+    {
+        $startDateTime = $request->input('start_date_time');
+        $employeeId = $request->input('employee_id');
+
+        $booking->update([
+            'start_date_time' => $startDateTime,
+        ]);
+
+        $nextStart = Carbon::parse($startDateTime);
+        $bookingServices = BookingService::where('booking_id', $booking->id)
+            ->orderBy('sequance')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($bookingServices as $service) {
+            $service->update([
+                'employee_id' => $employeeId,
+                'start_date_time' => $nextStart->format('Y-m-d H:i:s'),
+            ]);
+
+            $nextStart = $nextStart->copy()->addMinutes((int) ($service->duration_min ?: 0));
+        }
+
+        BookingPackages::where('booking_id', $booking->id)->update([
+            'employee_id' => $employeeId,
+        ]);
     }
 
     /**
@@ -1115,6 +1153,7 @@ public function index_list(Request $request)
         $branchId = (int) $request->branch_id;
         $employeeId = (int) $request->employee_id;
         $serviceDuration = max(0, (int) $request->service_duration);
+        $ignoreBookingId = (int) $request->booking_id;
 
         if ($employeeId <= 0) {
             if ($branchId <= 0) {
@@ -1133,7 +1172,7 @@ public function index_list(Request $request)
                 ->get();
 
             $slots = $employees
-                ->flatMap(fn ($employee) => $this->buildBookingSlotsForEmployee($employee, $date, $branchId, $serviceDuration))
+                ->flatMap(fn ($employee) => $this->buildBookingSlotsForEmployee($employee, $date, $branchId, $serviceDuration, $ignoreBookingId))
                 ->unique('value')
                 ->sortBy('value')
                 ->values()
@@ -1163,12 +1202,12 @@ public function index_list(Request $request)
             return response()->json(['status' => true, 'data' => []]);
         }
 
-        $slots = $this->buildBookingSlotsForEmployee($employee, $date, $effectiveBranchId, $serviceDuration);
+        $slots = $this->buildBookingSlotsForEmployee($employee, $date, $effectiveBranchId, $serviceDuration, $ignoreBookingId);
 
         return response()->json(['status' => true, 'data' => $slots]);
     }
 
-    private function buildBookingSlotsForEmployee(User $employee, string $date, int $branchId, int $serviceDuration): array
+    private function buildBookingSlotsForEmployee(User $employee, string $date, int $branchId, int $serviceDuration, int $ignoreBookingId = 0): array
     {
         $dayName = strtolower(Carbon::parse($date)->format('l'));
         $context = [
@@ -1216,7 +1255,7 @@ public function index_list(Request $request)
         }
 
         $breakRanges = $this->slotBreakRanges($date, $workingConfig['breaks']);
-        $busyRanges = $this->employeeBusyRanges($employee->id, $branchId, $date);
+        $busyRanges = $this->employeeBusyRanges($employee->id, $branchId, $date, $ignoreBookingId);
         $slots = [];
 
         for ($cursor = $start->copy(); $cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($end); $cursor->addMinutes($slotInterval)) {
@@ -1265,10 +1304,11 @@ public function index_list(Request $request)
         }, $breaks)));
     }
 
-    private function employeeBusyRanges(int $employeeId, int $branchId, string $date): array
+    private function employeeBusyRanges(int $employeeId, int $branchId, string $date, int $ignoreBookingId = 0): array
     {
         $serviceRanges = BookingService::with('booking')
             ->where('employee_id', $employeeId)
+            ->when($ignoreBookingId > 0, fn ($q) => $q->where('booking_id', '!=', $ignoreBookingId))
             ->whereHas('booking', function ($q) use ($branchId, $date) {
                 $q->where('branch_id', $branchId)
                     ->whereDate('start_date_time', $date)
@@ -1286,6 +1326,7 @@ public function index_list(Request $request)
 
         $packageRanges = BookingPackages::with('booking', 'services')
             ->where('employee_id', $employeeId)
+            ->when($ignoreBookingId > 0, fn ($q) => $q->where('booking_id', '!=', $ignoreBookingId))
             ->whereHas('booking', function ($q) use ($branchId, $date) {
                 $q->where('branch_id', $branchId)
                     ->whereDate('start_date_time', $date)

@@ -41,6 +41,8 @@ class BookingResource extends JsonResource
             'user_name' => optional($this->user)->full_name ?? default_user_name(),
             'user_profile_image' => optional($this->user)->profile_image ?? default_user_avatar(),
             'user_created' => optional($this->user)->created_at ?? '-',
+            'user_mobile' => optional($this->user)->mobile ?? '',
+            'user_email' => optional($this->user)->email ?? '',
             'status' => $this->status,
             'is_paid' => $this->bookingTransaction ? 1 : 0,
             'created_by_name' => optional($this->createdUser)->full_name ?? default_user_name(),

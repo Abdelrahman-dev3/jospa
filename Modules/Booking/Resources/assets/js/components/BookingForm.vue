@@ -4,10 +4,10 @@
       <template v-if="SINLGE_STEP == 'LOADER'">
         <div class="booking-loader">
           <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-          <span>جاري تجهيز بيانات الموعد...</span>
+          <span>{{ $t('booking.loading_appointment_details') }}</span>
         </div>
       </template>
-      <template v-else-if="SINLGE_STEP == 'MAIN' && status == 'completed'">
+      <template v-else-if="SINLGE_STEP == 'MAIN' && status == 'completed' && props.bookingType !== 'CALENDER_BOOKING'">
         <InvoiceComponent :booking_id="id"></InvoiceComponent>
       </template>
       <template v-else-if="SINLGE_STEP == 'MAIN' && status != 'checkout'">
@@ -15,38 +15,56 @@
           <BookingHeader :booking_id="id" :status="status" :is_paid="is_paid" @statusUpdate="updateStatus"></BookingHeader>
         </div>
         <p class="ps-3" v-if="id > 0">
-          <strong>{{ $t('Appointment Id') }} :-{{ id }} </strong>
+          <strong>{{ $t('booking.lbl_appointment_id') }} :-{{ id }} </strong>
         </p>
+        <div class="px-3 pb-3" v-if="id > 0">
+          <div class="booking-payment-status" :class="isPaidBooking ? 'is-paid' : 'is-unpaid'">
+            <span>{{ $t('booking.lbl_payment_status') }}</span>
+            <strong>{{ paymentStatusLabel }}</strong>
+          </div>
+        </div>
         <BookingStatus v-if="id" :status="status" :booking_id="id" :status-list="statusList" :employee_id="employee_id" @statusUpdate="updateStatus"></BookingStatus>
         <div>
           <div class="d-flex text-center date-time">
             <div class="col-6 py-3">
-              <i>On</i> <strong v-if="start_date_time && start_date_time !== 'Invalid date'">{{ moment(start_date_time).format('D, MMM YYYY') }}</strong>
+              <i>{{ $t('booking.lbl_on') }}</i> <strong v-if="start_date_time && start_date_time !== 'Invalid date'">{{ moment(start_date_time).format('D, MMM YYYY') }}</strong>
               <strong v-else> {{ moment(current_date).format('D, MMM YYYY') }}</strong>
             </div>
             <div class="col-6 py-3">
-              <i>At</i> <strong v-if="start_date_time && start_date_time !== 'Invalid date'">{{ moment(start_date_time).format('LT') }}</strong>
+              <i>{{ $t('booking.lbl_at') }}</i> <strong v-if="start_date_time && start_date_time !== 'Invalid date'">{{ moment(start_date_time).format('LT') }}</strong>
               <strong v-else>--:--</strong>
             </div>
           </div>
         </div>
         <div class="offcanvas-body border-top">
           <!-- <div class="form-group" v-if="bookingType !== 'CALENDER_BOOKING' && branch.options.length > 1"> -->
-          <div class="form-group" v-if="!['check_in', 'checkout', 'confirmed'].includes(status)">
-            <Multiselect id="branch_id" placeholder="Select Branch" v-model="branch_id" :disabled="is_paid || filterStatus(status).is_disabled" :value="branch_id" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" @change="removeBranch" class="form-group"></Multiselect>
+          <div class="form-group" v-if="canShowScheduleControls">
+            <Multiselect id="branch_id" :placeholder="$t('booking.select_branch')" v-model="branch_id" :disabled="isPaidBooking || isScheduleDisabled" :value="branch_id" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" @change="removeBranch" class="form-group"></Multiselect>
           </div>
           <div class="row">
-            <div class="form-group col-6" v-if="!['check_in', 'checkout', 'confirmed'].includes(status)" >
+            <div class="form-group col-6" v-if="canShowScheduleControls" >
               <div class="booking-datepicker">
-                <flat-pickr v-model="current_date" :disabled="is_paid || filterStatus(status).is_disabled" placeholder="Select Date" @change="dateChange" :config="config" class="form-control" />
+                <flat-pickr v-model="current_date" :disabled="isScheduleDisabled" :placeholder="$t('booking.select_date')" @change="dateChange" :config="config" class="form-control" />
               </div>
             </div>
-            <div class="form-group col-6"  v-if="!['check_in', 'checkout', 'confirmed'].includes(status)">
-              <Multiselect id="star_time" placeholder="Select Time" v-model="start_date_time" :disabled="is_paid || filterStatus(status).is_disabled" :value="start_date_time" v-bind="singleSelectOption" :options="slots" @select="slotSelect" @change="removeSlot" class="form-group"></Multiselect>
+            <div class="form-group col-6"  v-if="canShowScheduleControls">
+              <div class="booking-field-wrap">
+                <Multiselect id="employee_id" :placeholder="$t('booking.select_staff')" v-model="employee_id" :value="employee_id" :disabled="isScheduleDisabled || IS_EMPLOYEES_LOADING" v-bind="singleSelectOption" :options="employee.options" @select="employeeSelect" @change="removeEmployee" class="form-group"></Multiselect>
+                <span v-if="IS_EMPLOYEES_LOADING" class="booking-field-loader">
+                  <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  {{ $t('booking.loading_available_staff') }}
+                </span>
+              </div>
             </div>
           </div>
-          <div class="form-group" v-if="!['check_in', 'checkout', 'confirmed'].includes(status) && start_date_time">
-            <Multiselect id="employee_id" placeholder="Select Staff" v-model="employee_id" :value="employee_id" :disabled="is_paid || filterStatus(status).is_disabled" v-bind="singleSelectOption" :options="employee.options" @select="employeeSelect" @change="removeEmployee" class="form-group"></Multiselect>
+          <div class="form-group" v-if="canShowScheduleControls && employee_id">
+            <div class="booking-field-wrap">
+              <Multiselect id="star_time" :placeholder="$t('booking.select_time')" v-model="start_date_time" :disabled="isScheduleDisabled || IS_SLOTS_LOADING" :value="start_date_time" v-bind="singleSelectOption" :options="slots" @select="slotSelect" @change="removeSlot" class="form-group"></Multiselect>
+              <span v-if="IS_SLOTS_LOADING" class="booking-field-loader">
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                {{ $t('booking.loading_available_times') }}
+              </span>
+            </div>
           </div>
           <div class="form-group border-bottom">
             <div v-if="selectedCustomer">
@@ -56,11 +74,11 @@
                   <div class="gap-2">
                     <strong>{{ selectedCustomer.full_name }}</strong>
                     <p class="m-0">
-                      <small>Client since {{ moment(selectedCustomer.created_at).format('MMMM YYYY') }}</small>
+                      <small>{{ $t('booking.client_since') }} {{ moment(selectedCustomer.created_at).format('MMMM YYYY') }}</small>
                     </p>
                   </div>
                 </div>
-                <button type="button" v-if="!is_paid && !['check_in', 'checkout', 'confirmed'].includes(status)" @click="removeCustomer()" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                <button type="button" v-if="canEditFullBooking && !id" @click="removeCustomer()" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
               </div>
               <div class="row">
                 <label class="col-3"
@@ -84,8 +102,8 @@
             <Multiselect 
                 id="user_id"
                 v-else v-model="user_id"
-                placeholder="Select Customer"
-                :disabled="is_paid || filterStatus(status).is_disabled"
+                :placeholder="$t('booking.customer_name')"
+                :disabled="isPaidBooking || filterStatus(status).is_disabled"
                 :value="user_id"
                 v-bind="singleSelectOption" 
                 :options="customer.options"
@@ -111,7 +129,7 @@
               <div class="d-flex flex-column gap-2">
                 <div class="d-flex align-items-center justify-content-between">
                   <h6>{{ service.service_name }} ({{ formatCurrencyVue(service.service_price) }})</h6>
-                  <button type="button" v-if="!['check_in', 'checkout', 'confirmed'].includes(status) && !is_paid" @click="removeService(service.service_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                  <button type="button" v-if="canEditFullBooking" @click="removeService(service.service_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
                 </div>
                 <p class="m-0">
                   <label
@@ -124,29 +142,29 @@
                     ><i>{{ $t('booking.lbl_at') }}</i></label
                   >
                   <strong v-if="service.start_date_time !== 'Invalid date'">{{ moment(service.start_date_time).format('LT') }}</strong
-                  ><strong v-else>--:--</strong> <span class="px-2">|</span> <label class="me-2"><i>For: </i></label><strong>{{ service.duration_min }} Min</strong>
+                  ><strong v-else>--:--</strong> <span class="px-2">|</span> <label class="me-2"><i>{{ $t('booking.lbl_for') }} </i></label><strong>{{ service.duration_min }} {{ $t('booking.lbl_minutes') }}</strong>
                 </div>
               </div>
             </li>
           </ul>
-          <div v-if="selectPurchasePackages.length === 0 && services_id.length < service.options.length && selectedCustomer && employee_id" class="text-center">
-            <Multiselect v-if="newService" :canClear="false" placeholder="Select Service" ref="serviceInput" class="" v-model="services_id" :value="services_id" v-bind="multipleSelectOption" :options="service.options" @select="serviceSelect" id="service_ids">
+          <div v-if="canEditFullBooking && selectPurchasePackages.length === 0 && services_id.length < service.options.length && selectedCustomer && employee_id" class="text-center">
+            <Multiselect v-if="newService" :canClear="false" :placeholder="$t('booking.select_service')" ref="serviceInput" class="" v-model="services_id" :value="services_id" v-bind="multipleSelectOption" :options="service.options" @select="serviceSelect" id="service_ids">
               <template v-slot:multiplelabel="{ values }">
-                <div class="multiselect-multiple-label">Select Service</div>
+                <div class="multiselect-multiple-label">{{ $t('booking.select_service') }}</div>
               </template>
             </Multiselect>
             <template v-else>
-              <a v-if="!filterStatus(status).is_disabled && !is_paid && start_date_time" href="javascript:void(0)" @click="addNewService" class="btnw-100"><i class="fa-solid fa-circle-plus"></i> {{ $t('booking.lbl_add_service') }}</a>
+              <a v-if="canEditFullBooking && start_date_time" href="javascript:void(0)" @click="addNewService" class="btnw-100"><i class="fa-solid fa-circle-plus"></i> {{ $t('booking.lbl_add_service') }}</a>
             </template>
           </div>
-          <div v-if="selectPurchasePackages.length == 0 && selectedCustomer && employee_id" class="text-center bg-soft-primary p-5 iq-package mt-3" @click="purchasePackageModel">
+          <div v-if="canEditFullBooking && selectPurchasePackages.length == 0 && selectedCustomer && employee_id" class="text-center bg-soft-primary p-5 iq-package mt-3" @click="purchasePackageModel">
             <div class="d-flex justify-content-center mb-3">
               <div class="avatar avatar-60 rounded-pill bg-soft-secondary">
                 <i class="fa-solid fa-gift"></i>
               </div>
             </div>
             <h5>{{ filteredPackages.length }} {{ $t('booking.lbl_package_available') }}</h5>
-            <h6 class="text-primary">View all</h6>
+            <h6 class="text-primary">{{ $t('booking.lbl_view_all') }}</h6>
           </div>
           <div v-if="selectPurchasePackages.length > 0 && selectedCustomer && employee_id">
             <ul class="form-group list-group list-group-flush iq-package-list">
@@ -158,7 +176,7 @@
                 <div class="d-flex flex-column gap-2">
                   <div class="d-flex align-items-center justify-content-between">
                     <h6>{{ packages.name }}</h6>
-                    <button type="button" v-if="!['check_in', 'checkout', 'confirmed'].includes(status) && !is_paid" @click="removePurchasePackage(packages.package_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                    <button type="button" v-if="canEditFullBooking" @click="removePurchasePackage(packages.package_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
                   </div>
 
                   <p class="mb-0">
@@ -169,10 +187,10 @@
                     <div class="mb-4">
                       <div class="d-flex align-items-center gap-2 mb-1">
                         <p class="mb-0">-> {{ packageServices.service_name }} -</p>
-                        <h6 class="mb-0">60 mins</h6>
+                        <h6 class="mb-0">60 {{ $t('booking.lbl_minutes') }}</h6>
                       </div>
                       <div class="d-flex align-items-center gap-2 ms-3">
-                        <p class="mb-0">Quantity:</p>
+                        <p class="mb-0">{{ $t('booking.lbl_quantity') }}:</p>
                         <h6 class="mb-0">{{ packageServices.quantity ?? packageServices.qty ?? packageServices.remaining_qty }}</h6>
                       </div>
                     </div>
@@ -194,7 +212,7 @@
           </div>
           <div class="form-group px-3">
             <label class="form-label">{{ $t('booking.lbl_note') }}</label>
-            <textarea name="note" :disabled="is_paid || filterStatus(status).is_disabled" v-model="note" cols="60" class="form-control"></textarea>
+            <textarea name="note" :disabled="isPaidBooking || filterStatus(status).is_disabled" v-model="note" cols="60" class="form-control"></textarea>
           </div>
           <div class="form-group m-0 p-3 d-flex justify-content-between border-top">
             <label for=""
@@ -202,11 +220,11 @@
             </label>
             <span>{{ formatCurrencyVue(SUB_TOTAL_SERVICE_AMOUNT) }}</span>
           </div>
-          <div class="d-grid gap-3" v-if="status !== 'check_in' && !is_paid">
-            <button :disabled="services_id.length > 0 || (selectPurchasePackages.length > 0 && status !== 'cancelled') ? false : true" :class="`btn ${services_id.length > 0 || (selectPurchasePackages.length > 0 && status !== 'cancelled') ? 'btn-primary' : 'disabled btn-gray'} btn-lg rounded-0 d-block`" @click="formSubmit">
+          <div class="d-grid gap-3" v-if="canSaveBooking">
+            <button :disabled="IS_SUBMITED || !canSubmitBooking" :class="`btn ${canSubmitBooking ? 'btn-primary' : 'disabled btn-gray'} btn-lg rounded-0 d-block`" @click="formSubmit">
               <template v-if="IS_SUBMITED">
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                Loading...
+                {{ $t('booking.loading') }}
               </template>
               <span v-else><i class="fa-solid fa-floppy-disk me-2"></i>{{ $t('messages.save_appointment') }}</span>
             </button>
@@ -621,6 +639,7 @@
 </template>
 <script setup>
 import { ref, reactive, watch, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FlatPickr from 'vue-flatpickr-component'
 import { useBookingStore } from '../store/booking'
 // Select Options List Request
@@ -650,6 +669,7 @@ const { getRequest, storeRequest, updateRequest, listingRequest } = useRequest()
 const store = useBookingStore()
 // Event Emits
 const emit = defineEmits(['onSubmit'])
+const { t } = useI18n()
 
 const formatCurrencyVue = (value) => {
   if (window.currencyFormat !== undefined) {
@@ -673,12 +693,22 @@ const props = defineProps({
   }
 })
 const IS_SUBMITED = ref(false)
+const IS_EMPLOYEES_LOADING = ref(false)
+const IS_SLOTS_LOADING = ref(false)
 const filterStatus = (value) => {
   if (props.statusList) {
     return props.statusList[value]
   }
   return { is_disabled: false }
 }
+const isPaidBooking = computed(() => Number(is_paid.value) === 1)
+const scheduleLockedStatuses = ['check_in', 'checkout']
+const fullEditLockedStatuses = ['check_in', 'checkout', 'confirmed']
+const canShowScheduleControls = computed(() => !scheduleLockedStatuses.includes(status.value))
+const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLockedStatuses.includes(status.value) && !filterStatus(status.value).is_disabled)
+const isScheduleDisabled = computed(() => !isPaidBooking.value && filterStatus(status.value).is_disabled)
+const canSaveBooking = computed(() => status.value !== 'check_in' && (isPaidBooking.value || !filterStatus(status.value).is_disabled))
+const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('messages.paid') : t('messages.unpaid')))
 const holidays = ref([])
 const current_date = ref(moment().format('YYYY-MM-DD'))
 const config = ref({
@@ -716,7 +746,7 @@ watch(
           }
 
           branchSelect(res.data.branch_id, true)
-          employeeSelect(res.data.employee_id)
+          employeeSelect(res.data.employee_id, true)
           getUserPackages(res.data.user_id)
           console.log(res.data);
         }
@@ -735,7 +765,7 @@ watch(
       }
       ensureCalendarPresetOptions()
       branchSelect(branch_id.value, true)
-      employeeSelect(employee_id.value)
+      employeeSelect(employee_id.value, true)
       window.setTimeout(() => {
         store.updateStep('MAIN')
         ensureCalendarPresetOptions()
@@ -802,6 +832,8 @@ const setFormData = (data) => {
   newSelectedServices.value = []
   packageApplied.value = false
   userPackage.value = []
+  selectedBookingCustomer.value = buildBookingCustomer(data)
+  ensureSelectedCustomerOption()
 
   if (data.status == 'checkout') {
     store.updateStep('CHECK_OUT')
@@ -895,8 +927,41 @@ const branch = ref({ options: [], list: [] })
 const employee = ref({ options: [], list: [] })
 const customer = ref({ options: [], list: [] })
 const service = ref({ options: [], list: [] })
+const selectedBookingCustomer = ref(null)
 
 const slots = ref([])
+
+const buildBookingCustomer = (data) => {
+  if (!data?.user_id) {
+    return null
+  }
+
+  return {
+    id: data.user_id,
+    full_name: data.user_name || '',
+    profile_image: data.user_profile_image || '',
+    created_at: data.user_created || null,
+    mobile: data.user_mobile || '',
+    email: data.user_email || ''
+  }
+}
+
+const ensureSelectedCustomerOption = () => {
+  if (!selectedBookingCustomer.value?.id) {
+    return
+  }
+
+  const customerId = String(selectedBookingCustomer.value.id)
+  const hasCustomer = customer.value.list.some((item) => String(item.id) === customerId)
+
+  if (!hasCustomer) {
+    customer.value.list = [selectedBookingCustomer.value, ...customer.value.list]
+    customer.value.options = [
+      { value: selectedBookingCustomer.value.id, label: selectedBookingCustomer.value.full_name },
+      ...customer.value.options
+    ]
+  }
+}
 
 const ensureSelectOption = (selectRef, option) => {
   if (!option?.value) return
@@ -911,7 +976,7 @@ const ensureSelectOption = (selectRef, option) => {
 }
 
 const ensureCalendarPresetOptions = () => {
-  if (props.bookingType !== 'CALENDER_BOOKING' || props.bookingData.id) return
+  if (props.bookingType !== 'CALENDER_BOOKING') return
 
   const selectedBranch = branch.value.list.find((item) => String(item.id) === String(branch_id.value))
   ensureSelectOption(branch, {
@@ -950,6 +1015,7 @@ useOnOffcanvasShow('booking-form', () => {
 const getCustomers = (cb) =>
   useSelect({ url: CUSTOMER_LIST }, { value: 'id', label: 'full_name' }).then((data) => {
     customer.value = data
+    ensureSelectedCustomerOption()
     if (typeof cb == 'function') {
       cb()
     }
@@ -957,29 +1023,39 @@ const getCustomers = (cb) =>
 
 const dateChange = () => {
   start_date_time.value = null
-  employee_id.value = null
+  slots.value = []
   service.value = { options: [], list: [] }
-  resetServices()
-  setEmployeeOptions([])
-  getSlots()
+  if (!isPaidBooking.value) {
+    resetServices()
+  }
+  loadAvailableEmployees().then(() => {
+    if (employee_id.value) {
+      getSlots()
+    }
+  })
 }
 
 const getSlots = () => {
-  if (!branch_id.value || !current_date.value) {
+  if (!branch_id.value || !current_date.value || !employee_id.value) {
     slots.value = []
+    IS_SLOTS_LOADING.value = false
     return Promise.resolve()
   }
 
+  IS_SLOTS_LOADING.value = true
   return listingRequest({ url: SLOT_LIST, data: { 
       branch_id: branch_id.value,
       date: current_date.value,
-      employee_id: null,
-      service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0 // Add service duration
+      employee_id: employee_id.value,
+      booking_id: id.value || null,
+      service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0
     }  }).then((res) => {
     if (res.status) {
       slots.value = res.data || []
       ensureCalendarPresetOptions()
     }
+  }).finally(() => {
+    IS_SLOTS_LOADING.value = false
   })
 }
 
@@ -995,17 +1071,18 @@ const setEmployeeOptions = (employees) => {
 }
 
 const loadAvailableEmployees = () => {
-  if (!branch_id.value || !current_date.value || !start_date_time.value) {
+  if (!branch_id.value || !current_date.value) {
     setEmployeeOptions([])
+    IS_EMPLOYEES_LOADING.value = false
     return Promise.resolve()
   }
 
+  IS_EMPLOYEES_LOADING.value = true
   return listingRequest({
     url: INDEX_URL,
     data: {
       branch_id: branch_id.value,
       date: current_date.value,
-      start_date_time: start_date_time.value,
       service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0,
       per_page: 1000
     }
@@ -1022,25 +1099,29 @@ const loadAvailableEmployees = () => {
       employee_id.value = null
       service.value = { options: [], list: [] }
       slots.value = []
-      resetServices()
+      if (!isPaidBooking.value) {
+        resetServices()
+      }
     }
 
     ensureCalendarPresetOptions()
+  }).finally(() => {
+    IS_EMPLOYEES_LOADING.value = false
   })
 }
 // On Select
 const branchSelect = (value, preserveSelection = false) => {
   branch_id.value = Number(value) > 0 ? value : null
   if (preserveSelection) {
-    loadAvailableEmployees()
+    loadAvailableEmployees().then(() => getSlots())
   } else {
     employee_id.value = null
     start_date_time.value = null
+    slots.value = []
     service.value = { options: [], list: [] }
-    setEmployeeOptions([])
     resetServices()
+    loadAvailableEmployees()
   }
-  getSlots()
   if (value) {
     fetchHolidays(value)
   } else {
@@ -1075,14 +1156,38 @@ const removeBranch = (value) => {
   user_id.value = null
   resetServices()
 }
-const employeeSelect = (value) => {
+const employeeSelect = (value, preserveSelection = false) => {
   employee_id.value = value
+  if (!preserveSelection) {
+    start_date_time.value = null
+    slots.value = []
+  }
+  if (isPaidBooking.value) {
+    selectedService.value = selectedService.value.map((bookingService) => ({
+      ...bookingService,
+      employee_id: value,
+      employee: selectedEmployee.value || bookingService.employee
+    }))
+    selectPurchasePackages.value = selectPurchasePackages.value.map((bookingPackage) => ({
+      ...bookingPackage,
+      employee_id: value
+    }))
+    if (start_date_time.value) {
+      resetServiceTime()
+    }
+  } else if (!preserveSelection) {
+    resetServices()
+  }
   useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, { value: 'service_id', label: 'service_name' }).then((data) => {
     service.value = data
     ensureCalendarPresetOptions()
   })
+  getSlots()
 }
 const removeEmployee = () => {
+  employee_id.value = null
+  start_date_time.value = null
+  slots.value = []
   service.value = { options: [], list: [] }
   resetServices()
 }
@@ -1099,26 +1204,28 @@ const customerSelect = (value) => {
   }
 }
 const slotSelect = () => {
-  employee_id.value = null
-  service.value = { options: [], list: [] }
-  resetServices()
-  loadAvailableEmployees()
   resetServiceTime()
 }
 const removeSlot = () => {
-  employee_id.value = null
-  service.value = { options: [], list: [] }
-  setEmployeeOptions([])
-  resetServices()
+  start_date_time.value = null
   resetServiceTime()
 }
 
 //  Customer Select & Unselect & Selected Values
-const selectedCustomer = computed(() => customer.value.list.find((customer) => customer.id == user_id.value) ?? null)
+const selectedCustomer = computed(() => {
+  const customerFromList = customer.value.list.find((customer) => customer.id == user_id.value)
+
+  if (customerFromList) {
+    return customerFromList
+  }
+
+  return String(selectedBookingCustomer.value?.id || '') === String(user_id.value || '') ? selectedBookingCustomer.value : null
+})
 const selectedEmployee = computed(() => employee.value.list.find((employee) => employee.id == employee_id.value) ?? null)
 
 const removeCustomer = () => {
   user_id.value = null
+  selectedBookingCustomer.value = null
   services_id.value = []
   selectedService.value = []
   userPackage.value = null
@@ -1138,6 +1245,7 @@ const removeService = (id) => {
   selectedService.value = selectedService.value.filter((BKservice) => BKservice.service_id !== id)
   newSelectedServices.value = newSelectedServices.value.filter((BKservice) => BKservice.service_id !== id)
   resetServiceTime()
+  getSlots()
 }
 const newService = ref(false)
 const serviceInput = ref(null)
@@ -1164,9 +1272,18 @@ const serviceSelect = (value) => {
   selectedService.value.push(bookingService)
   newSelectedServices.value.push(bookingService)
   resetServiceTime()
+  getSlots().then(() => {
+    if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value))) {
+      start_date_time.value = null
+      resetServiceTime()
+    }
+  })
   newService.value = false
 }
 const resetServiceTime = () => {
+  if (!start_date_time.value || !moment(start_date_time.value).isValid()) {
+    return
+  }
   let startTime = moment(start_date_time.value)
   selectedService.value.forEach((bookingService, index) => {
     if (index > 0) {
@@ -1498,6 +1615,13 @@ function singleAppliedService(service_id) {
 
 const selectPurchasePackages = ref([])
 const selectPurchasePackageIds = ref([])
+const canSubmitBooking = computed(() => {
+  const hasSelectedServices = selectedService.value.length > 0 || services_id.value.length > 0
+  const hasSelectedPackages = selectPurchasePackages.value.length > 0 && status.value !== 'cancelled'
+  const hasSchedule = Boolean(branch_id.value && employee_id.value && start_date_time.value)
+
+  return canSaveBooking.value && hasSchedule && (hasSelectedServices || hasSelectedPackages)
+})
 function purchasePackageModel() {
   $('#purchasePackageModel').modal('show')
   selectPurchasePackages.value.forEach((packages) => {
@@ -1752,6 +1876,50 @@ const isServiceInFilteredPackages = (serviceId) => {
   align-items: center;
   justify-content: center;
   color: var(--bs-body-color);
+}
+.booking-payment-status {
+  align-items: center;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+.booking-payment-status span {
+  color: var(--bs-secondary-color);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+.booking-payment-status strong {
+  border-radius: 999px;
+  font-size: 0.82rem;
+  padding: 4px 10px;
+}
+.booking-payment-status.is-paid strong {
+  background: rgba(25, 135, 84, 0.12);
+  color: #198754;
+}
+.booking-payment-status.is-unpaid strong {
+  background: rgba(220, 53, 69, 0.12);
+  color: #dc3545;
+}
+.booking-field-wrap {
+  position: relative;
+}
+.booking-field-loader {
+  align-items: center;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  bottom: -26px;
+  color: var(--bs-secondary-color);
+  display: inline-flex;
+  font-size: 0.78rem;
+  gap: 6px;
+  inset-inline-end: 0;
+  padding: 3px 8px;
+  position: absolute;
+  z-index: 2;
 }
 .service-duration {
   position: absolute;

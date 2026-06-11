@@ -433,12 +433,14 @@ const getEventEmployeeName = (employeeId) => {
 }
 
 const openBookingListEvent = (event) => {
+  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(event.resourceId))
   const updatedInfo = {
     id: event.extendedProps?.booking_id || event.id,
     resource: {
       id: event.resourceId,
       branch_id: event.extendedProps?.branch_id
     },
+    employee_name: event.extendedProps?.employee_name || employee?.title,
     date: event.start
   }
   showBookingForm(updatedInfo)
@@ -557,7 +559,7 @@ const setBooking = (info) => {
   const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
   bookingData.id = info.id || 0
   bookingData.employee_id = employeeId
-  bookingData.employee_name = employee?.title || null
+  bookingData.employee_name = employee?.title || info.employee_name || null
   bookingData.start_date_time = getInfoStartDate(info)
   bookingData.branch_id = resolveBranchId(info)
 }
@@ -1086,6 +1088,7 @@ onMounted(() => {
                 id: resourceId,
                 branch_id: info.event.extendedProps?.branch_id || employee?.branch_id
               },
+              employee_name: info.event.extendedProps?.employee_name || employee?.title,
               date: info.event.start
             }
             showBookingForm(updatedInfo)

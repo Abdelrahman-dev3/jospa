@@ -45,7 +45,7 @@ export const UPDATE_STATUS = (id) => {return {path: `${MODULE}/update-status/${i
 export const EMPLOYEE_ORDER_URL = () => {return {path: `${MODULE}/employee-order`, method: 'POST'}}
 export const CUSTOMER_LIST = () => {return {path: `users/user-list?role=user`, method: 'GET'}}
 export const SERVICE_LIST = ({id: employee_id, branch_id}) => {return {path: `${MODULE}/services-index_list?employee_id=${employee_id}&branch_id=${branch_id}`, method: 'GET'}}
-export const SLOT_LIST = ({date, employee_id = null, branch_id, service_duration = 0}) => {return { path: `${MODULE}/slots?date=${date}&branch_id=${branch_id}&employee_id=${employee_id || ''}&service_duration=${service_duration}`, method: 'GET',}}
+export const SLOT_LIST = ({date, employee_id = null, branch_id, service_duration = 0, booking_id = null}) => {return { path: `${MODULE}/slots?date=${date}&branch_id=${branch_id}&employee_id=${employee_id || ''}&service_duration=${service_duration}&booking_id=${booking_id || ''}`, method: 'GET',}}
 export const UPDATE_PAYMENT_DATA = (booking_transaction_id) => {return {path: `${MODULE}/booking-payment-update/${booking_transaction_id}`, method: 'PUT'}}
 export const STRIPE_PAYMENT_DATA = () => {return {path: `${MODULE}/stripe-payment`, method: 'POST'}}
 export const coupon_validate = () => {return {path: `promotions/coupon-validate`, method: 'PUT'}}
