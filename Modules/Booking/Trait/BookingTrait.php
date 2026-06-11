@@ -26,7 +26,7 @@ trait BookingTrait
         }
         $bookingService->delete();
         foreach ($serviceData as $key => $value) {
-            BookingService::updateOrCreate(['booking_id' => $booking_id, 'service_id' => $value['service_id'], 'employee_id' => $value['employee_id']], [
+            BookingService::updateOrCreate(['booking_id' => $booking_id, 'service_id' => $value['service_id']], [
                 'sequance' => $key,
                 'start_date_time' => $value['start_date_time'],
                 'booking_id' => $booking_id,
@@ -67,7 +67,7 @@ trait BookingTrait
         $bookingPackage->delete(); 
         foreach ($packageData as $key => $value) {
 
-            $bookingPackage = BookingPackages::updateOrCreate(['booking_id' => $booking_id, 'package_id' => $value['package_id'], 'employee_id' => $value['employee_id'], 'is_reclaim' => $value['is_reclaim']], [
+            $bookingPackage = BookingPackages::updateOrCreate(['booking_id' => $booking_id, 'package_id' => $value['package_id'], 'is_reclaim' => $value['is_reclaim']], [
                 'sequance' => $key,
                 'booking_id' => $booking_id,
                 'package_id' => $value['package_id'],

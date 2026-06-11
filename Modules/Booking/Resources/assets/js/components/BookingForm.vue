@@ -37,7 +37,6 @@
           </div>
         </div>
         <div class="offcanvas-body border-top">
-          <!-- <div class="form-group" v-if="bookingType !== 'CALENDER_BOOKING' && branch.options.length > 1"> -->
           <div class="form-group" v-if="canShowScheduleControls">
             <Multiselect id="branch_id" :placeholder="$t('booking.select_branch')" v-model="branch_id" :disabled="isPaidBooking || isScheduleDisabled" :value="branch_id" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" @change="removeBranch" class="form-group"></Multiselect>
           </div>
@@ -82,7 +81,7 @@
               </div>
               <div class="row">
                 <label class="col-3"
-                  ><i>{{ $t('booking.lbl_phone') }}</i></label
+                ><i>{{ $t('booking.lbl_phone') }}</i></label
                 >
                 <strong class="col">
                   <span v-if="selectedCustomer.mobile">{{ selectedCustomer.mobile }}</span>
@@ -91,7 +90,7 @@
               </div>
               <div class="row mb-3">
                 <label class="col-3"
-                  ><i>{{ $t('booking.lbl_e-mail') }}</i></label
+                ><i>{{ $t('booking.lbl_e-mail') }}</i></label
                 >
                 <strong class="col">
                   <span v-if="selectedCustomer.email">{{ selectedCustomer.email }}</span>
@@ -99,29 +98,29 @@
                 </strong>
               </div>
             </div>
-            <Multiselect 
-                id="user_id"
-                v-else v-model="user_id"
-                :placeholder="$t('booking.customer_name')"
-                :disabled="isPaidBooking || filterStatus(status).is_disabled"
-                :value="user_id"
-                v-bind="singleSelectOption" 
-                :options="customer.options"
-                @select="customerSelect"
-                class="form-group"
-                >
-                 <template #option="{ option }">
+            <Multiselect
+              id="user_id"
+              v-else v-model="user_id"
+              :placeholder="$t('booking.customer_name')"
+              :disabled="isPaidBooking || filterStatus(status).is_disabled"
+              :value="user_id"
+              v-bind="singleSelectOption"
+              :options="customer.options"
+              @select="customerSelect"
+              class="form-group"
+            >
+              <template #option="{ option }">
                     <span v-if="option.__CREATE__">
                       {{ option.label }} {{ $t('booking.add_customer_label') }}
                     </span>
-                    <span v-else>
+                <span v-else>
                       {{ option.label }}
                     </span>
-                  </template>
-                
-                  <template #singlelabel="{ option }">
-                    <span>{{ option.label }}</span>
-                  </template>
+              </template>
+
+              <template #singlelabel="{ option }">
+                <span>{{ option.label }}</span>
+              </template>
             </Multiselect>
           </div>
           <ul class="form-group list-group list-group-flush">
@@ -133,13 +132,13 @@
                 </div>
                 <p class="m-0">
                   <label
-                    ><i>{{ $t('booking.lbl_with') }}</i></label
+                  ><i>{{ $t('booking.lbl_with') }}</i></label
                   >
                   <strong>{{ service.employee?.full_name || selectedEmployee?.name || '' }}</strong>
                 </p>
                 <div>
                   <label
-                    ><i>{{ $t('booking.lbl_at') }}</i></label
+                  ><i>{{ $t('booking.lbl_at') }}</i></label
                   >
                   <strong v-if="service.start_date_time !== 'Invalid date'">{{ moment(service.start_date_time).format('LT') }}</strong
                   ><strong v-else>--:--</strong> <span class="px-2">|</span> <label class="me-2"><i>{{ $t('booking.lbl_for') }} </i></label><strong>{{ service.duration_min }} {{ $t('booking.lbl_minutes') }}</strong>
@@ -170,7 +169,6 @@
             <ul class="form-group list-group list-group-flush iq-package-list">
               <div class="d-flex align-items-center justify-content-between">
                 <h6 class="mb-0">{{ $t('booking.lbl_packages_detail') }}</h6>
-                <!-- <a href="#" @click="purchasePackageModel" class="pe-auto text-primary">{{ $t('booking.lbl_add_more') }}</a> -->
               </div>
               <li v-for="(packages, index) in selectPurchasePackages" :key="index" class="list-group-item py-3 px-3 bg-soft-primary rounded-3 m-2">
                 <div class="d-flex flex-column gap-2">
@@ -216,7 +214,7 @@
           </div>
           <div class="form-group m-0 p-3 d-flex justify-content-between border-top">
             <label for=""
-              ><strong>{{ $t('booking.lbl_sub_tot') }} </strong>
+            ><strong>{{ $t('booking.lbl_sub_tot') }} </strong>
             </label>
             <span>{{ formatCurrencyVue(SUB_TOTAL_SERVICE_AMOUNT) }}</span>
           </div>
@@ -271,16 +269,16 @@
                   </div>
                   <p class="m-0">
                     <label
-                      ><i>{{ $t('booking.lbl_with') }}</i></label
+                    ><i>{{ $t('booking.lbl_with') }}</i></label
                     >
                     <strong>{{ service.employee?.full_name || selectedEmployee?.name || '' }}</strong>
                   </p>
                   <div>
                     <label
-                      ><i>{{ $t('booking.lbl_at') }}</i></label
+                    ><i>{{ $t('booking.lbl_at') }}</i></label
                     >
                     <strong>{{ moment(service.start_date_time).format('LT') }}</strong> <span class="px-2">|</span> <label class="me-2"> <i>For:</i></label
-                    ><strong> {{ service.duration_min }} Min</strong>
+                  ><strong> {{ service.duration_min }} Min</strong>
                   </div>
                 </div>
                 <div v-if="!isPackageServiceSelected(service.service_id) && isServiceInFilteredPackages(service.service_id)">
@@ -288,12 +286,8 @@
                 </div>
                 <div class="mt-2 d-none d-flex justify-content-between align-items-center" :id="service.service_id + '' + service.service_id">
                   <h6>{{ service.service_name }} Package</h6>
-                  <!-- <div v-for="appliedServices in appliedServices">
-                      <h6 class="text-danger" v-if="service.service_id === ">- {{ formatCurrencyVue(appliedServices.price) }}</h6>
-                    </div> -->
                   <h6 class="text-danger" v-if="singleAppliedService(service.service_id)">- {{ formatCurrencyVue(singleAppliedServicePrice) }}</h6>
                 </div>
-                <!-- </div> -->
               </li>
             </ul>
           </div>
@@ -326,7 +320,6 @@
             <ul class="form-group list-group list-group-flush mt-3">
               <div class="d-flex align-items-center justify-content-between">
                 <h6>{{ $t('booking.lbl_packages_detail') }}</h6>
-                <!-- <a href="#" @click="purchasePackageModel" class="pe-auto text-primary">add more</a> -->
               </div>
               <li v-for="(packages, index) in selectPurchasePackages" :key="index" class="list-group-item py-3 px-3 bg-soft-primary rounded-3 m-2">
                 <div class="d-flex flex-column gap-2">
@@ -420,7 +413,7 @@
         <div class="offcanvas-footer border-top">
           <div class="form-group m-0 p-3 d-flex justify-content-between">
             <label for=""
-              ><strong>{{ $t('booking.lbl_sub_tot') }} </strong>
+            ><strong>{{ $t('booking.lbl_sub_tot') }} </strong>
             </label>
 
             <span v-if="packageApplied">{{ formatCurrencyVue(GRAND_TOTAL) }}</span>
@@ -637,13 +630,29 @@
 
   <CustomerCreate :data="newCustomerData" @submit="externalFormCreation"></CustomerCreate>
 </template>
+
 <script setup>
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FlatPickr from 'vue-flatpickr-component'
 import { useBookingStore } from '../store/booking'
-// Select Options List Request
-import { INDEX_URL, CUSTOMER_LIST, SERVICE_LIST, SLOT_LIST, PAYMENT_PUT_URL, UPDATE_PAYMENT_DATA, CHECKOUT_URL, STRIPE_PAYMENT_DATA, EDIT_URL, STORE_URL, UPDATE_URL, UPDATE_STATUS, PRODUCT_LIST, PACKAGE_LIST, USER_PACKAGE_LIST } from '../constant/booking'
+import {
+  INDEX_URL,
+  CUSTOMER_LIST,
+  SERVICE_LIST,
+  SLOT_LIST,
+  PAYMENT_PUT_URL,
+  UPDATE_PAYMENT_DATA,
+  CHECKOUT_URL,
+  STRIPE_PAYMENT_DATA,
+  EDIT_URL,
+  STORE_URL,
+  UPDATE_URL,
+  UPDATE_STATUS,
+  PRODUCT_LIST,
+  PACKAGE_LIST,
+  USER_PACKAGE_LIST
+} from '../constant/booking'
 import { BRANCH_LIST, IS_HOLIDAY } from '@/vue/constants/branch'
 
 import { useField, useForm } from 'vee-validate'
@@ -651,10 +660,8 @@ import * as yup from 'yup'
 
 import { useRequest, useOnOffcanvasHide, useOnOffcanvasShow } from '@/helpers/hooks/useCrudOpration'
 
-// Modals
 import CustomerCreate from '@/vue/components/Modal/CustomerCreate.vue'
 
-// Element Component
 import BookingHeader from './BookingFormElements/BookingHeader.vue'
 import BookingStatus from './BookingFormElements/BookingStatus.vue'
 import PaymentForm from './Forms/PaymentForm.vue'
@@ -663,11 +670,11 @@ import InvoiceComponent from './Forms/InvoiceComponent.vue'
 import QtyButton from '@/vue/components/form-elements/QtyButton.vue'
 import { useSelect } from '@/helpers/hooks/useSelect'
 import moment from 'moment'
+
 const shownServiceIds = ref([])
 
 const { getRequest, storeRequest, updateRequest, listingRequest } = useRequest()
 const store = useBookingStore()
-// Event Emits
 const emit = defineEmits(['onSubmit'])
 const { t } = useI18n()
 
@@ -677,7 +684,7 @@ const formatCurrencyVue = (value) => {
   }
   return value
 }
-// Props
+
 const props = defineProps({
   statusList: { type: Object },
   bookingType: { type: String, default: 'GLOBAL_BOOKING' },
@@ -692,15 +699,18 @@ const props = defineProps({
     }
   }
 })
+
 const IS_SUBMITED = ref(false)
 const IS_EMPLOYEES_LOADING = ref(false)
 const IS_SLOTS_LOADING = ref(false)
+
 const filterStatus = (value) => {
   if (props.statusList) {
     return props.statusList[value]
   }
   return { is_disabled: false }
 }
+
 const isPaidBooking = computed(() => Number(is_paid.value) === 1)
 const scheduleLockedStatuses = ['check_in', 'checkout']
 const fullEditLockedStatuses = ['check_in', 'checkout', 'confirmed']
@@ -709,6 +719,7 @@ const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLocke
 const isScheduleDisabled = computed(() => !isPaidBooking.value && filterStatus(status.value).is_disabled)
 const canSaveBooking = computed(() => status.value !== 'check_in' && (isPaidBooking.value || !filterStatus(status.value).is_disabled))
 const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('messages.paid') : t('messages.unpaid')))
+
 const holidays = ref([])
 const current_date = ref(moment().format('YYYY-MM-DD'))
 const config = ref({
@@ -717,12 +728,15 @@ const config = ref({
   static: true,
   disable: holidays.value
 })
+
 watch(holidays, () => {
   config.value.disable = holidays.value
 })
+
 watch(
   () => props.bookingType,
-  (value) => {}
+  (value) => {
+  }
 )
 
 watch(
@@ -740,15 +754,14 @@ watch(
           store.updateStep('MAIN')
           setFormData(res.data)
 
-          // Check for coupon_redeem and handle it
           if (res.data.coupon_redeem) {
-            couponRedeem.value = res.data.coupon_redeem // Assuming you have a reactive couponRedeem
+            couponRedeem.value = res.data.coupon_redeem
           }
 
           branchSelect(res.data.branch_id, true)
           employeeSelect(res.data.employee_id, true)
           getUserPackages(res.data.user_id)
-          console.log(res.data);
+          console.log(res.data)
         }
       })
     } else {
@@ -775,7 +788,6 @@ watch(
   { deep: true }
 )
 
-// Vee-Validation Validations
 const validationSchema = yup.object({
   start_date_time: yup.string().required('Start Date Time is required'),
   branch_id: yup.string().required('Branch is required').notOneOf(['0', 0], 'Branch is required'),
@@ -796,18 +808,18 @@ const { value: services_id } = useField('services_id')
 const { value: product_variation_id } = useField('product_variation_id')
 const { value: is_paid } = useField('is_paid')
 const { value: package_id } = useField('package_id')
+
 status.value = 'pending'
 product_variation_id.value = []
 package_id.value = []
 services_id.value = []
-const userPackage = ref([])
 
+const userPackage = ref([])
 const selectedPackageService = ref([])
 const tempSelectedPackageService = ref([])
 const errorMessages = ref({})
 const couponRedeem = ref([])
 
-// Default FORM DATA
 const defaultData = () => {
   errorMessages.value = {}
   selectedPackageService.value = []
@@ -825,7 +837,6 @@ const defaultData = () => {
   }
 }
 
-//  Reset Form
 const setFormData = (data) => {
   IS_SUBMITED.value = false
   newService.value = false
@@ -879,11 +890,13 @@ const setFormData = (data) => {
     resetPurchasePackage()
     userPackage.value = null
   }
+
   if (data.packages !== undefined && data.packages.length > 0) {
     selectedPackage.value = data.packages
   } else {
     resetPackage()
   }
+
   resetForm({
     values: {
       id: data.id,
@@ -901,7 +914,6 @@ const setFormData = (data) => {
   })
 }
 
-// Emit Listner Functions
 const externalFormCreation = (e) => {
   switch (e.type) {
     case 'create_customer':
@@ -910,7 +922,6 @@ const externalFormCreation = (e) => {
   }
 }
 
-// Select Options
 const singleSelectOption = ref({
   createOption: true,
   closeOnSelect: true,
@@ -928,14 +939,12 @@ const employee = ref({ options: [], list: [] })
 const customer = ref({ options: [], list: [] })
 const service = ref({ options: [], list: [] })
 const selectedBookingCustomer = ref(null)
-
 const slots = ref([])
 
 const buildBookingCustomer = (data) => {
   if (!data?.user_id) {
     return null
   }
-
   return {
     id: data.user_id,
     full_name: data.user_name || '',
@@ -950,10 +959,8 @@ const ensureSelectedCustomerOption = () => {
   if (!selectedBookingCustomer.value?.id) {
     return
   }
-
   const customerId = String(selectedBookingCustomer.value.id)
   const hasCustomer = customer.value.list.some((item) => String(item.id) === customerId)
-
   if (!hasCustomer) {
     customer.value.list = [selectedBookingCustomer.value, ...customer.value.list]
     customer.value.options = [
@@ -965,11 +972,9 @@ const ensureSelectedCustomerOption = () => {
 
 const ensureSelectOption = (selectRef, option) => {
   if (!option?.value) return
-
   if (!selectRef.value.options.some((item) => String(item.value) === String(option.value))) {
     selectRef.value.options.unshift(option)
   }
-
   if (!selectRef.value.list.some((item) => String(item.id) === String(option.value))) {
     selectRef.value.list.unshift({ id: option.value, name: option.label, full_name: option.label })
   }
@@ -1043,13 +1048,16 @@ const getSlots = () => {
   }
 
   IS_SLOTS_LOADING.value = true
-  return listingRequest({ url: SLOT_LIST, data: { 
+  return listingRequest({
+    url: SLOT_LIST,
+    data: {
       branch_id: branch_id.value,
       date: current_date.value,
       employee_id: employee_id.value,
       booking_id: id.value || null,
       service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0
-    }  }).then((res) => {
+    }
+  }).then((res) => {
     if (res.status) {
       slots.value = res.data || []
       ensureCalendarPresetOptions()
@@ -1109,7 +1117,7 @@ const loadAvailableEmployees = () => {
     IS_EMPLOYEES_LOADING.value = false
   })
 }
-// On Select
+
 const branchSelect = (value, preserveSelection = false) => {
   branch_id.value = Number(value) > 0 ? value : null
   if (preserveSelection) {
@@ -1132,19 +1140,14 @@ const branchSelect = (value, preserveSelection = false) => {
 function fetchHolidays(value) {
   listingRequest({ url: IS_HOLIDAY, data: { branch_id: value } }).then((data) => {
     console.log(data)
-
-    // Extract dates from the object
     holidays.value = Object.values(data.isHoliday)
       .map((day) => {
         const parsedDate = new Date(day.date)
-
-        // Check if the parsed date is valid
         return isNaN(parsedDate.getTime()) ? null : parsedDate
       })
       .filter(Boolean)
     console.log(holidays.value)
   })
-  // Assuming the API returns an array of { date }
 }
 
 const removeBranch = (value) => {
@@ -1156,34 +1159,54 @@ const removeBranch = (value) => {
   user_id.value = null
   resetServices()
 }
+
+const updateSelectedBookingItemsEmployee = (value) => {
+  selectedService.value = selectedService.value.map((bookingService) => ({
+    ...bookingService,
+    employee_id: value,
+    employee: selectedEmployee.value || bookingService.employee
+  }))
+  selectPurchasePackages.value = selectPurchasePackages.value.map((bookingPackage) => ({
+    ...bookingPackage,
+    employee_id: value
+  }))
+}
+
+// ============================================================
+// ✅ الإصلاح الأول: employeeSelect
+// المشكلة: كان يستدعي resetServices() عند كل تغيير للموظف
+// حتى في المواعيد الموجودة (id.value > 0)، مما يمسح الخدمات
+// ويجعل canSubmitBooking = false
+// الحل: لا تمسح الخدمات إذا كان الموعد موجوداً (id.value)
+// ============================================================
 const employeeSelect = (value, preserveSelection = false) => {
   employee_id.value = value
   if (!preserveSelection) {
+    // امسح الوقت والـ slots دائماً عند تغيير الموظف (صحيح)
     start_date_time.value = null
     slots.value = []
   }
-  if (isPaidBooking.value) {
-    selectedService.value = selectedService.value.map((bookingService) => ({
-      ...bookingService,
-      employee_id: value,
-      employee: selectedEmployee.value || bookingService.employee
-    }))
-    selectPurchasePackages.value = selectPurchasePackages.value.map((bookingPackage) => ({
-      ...bookingPackage,
-      employee_id: value
-    }))
+  if (isPaidBooking.value || id.value) {
+    // موعد موجود أو مدفوع: حدّث الموظف في الخدمات بدلاً من مسحها
+    updateSelectedBookingItemsEmployee(value)
     if (start_date_time.value) {
       resetServiceTime()
     }
-  } else if (!preserveSelection) {
+  } else if (!preserveSelection && !id.value) {
+    // ✅ الإصلاح: أضفنا && !id.value
+    // موعد جديد فقط: امسح الخدمات عند تغيير الموظف
     resetServices()
   }
-  useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, { value: 'service_id', label: 'service_name' }).then((data) => {
+  useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, {
+    value: 'service_id',
+    label: 'service_name'
+  }).then((data) => {
     service.value = data
     ensureCalendarPresetOptions()
   })
   getSlots()
 }
+
 const removeEmployee = () => {
   employee_id.value = null
   start_date_time.value = null
@@ -1191,6 +1214,7 @@ const removeEmployee = () => {
   service.value = { options: [], list: [] }
   resetServices()
 }
+
 const newCustomerData = ref(null)
 const customerSelect = (value) => {
   getUserPackages(value)
@@ -1203,24 +1227,24 @@ const customerSelect = (value) => {
     user_id.value = null
   }
 }
+
 const slotSelect = () => {
   resetServiceTime()
 }
+
 const removeSlot = () => {
   start_date_time.value = null
   resetServiceTime()
 }
 
-//  Customer Select & Unselect & Selected Values
 const selectedCustomer = computed(() => {
   const customerFromList = customer.value.list.find((customer) => customer.id == user_id.value)
-
   if (customerFromList) {
     return customerFromList
   }
-
   return String(selectedBookingCustomer.value?.id || '') === String(user_id.value || '') ? selectedBookingCustomer.value : null
 })
+
 const selectedEmployee = computed(() => employee.value.list.find((employee) => employee.id == employee_id.value) ?? null)
 
 const removeCustomer = () => {
@@ -1231,14 +1255,17 @@ const removeCustomer = () => {
   userPackage.value = null
 }
 
-//------------------ Start:- Service Module Logic -----------------//
+// ------------------- Service Module -------------------
+
 const selectedService = ref([])
 const newSelectedServices = ref([])
+
 const resetServices = () => {
   selectedService.value = []
   services_id.value = []
   newSelectedServices.value = []
 }
+
 const removeService = (id) => {
   const servicesIds = services_id.value
   services_id.value = servicesIds.filter((serviceid) => serviceid !== id)
@@ -1247,8 +1274,10 @@ const removeService = (id) => {
   resetServiceTime()
   getSlots()
 }
+
 const newService = ref(false)
 const serviceInput = ref(null)
+
 const addNewService = (value) => {
   newService.value = true
   setTimeout(() => {
@@ -1280,6 +1309,7 @@ const serviceSelect = (value) => {
   })
   newService.value = false
 }
+
 const resetServiceTime = () => {
   if (!start_date_time.value || !moment(start_date_time.value).isValid()) {
     return
@@ -1296,13 +1326,11 @@ const resetServiceTime = () => {
   })
 }
 
-//------------------ End:- Service Module Logic -----------------//
+// ------------------- Package Module -------------------
 
-//------------------ Start:- Package Module Logic -----------------//
-
-// redeem package
 const packages = ref({ options: [], list: [] })
 const selectedPackage = ref([])
+
 const resetPackage = () => {
   selectedPackage.value = []
   package_id.value = []
@@ -1310,6 +1338,7 @@ const resetPackage = () => {
 
 const newPackage = ref(false)
 const packageInput = ref(null)
+
 const addNewPackage = (value) => {
   newPackage.value = true
   setTimeout(() => {
@@ -1333,11 +1362,11 @@ const getUserPackages = (user_id) => {
   })
 }
 
-//------------------ End:- PackagePackage Module Logic -----------------//
-//------------------ Start:- Product Module Logic -----------------//
+// ------------------- Product Module -------------------
 
 const newProduct = ref(false)
 const productInput = ref(null)
+
 const addNewProduct = (value) => {
   newProduct.value = true
   setTimeout(() => {
@@ -1351,6 +1380,7 @@ const resetProducts = () => {
 }
 
 const products = ref({ options: [], list: [] })
+
 const getProducts = () => {
   useSelect({ url: PRODUCT_LIST }, { value: 'id', label: 'text' }).then((data) => {
     products.value = data
@@ -1361,9 +1391,7 @@ const selectedProduct = ref([])
 
 const selectProduct = (value) => {
   const filteredProduct = products.value.list.find((pr) => pr.id == value)
-
   const product_variation = JSON.parse(filteredProduct.extra_data)
-
   const bookingProduct = {
     id: null,
     product_name: filteredProduct.text,
@@ -1390,18 +1418,43 @@ const removeProduct = (id) => {
   selectedProduct.value = selectedProduct.value.filter((BKproduct) => BKproduct.product_variation_id !== id)
 }
 
-//------------------ End:- Product Module Logic -----------------//
+// ------------------- Payment & Submit -------------------
 
 const payment_data = ref(null)
 const stripe_payment_data = ref(null)
 const SINLGE_STEP = computed(() => store.singleStep)
+
 var SUB_TOTAL_SERVICE_AMOUNT = computed(() =>
   selectedService.value.reduce((total, service) => total + service.service_price, 0) +
   selectPurchasePackages.value.reduce((total, PurchasePackage) => total + PurchasePackage.package_price, 0) +
   selectedProduct.value.reduce((total, product) => total + (product.discounted_price ? product.discounted_price : product.product_price) * product.product_qty, 0) +
   selectedPackage.value.reduce((total, packages) => total + packages.package_price, 0) -
-  (couponRedeem.value || 0) // Subtract coupon discount if it exists
+  (couponRedeem.value || 0)
 )
+
+// ============================================================
+// ✅ الإصلاح الثاني: canSubmitBooking
+// المشكلة: كان يشترط hasSelectedServices حتى في المواعيد الموجودة
+// بعد تغيير الموظف تصبح selectedService فارغة مؤقتاً → الزر يُعطّل
+// الحل: إضافة شرط isExistingBookingWithSchedule
+// إذا كان الموعد موجوداً (id) وتم اختيار branch + employee + time
+// يصبح الزر فعّالاً بغض النظر عن عدد الخدمات المحددة
+// ============================================================
+const canSubmitBooking = computed(() => {
+  const hasSelectedServices = selectedService.value.length > 0 || services_id.value.length > 0
+  const hasSelectedPackages = selectPurchasePackages.value.length > 0 && status.value !== 'cancelled'
+  const hasSchedule = Boolean(branch_id.value && employee_id.value && start_date_time.value)
+  const isExistingPaidBooking = Boolean(id.value && isPaidBooking.value)
+  // ✅ الشرط الجديد: موعد موجود + جدول مكتمل → اسمح بالحفظ
+  const isExistingBookingWithSchedule = Boolean(id.value && hasSchedule)
+
+  return (
+    canSaveBooking.value &&
+    hasSchedule &&
+    (isExistingPaidBooking || isExistingBookingWithSchedule || hasSelectedServices || hasSelectedPackages)
+  )
+})
+
 const formSubmit = handleSubmit((values) => {
   if (!IS_SUBMITED.value) {
     IS_SUBMITED.value = true
@@ -1420,16 +1473,33 @@ const formSubmit = handleSubmit((values) => {
     }
   }
 })
+
 const updateStatus = (data) => {
   setFormData(data)
-  emit('onSubmit')
+  emit('onSubmit', {
+    employee_id: employee_id.value,
+    start_date_time: start_date_time.value,
+    branch_id: branch_id.value,
+    booking_id: id.value
+  })
 }
+
 const submiting_booking = (res) => {
   IS_SUBMITED.value = false
+  const submittedBooking = {
+    employee_id: res?.data?.employee_id ?? employee_id.value,
+    start_date_time: res?.data?.start_date_time ?? start_date_time.value,
+    branch_id: res?.data?.branch_id ?? branch_id.value,
+    booking_id: res?.data?.id ?? id.value
+  }
+
   if (res.status) {
     window.successSnackbar(res.message)
     if (props.bookingType == 'CALENDER_BOOKING') {
       setFormData(res.data)
+      const elem = document.getElementById('booking-form')
+      const form = bootstrap.Offcanvas.getOrCreateInstance(elem)
+      form.hide()
     } else {
       setFormData(defaultData())
       const elem = document.getElementById('booking-form')
@@ -1442,17 +1512,22 @@ const submiting_booking = (res) => {
   } else {
     window.errorSnackbar(res.message)
   }
-  emit('onSubmit')
+  emit('onSubmit', submittedBooking)
 }
+
 const formSubmitCheckout = () => {
   if (!IS_SUBMITED.value) {
-    const values = { services: selectedService.value, products: selectedProduct.value, packages: selectedPackage.value, packageApplied: selectedPackageService.value, purchase_package: selectPurchasePackages.value }
+    const values = {
+      services: selectedService.value,
+      products: selectedProduct.value,
+      packages: selectedPackage.value,
+      packageApplied: selectedPackageService.value,
+      purchase_package: selectPurchasePackages.value
+    }
 
     IS_SUBMITED.value = true
     if (is_paid.value) {
-      const data = {
-        status: 'completed'
-      }
+      const data = { status: 'completed' }
       updateRequest({ url: UPDATE_STATUS, id: id.value, body: data }).then((res) => {
         if (res.status) {
           store.updateStep('MAIN')
@@ -1471,9 +1546,11 @@ const formSubmitCheckout = () => {
     }
   }
 }
+
 const updatePaymentData = (data) => {
   payment_data.value = data
 }
+
 const formSubmitPaynow = () => {
   if (!IS_SUBMITED.value) {
     const values = { payment: payment_data.value, packageApplied: appliedServices.value }
@@ -1505,7 +1582,6 @@ const formSubmitPaynow = () => {
             window.errorSnackbar('Stripe Secret key does not exist')
             errorMessages.value = 'Stripe Secret key does not exist'
           }
-
           break
 
         default:
@@ -1520,14 +1596,13 @@ const formSubmitPaynow = () => {
 
 const openRazorpay = (data) => {
   var options = {
-    key: data.public_key, // Enter the Key ID generated from the Dashboard
-    amount: data.total_amount * 100, // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
+    key: data.public_key,
+    amount: data.total_amount * 100,
     currency: data.currency,
-    name: 'Acme Corp', //your business name
+    name: 'Acme Corp',
     description: 'Test Transaction',
     image: 'https://example.com/your_logo',
-
-    handler: function (response) {
+    handler: function(response) {
       response.razorpay_payment_id = response.razorpay_payment_id
       response.total_amount = data.total_amount
       response.currency = data.currency
@@ -1538,20 +1613,14 @@ const openRazorpay = (data) => {
         store.updateStep('MAIN')
       })
     },
-
-    notes: {
-      address: 'Razorpay Corporate Office'
-    },
-    theme: {
-      color: '#3399cc'
-    }
+    notes: { address: 'Razorpay Corporate Office' },
+    theme: { color: '#3399cc' }
   }
   var rzp1 = new Razorpay(options)
-  rzp1.on('payment.failed', function (response) {
+  rzp1.on('payment.failed', function(response) {
     window.errorSnackbar(response.error.description)
     errorMessages.value = response.error.description
   })
-
   rzp1.open()
 }
 
@@ -1566,16 +1635,22 @@ const openStripe = (data) => {
   })
 }
 
+// ------------------- Package Logic -------------------
+
 const packageApplied = ref(false)
 const appliedServices = ref([])
 
-var GRAND_TOTAL = computed(() => newSelectedServices.value.reduce((total, service) => total + service.service_price, 0) + selectedProduct.value.reduce((total, product) => total + (product.discounted_price ? product.discounted_price : product.product_price) * product.product_qty, 0) + selectedPackage.value.reduce((total, packages) => total + packages.package_price, 0))
+var GRAND_TOTAL = computed(() =>
+  newSelectedServices.value.reduce((total, service) => total + service.service_price, 0) +
+  selectedProduct.value.reduce((total, product) => total + (product.discounted_price ? product.discounted_price : product.product_price) * product.product_qty, 0) +
+  selectedPackage.value.reduce((total, packages) => total + packages.package_price, 0)
+)
 
 const packageQtyReduce = () => {
   for (let singlePackage of packages.value.list) {
     for (let packageService of singlePackage.services) {
-      for (let appliedServices of appliedServices.value)
-        if (packageService.service_id === appliedServices.id && singlePackage.id === appliedServices.package_id) {
+      for (let appliedService of appliedServices.value)
+        if (packageService.service_id === appliedService.id && singlePackage.id === appliedService.package_id) {
           packageService.quantity = packageService.quantity - 1
         }
     }
@@ -1603,6 +1678,7 @@ const openModal = (service) => {
 }
 
 const singleAppliedServicePrice = ref(null)
+
 function singleAppliedService(service_id) {
   for (let singleServices of appliedServices.value) {
     if (service_id === singleServices.id) {
@@ -1615,13 +1691,7 @@ function singleAppliedService(service_id) {
 
 const selectPurchasePackages = ref([])
 const selectPurchasePackageIds = ref([])
-const canSubmitBooking = computed(() => {
-  const hasSelectedServices = selectedService.value.length > 0 || services_id.value.length > 0
-  const hasSelectedPackages = selectPurchasePackages.value.length > 0 && status.value !== 'cancelled'
-  const hasSchedule = Boolean(branch_id.value && employee_id.value && start_date_time.value)
 
-  return canSaveBooking.value && hasSchedule && (hasSelectedServices || hasSelectedPackages)
-})
 function purchasePackageModel() {
   $('#purchasePackageModel').modal('show')
   selectPurchasePackages.value.forEach((packages) => {
@@ -1640,6 +1710,7 @@ function purchasePackage(packagesId) {
 const resetPurchasePackage = () => {
   selectPurchasePackages.value = []
 }
+
 function removePurchasePackageId(package_id) {
   let removePackageId = selectPurchasePackageIds.value.some((p) => p === package_id)
   if (removePackageId) {
@@ -1655,8 +1726,6 @@ function removePurchasePackage(package_id) {
 function savePurchasePackage() {
   selectPurchasePackageIds.value.forEach((packagesId) => {
     const filteredPackage = packages.value.list.find((pa) => pa.id == packagesId)
-
-    // Check if the package already exists in selectPurchasePackages
     const packageExists = selectPurchasePackages.value.some((packages) => packages.package_id === packagesId)
 
     if (!packageExists) {
@@ -1679,7 +1748,6 @@ function savePurchasePackage() {
       resetServices()
     }
   })
-
   $('#purchasePackageModel').modal('hide')
   selectPurchasePackageIds.value = []
 }
@@ -1701,7 +1769,7 @@ const filteredUserPackages = computed(() => {
         packages.services.some((service) =>
           selectedService.value.some((selected) => {
             if (selected.service_id === service.service_id) {
-              service.employee_id = selected.employee_id // Push employee_id into the service
+              service.employee_id = selected.employee_id
               return true
             }
             return false
@@ -1728,18 +1796,20 @@ const filteredPackages = computed(() => {
   if (selectedServiceIds.length === 0) {
     return packages.value.list.filter((pkg) => !isUserPackage(pkg.id))
   }
-  const filtered = packages.value.list.filter((pkg) => !isUserPackage(pkg.id) && pkg.services && pkg.services.some((service) => selectedServiceIds.includes(service.service_id)))
+  const filtered = packages.value.list.filter(
+    (pkg) => !isUserPackage(pkg.id) && pkg.services && pkg.services.some((service) => selectedServiceIds.includes(service.service_id))
+  )
   return filtered.length > 0 ? filtered : []
 })
 
-// Function to check if service is selected
 function isServiceSelected(userPackageId, serviceId) {
   return tempSelectedPackageService.value.some((service) => service.user_package_id === userPackageId && service.service_id === serviceId)
 }
 
-// Function to update selected services
 function updateSelectedServices(packageServices) {
-  const exactMatchIndex = tempSelectedPackageService.value.findIndex((service) => service.user_package_id === packageServices.user_package_id && service.service_id === packageServices.service_id)
+  const exactMatchIndex = tempSelectedPackageService.value.findIndex(
+    (service) => service.user_package_id === packageServices.user_package_id && service.service_id === packageServices.service_id
+  )
   if (exactMatchIndex !== -1) {
     tempSelectedPackageService.value.splice(exactMatchIndex, 1)
   } else {
@@ -1747,14 +1817,13 @@ function updateSelectedServices(packageServices) {
     if (serviceIdMatchIndex !== -1) {
       tempSelectedPackageService.value.splice(serviceIdMatchIndex, 1)
     }
-
     tempSelectedPackageService.value.push({
       ...packageServices,
       qty: packageServices.qty ?? 1
     })
   }
 }
-// Function to update service quantity
+
 function updateServiceQty(index, packageServices, newQty) {
   const service = tempSelectedPackageService.value[index]
   if (service) {
@@ -1769,13 +1838,17 @@ const isPackageServiceSelected = computed(() => {
 })
 
 const PackageServiceSelectedPrice = computed(() => {
-  return selectedPackageService.value.reduce((total, packageService) => total + (selectedService.value.some((service) => service.service_id === packageService.service_id) ? packageService.service_price : 0), 0)
+  return selectedPackageService.value.reduce(
+    (total, packageService) =>
+      total + (selectedService.value.some((service) => service.service_id === packageService.service_id) ? packageService.service_price : 0),
+    0
+  )
 })
 
 function removeApplyPackageService(service_id) {
   selectedPackageService.value = selectedPackageService.value.filter((service) => service.service_id !== service_id)
 }
-// Function to save selected package services
+
 function saveSelectedPackageService() {
   tempSelectedPackageService.value.forEach((packageService) => {
     const exists = selectedPackageService.value.some((service) => service.id === packageService.id)
@@ -1787,7 +1860,6 @@ function saveSelectedPackageService() {
   $('#applyUserPackage').modal('hide')
 }
 
-// Function to cancel and reset selections
 function cancelSelectedPackageService() {
   tempSelectedPackageService.value = []
   $('#applyUserPackage').modal('hide')
@@ -1839,10 +1911,9 @@ function redeemPackage(package_id) {
 }
 
 watch(filteredUserPackages, () => {
-  shownServiceIds.value = [] // Reset shownServiceIds when filteredUserPackages change
+  shownServiceIds.value = []
 })
 
-// Compute unique service IDs
 const uniqueServiceIds = computed(() => {
   const serviceIds = new Set()
   filteredUserPackages.value.forEach((filteredPackage) => {
@@ -1857,8 +1928,6 @@ const uniqueServiceIds = computed(() => {
   return Array.from(serviceIds)
 })
 
-// Determine if the button should be shown
-// Method to check if a service ID is in filtered packages
 const isServiceInFilteredPackages = (serviceId) => {
   return uniqueServiceIds.value.includes(serviceId)
 }
@@ -1868,6 +1937,7 @@ const isServiceInFilteredPackages = (serviceId) => {
 .offcanvas {
   box-shadow: none;
 }
+
 .booking-loader {
   min-height: 220px;
   padding: 32px 24px;
@@ -1877,6 +1947,7 @@ const isServiceInFilteredPackages = (serviceId) => {
   justify-content: center;
   color: var(--bs-body-color);
 }
+
 .booking-payment-status {
   align-items: center;
   border: 1px solid var(--bs-border-color);
@@ -1885,27 +1956,33 @@ const isServiceInFilteredPackages = (serviceId) => {
   justify-content: space-between;
   padding: 10px 12px;
 }
+
 .booking-payment-status span {
   color: var(--bs-secondary-color);
   font-size: 0.84rem;
   font-weight: 700;
 }
+
 .booking-payment-status strong {
   border-radius: 999px;
   font-size: 0.82rem;
   padding: 4px 10px;
 }
+
 .booking-payment-status.is-paid strong {
   background: rgba(25, 135, 84, 0.12);
   color: #198754;
 }
+
 .booking-payment-status.is-unpaid strong {
   background: rgba(220, 53, 69, 0.12);
   color: #dc3545;
 }
+
 .booking-field-wrap {
   position: relative;
 }
+
 .booking-field-loader {
   align-items: center;
   background: var(--bs-body-bg);
@@ -1921,9 +1998,9 @@ const isServiceInFilteredPackages = (serviceId) => {
   position: absolute;
   z-index: 2;
 }
+
 .service-duration {
   position: absolute;
-  /* padding: 2px 8px; */
   bottom: -16px;
   border-radius: 0;
   border-bottom-left-radius: 4px;
@@ -1938,18 +2015,23 @@ const isServiceInFilteredPackages = (serviceId) => {
 [dir='rtl'] .border-br-radius-0 {
   border-bottom-left-radius: 0;
 }
+
 .date-time {
   border-top: 1px solid var(--bs-border-color);
 }
+
 .date-time > div:not(:first-child) {
   border-left: 1px solid var(--bs-border-color);
 }
+
 .list-group-flush > .list-group-item {
   color: var(--bs-body-color);
 }
+
 .text-muted {
   text-decoration: line-through;
 }
+
 .iq-package {
   cursor: pointer;
 }
@@ -1961,28 +2043,32 @@ const isServiceInFilteredPackages = (serviceId) => {
 .dark .iq-card-package {
   background-color: #2e2c2c !important;
 }
+
 .iq-package-list {
   .list-group-item {
     background-color: unset;
   }
 }
+
 .iq-purchase-package {
   height: 250px;
   overflow: auto;
 }
+
 .iq-purchase-package::-webkit-scrollbar {
-  width: 8px; /* Width of the scrollbar */
+  width: 8px;
 }
+
 .iq-purchase-package::-webkit-scrollbar-track {
-  background: #f1f1f1; /* Color of the scrollbar track */
+  background: #f1f1f1;
 }
 
 .iq-purchase-package::-webkit-scrollbar-thumb {
-  background: #888; /* Color of the scrollbar thumb */
-  border-radius: 4px; /* Rounded corners of the thumb */
+  background: #888;
+  border-radius: 4px;
 }
 
 .iq-purchase-package::-webkit-scrollbar-thumb:hover {
-  background: #555; /* Color of the thumb on hover */
+  background: #555;
 }
 </style>

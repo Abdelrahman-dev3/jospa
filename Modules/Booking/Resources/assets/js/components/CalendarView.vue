@@ -48,7 +48,7 @@
                   </ul>
                 </div>
 
-                  <li class="px-2"> 
+                  <li class="px-2">
                     <button
                   id="refresh"
                   class="btn bg-primary rounded"
@@ -1105,8 +1105,33 @@ onMounted(() => {
   }
 })
 
-const onSubmitEvent = () => {
+const onSubmitEvent = (booking = {}) => {
+  const nextEmployeeId = Number(booking.employee_id)
+
+  if (booking.start_date_time) {
+    selectedCalendarDate.value = moment(booking.start_date_time).format('YYYY-MM-DD')
+  }
+
+  // ✅ الإصلاح: أضف الموظف الجديد للفلتر بغض النظر عن canReorder
+  if (
+    nextEmployeeId > 0 &&
+    selectedCalendarEmployeeIds.value.length > 0 &&
+    !selectedCalendarEmployeeIds.value.includes(nextEmployeeId)
+  ) {
+    selectedCalendarEmployeeIds.value = [...selectedCalendarEmployeeIds.value, nextEmployeeId]
+  }
+
+  resourceWidths.value = []
+  calenderInit.value.setOption('date', selectedCalendarDate.value)
   calenderInit.value.refetchEvents()
+  window.setTimeout(() => {
+    calenderInit.value?.refetchEvents()
+    refreshResourceSizing()
+  }, 250)
+  window.setTimeout(() => {
+    calenderInit.value?.refetchEvents()
+    refreshResourceSizing()
+  }, 700)
   refreshResourceSizing()
 }
 

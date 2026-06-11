@@ -992,8 +992,22 @@ public function index_list(Request $request)
 
         $booking->update($request->all());
 
-        $this->updateBookingService($request->services, $booking->id);
-        $this->updateBookingPackage($request->purchase_packages, $booking->id);
+        $services = $request->input('services', []);
+        $purchasePackages = $request->input('purchase_packages', []);
+
+        if (is_array($services) && count($services) > 0) {
+            $this->updateBookingService($services, $booking->id);
+        } else {
+            $this->updateExistingBookingSchedule($booking, $request);
+        }
+
+        if (is_array($purchasePackages) && count($purchasePackages) > 0) {
+            $this->updateBookingPackage($purchasePackages, $booking->id);
+        } elseif (! (is_array($services) && count($services) > 0)) {
+            BookingPackages::where('booking_id', $booking->id)->update([
+                'employee_id' => $request->input('employee_id'),
+            ]);
+        }
         $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
 
         $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
@@ -1002,6 +1016,11 @@ public function index_list(Request $request)
     }
 
     private function updatePaidBookingSchedule(Booking $booking, Request $request): void
+    {
+        $this->updateExistingBookingSchedule($booking, $request);
+    }
+
+    private function updateExistingBookingSchedule(Booking $booking, Request $request): void
     {
         $startDateTime = $request->input('start_date_time');
         $employeeId = $request->input('employee_id');
