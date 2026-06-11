@@ -189,7 +189,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         session(['urpay_payment' => array_merge($data, ['amount' => $amount])]);
 
         $template = trim((string) config('urpay.checkout_url_template'));
-        if ($template !== '') {
+        if ($template !== '' && $this->templateHasPlaceholders($template)) {
             return $this->buildTemplateCheckoutUrl($template, [
                 'amount' => number_format($amount, 2, '.', ''),
                 'currency' => $currency,
@@ -314,13 +314,28 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             $http = $http->withBasicAuth($username, $password);
         }
 
-        $response = $http->get($baseUrl . '/' . $verifyOrderPath, [
+        $payload = [
             'transaction_id' => $reference,
             'payment_id' => $reference,
             'checkout_id' => $reference,
             'order_id' => $reference,
             'reference' => $reference,
-        ]);
+        ];
+
+        $response = $http->get($baseUrl . '/' . $verifyOrderPath, $payload);
+
+        if ($this->shouldRetryVerificationAsPost($response)) {
+            $retryHttp = Http::acceptJson()->asForm();
+            if ($token !== '') {
+                $retryHttp = $retryHttp->withToken($token);
+            }
+
+            if ($username !== '' || $password !== '') {
+                $retryHttp = $retryHttp->withBasicAuth($username, $password);
+            }
+
+            $response = $retryHttp->post($baseUrl . '/' . $verifyOrderPath, $payload);
+        }
 
         if (! $response->successful()) {
             return [
@@ -436,5 +451,19 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return strtr($template, $replacements);
+    }
+
+    private function templateHasPlaceholders(string $template): bool
+    {
+        return preg_match('/\{[a-z0-9_]+\}/i', $template) === 1;
+    }
+
+    private function shouldRetryVerificationAsPost($response): bool
+    {
+        if ($response->status() === 405) {
+            return true;
+        }
+
+        return str_contains(strtolower($response->body()), "request method 'get' not supported");
     }
 }
