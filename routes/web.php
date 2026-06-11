@@ -75,9 +75,9 @@
         Route::get('tabby/success/{invoice}', 'tabbySuccess')->name('tabby.success');
         Route::get('tabby/fail/{invoice}', 'tabbyFail')->name('tabby.fail');
         Route::get('tabby/cancel/{invoice}', 'tabbyCancel')->name('tabby.cancel');
-        Route::get('/urpay/success', 'urpaySuccess')->name('urpay.success');
-        Route::get('/urpay/failure', 'urpayFail')->name('urpay.failure');
-        Route::get('/urpay/cancel', 'urpayCancel')->name('urpay.cancel');
+        Route::match(['get', 'post'], '/urpay/success', 'urpaySuccess')->name('urpay.success');
+        Route::match(['get', 'post'], '/urpay/failure', 'urpayFail')->name('urpay.failure');
+        Route::match(['get', 'post'], '/urpay/cancel', 'urpayCancel')->name('urpay.cancel');
 
         Route::get('/tamara/success', [TamaraPaymentStrategy::class, 'success'])->name('tamara.success');
         Route::get('/tamara/failure', [TamaraPaymentStrategy::class, 'failure'])->name('tamara.failure');

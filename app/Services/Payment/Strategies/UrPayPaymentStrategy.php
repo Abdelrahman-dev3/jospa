@@ -35,7 +35,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
 
         try {
-            $paymentUrl = $this->createCheckoutUrl($request, $remainingAmount, $data, $merchantUrls);
+            $checkout = $this->createCheckoutRequest($request, $remainingAmount, $data, $merchantUrls);
         } catch (\Throwable $e) {
             if (! $this->wantsJson($request)) {
                 session()->forget('urpay_payment');
@@ -45,19 +45,39 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($this->wantsJson($request)) {
+            $responseData = [
+                'amount' => $remainingAmount,
+                'payment_method' => $data['payment_method'],
+                'discount_amount' => $data['discountAmount'] ?? 0,
+            ];
+
+            if ($checkout['type'] === 'redirect') {
+                $responseData['payment_url'] = $checkout['url'];
+            } else {
+                $responseData['payment_action'] = $checkout['action'];
+                $responseData['payment_method_http'] = $checkout['method'];
+                $responseData['payment_fields'] = $checkout['fields'];
+            }
+
             return response()->json([
                 'status' => true,
                 'message' => 'Redirect to payment gateway.',
-                'data' => [
-                    'payment_url' => $paymentUrl,
-                    'amount' => $remainingAmount,
-                    'payment_method' => $data['payment_method'],
-                    'discount_amount' => $data['discountAmount'] ?? 0,
-                ],
+                'data' => $responseData,
             ]);
         }
 
-        return redirect()->away($paymentUrl);
+        if ($checkout['type'] === 'redirect') {
+            return redirect()->away($checkout['url']);
+        }
+
+        return response()->view('frontend.payment-status.redirect-form', [
+            'actionUrl' => $checkout['action'],
+            'method' => $checkout['method'],
+            'fields' => $checkout['fields'],
+            'message' => app()->getLocale() === 'ar'
+                ? 'جار تحويلك إلى بوابة الدفع، الرجاء الانتظار...'
+                : 'Redirecting you to the payment gateway. Please wait...',
+        ]);
     }
 
     public function success(Request $request)
@@ -69,21 +89,29 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     {
         session()->forget('urpay_payment');
 
-        return $this->respondFailure($request, __('messages.payment_failed'), 402);
+        return $this->respondFailure(
+            $request,
+            $this->resolveGatewayMessage($request, __('messages.payment_failed')),
+            402
+        );
     }
 
     public function cancel(Request $request)
     {
         session()->forget('urpay_payment');
 
-        return $this->respondFailure($request, __('messages.payment_cancelled'), 400);
+        return $this->respondFailure(
+            $request,
+            $this->resolveGatewayMessage($request, __('messages.payment_cancelled')),
+            400
+        );
     }
 
     private function handleCallback(Request $request, string $expectedOutcome)
     {
         $data = session('urpay_payment');
 
-        if ($data && $data['user_id'] !== auth()->id()) {
+        if ($data && auth()->check() && $data['user_id'] !== auth()->id()) {
             abort(403);
         }
 
@@ -97,7 +125,11 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         if (($verification['status'] ?? 'success') !== $expectedOutcome) {
             session()->forget('urpay_payment');
 
-            return $this->respondFailure($request, __('messages.payment_failed'), 402);
+            $failureMessage = $expectedOutcome === 'success'
+                ? $this->resolveGatewayMessage($request, __('messages.payment_failed'))
+                : __('messages.payment_failed');
+
+            return $this->respondFailure($request, $failureMessage, 402);
         }
 
         if ($data) {
@@ -179,29 +211,38 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         ]);
     }
 
-    private function createCheckoutUrl(Request $request, float $amount, array $data, array $merchantUrls): string
+    private function createCheckoutRequest(Request $request, float $amount, array $data, array $merchantUrls): array
     {
         $user = auth()->user();
         $invoiceRef = $this->buildInvoiceReference($data);
         $buyerName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->full_name ?? 'Customer');
         $currency = config('urpay.currency', 'SAR');
 
-        session(['urpay_payment' => array_merge($data, ['amount' => $amount])]);
+        session([
+            'urpay_payment' => array_merge($data, [
+                'amount' => $amount,
+                'invoice_reference' => $invoiceRef,
+                'transaction_reference' => $invoiceRef,
+            ]),
+        ]);
 
         $template = trim((string) config('urpay.checkout_url_template'));
         if ($template !== '' && $this->templateHasPlaceholders($template)) {
-            return $this->buildTemplateCheckoutUrl($template, [
-                'amount' => number_format($amount, 2, '.', ''),
-                'currency' => $currency,
-                'reference' => $invoiceRef,
-                'invoice' => $invoiceRef,
-                'customer_name' => $buyerName,
-                'customer_phone' => $user->mobile ?? '',
-                'success_url' => $merchantUrls['success'],
-                'failure_url' => $merchantUrls['failure'],
-                'cancel_url' => $merchantUrls['cancel'],
-                'lang' => app()->getLocale() ?? 'en',
-            ]);
+            return [
+                'type' => 'redirect',
+                'url' => $this->buildTemplateCheckoutUrl($template, [
+                    'amount' => number_format($amount, 2, '.', ''),
+                    'currency' => $currency,
+                    'reference' => $invoiceRef,
+                    'invoice' => $invoiceRef,
+                    'customer_name' => $buyerName,
+                    'customer_phone' => $user->mobile ?? '',
+                    'success_url' => $merchantUrls['success'],
+                    'failure_url' => $merchantUrls['failure'],
+                    'cancel_url' => $merchantUrls['cancel'],
+                    'lang' => app()->getLocale() ?? 'en',
+                ]),
+            ];
         }
 
         $baseUrl = rtrim((string) config('urpay.base_url'), '/');
@@ -212,7 +253,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($this->isHostedPagePath($createOrderPath)) {
-            throw new \RuntimeException('تعذر بدء دفع URPAY لأن إعداد URPAY_CREATE_ORDER_PATH يشير إلى hosted.htm، وهو صفحة دفع مستضافة وليس مسار API لإنشاء العملية. يلزم تزويد مسار API الصحيح من البنك أو استخدام قالب تحويل يحتوي على المتغيرات المطلوبة.');
+            return $this->buildHostedCheckoutForm($baseUrl, $createOrderPath, $amount, $currency, $invoiceRef, $buyerName, $merchantUrls, $user);
         }
 
         $payload = [
@@ -276,34 +317,92 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             session()->put('urpay_payment.transaction_reference', $reference);
         }
 
-        return $paymentUrl;
+        return [
+            'type' => 'redirect',
+            'url' => $paymentUrl,
+        ];
+    }
+
+    private function buildHostedCheckoutForm(
+        string $baseUrl,
+        string $createOrderPath,
+        float $amount,
+        string $currency,
+        string $invoiceRef,
+        string $buyerName,
+        array $merchantUrls,
+        $user
+    ): array {
+        $tranportalId = trim((string) config('urpay.username'));
+        $tranportalPassword = trim((string) config('urpay.password'));
+
+        if ($tranportalId === '' || $tranportalPassword === '') {
+            throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
+        }
+
+        $actionUrl = $baseUrl . '/' . ltrim($createOrderPath, '/');
+        $fields = [
+            'id' => $tranportalId,
+            'password' => $tranportalPassword,
+            'action' => '1',
+            'langid' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
+            'currencycode' => $this->resolveCurrencyCode($currency),
+            'amt' => number_format($amount, 2, '.', ''),
+            'trackid' => $invoiceRef,
+            'responseURL' => $merchantUrls['success'],
+            'errorURL' => $merchantUrls['failure'],
+            'cancelURL' => $merchantUrls['cancel'],
+            'udf1' => $invoiceRef,
+            'udf2' => (string) ($user->id ?? ''),
+            'udf3' => (string) ($user->mobile ?? ''),
+            'udf4' => (string) config('urpay.merchant_id'),
+            'udf5' => (string) config('urpay.terminal_id'),
+            'merchantid' => (string) config('urpay.merchant_id'),
+            'terminalid' => (string) config('urpay.terminal_id'),
+            'customer_name' => $buyerName,
+            'customer_phone' => (string) ($user->mobile ?? ''),
+        ];
+
+        return [
+            'type' => 'form',
+            'action' => $actionUrl,
+            'method' => 'POST',
+            'fields' => array_filter($fields, static function ($value) {
+                return $value !== null && $value !== '';
+            }),
+        ];
     }
 
     private function verifyPayment(Request $request, ?array $data): array
     {
+        $callbackStatus = $this->resolveHostedCallbackStatus($request);
         $baseUrl = rtrim((string) config('urpay.base_url'), '/');
         $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
 
-        if ($baseUrl === '' || $verifyOrderPath === '') {
+        if ($callbackStatus !== null && ($verifyOrderPath === '' || $this->isHostedPagePath($verifyOrderPath) || $this->isTranportalPath($verifyOrderPath))) {
             return [
-                'ok' => false,
-                'message' => 'UrPay callback received, but payment verification is not configured yet.',
+                'ok' => true,
+                'status' => $callbackStatus,
             ];
         }
 
-        $reference = $request->get('transaction_id')
-            ?? $request->get('payment_id')
-            ?? $request->get('checkout_id')
-            ?? $request->get('order_id')
-            ?? $request->get('reference')
-            ?? $request->get('invoice')
-            ?? ($data['transaction_reference'] ?? null);
+        if ($baseUrl === '' || $verifyOrderPath === '') {
+            return $callbackStatus !== null
+                ? ['ok' => true, 'status' => $callbackStatus]
+                : [
+                    'ok' => false,
+                    'message' => 'UrPay callback received, but payment verification is not configured yet.',
+                ];
+        }
 
+        $reference = $this->resolveCallbackReference($request, $data);
         if (! $reference) {
-            return [
-                'ok' => false,
-                'message' => 'UrPay transaction reference is missing.',
-            ];
+            return $callbackStatus !== null
+                ? ['ok' => true, 'status' => $callbackStatus]
+                : [
+                    'ok' => false,
+                    'message' => 'UrPay transaction reference is missing.',
+                ];
         }
 
         $http = Http::acceptJson();
@@ -324,6 +423,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'checkout_id' => $reference,
             'order_id' => $reference,
             'reference' => $reference,
+            'trackid' => $reference,
         ];
 
         $response = $http->get($baseUrl . '/' . $verifyOrderPath, $payload);
@@ -342,18 +442,22 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if (! $response->successful()) {
-            return [
-                'ok' => false,
-                'message' => 'Failed to verify UrPay payment.',
-            ];
+            return $callbackStatus !== null
+                ? ['ok' => true, 'status' => $callbackStatus]
+                : [
+                    'ok' => false,
+                    'message' => 'Failed to verify UrPay payment.',
+                ];
         }
 
         $body = $response->json();
         $status = strtolower((string) (
             $body['status']
             ?? $body['payment_status']
+            ?? $body['result']
             ?? data_get($body, 'data.status')
             ?? data_get($body, 'data.payment_status')
+            ?? data_get($body, 'data.result')
             ?? ''
         ));
 
@@ -378,10 +482,12 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             ];
         }
 
-        return [
-            'ok' => false,
-            'message' => 'UrPay returned an unknown payment status.',
-        ];
+        return $callbackStatus !== null
+            ? ['ok' => true, 'status' => $callbackStatus]
+            : [
+                'ok' => false,
+                'message' => 'UrPay returned an unknown payment status.',
+            ];
     }
 
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
@@ -411,7 +517,31 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     private function resolveStatelessContext(Request $request): ?array
     {
-        if (! $request->hasValidSignatureWhileIgnoring(['transaction_id', 'payment_id', 'checkout_id', 'status', 'payment_status', 'order_id', 'reference'])) {
+        if (! $request->hasValidSignatureWhileIgnoring([
+            'transaction_id',
+            'payment_id',
+            'checkout_id',
+            'status',
+            'payment_status',
+            'order_id',
+            'reference',
+            'result',
+            'Result',
+            'trackid',
+            'track_id',
+            'tranid',
+            'payid',
+            'auth',
+            'ref',
+            'udf1',
+            'udf2',
+            'udf3',
+            'udf4',
+            'udf5',
+            'ErrorText',
+            'errorText',
+            'responsecode',
+        ])) {
             return null;
         }
 
@@ -471,6 +601,117 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         return str_contains(strtolower($response->body()), "request method 'get' not supported");
     }
 
+    private function resolveCurrencyCode(string $currency): string
+    {
+        return match (strtoupper($currency)) {
+            'SAR' => '682',
+            'KWD' => '414',
+            'BHD' => '048',
+            'AED' => '784',
+            'QAR' => '634',
+            'OMR' => '512',
+            default => strtoupper($currency),
+        };
+    }
+
+    private function resolveHostedCallbackStatus(Request $request): ?string
+    {
+        $errorText = trim((string) ($request->input('ErrorText') ?? $request->input('errorText') ?? ''));
+        if ($errorText !== '') {
+            return 'failure';
+        }
+
+        $candidates = [
+            $request->input('status'),
+            $request->input('payment_status'),
+            $request->input('result'),
+            $request->input('Result'),
+            $request->input('responseMessage'),
+            $request->input('authRespMessage'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $normalized = strtolower(trim((string) $candidate));
+            if ($normalized === '') {
+                continue;
+            }
+
+            if ($this->containsAny($normalized, ['captured', 'approved', 'authorized', 'authorised', 'paid', 'success'])) {
+                return 'success';
+            }
+
+            if ($this->containsAny($normalized, ['cancel', 'cancelled', 'canceled', 'abort'])) {
+                return 'cancel';
+            }
+
+            if ($this->containsAny($normalized, ['fail', 'declin', 'denied', 'reject', 'error'])) {
+                return 'failure';
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveCallbackReference(Request $request, ?array $data): ?string
+    {
+        $candidates = [
+            $request->get('transaction_id'),
+            $request->get('payment_id'),
+            $request->get('checkout_id'),
+            $request->get('order_id'),
+            $request->get('reference'),
+            $request->get('invoice'),
+            $request->get('trackid'),
+            $request->get('track_id'),
+            $request->get('tranid'),
+            $request->get('payid'),
+            $request->get('udf1'),
+            $data['transaction_reference'] ?? null,
+            $data['invoice_reference'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) $candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveGatewayMessage(Request $request, string $default): string
+    {
+        $candidates = [
+            $request->input('ErrorText'),
+            $request->input('errorText'),
+            $request->input('responseMessage'),
+            $request->input('authRespMessage'),
+            $request->input('result'),
+            $request->input('Result'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) $candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return $default;
+    }
+
+    private function containsAny(string $haystack, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if (str_contains($haystack, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function presentableErrorMessage(\Throwable $e): string
     {
         $message = trim($e->getMessage());
@@ -487,11 +728,20 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             return 'فشل بدء عملية دفع URPAY من البوابة. يرجى مراجعة مسار الإنشاء وبيانات الربط المرسلة من البنك.';
         }
 
+        if (str_contains($message, 'URPAY hosted payment requires Tranportal ID and Tranportal Password.')) {
+            return 'تعذر بدء دفع URPAY لأن بيانات Tranportal ID أو Tranportal Password غير مكتملة في إعدادات البيئة.';
+        }
+
         return $message;
     }
 
     private function isHostedPagePath(string $path): bool
     {
         return str_ends_with(strtolower($path), 'hosted.htm');
+    }
+
+    private function isTranportalPath(string $path): bool
+    {
+        return str_ends_with(strtolower($path), 'tranportal.htm');
     }
 }
