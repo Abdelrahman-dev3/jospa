@@ -68,6 +68,13 @@ return [
         'enabled' => env('JAVNA_WEBHOOK_ENABLED', true),
         'webhook_secret' => env('JAVNA_WEBHOOK_SECRET'),
         'log_payloads' => env('JAVNA_WEBHOOK_LOG_PAYLOADS', true),
+        'whatsapp_enabled' => env('JAVNA_WHATSAPP_ENABLED', false),
+        'whatsapp_api_url' => env('JAVNA_WHATSAPP_API_URL'),
+        'whatsapp_api_token' => env('JAVNA_WHATSAPP_API_TOKEN'),
+        'whatsapp_sender' => env('JAVNA_WHATSAPP_SENDER'),
+        'whatsapp_channel_id' => env('JAVNA_WHATSAPP_CHANNEL_ID'),
+        'whatsapp_timeout' => (int) env('JAVNA_WHATSAPP_TIMEOUT', 15),
+        'whatsapp_payload_style' => env('JAVNA_WHATSAPP_PAYLOAD_STYLE', 'auto'),
     ],
 
 

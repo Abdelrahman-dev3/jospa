@@ -5,6 +5,7 @@ namespace App\Services\Payment;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\OdooBookingSyncService;
+use App\Services\WhatsApp\PaidInvoiceWhatsAppService;
 use Illuminate\Support\Collection;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
@@ -105,6 +106,17 @@ class PaymentFinalizerService
 
         if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
             app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+        }
+
+        if ($invoiceId > 0) {
+            try {
+                app(PaidInvoiceWhatsAppService::class)->sendForInvoice($invoiceId);
+            } catch (\Throwable $exception) {
+                \Log::error('Failed to send paid invoice WhatsApp message.', [
+                    'invoice_id' => $invoiceId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
         }
 
         return $invoiceId;
