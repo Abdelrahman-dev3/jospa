@@ -224,11 +224,56 @@ document.addEventListener("DOMContentLoaded", function () {
     const addLeaveButton = document.getElementById("add-leave-period");
     const leavePeriodsContainer = document.getElementById("leave-periods-container");
 
+    const reindexBreakRows = (day) => {
+        const breaksContainer = document.querySelector(`.breaks-container[data-day="${day}"]`);
+
+        if (!breaksContainer) {
+            return;
+        }
+
+        breaksContainer.querySelectorAll(".break-row").forEach((row, index) => {
+            const startInput = row.querySelector('input[name*="[start_break]"]');
+            const endInput = row.querySelector('input[name*="[end_break]"]');
+
+            if (startInput) {
+                startInput.name = `working_hours[${day}][breaks][${index}][start_break]`;
+            }
+
+            if (endInput) {
+                endInput.name = `working_hours[${day}][breaks][${index}][end_break]`;
+            }
+        });
+    };
+
+    document.addEventListener("click", function (event) {
+        const removeButton = event.target.closest(".remove-break");
+
+        if (!removeButton) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const breakRow = removeButton.closest(".break-row");
+        const breaksContainer = removeButton.closest(".breaks-container");
+
+        if (!breakRow || !breaksContainer) {
+            return;
+        }
+
+        const day = breaksContainer.getAttribute("data-day");
+        breakRow.remove();
+        reindexBreakRows(day);
+    });
+
     addBreakLinks.forEach((link) => {
-        link.addEventListener("click", function () {
+        link.addEventListener("click", function (event) {
+            event.preventDefault();
+
             const day = link.getAttribute("data-day");
             const breaksContainer = document.querySelector(`.breaks-container[data-day="${day}"]`);
 
+            reindexBreakRows(day);
             const breakIndex = breaksContainer.querySelectorAll(".break-row").length;
 
             const breakRow = document.createElement("div");
@@ -247,10 +292,6 @@ document.addEventListener("DOMContentLoaded", function () {
             `;
 
             breaksContainer.appendChild(breakRow);
-
-            breakRow.querySelector('.remove-break').addEventListener('click', function () {
-                breakRow.remove();
-            });
         });
     });
 
