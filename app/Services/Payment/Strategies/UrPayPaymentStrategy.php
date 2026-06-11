@@ -361,12 +361,14 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'id' => $tranportalId,
             'currencyCode' => $this->resolveCurrencyCode($currency),
             'trackId' => $trackId,
-            'mobileNumber' => $mobileNumber,
             'responseURL' => $merchantUrls['success'],
             'errorURL' => $merchantUrls['failure'],
             'udf1' => $merchantReference,
             'udf2' => $this->sanitizeUrPayAlphaNum((string) (auth()->id() ?? '')),
             'udf5' => $merchantReference,
+            'langid' => app()->getLocale() === 'ar' ? 'ar' : 'en',
+            'cust_mobile_number' => $mobileNumber,
+            'cust_emailId' => (string) (auth()->user()->email ?? ''),
         ]];
 
         $endpointPath = $this->resolveTokenGenerationPath($createOrderPath);
@@ -634,9 +636,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             throw new \RuntimeException('Unable to encode UrPay trandata payload.');
         }
 
-        $encodedPlainJson = urlencode($plainJson);
         $blockSize = openssl_cipher_iv_length('aes-256-cbc');
-        $padded = $this->pkcs5Pad($encodedPlainJson, $blockSize);
+        $padded = $this->pkcs5Pad($plainJson, $blockSize);
         $encrypted = openssl_encrypt(
             $padded,
             'aes-256-cbc',
@@ -686,8 +687,11 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             return null;
         }
 
-        $decoded = urldecode($unpadded);
-        $payload = json_decode($decoded, true);
+        $payload = json_decode($unpadded, true);
+
+        if (! is_array($payload)) {
+            $payload = json_decode(urldecode($unpadded), true);
+        }
 
         if (! is_array($payload)) {
             return null;
