@@ -341,184 +341,129 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     ): array {
         $tranportalId = trim((string) config('urpay.username'));
         $tranportalPassword = trim((string) config('urpay.password'));
-        $resourceKey = trim((string) config('urpay.token'));
-        $terminalId = trim((string) config('urpay.terminal_id'));
-        $merchantId = trim((string) config('urpay.merchant_id'));
 
         if ($tranportalId === '' || $tranportalPassword === '') {
             throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
         }
 
-        $payloadVariants = [
-            [
-                'id' => $tranportalId,
-                'password' => $tranportalPassword,
-                'action' => '1',
-                'langid' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
-                'currencycode' => $this->resolveCurrencyCode($currency),
-                'amt' => number_format($amount, 2, '.', ''),
-                'trackid' => $invoiceRef,
-                'responseURL' => $merchantUrls['success'],
-                'errorURL' => $merchantUrls['failure'],
-                'udf1' => $invoiceRef,
-                'udf5' => $merchantUrls['cancel'],
-                'merchantid' => $merchantId,
-                'terminalid' => $terminalId,
-                'resourcekey' => $resourceKey,
-            ],
-            [
-                'tranportalId' => $tranportalId,
-                'tranportalPassword' => $tranportalPassword,
-                'action' => '1',
-                'langid' => app()->getLocale() === 'ar' ? 'AR' : 'EN',
-                'currencycode' => $this->resolveCurrencyCode($currency),
-                'amt' => number_format($amount, 2, '.', ''),
-                'trackid' => $invoiceRef,
-                'responseURL' => $merchantUrls['success'],
-                'errorURL' => $merchantUrls['failure'],
-                'udf1' => $invoiceRef,
-                'udf5' => $merchantUrls['cancel'],
-                'merchantId' => $merchantId,
-                'terminalId' => $terminalId,
-                'resourceKey' => $resourceKey,
-            ],
-        ];
-
-        $paths = array_values(array_unique(array_filter([
-            trim($createOrderPath, '/'),
-            trim((string) config('urpay.verify_order_path'), '/'),
-        ])));
-
-        foreach ($paths as $path) {
-            foreach ($payloadVariants as $payload) {
-                $html = $this->postHostedJsonRequest($baseUrl, $path, $payload);
-                if (! $this->isInvalidAccessResponse($html)) {
-                    return [
-                        'type' => 'html',
-                        'html' => $html,
-                    ];
-                }
-            }
+        $mobileNumber = $this->normalizeUrPayMobileNumber((string) (auth()->user()->mobile ?? ''));
+        if ($mobileNumber === null) {
+            throw new \RuntimeException('تعذر بدء دفع URPAY لأن رقم جوال العميل غير صالح لصيغة URPAY المطلوبة. يجب إرسال رقم جوال مكوّن من 9 أرقام بدون 0 أو +966.');
         }
 
-        throw new \RuntimeException('بوابة URPAY قبلت نوع الإرسال JSON لكنها أعادت صفحة InvalidAccess. هذا يعني أن صيغة التهيئة أو أسماء الحقول ما زالت لا تطابق مستند التكامل الرسمي من البنك.');
+        $trackId = $this->buildNumericTrackId($invoiceRef);
+        $merchantReference = $this->sanitizeUrPayAlphaNum($invoiceRef) ?: $trackId;
+
+        $plainTrandata = [[
+            'amt' => number_format($amount, 2, '.', ''),
+            'action' => '1',
+            'password' => $tranportalPassword,
+            'id' => $tranportalId,
+            'currencyCode' => $this->resolveCurrencyCode($currency),
+            'trackId' => $trackId,
+            'mobileNumber' => $mobileNumber,
+            'responseURL' => $merchantUrls['success'],
+            'errorURL' => $merchantUrls['failure'],
+            'udf1' => $merchantReference,
+            'udf2' => $this->sanitizeUrPayAlphaNum((string) (auth()->id() ?? '')),
+            'udf5' => $merchantReference,
+        ]];
+
+        $endpointPath = $this->resolveTokenGenerationPath($createOrderPath);
+        $requestBody = [[
+            'id' => $tranportalId,
+            'trandata' => $this->encryptTrandataPayload($plainTrandata),
+            'responseURL' => $merchantUrls['success'],
+            'errorURL' => $merchantUrls['failure'],
+        ]];
+
+        $response = Http::acceptJson()
+            ->asJson()
+            ->withHeaders([
+                'X-FORWARDED-FOR' => $this->buildForwardedForHeader(request()),
+            ])
+            ->post($baseUrl . '/' . ltrim($endpointPath, '/'), $requestBody);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException('UrPay token generation failed: ' . $response->body());
+        }
+
+        $responseData = $response->json();
+        if (is_array($responseData) && array_is_list($responseData)) {
+            $responseData = $responseData[0] ?? [];
+        }
+
+        $status = (string) ($responseData['status'] ?? '');
+        if ($status !== '1') {
+            $message = trim((string) ($responseData['errorText'] ?? $responseData['result'] ?? ''));
+            throw new \RuntimeException($message !== '' ? $message : 'UrPay token generation failed.');
+        }
+
+        $result = trim((string) ($responseData['result'] ?? ''));
+        if ($result === '' || ! str_contains($result, ':')) {
+            throw new \RuntimeException('UrPay token generation did not return PaymentID and payment page URL.');
+        }
+
+        [$paymentId, $paymentUrl] = explode(':', $result, 2);
+        $paymentId = trim($paymentId);
+        $paymentUrl = preg_replace('/\s+/', '', trim($paymentUrl));
+
+        if ($paymentId === '' || $paymentUrl === '') {
+            throw new \RuntimeException('UrPay token generation returned an invalid payment page response.');
+        }
+
+        $framedUrl = stripos($paymentUrl, 'paymentid=') !== false
+            ? $paymentUrl
+            : $paymentUrl . (str_contains($paymentUrl, '?') ? '&' : '?') . 'PaymentID=' . urlencode($paymentId);
+
+        session()->put('urpay_payment.transaction_reference', $paymentId);
+        session()->put('urpay_payment.track_id', $trackId);
+
+        return [
+            'type' => 'redirect',
+            'url' => $framedUrl,
+        ];
     }
 
     private function verifyPayment(Request $request, ?array $data): array
     {
         $callbackStatus = $this->resolveHostedCallbackStatus($request);
-        $baseUrl = rtrim((string) config('urpay.base_url'), '/');
-        $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
+        $decryptedPayload = $this->getDecryptedResponsePayload($request);
 
-        if ($callbackStatus !== null && ($verifyOrderPath === '' || $this->isHostedPagePath($verifyOrderPath) || $this->isTranportalPath($verifyOrderPath))) {
+        if ($callbackStatus !== null) {
             return [
                 'ok' => true,
                 'status' => $callbackStatus,
             ];
         }
 
-        if ($baseUrl === '' || $verifyOrderPath === '') {
-            return $callbackStatus !== null
-                ? ['ok' => true, 'status' => $callbackStatus]
-                : [
-                    'ok' => false,
-                    'message' => 'UrPay callback received, but payment verification is not configured yet.',
-                ];
-        }
+        if ($decryptedPayload) {
+            $message = trim((string) ($decryptedPayload['errorText'] ?? $decryptedPayload['result'] ?? ''));
 
-        $reference = $this->resolveCallbackReference($request, $data);
-        if (! $reference) {
-            return $callbackStatus !== null
-                ? ['ok' => true, 'status' => $callbackStatus]
-                : [
-                    'ok' => false,
-                    'message' => 'UrPay transaction reference is missing.',
-                ];
-        }
-
-        $http = Http::acceptJson();
-        $token = trim((string) config('urpay.token'));
-        if ($token !== '') {
-            $http = $http->withToken($token);
-        }
-
-        $username = trim((string) config('urpay.username'));
-        $password = trim((string) config('urpay.password'));
-        if ($username !== '' || $password !== '') {
-            $http = $http->withBasicAuth($username, $password);
-        }
-
-        $payload = [
-            'transaction_id' => $reference,
-            'payment_id' => $reference,
-            'checkout_id' => $reference,
-            'order_id' => $reference,
-            'reference' => $reference,
-            'trackid' => $reference,
-        ];
-
-        $response = $http->get($baseUrl . '/' . $verifyOrderPath, $payload);
-
-        if ($this->shouldRetryVerificationAsPost($response)) {
-            $retryHttp = Http::acceptJson()->asForm();
-            if ($token !== '') {
-                $retryHttp = $retryHttp->withToken($token);
-            }
-
-            if ($username !== '' || $password !== '') {
-                $retryHttp = $retryHttp->withBasicAuth($username, $password);
-            }
-
-            $response = $retryHttp->post($baseUrl . '/' . $verifyOrderPath, $payload);
-        }
-
-        if (! $response->successful()) {
-            return $callbackStatus !== null
-                ? ['ok' => true, 'status' => $callbackStatus]
-                : [
-                    'ok' => false,
-                    'message' => 'Failed to verify UrPay payment.',
-                ];
-        }
-
-        $body = $response->json();
-        $status = strtolower((string) (
-            $body['status']
-            ?? $body['payment_status']
-            ?? $body['result']
-            ?? data_get($body, 'data.status')
-            ?? data_get($body, 'data.payment_status')
-            ?? data_get($body, 'data.result')
-            ?? ''
-        ));
-
-        if (in_array($status, ['success', 'paid', 'captured', 'authorized', 'approved'], true)) {
             return [
-                'ok' => true,
-                'status' => 'success',
-            ];
-        }
-
-        if (in_array($status, ['failed', 'failure', 'declined'], true)) {
-            return [
-                'ok' => true,
-                'status' => 'failure',
-            ];
-        }
-
-        if (in_array($status, ['cancel', 'cancelled', 'canceled'], true)) {
-            return [
-                'ok' => true,
-                'status' => 'cancel',
-            ];
-        }
-
-        return $callbackStatus !== null
-            ? ['ok' => true, 'status' => $callbackStatus]
-            : [
                 'ok' => false,
-                'message' => 'UrPay returned an unknown payment status.',
+                'message' => $message !== '' ? $message : 'UrPay returned an unknown payment status.',
             ];
+        }
+
+        if ($request->filled('ErrorText') || $request->filled('errorText')) {
+            return [
+                'ok' => false,
+                'message' => $this->resolveGatewayMessage($request, __('messages.payment_failed')),
+            ];
+        }
+
+        if ($this->resolveCallbackReference($request, $data)) {
+            return [
+                'ok' => false,
+                'message' => 'UrPay callback received without trandata result.',
+            ];
+        }
+
+        return [
+            'ok' => false,
+            'message' => 'UrPay transaction reference is missing.',
+        ];
     }
 
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
@@ -551,14 +496,20 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         if (! $request->hasValidSignatureWhileIgnoring([
             'transaction_id',
             'payment_id',
+            'paymentId',
+            'paymentid',
             'checkout_id',
             'status',
             'payment_status',
             'order_id',
             'reference',
+            'trandata',
+            'transId',
+            'transid',
             'result',
             'Result',
             'trackid',
+            'trackId',
             'track_id',
             'tranid',
             'payid',
@@ -645,7 +596,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         };
     }
 
-    private function resolveHostedFormActionPath(string $createOrderPath): string
+    private function resolveTokenGenerationPath(string $createOrderPath): string
     {
         $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
 
@@ -656,19 +607,177 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         return $createOrderPath;
     }
 
-    private function postHostedJsonRequest(string $baseUrl, string $path, array $payload): string
+    private function buildForwardedForHeader(Request $request): string
     {
-        $response = Http::accept('text/html,application/xhtml+xml,application/json')
-            ->asJson()
-            ->post($baseUrl . '/' . ltrim($path, '/'), array_filter($payload, static function ($value) {
-                return $value !== null && $value !== '';
-            }));
-
-        if (! $response->successful()) {
-            throw new \RuntimeException('UrPay hosted checkout failed: ' . $response->body());
+        $customerIp = trim((string) $request->ip());
+        if ($customerIp === '') {
+            $customerIp = '127.0.0.1';
         }
 
-        return $response->body();
+        $forwarded = trim((string) $request->header('X-Forwarded-For', ''));
+        if ($forwarded === '') {
+            return $customerIp;
+        }
+
+        return $customerIp . ',' . $forwarded;
+    }
+
+    private function encryptTrandataPayload(array $payload): string
+    {
+        $resourceKey = trim((string) config('urpay.token'));
+        if ($resourceKey === '') {
+            throw new \RuntimeException('URPAY resource key is missing.');
+        }
+
+        $plainJson = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($plainJson === false) {
+            throw new \RuntimeException('Unable to encode UrPay trandata payload.');
+        }
+
+        $encodedPlainJson = urlencode($plainJson);
+        $blockSize = openssl_cipher_iv_length('aes-256-cbc');
+        $padded = $this->pkcs5Pad($encodedPlainJson, $blockSize);
+        $encrypted = openssl_encrypt(
+            $padded,
+            'aes-256-cbc',
+            $resourceKey,
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+            'PGKEYENCDECIVSPC'
+        );
+
+        if ($encrypted === false) {
+            throw new \RuntimeException('Unable to encrypt UrPay trandata.');
+        }
+
+        return urlencode(bin2hex($encrypted));
+    }
+
+    private function decryptTrandataPayload(string $encryptedHex): ?array
+    {
+        $resourceKey = trim((string) config('urpay.token'));
+        if ($resourceKey === '') {
+            return null;
+        }
+
+        $hex = trim(urldecode($encryptedHex));
+        if ($hex === '') {
+            return null;
+        }
+
+        $binary = @hex2bin($hex);
+        if ($binary === false) {
+            return null;
+        }
+
+        $decrypted = openssl_decrypt(
+            $binary,
+            'aes-256-cbc',
+            $resourceKey,
+            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+            'PGKEYENCDECIVSPC'
+        );
+
+        if ($decrypted === false) {
+            return null;
+        }
+
+        $unpadded = $this->pkcs5Unpad($decrypted);
+        if ($unpadded === null) {
+            return null;
+        }
+
+        $decoded = urldecode($unpadded);
+        $payload = json_decode($decoded, true);
+
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        if (array_is_list($payload)) {
+            $payload = $payload[0] ?? null;
+        }
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function getDecryptedResponsePayload(Request $request): ?array
+    {
+        if ($request->attributes->has('urpay_decrypted_payload')) {
+            return $request->attributes->get('urpay_decrypted_payload');
+        }
+
+        $encrypted = trim((string) $request->input('trandata', ''));
+        if ($encrypted === '') {
+            $request->attributes->set('urpay_decrypted_payload', null);
+            return null;
+        }
+
+        $payload = $this->decryptTrandataPayload($encrypted);
+        $request->attributes->set('urpay_decrypted_payload', $payload);
+
+        return $payload;
+    }
+
+    private function pkcs5Pad(string $text, int $blockSize): string
+    {
+        $pad = $blockSize - (strlen($text) % $blockSize);
+        return $text . str_repeat(chr($pad), $pad);
+    }
+
+    private function pkcs5Unpad(string $text): ?string
+    {
+        $length = strlen($text);
+        if ($length === 0) {
+            return null;
+        }
+
+        $pad = ord($text[$length - 1]);
+        if ($pad < 1 || $pad > 16) {
+            return null;
+        }
+
+        if (substr($text, -1 * $pad) !== str_repeat(chr($pad), $pad)) {
+            return null;
+        }
+
+        return substr($text, 0, $length - $pad);
+    }
+
+    private function normalizeUrPayMobileNumber(string $mobile): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $mobile);
+        if (! is_string($digits) || $digits === '') {
+            return null;
+        }
+
+        if (str_starts_with($digits, '00966')) {
+            $digits = substr($digits, 5);
+        } elseif (str_starts_with($digits, '966')) {
+            $digits = substr($digits, 3);
+        }
+
+        if (strlen($digits) === 10 && str_starts_with($digits, '0')) {
+            $digits = substr($digits, 1);
+        }
+
+        return preg_match('/^5\d{8}$/', $digits) === 1 ? $digits : null;
+    }
+
+    private function buildNumericTrackId(string $invoiceRef): string
+    {
+        $digits = preg_replace('/\D+/', '', $invoiceRef);
+        $seed = now()->format('YmdHisv') . random_int(100, 999);
+
+        if (is_string($digits) && $digits !== '') {
+            return substr($seed . $digits, 0, 18);
+        }
+
+        return substr($seed, 0, 18);
+    }
+
+    private function sanitizeUrPayAlphaNum(string $value): string
+    {
+        return substr((string) preg_replace('/[^A-Za-z0-9]/', '', $value), 0, 30);
     }
 
     private function isInvalidAccessResponse(string $html): bool
@@ -682,6 +791,24 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     private function resolveHostedCallbackStatus(Request $request): ?string
     {
+        $payload = $this->getDecryptedResponsePayload($request);
+        if ($payload) {
+            $result = strtolower(trim((string) ($payload['result'] ?? '')));
+            if ($result !== '') {
+                if ($this->containsAny($result, ['captured', 'approved', 'authorized', 'authorised', 'paid', 'success'])) {
+                    return 'success';
+                }
+
+                if ($this->containsAny($result, ['cancel', 'cancelled', 'canceled', 'abort'])) {
+                    return 'cancel';
+                }
+
+                if ($this->containsAny($result, ['fail', 'declin', 'denied', 'reject', 'error'])) {
+                    return 'failure';
+                }
+            }
+        }
+
         $errorText = trim((string) ($request->input('ErrorText') ?? $request->input('errorText') ?? ''));
         if ($errorText !== '') {
             return 'failure';
@@ -720,7 +847,11 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     private function resolveCallbackReference(Request $request, ?array $data): ?string
     {
+        $payload = $this->getDecryptedResponsePayload($request);
         $candidates = [
+            $payload['trackId'] ?? null,
+            $payload['paymentId'] ?? null,
+            $payload['transId'] ?? null,
             $request->get('transaction_id'),
             $request->get('payment_id'),
             $request->get('checkout_id'),
@@ -730,9 +861,12 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             $request->get('trackid'),
             $request->get('track_id'),
             $request->get('tranid'),
+            $request->get('paymentId'),
+            $request->get('paymentid'),
             $request->get('payid'),
             $request->get('udf1'),
             $data['transaction_reference'] ?? null,
+            $data['track_id'] ?? null,
             $data['invoice_reference'] ?? null,
         ];
 
@@ -748,7 +882,10 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     private function resolveGatewayMessage(Request $request, string $default): string
     {
+        $payload = $this->getDecryptedResponsePayload($request);
         $candidates = [
+            $payload['errorText'] ?? null,
+            $payload['result'] ?? null,
             $request->input('ErrorText'),
             $request->input('errorText'),
             $request->input('responseMessage'),
@@ -790,12 +927,16 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             return 'تعذر إنشاء رابط دفع URPAY. الاستجابة القادمة من البوابة لا تحتوي على رابط تحويل صالح، وغالبًا أن إعدادات الربط الحالية غير مطابقة لمتطلبات البنك.';
         }
 
-        if (str_contains($message, 'UrPay checkout failed:')) {
-            return 'فشل بدء عملية دفع URPAY من البوابة. يرجى مراجعة مسار الإنشاء وبيانات الربط المرسلة من البنك.';
+        if (str_contains($message, 'UrPay checkout failed:') || str_contains($message, 'UrPay token generation failed:')) {
+            return 'فشل بدء عملية دفع URPAY من البوابة. يرجى مراجعة مسار إنشاء الـ token وبيانات الربط المرسلة من البنك.';
         }
 
         if (str_contains($message, 'URPAY hosted payment requires Tranportal ID and Tranportal Password.')) {
             return 'تعذر بدء دفع URPAY لأن بيانات Tranportal ID أو Tranportal Password غير مكتملة في إعدادات البيئة.';
+        }
+
+        if (str_contains($message, 'URPAY resource key is missing.')) {
+            return 'تعذر بدء دفع URPAY لأن Resource Key غير موجودة في الإعدادات.';
         }
 
         return $message;
