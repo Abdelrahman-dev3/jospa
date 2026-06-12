@@ -102,7 +102,7 @@ class BookingsController extends Controller
             }
     
             $statusList[$value->name] = [
-                'title' => $value->value,
+                'title' => $this->bookingStatusTitle($value->name, $value->value),
                 'color_hex' => $bookingColors->where('sub_type', $value->name)->first()->name,
                 'is_disabled' => $isDisabled,
             ];
@@ -118,6 +118,16 @@ class BookingsController extends Controller
     
         return $statusList;
 }
+
+    private function bookingStatusTitle(string $status, ?string $fallback = null): string
+    {
+        $translationKey = 'booking.status_' . $status;
+        $translated = __($translationKey);
+
+        return $translated !== $translationKey
+            ? $translated
+            : ($fallback ?? ucfirst(str_replace('_', ' ', $status)));
+    }
 
     /**
      * @return Response
@@ -504,6 +514,10 @@ public function index_list(Request $request)
                 'editable' => false,
             ],
         ];
+
+        if (Carbon::parse($date)->lt(Carbon::today())) {
+            return ['events' => $events, 'ranges' => []];
+        }
 
         if ($branchId > 0 && isset($context['holiday_branch_ids'][$branchId])) {
             return ['events' => $events, 'ranges' => []];
@@ -1124,11 +1138,22 @@ public function index_list(Request $request)
             $status = $request->value;
         }
 
-        BookingTransaction::where('booking_id', $id)->update(['payment_status' => $request->value]);
+        $paymentStatus = (int) $request->value;
+        $transactionType = $request->input('transaction_type', 'cash');
+
+        BookingTransaction::updateOrCreate(
+            ['booking_id' => $id],
+            [
+                'payment_status' => $paymentStatus,
+                'transaction_type' => $transactionType,
+            ]
+        );
 
         $message = __('booking.status_update');
 
-        return response()->json(['message' => $message, 'status' => true]);
+        $booking = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($id);
+
+        return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($booking)]);
     }
 
     public function bulk_action(Request $request)
@@ -1166,6 +1191,10 @@ public function index_list(Request $request)
         try {
             $date = Carbon::parse($request->date)->toDateString();
         } catch (\Throwable $e) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        if (Carbon::parse($date)->lt(Carbon::today())) {
             return response()->json(['status' => true, 'data' => []]);
         }
 
@@ -1228,6 +1257,10 @@ public function index_list(Request $request)
 
     private function buildBookingSlotsForEmployee(User $employee, string $date, int $branchId, int $serviceDuration, int $ignoreBookingId = 0): array
     {
+        if (Carbon::parse($date)->lt(Carbon::today())) {
+            return [];
+        }
+
         $dayName = strtolower(Carbon::parse($date)->format('l'));
         $context = [
             'day_name' => $dayName,

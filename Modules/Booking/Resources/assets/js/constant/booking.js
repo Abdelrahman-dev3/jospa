@@ -42,6 +42,7 @@ export const CHECKOUT_URL = (id) => {return {path: `${MODULE}/${id}/checkout`, m
 export const PAYMENT_CREATE_URL = ({ booking_id ,userPackageserviceIds }) => {return {path: `${MODULE}/payment-create?booking_id=${booking_id}&userPackageserviceIds=${userPackageserviceIds}`, method: 'GET'}}
 export const PAYMENT_PUT_URL = (booking_id) => {return {path: `${MODULE}/booking-payment/${booking_id}`, method: 'PUT'}}
 export const UPDATE_STATUS = (id) => {return {path: `${MODULE}/update-status/${id}`, method: 'POST'}}
+export const UPDATE_PAYMENT_STATUS = (id) => {return {path: `${MODULE}/update-payment-status/${id}`, method: 'POST'}}
 export const EMPLOYEE_ORDER_URL = () => {return {path: `${MODULE}/employee-order`, method: 'POST'}}
 export const CUSTOMER_LIST = () => {return {path: `users/user-list?role=user`, method: 'GET'}}
 export const SERVICE_LIST = ({id: employee_id, branch_id}) => {return {path: `${MODULE}/services-index_list?employee_id=${employee_id}&branch_id=${branch_id}`, method: 'GET'}}

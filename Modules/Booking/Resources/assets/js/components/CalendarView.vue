@@ -603,6 +603,20 @@ const slotUnavailableMessage = () => {
   window.alert(message)
 }
 
+const pastDateUnavailableMessage = () => {
+  const message = 'لا يمكن إضافة موعد في تاريخ سابق لليوم'
+  if (window.errorSnackbar) {
+    window.errorSnackbar(message)
+    return
+  }
+
+  window.alert(message)
+}
+
+const isPastCalendarDate = (date) => {
+  return date && moment(date).startOf('day').isBefore(moment().startOf('day'))
+}
+
 const isWithinRange = (date, range) => {
   const clicked = moment(date)
   const start = moment(range.start)
@@ -628,6 +642,11 @@ const isAvailableSlot = (info) => {
 }
 
 const handleCalendarSlotClick = (info) => {
+  if (isPastCalendarDate(getInfoStartDate(info))) {
+    pastDateUnavailableMessage()
+    return
+  }
+
   if (selectedCalendarView.value === 'month') {
     showBookingForm(info)
     return

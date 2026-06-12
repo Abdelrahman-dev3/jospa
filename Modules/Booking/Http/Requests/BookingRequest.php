@@ -19,7 +19,7 @@ class BookingRequest extends FormRequest
             case 'post':
                 return [
                     'branch_id' => 'required',
-                    'start_date_time' => 'required',
+                    'start_date_time' => 'required|date',
                     'user_id' => 'required',
                     'employee_id' => 'required',
 
@@ -30,7 +30,7 @@ class BookingRequest extends FormRequest
 
                 return [
                     'branch_id' => 'required',
-                    'start_date_time' => 'required',
+                    'start_date_time' => 'required|date',
                     'user_id' => 'required',
                     'employee_id' => 'required',
 
@@ -41,6 +41,25 @@ class BookingRequest extends FormRequest
                 // code...
                 break;
         }
+    }
+
+    public function withValidator(Validator $validator)
+    {
+        $validator->after(function (Validator $validator) {
+            if (! $this->filled('start_date_time')) {
+                return;
+            }
+
+            try {
+                $bookingDate = \Carbon\Carbon::parse($this->input('start_date_time'))->startOfDay();
+            } catch (\Throwable $e) {
+                return;
+            }
+
+            if ($bookingDate->lt(\Carbon\Carbon::today())) {
+                $validator->errors()->add('start_date_time', 'لا يمكن إضافة موعد في تاريخ سابق لليوم');
+            }
+        });
     }
 
     protected function failedValidation(Validator $validator)

@@ -23,7 +23,7 @@
             <strong>{{ paymentStatusLabel }}</strong>
           </div>
         </div>
-        <BookingStatus v-if="id" :status="status" :booking_id="id" :status-list="statusList" :employee_id="employee_id" @statusUpdate="updateStatus"></BookingStatus>
+        <BookingStatus v-if="id" :status="status" :is-paid="is_paid" :booking_id="id" :status-list="statusList" :employee_id="employee_id" @statusUpdate="updateStatus"></BookingStatus>
         <div>
           <div class="d-flex text-center date-time">
             <div class="col-6 py-3">
@@ -241,7 +241,7 @@
         <p class="ps-3" v-if="id > 0">
           <strong>{{ $t('Appointment Id') }} :-{{ id }} </strong>
         </p>
-        <BookingStatus v-if="id" :status="status" :booking_id="id" :status-list="statusList" :employee_id="employee_id" @statusUpdate="updateStatus"></BookingStatus>
+        <BookingStatus v-if="id" :status="status" :is-paid="is_paid" :booking_id="id" :status-list="statusList" :employee_id="employee_id" @statusUpdate="updateStatus"></BookingStatus>
         <div class="offcanvas-body border-top">
           <div v-if="selectedCustomer" class="border-bottom mb-3">
             <div class="d-flex align-items-start gap-3 mb-3">
@@ -718,13 +718,14 @@ const canShowScheduleControls = computed(() => !scheduleLockedStatuses.includes(
 const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLockedStatuses.includes(status.value) && !filterStatus(status.value).is_disabled)
 const isScheduleDisabled = computed(() => !isPaidBooking.value && filterStatus(status.value).is_disabled)
 const canSaveBooking = computed(() => status.value !== 'check_in' && (isPaidBooking.value || !filterStatus(status.value).is_disabled))
-const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('messages.paid') : t('messages.unpaid')))
+const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('booking.status_paid') : t('booking.status_unpaid')))
 
 const holidays = ref([])
 const current_date = ref(moment().format('YYYY-MM-DD'))
 const config = ref({
   dateFormat: 'Y-m-d',
   defaultDate: 'today',
+  minDate: 'today',
   static: true,
   disable: holidays.value
 })
@@ -1027,6 +1028,10 @@ const getCustomers = (cb) =>
   })
 
 const dateChange = () => {
+  if (current_date.value && moment(current_date.value).startOf('day').isBefore(moment().startOf('day'))) {
+    current_date.value = moment().format('YYYY-MM-DD')
+  }
+
   start_date_time.value = null
   slots.value = []
   service.value = { options: [], list: [] }

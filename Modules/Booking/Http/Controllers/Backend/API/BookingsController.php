@@ -380,7 +380,7 @@ class BookingsController extends Controller
             if ($value->name !== 'cancelled') {
                 $statusList = [
                     'status' => $value->name,
-                    'title' => $value->value,
+                    'title' => $this->bookingStatusTitle($value->name, $value->value),
                     'color_hex' => $bookingColors->where('sub_type', $value->name)->first()->name,
                     'is_disabled' => $value->sequence >= $checkout_sequence,
                 ];
@@ -392,7 +392,7 @@ class BookingsController extends Controller
             } else {
                 $statusList = [
                     'status' => $value->name,
-                    'title' => $value->value,
+                    'title' => $this->bookingStatusTitle($value->name, $value->value),
                     'color_hex' => $bookingColors->where('sub_type', $value->name)->first()->name,
                     'is_disabled' => true,
                 ];
@@ -405,6 +405,16 @@ class BookingsController extends Controller
             'data' => $finalstatusList,
             'message' => __('booking.booking_status_list'),
         ], 200);
+    }
+
+    private function bookingStatusTitle(string $status, ?string $fallback = null): string
+    {
+        $translationKey = 'booking.status_' . $status;
+        $translated = __($translationKey);
+
+        return $translated !== $translationKey
+            ? $translated
+            : ($fallback ?? ucfirst(str_replace('_', ' ', $status)));
     }
 
     public function bookingUpdate(Request $request)
