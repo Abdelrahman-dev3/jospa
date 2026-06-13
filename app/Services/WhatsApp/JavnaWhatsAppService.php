@@ -18,13 +18,18 @@ class JavnaWhatsAppService
     public function sendText(string $phone, string $message): bool
     {
         if (! $this->isEnabled()) {
+            Log::warning('WhatsApp sending is disabled or incomplete.', [
+                'enabled' => (bool) config('services.javna.whatsapp_enabled'),
+                'missing_config' => $this->missingConfigKeys(),
+            ]);
+
             return false;
         }
 
         $normalizedPhone = $this->normalizePhoneForWhatsApp($phone);
         if ($normalizedPhone === null) {
             Log::warning('WhatsApp message skipped because the phone number is invalid.', [
-                'phone' => $phone,
+                'original_phone' => $phone,
             ]);
 
             return false;
@@ -33,8 +38,17 @@ class JavnaWhatsAppService
         $apiUrl = (string) config('services.javna.whatsapp_api_url');
         $apiToken = (string) config('services.javna.whatsapp_api_token');
         $timeout = (int) config('services.javna.whatsapp_timeout', 15);
+        $payloadCandidates = $this->buildPayloadCandidates($normalizedPhone, $message);
 
-        foreach ($this->buildPayloadCandidates($normalizedPhone, $message) as $style => $payload) {
+        Log::info('Attempting outbound WhatsApp send.', [
+            'phone' => $normalizedPhone,
+            'api_url' => $apiUrl,
+            'timeout' => $timeout,
+            'payload_styles' => array_keys($payloadCandidates),
+            'message_length' => mb_strlen($message),
+        ]);
+
+        foreach ($payloadCandidates as $style => $payload) {
             try {
                 $response = Http::acceptJson()
                     ->asJson()
@@ -43,21 +57,36 @@ class JavnaWhatsAppService
                     ->post($apiUrl, $payload);
 
                 if ($response->successful()) {
+                    Log::info('Outbound WhatsApp message sent successfully.', [
+                        'style' => $style,
+                        'phone' => $normalizedPhone,
+                        'status' => $response->status(),
+                        'body' => $this->truncateBody($response->body()),
+                    ]);
+
                     return true;
                 }
 
                 Log::warning('WhatsApp provider rejected outbound message payload.', [
                     'style' => $style,
+                    'phone' => $normalizedPhone,
                     'status' => $response->status(),
-                    'body' => $response->body(),
+                    'response_body' => $this->truncateBody($response->body()),
+                    'payload_keys' => array_keys($payload),
                 ]);
             } catch (\Throwable $exception) {
                 Log::error('Failed to send outbound WhatsApp message.', [
                     'style' => $style,
+                    'phone' => $normalizedPhone,
                     'message' => $exception->getMessage(),
                 ]);
             }
         }
+
+        Log::error('All outbound WhatsApp payload styles failed.', [
+            'phone' => $normalizedPhone,
+            'payload_styles' => array_keys($payloadCandidates),
+        ]);
 
         return false;
     }
@@ -107,5 +136,33 @@ class JavnaWhatsAppService
         }
 
         return '966' . substr($validated, 1);
+    }
+
+    private function missingConfigKeys(): array
+    {
+        $required = [
+            'services.javna.whatsapp_api_url' => 'JAVNA_WHATSAPP_API_URL',
+            'services.javna.whatsapp_api_token' => 'JAVNA_WHATSAPP_API_TOKEN',
+        ];
+
+        $missing = [];
+        foreach ($required as $configKey => $envKey) {
+            if (! filled(config($configKey))) {
+                $missing[] = $envKey;
+            }
+        }
+
+        return $missing;
+    }
+
+    private function truncateBody(?string $body, int $limit = 1000): ?string
+    {
+        if ($body === null) {
+            return null;
+        }
+
+        return mb_strlen($body) > $limit
+            ? mb_substr($body, 0, $limit) . '...'
+            : $body;
     }
 }

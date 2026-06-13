@@ -19,23 +19,92 @@ class PaidInvoiceWhatsAppService
     public function sendForInvoice(int $invoiceId): bool
     {
         if (! $this->whatsAppService->isEnabled()) {
+            Log::warning('Skipping paid invoice WhatsApp because the service is disabled.', [
+                'invoice_id' => $invoiceId,
+            ]);
+
             return false;
         }
 
         $invoice = Invoice::with('user')->find($invoiceId);
-        if (! $invoice || ! $invoice->user || blank($invoice->user->mobile)) {
+        if (! $invoice) {
+            Log::warning('Skipping paid invoice WhatsApp because the invoice was not found.', [
+                'invoice_id' => $invoiceId,
+            ]);
+
             return false;
         }
 
-        $bookings = $this->loadBookings($invoice->cart_ids ?? []);
-        $giftCards = $this->loadGiftCards($invoice->gift_ids ?? []);
+        if (! $invoice->user) {
+            Log::warning('Skipping paid invoice WhatsApp because the invoice user was not found.', [
+                'invoice_id' => $invoiceId,
+                'user_id' => $invoice->user_id,
+            ]);
+            
+            return false;
+        }
+
+        if (blank($invoice->user->mobile)) {
+            Log::warning('Skipping paid invoice WhatsApp because the customer mobile is missing.', [
+                'invoice_id' => $invoiceId,
+                'user_id' => $invoice->user_id,
+            ]);
+
+            return false;
+        }
+
+        $bookingIds = $invoice->cart_ids ?? [];
+        $giftIds = $invoice->gift_ids ?? [];
+
+        if (is_string($bookingIds)) {
+            $bookingIds = json_decode($bookingIds, true) ?: explode(',', $bookingIds);
+        }
+
+        if (is_string($giftIds)) {
+            $giftIds = json_decode($giftIds, true) ?: explode(',', $giftIds);
+        }
+
+        $bookings = $this->loadBookings((array) $bookingIds);
+        $giftCards = $this->loadGiftCards((array) $giftIds);
         $message = $this->buildMessage($invoice, $bookings, $giftCards);
 
         if (blank(trim($message))) {
+            Log::warning('Skipping paid invoice WhatsApp because the generated message is empty.', [
+                'invoice_id' => $invoiceId,
+            ]);
+
             return false;
         }
 
-        return $this->whatsAppService->sendText((string) $invoice->user->mobile, $message);
+        Log::info('Prepared paid invoice WhatsApp message.', [
+            'invoice_id' => $invoiceId,
+            'user_id' => $invoice->user_id,
+            'phone' => $invoice->user->mobile,
+            'bookings_count' => $bookings->count(),
+            'gift_cards_count' => $giftCards->count(),
+            'product_items_count' => $invoice->productItems->count(),
+            'message_length' => mb_strlen($message),
+        ]);
+
+        $sent = $this->whatsAppService->sendText((string) $invoice->user->mobile, $message);
+
+        if (! $sent) {
+            Log::error('Paid invoice WhatsApp send failed.', [
+                'invoice_id' => $invoiceId,
+                'user_id' => $invoice->user_id,
+                'phone' => $invoice->user->mobile,
+            ]);
+
+            return false;
+        }
+
+        Log::info('Paid invoice WhatsApp send completed successfully.', [
+            'invoice_id' => $invoiceId,
+            'user_id' => $invoice->user_id,
+            'phone' => $invoice->user->mobile,
+        ]);
+
+        return true;
     }
 
     private function loadBookings(array $bookingIds): Collection
