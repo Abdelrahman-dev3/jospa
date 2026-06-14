@@ -3,6 +3,7 @@
 namespace App\Services\WhatsApp;
 
 use App\Services\TaqnyatSmsService;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -49,42 +50,38 @@ class JavnaWhatsAppService
         ]);
 
         foreach ($payloadCandidates as $style => $payload) {
-            try {
-                $response = Http::acceptJson()
-                    ->asJson()
-                    ->timeout($timeout)
-                    ->withHeaders([
-                        'x-api-key' => $apiToken,
-                    ])
-                    ->post(
-                        rtrim($apiUrl, '/') . '/whatsapp/v1.0/message/text',
-                        $payload
-                    );
+            foreach ($this->resolveTransportModes($style) as $transport) {
+                try {
+                    $response = $this->sendPayload($apiUrl, $apiToken, $timeout, $payload, $transport);
 
-                if ($response->successful()) {
-                    Log::info('Outbound WhatsApp message sent successfully.', [
+                    if ($response->successful()) {
+                        Log::info('Outbound WhatsApp message sent successfully.', [
+                            'style' => $style,
+                            'transport' => $transport,
+                            'phone' => $normalizedPhone,
+                            'status' => $response->status(),
+                            'body' => $this->truncateBody($response->body()),
+                        ]);
+
+                        return true;
+                    }
+
+                    Log::warning('WhatsApp provider rejected outbound message payload.', [
                         'style' => $style,
+                        'transport' => $transport,
                         'phone' => $normalizedPhone,
                         'status' => $response->status(),
-                        'body' => $this->truncateBody($response->body()),
+                        'response_body' => $this->truncateBody($response->body()),
+                        'payload_keys' => array_keys($payload),
                     ]);
-
-                    return true;
+                } catch (\Throwable $exception) {
+                    Log::error('Failed to send outbound WhatsApp message.', [
+                        'style' => $style,
+                        'transport' => $transport,
+                        'phone' => $normalizedPhone,
+                        'message' => $exception->getMessage(),
+                    ]);
                 }
-
-                Log::warning('WhatsApp provider rejected outbound message payload.', [
-                    'style' => $style,
-                    'phone' => $normalizedPhone,
-                    'status' => $response->status(),
-                    'response_body' => $this->truncateBody($response->body()),
-                    'payload_keys' => array_keys($payload),
-                ]);
-            } catch (\Throwable $exception) {
-                Log::error('Failed to send outbound WhatsApp message.', [
-                    'style' => $style,
-                    'phone' => $normalizedPhone,
-                    'message' => $exception->getMessage(),
-                ]);
             }
         }
 
@@ -185,5 +182,51 @@ class JavnaWhatsAppService
         return mb_strlen($body) > $limit
             ? mb_substr($body, 0, $limit) . '...'
             : $body;
+    }
+
+    private function resolveTransportModes(string $style): array
+    {
+        if (str_starts_with($style, 'javna_')) {
+            return ['json', 'form', 'multipart'];
+        }
+
+        return ['json'];
+    }
+
+    private function sendPayload(
+        string $apiUrl,
+        string $apiToken,
+        int $timeout,
+        array $payload,
+        string $transport
+    ) {
+        $request = Http::acceptJson()
+            ->timeout($timeout)
+            ->withHeaders([
+                'x-api-key' => $apiToken,
+            ]);
+
+        $endpoint = rtrim($apiUrl, '/') . '/whatsapp/v1.0/message/text';
+
+        return match ($transport) {
+            'form' => $request->asForm()->post($endpoint, $payload),
+            'multipart' => $this->sendMultipartPayload($request, $endpoint, $payload),
+            default => $request->asJson()->post($endpoint, $payload),
+        };
+    }
+
+    private function sendMultipartPayload(PendingRequest $request, string $endpoint, array $payload)
+    {
+        $multipart = [];
+        foreach ($payload as $key => $value) {
+            $multipart[] = [
+                'name' => $key,
+                'contents' => is_scalar($value) ? (string) $value : json_encode($value, JSON_UNESCAPED_UNICODE),
+            ];
+        }
+
+        return $request->send('POST', $endpoint, [
+            'multipart' => $multipart,
+        ]);
     }
 }
