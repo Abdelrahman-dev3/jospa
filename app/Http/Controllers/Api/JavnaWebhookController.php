@@ -69,6 +69,9 @@ class JavnaWebhookController extends Controller
             'data.messageStatus.message',
             'data.deliveryStatus.reason',
             'data.deliveryStatus.description',
+            'data.failureInfo.sendingFailureDetails.failureDescription',
+            'data.failureInfo.sendingFailureDetails.whatsappError.error.message',
+            'data.failureInfo.sendingFailureDetails.whatsappError.error.error_data.details',
             'data.failureInfo.deliveryFailureDetails.Title',
             'data.failureInfo.deliveryFailureDetails.Message',
             'data.failureInfo.deliveryFailureDetails.error_data.Details',
@@ -87,6 +90,7 @@ class JavnaWebhookController extends Controller
             'data.failure_code',
             'data.messageStatus.code',
             'data.deliveryStatus.code',
+            'data.failureInfo.sendingFailureDetails.whatsappError.error.code',
             'data.failureInfo.deliveryFailureDetails.Code',
             'metadata.code',
         ]);
