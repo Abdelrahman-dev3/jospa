@@ -203,6 +203,39 @@ class JavnaWhatsAppService
         ], $parameterValues);
 
         $candidates = [
+            'javna_template_messages_content' => array_filter([
+                'Messages' => [[
+                    'To' => $phone,
+                    'From' => $sender,
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages' => array_filter([
+                'Messages' => [[
+                    'To' => $phone,
+                    'From' => $sender,
+                    'TemplateName' => $templateName,
+                    'Language' => $language,
+                    'Parameters' => $parameterValues,
+                    'Namespace' => $namespace !== '' ? $namespace : null,
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_lower' => array_filter([
+                'messages' => [[
+                    'to' => $phone,
+                    'from' => $sender,
+                    'templateName' => $templateName,
+                    'language' => $language,
+                    'parameters' => $parameterValues,
+                    'namespace' => $namespace !== '' ? $namespace : null,
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_content' => array_filter([
                 'To' => $phone,
                 'From' => $sender !== '' ? $sender : null,
@@ -316,6 +349,10 @@ class JavnaWhatsAppService
 
     private function resolveTransportModes(string $style): array
     {
+        if (str_starts_with($style, 'javna_template_')) {
+            return ['json'];
+        }
+
         if (str_starts_with($style, 'javna_')) {
             return ['json', 'form', 'multipart'];
         }
