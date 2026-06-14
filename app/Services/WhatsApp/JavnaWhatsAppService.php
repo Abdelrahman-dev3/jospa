@@ -53,8 +53,13 @@ class JavnaWhatsAppService
                 $response = Http::acceptJson()
                     ->asJson()
                     ->timeout($timeout)
-                    ->withToken($apiToken)
-                    ->post($apiUrl, $payload);
+                    ->withHeaders([
+                        'x-api-key' => $apiToken,
+                    ])
+                    ->post(
+                        rtrim($apiUrl, '/') . '/whatsapp/v1.0/message/text',
+                        $payload
+                    );
 
                 if ($response->successful()) {
                     Log::info('Outbound WhatsApp message sent successfully.', [
@@ -97,7 +102,23 @@ class JavnaWhatsAppService
         $channelId = trim((string) config('services.javna.whatsapp_channel_id', ''));
         $preferredStyle = trim((string) config('services.javna.whatsapp_payload_style', 'auto'));
 
+        if ($sender === '') {
+            Log::warning('Javna WhatsApp sender is empty. Some payload styles will fail until JAVNA_WHATSAPP_SENDER is configured.');
+        }
+
         $candidates = [
+            'javna_text' => array_filter([
+                'To' => $phone,
+                'From' => $sender !== '' ? $sender : null,
+                'Text' => $message,
+                'ChannelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_text_lower' => array_filter([
+                'to' => $phone,
+                'from' => $sender !== '' ? $sender : null,
+                'text' => $message,
+                'channelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
             'meta' => array_filter([
                 'messaging_product' => 'whatsapp',
                 'recipient_type' => 'individual',
