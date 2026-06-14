@@ -219,6 +219,49 @@ class JavnaWhatsAppService
                     ], fn ($value) => $value !== null && $value !== ''),
                 ]],
             ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_content_lower_to' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [[
+                        'to' => $phone,
+                    ]],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_content_msisdn' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [[
+                        'msisdn' => $phone,
+                    ]],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_content_string' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_messages_destinations' => array_filter([
                 'Messages' => [[
                     'From' => $sender,
@@ -243,6 +286,36 @@ class JavnaWhatsAppService
                         'Language' => $language,
                         'Namespace' => $namespace !== '' ? $namespace : null,
                         'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destenations_content_lower_to' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destenations' => [[
+                        'to' => $phone,
+                    ]],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_lower_destinations_content' => array_filter([
+                'messages' => [[
+                    'from' => $sender,
+                    'destinations' => [[
+                        'to' => $phone,
+                    ]],
+                    'content' => array_filter([
+                        'type' => 'template',
+                        'templateName' => $templateName,
+                        'language' => $language,
+                        'namespace' => $namespace !== '' ? $namespace : null,
+                        'parameters' => $parameterValues,
                     ], fn ($value) => $value !== null && $value !== ''),
                 ]],
             ], fn ($value) => $value !== null && $value !== ''),
@@ -370,6 +443,7 @@ class JavnaWhatsAppService
                         'status' => $response->status(),
                         'response_body' => $this->truncateBody($response->body()),
                         'payload_keys' => array_keys($payload),
+                        'payload_preview' => $this->truncateBody(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
                     ]);
                 } catch (\Throwable $exception) {
                     Log::error($exceptionLogMessage, [
