@@ -204,6 +204,49 @@ class JavnaWhatsAppService
         ], $parameterValues);
 
         $candidates = [
+            'javna_template_messages_destinations_string_content_lower' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => [
+                        'templateName' => $templateName,
+                        'language' => $language,
+                        'templateData' => [
+                            'body' => [
+                                'placeholders' => $parameterValues,
+                            ],
+                        ],
+                    ],
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_content_mixed' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => [
+                        'TemplateName' => $templateName,
+                        'language' => $language,
+                        'templateData' => [
+                            'body' => [
+                                'placeholders' => $parameterValues,
+                            ],
+                        ],
+                    ],
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_content_language_body' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => [
+                        'templateName' => $templateName,
+                        'language' => $language,
+                        'body' => [
+                            'placeholders' => $parameterValues,
+                        ],
+                    ],
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_messages_destinations_string_template_language_data' => array_filter([
                 'Messages' => [[
                     'From' => $sender,
