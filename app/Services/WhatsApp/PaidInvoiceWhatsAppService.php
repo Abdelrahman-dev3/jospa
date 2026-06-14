@@ -40,7 +40,7 @@ class PaidInvoiceWhatsAppService
                 'invoice_id' => $invoiceId,
                 'user_id' => $invoice->user_id,
             ]);
-            
+
             return false;
         }
 
@@ -53,28 +53,11 @@ class PaidInvoiceWhatsAppService
             return false;
         }
 
-        $bookingIds = $invoice->cart_ids ?? [];
-        $giftIds = $invoice->gift_ids ?? [];
-
-        if (is_string($bookingIds)) {
-            $bookingIds = json_decode($bookingIds, true) ?: explode(',', $bookingIds);
-        }
-
-        if (is_string($giftIds)) {
-            $giftIds = json_decode($giftIds, true) ?: explode(',', $giftIds);
-        }
-
-        $bookings = $this->loadBookings((array) $bookingIds);
-        $giftCards = $this->loadGiftCards((array) $giftIds);
+        $bookingIds = $this->normalizeIds($invoice->cart_ids ?? []);
+        $giftIds = $this->normalizeIds($invoice->gift_ids ?? []);
+        $bookings = $this->loadBookings($bookingIds);
+        $giftCards = $this->loadGiftCards($giftIds);
         $message = $this->buildMessage($invoice, $bookings, $giftCards);
-
-        if (blank(trim($message))) {
-            Log::warning('Skipping paid invoice WhatsApp because the generated message is empty.', [
-                'invoice_id' => $invoiceId,
-            ]);
-
-            return false;
-        }
 
         Log::info('Prepared paid invoice WhatsApp message.', [
             'invoice_id' => $invoiceId,
@@ -86,7 +69,29 @@ class PaidInvoiceWhatsAppService
             'message_length' => mb_strlen($message),
         ]);
 
-        $sent = $this->whatsAppService->sendText((string) $invoice->user->mobile, $message);
+        if ($this->whatsAppService->shouldUsePaymentTemplate()) {
+            $templateVariables = $this->buildTemplateVariables($invoice, $bookings, $giftCards);
+
+            Log::info('Prepared paid invoice WhatsApp template payload.', [
+                'invoice_id' => $invoiceId,
+                'template_variables' => $templateVariables,
+            ]);
+
+            $sent = $this->whatsAppService->sendTemplate(
+                phone: (string) $invoice->user->mobile,
+                variables: $templateVariables
+            );
+        } else {
+            if (blank(trim($message))) {
+                Log::warning('Skipping paid invoice WhatsApp because the generated message is empty.', [
+                    'invoice_id' => $invoiceId,
+                ]);
+
+                return false;
+            }
+
+            $sent = $this->whatsAppService->sendText((string) $invoice->user->mobile, $message);
+        }
 
         if (! $sent) {
             Log::error('Paid invoice WhatsApp send failed.', [
@@ -105,6 +110,24 @@ class PaidInvoiceWhatsAppService
         ]);
 
         return true;
+    }
+
+    private function normalizeIds(array|string|null $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_filter($value, fn ($item) => $item !== null && $item !== ''));
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter($decoded, fn ($item) => $item !== null && $item !== ''));
+            }
+
+            return array_values(array_filter(explode(',', $value), fn ($item) => trim((string) $item) !== ''));
+        }
+
+        return [];
     }
 
     private function loadBookings(array $bookingIds): Collection
@@ -131,7 +154,7 @@ class PaidInvoiceWhatsAppService
 
     private function buildMessage(Invoice $invoice, Collection $bookings, Collection $giftCards): string
     {
-        $customerName = trim((string) ($invoice->user->full_name ?? $invoice->user->first_name ?? 'عميلنا العزيز'));
+        $customerName = $this->resolveCustomerName($invoice);
 
         $lines = [
             'مرحبا ' . $customerName,
@@ -183,6 +206,122 @@ class PaidInvoiceWhatsAppService
         $lines[] = 'شكرا لاختياركم JO SPA';
 
         return implode("\n", $lines);
+    }
+
+    private function buildTemplateVariables(Invoice $invoice, Collection $bookings, Collection $giftCards): array
+    {
+        return [
+            $this->resolveCustomerName($invoice),
+            'INV-' . $invoice->id,
+            $this->resolveOrderTypeLabel($invoice, $bookings, $giftCards),
+            $this->resolveOrderDetailsSummary($invoice, $bookings, $giftCards),
+            $this->resolveBranchLabel($bookings),
+            $this->formatAmount($invoice->final_total),
+        ];
+    }
+
+    private function resolveCustomerName(Invoice $invoice): string
+    {
+        return trim((string) ($invoice->user->full_name ?? $invoice->user->first_name ?? 'عميلنا العزيز'));
+    }
+
+    private function resolveOrderTypeLabel(Invoice $invoice, Collection $bookings, Collection $giftCards): string
+    {
+        $hasProducts = $invoice->productItems->isNotEmpty();
+        $hasGiftCards = $giftCards->isNotEmpty();
+        $hasServices = $bookings->contains(fn ($booking) => $booking->services->isNotEmpty());
+        $hasPackages = $bookings->contains(fn ($booking) => $booking->bookingPackages->isNotEmpty());
+
+        $types = [];
+        if ($hasServices) {
+            $types[] = 'حجز خدمة';
+        }
+        if ($hasPackages) {
+            $types[] = 'حجز باقة';
+        }
+        if ($hasGiftCards) {
+            $types[] = 'جيفت كارد';
+        }
+        if ($hasProducts) {
+            $types[] = 'منتجات';
+        }
+
+        if (count($types) > 1) {
+            return 'طلب متنوع';
+        }
+
+        return $types[0] ?? 'طلب';
+    }
+
+    private function resolveOrderDetailsSummary(Invoice $invoice, Collection $bookings, Collection $giftCards): string
+    {
+        $segments = [];
+
+        foreach ($bookings as $booking) {
+            $names = collect()
+                ->merge($booking->services->pluck('service_name'))
+                ->merge($booking->bookingPackages->pluck('name'))
+                ->filter()
+                ->map(fn ($name) => $this->stringValue($name))
+                ->filter()
+                ->unique()
+                ->values();
+
+            if ($names->isNotEmpty()) {
+                $segments[] = $names->implode(' + ') . ' بتاريخ ' . $this->formatBookingDateTime($booking->start_date_time);
+            }
+        }
+
+        if ($invoice->productItems->isNotEmpty()) {
+            $productNames = $invoice->productItems
+                ->map(fn ($item) => $this->stringValue(optional($item->product)->name))
+                ->filter()
+                ->unique()
+                ->values()
+                ->implode(' + ');
+
+            if ($productNames !== '') {
+                $segments[] = $productNames;
+            }
+        }
+
+        foreach ($giftCards as $giftCard) {
+            $giftText = 'جيفت كارد بقيمة ' . $this->formatAmount($giftCard->subtotal ?? $giftCard->options_amount ?? 0) . ' ر.س';
+            if (filled($giftCard->recipient_name)) {
+                $giftText .= ' للمستفيد/ة ' . $giftCard->recipient_name;
+            }
+
+            $segments[] = $giftText;
+        }
+
+        $summary = implode(' | ', array_filter($segments));
+        if ($summary === '') {
+            return 'تم تأكيد طلبك بنجاح';
+        }
+
+        return mb_strlen($summary) > 250
+            ? mb_substr($summary, 0, 247) . '...'
+            : $summary;
+    }
+
+    private function resolveBranchLabel(Collection $bookings): string
+    {
+        $branches = $bookings
+            ->map(fn ($booking) => $this->stringValue(optional($booking->branch)->name))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($branches)) {
+            return 'جو سبا';
+        }
+
+        $label = implode(' + ', $branches);
+
+        return mb_strlen($label) > 80
+            ? mb_substr($label, 0, 77) . '...'
+            : $label;
     }
 
     private function buildBookingServicesLine(Booking $booking): ?string

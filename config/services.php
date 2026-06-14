@@ -75,6 +75,10 @@ return [
         'whatsapp_channel_id' => env('JAVNA_WHATSAPP_CHANNEL_ID'),
         'whatsapp_timeout' => (int) env('JAVNA_WHATSAPP_TIMEOUT', 15),
         'whatsapp_payload_style' => env('JAVNA_WHATSAPP_PAYLOAD_STYLE', 'auto'),
+        'whatsapp_template_name' => env('JAVNA_WHATSAPP_TEMPLATE_NAME'),
+        'whatsapp_template_language' => env('JAVNA_WHATSAPP_TEMPLATE_LANGUAGE', 'ar'),
+        'whatsapp_template_namespace' => env('JAVNA_WHATSAPP_TEMPLATE_NAMESPACE'),
+        'whatsapp_template_path' => env('JAVNA_WHATSAPP_TEMPLATE_PATH', '/whatsapp/v1.0/message/template'),
     ],
 
 
