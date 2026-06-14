@@ -118,6 +118,7 @@ class JavnaWhatsAppService
         return $this->deliverPayloadCandidates(
             endpoint: $this->resolveTemplateEndpoint($apiUrl),
             apiToken: $apiToken,
+
             timeout: $timeout,
             phone: $normalizedPhone,
             payloadCandidates: $payloadCandidates,
@@ -203,6 +204,48 @@ class JavnaWhatsAppService
         ], $parameterValues);
 
         $candidates = [
+            'javna_template_messages_destinations_content' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [[
+                        'To' => $phone,
+                    ]],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [[
+                        'To' => $phone,
+                    ]],
+                    'TemplateName' => $templateName,
+                    'Language' => $language,
+                    'Parameters' => $parameterValues,
+                    'Namespace' => $namespace !== '' ? $namespace : null,
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destenations_content' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destenations' => [[
+                        'To' => $phone,
+                    ]],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'Language' => $language,
+                        'Namespace' => $namespace !== '' ? $namespace : null,
+                        'Parameters' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_messages_content' => array_filter([
                 'Messages' => [[
                     'To' => $phone,
@@ -308,7 +351,7 @@ class JavnaWhatsAppService
                 try {
                     $response = $this->sendPayload($endpoint, $apiToken, $timeout, $payload, $transport);
 
-                    if ($response->successful()) {
+                    if ($response->successful() && $this->responseRepresentsAcceptedSend($response)) {
                         Log::info($successLogMessage, [
                             'style' => $style,
                             'transport' => $transport,
@@ -443,5 +486,26 @@ class JavnaWhatsAppService
         return mb_strlen($body) > $limit
             ? mb_substr($body, 0, $limit) . '...'
             : $body;
+    }
+
+    private function responseRepresentsAcceptedSend($response): bool
+    {
+        $data = $response->json();
+        if (! is_array($data)) {
+            return $response->successful();
+        }
+
+        $accepted = (int) data_get($data, 'stats.accepted', 0);
+        $rejected = (int) data_get($data, 'stats.rejected', 0);
+
+        if ($accepted > 0 && $rejected === 0) {
+            return true;
+        }
+
+        if (array_key_exists('stats', $data) || array_key_exists('acceptedMessages', $data) || array_key_exists('rejectedMessages', $data)) {
+            return false;
+        }
+
+        return $response->successful();
     }
 }
