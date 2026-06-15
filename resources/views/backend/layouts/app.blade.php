@@ -83,6 +83,7 @@
                 ->where('file', $fileName)
                 ->pluck('value', 'key')
                 ->toArray();
+                
             if (count($dbLang) > 0) {
                 $arr = array_merge($arr, $dbLang);
             }
@@ -95,7 +96,7 @@
         </script>
     @endforeach
     <script>
-        window.auth_permissions = @json($permissions)
+        window.auth_permissions = @json($permissions ?? '')
     </script>
     <script>
         window.auth_profile_image = @json(default_user_avatar());

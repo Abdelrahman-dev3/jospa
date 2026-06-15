@@ -207,18 +207,6 @@ class JavnaWhatsAppService
         ], $parameterValues);
 
         $candidates = [
-            'javna_template_messages_destinations_string_template_language_parameters_objects' => array_filter([
-                'Messages' => [[
-                    'From' => $sender,
-                    'Destinations' => [$phone],
-                    'Content' => array_filter([
-                        'Type' => 'template',
-                        'TemplateName' => $templateName,
-                        'TemplateLanguage' => $language,
-                        'Parameters' => $textParameters,
-                    ], fn ($value) => $value !== null && $value !== ''),
-                ]],
-            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_messages_destinations_string_template_language_localizable_params' => array_filter([
                 'Messages' => [[
                     'From' => $sender,
@@ -228,22 +216,6 @@ class JavnaWhatsAppService
                         'TemplateName' => $templateName,
                         'TemplateLanguage' => $language,
                         'localizable_params' => $localizableParameters,
-                    ], fn ($value) => $value !== null && $value !== ''),
-                ]],
-            ], fn ($value) => $value !== null && $value !== ''),
-            'javna_template_messages_destinations_string_template_language_data_objects' => array_filter([
-                'Messages' => [[
-                    'From' => $sender,
-                    'Destinations' => [$phone],
-                    'Content' => array_filter([
-                        'Type' => 'template',
-                        'TemplateName' => $templateName,
-                        'TemplateLanguage' => $language,
-                        'TemplateData' => [
-                            'Body' => [
-                                'Placeholders' => $textParameters,
-                            ],
-                        ],
                     ], fn ($value) => $value !== null && $value !== ''),
                 ]],
             ], fn ($value) => $value !== null && $value !== ''),
@@ -258,6 +230,66 @@ class JavnaWhatsAppService
                         'TemplateData' => [
                             'body' => [
                                 'localizable_params' => $localizableParameters,
+                            ],
+                        ],
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_template_language_data_placeholders_lower' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'TemplateLanguage' => $language,
+                        'TemplateData' => [
+                            'body' => [
+                                'placeholders' => $parameterValues,
+                            ],
+                        ],
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_template_language_data_placeholders_objects_lower' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'TemplateLanguage' => $language,
+                        'TemplateData' => [
+                            'body' => [
+                                'placeholders' => $textParameters,
+                            ],
+                        ],
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_template_language_parameters_objects' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'TemplateLanguage' => $language,
+                        'Parameters' => $textParameters,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_template_language_data_objects' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'TemplateLanguage' => $language,
+                        'TemplateData' => [
+                            'Body' => [
+                                'Placeholders' => $textParameters,
                             ],
                         ],
                     ], fn ($value) => $value !== null && $value !== ''),
