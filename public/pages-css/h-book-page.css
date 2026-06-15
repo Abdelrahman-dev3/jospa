@@ -405,8 +405,7 @@ body {
 
     .service-grid {
         /*if d-block in mob*/
-        /*grid-template-columns: 1fr;*/
-        display: none;
+        grid-template-columns: 1fr;
     }
 
     .staff-grid {
