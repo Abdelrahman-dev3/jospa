@@ -260,7 +260,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             throw new \RuntimeException('UrPay is not fully configured. Set URPAY_CHECKOUT_URL_TEMPLATE or the API endpoint settings first.');
         }
 
-        if ($this->isHostedPagePath($createOrderPath)) {
+        if ($this->isHostedGatewayConfiguration($createOrderPath)) {
             return $this->createHostedCheckoutDocument($baseUrl, $createOrderPath, $amount, $currency, $invoiceRef, $merchantUrls);
         }
 
@@ -341,9 +341,14 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     ): array {
         $tranportalId = trim((string) config('urpay.username'));
         $tranportalPassword = trim((string) config('urpay.password'));
+        $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
 
         if ($tranportalId === '' || $tranportalPassword === '') {
             throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
+        }
+
+        if (! $this->isTranportalPath($verifyOrderPath)) {
+            throw new \RuntimeException('URPAY hosted payment requires URPAY_VERIFY_ORDER_PATH to point to tranportal.htm.');
         }
 
         $mobileNumber = $this->normalizeUrPayMobileNumber((string) (auth()->user()->mobile ?? ''));
@@ -390,7 +395,15 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             throw new \RuntimeException('UrPay token generation failed: ' . $response->body());
         }
 
+        if ($this->isInvalidAccessResponse($response->body())) {
+            throw new \RuntimeException('URPAY gateway rejected the hosted payment request with InvalidAccess. Re-check Tranportal ID, Tranportal Password, Resource Key, Terminal configuration, and the merchant server IP allowlist with the bank.');
+        }
+
         $responseData = $response->json();
+        if (! is_array($responseData)) {
+            throw new \RuntimeException('UrPay token generation returned a non-JSON response. Re-check the gateway endpoint paths and request format provided by the bank.');
+        }
+
         if (is_array($responseData) && array_is_list($responseData)) {
             $responseData = $responseData[0] ?? [];
         }
@@ -607,6 +620,12 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return $createOrderPath;
+    }
+
+    private function isHostedGatewayConfiguration(string $createOrderPath): bool
+    {
+        return $this->isHostedPagePath($createOrderPath)
+            || $this->isTranportalPath(trim((string) config('urpay.verify_order_path'), '/'));
     }
 
     private function buildForwardedForHeader(Request $request): string
@@ -941,6 +960,18 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
         if (str_contains($message, 'URPAY resource key is missing.')) {
             return 'تعذر بدء دفع URPAY لأن Resource Key غير موجودة في الإعدادات.';
+        }
+
+        if (str_contains($message, 'URPAY hosted payment requires URPAY_VERIFY_ORDER_PATH to point to tranportal.htm.')) {
+            return 'تعذر بدء دفع URPAY لأن قيمة URPAY_VERIFY_ORDER_PATH يجب أن تشير إلى tranportal.htm الخاص بالبنك.';
+        }
+
+        if (str_contains($message, 'URPAY gateway rejected the hosted payment request with InvalidAccess.')) {
+            return 'بوابة URPAY رفضت طلب الدفع برسالة InvalidAccess. غالبًا السبب في Tranportal ID أو Tranportal Password أو Resource Key أو إعدادات Terminal أو سماح عنوان IP من جهة البنك.';
+        }
+
+        if (str_contains($message, 'UrPay token generation returned a non-JSON response.')) {
+            return 'بوابة URPAY أعادت ردًا غير متوقع بدل JSON. راجع قيم URPAY_CREATE_ORDER_PATH و URPAY_VERIFY_ORDER_PATH وتأكد أنها مطابقة لمسارات البنك.';
         }
 
         return $message;
