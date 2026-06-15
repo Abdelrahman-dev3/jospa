@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Modules\Booking\Models\Booking;
 
 class PaidInvoiceWhatsAppService
@@ -103,6 +104,8 @@ class PaidInvoiceWhatsAppService
             return false;
         }
 
+        $this->storeAcceptedMessage($invoice);
+
         Log::info('Paid invoice WhatsApp send completed successfully.', [
             'invoice_id' => $invoiceId,
             'user_id' => $invoice->user_id,
@@ -110,6 +113,26 @@ class PaidInvoiceWhatsAppService
         ]);
 
         return true;
+    }
+
+    private function storeAcceptedMessage(Invoice $invoice): void
+    {
+        $acceptedMessage = $this->whatsAppService->getLastAcceptedMessage();
+        if (! is_array($acceptedMessage) || blank($acceptedMessage['message_id'] ?? null)) {
+            return;
+        }
+
+        if (! Schema::hasColumn('invoices', 'javna_whatsapp_message_id')) {
+            return;
+        }
+
+        $invoice->forceFill([
+            'javna_whatsapp_message_id' => $acceptedMessage['message_id'],
+            'javna_whatsapp_status' => $acceptedMessage['status'] ?: 'accepted',
+            'javna_whatsapp_payload_style' => $acceptedMessage['style'] ?? null,
+            'javna_whatsapp_sent_at' => now(),
+            'javna_whatsapp_last_event_at' => now(),
+        ])->save();
     }
 
     private function normalizeIds(array|string|null $value): array

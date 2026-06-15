@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class JavnaWhatsAppService
 {
+    private ?array $lastAcceptedMessage = null;
+
     public function isEnabled(): bool
     {
         return (bool) config('services.javna.whatsapp_enabled')
@@ -23,6 +25,8 @@ class JavnaWhatsAppService
 
     public function sendText(string $phone, string $message): bool
     {
+        $this->lastAcceptedMessage = null;
+
         if (! $this->isEnabled()) {
             Log::warning('WhatsApp sending is disabled or incomplete.', [
                 'enabled' => (bool) config('services.javna.whatsapp_enabled'),
@@ -69,6 +73,8 @@ class JavnaWhatsAppService
 
     public function sendTemplate(string $phone, array $variables, ?string $templateName = null, ?string $language = null): bool
     {
+        $this->lastAcceptedMessage = null;
+
         if (! $this->isEnabled()) {
             Log::warning('WhatsApp template sending is disabled or incomplete.', [
                 'enabled' => (bool) config('services.javna.whatsapp_enabled'),
@@ -127,6 +133,11 @@ class JavnaWhatsAppService
             exceptionLogMessage: 'Failed to send outbound WhatsApp template.',
             finalErrorLogMessage: 'All outbound WhatsApp template payload styles failed.'
         );
+    }
+
+    public function getLastAcceptedMessage(): ?array
+    {
+        return $this->lastAcceptedMessage;
     }
 
     private function buildTextPayloadCandidates(string $phone, string $message): array
@@ -684,10 +695,13 @@ class JavnaWhatsAppService
                     $response = $this->sendPayload($endpoint, $apiToken, $timeout, $payload, $transport);
 
                     if ($response->successful() && $this->responseRepresentsAcceptedSend($response)) {
+                        $this->lastAcceptedMessage = $this->extractAcceptedMessageData($response, $style, $transport);
+
                         Log::info($successLogMessage, [
                             'style' => $style,
                             'transport' => $transport,
                             'phone' => $phone,
+                            'message_id' => $this->lastAcceptedMessage['message_id'] ?? null,
                             'status' => $response->status(),
                             'body' => $this->truncateBody($response->body()),
                         ]);
@@ -840,5 +854,25 @@ class JavnaWhatsAppService
         }
 
         return $response->successful();
+    }
+
+    private function extractAcceptedMessageData($response, string $style, string $transport): array
+    {
+        $data = $response->json();
+        $acceptedMessage = is_array($data) ? data_get($data, 'acceptedMessages.0', []) : [];
+
+        if (! is_array($acceptedMessage)) {
+            $acceptedMessage = [];
+        }
+
+        return [
+            'message_id' => data_get($acceptedMessage, 'messageId') ?: data_get($acceptedMessage, 'message_id') ?: data_get($data, 'messageId'),
+            'from' => data_get($acceptedMessage, 'from'),
+            'to' => data_get($acceptedMessage, 'to'),
+            'status' => data_get($acceptedMessage, 'messageStatus.status') ?: data_get($data, 'status'),
+            'style' => $style,
+            'transport' => $transport,
+            'raw' => is_array($data) ? $data : null,
+        ];
     }
 }
