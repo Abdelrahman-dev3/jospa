@@ -117,6 +117,14 @@ class PaidInvoiceWhatsAppService
 
     private function storeAcceptedMessage(Invoice $invoice): void
     {
+        if (! method_exists($this->whatsAppService, 'getLastAcceptedMessage')) {
+            Log::warning('Skipping Javna WhatsApp tracking because the service is missing getLastAcceptedMessage().', [
+                'invoice_id' => $invoice->id,
+            ]);
+
+            return;
+        }
+
         $acceptedMessage = $this->whatsAppService->getLastAcceptedMessage();
         if (! is_array($acceptedMessage) || blank($acceptedMessage['message_id'] ?? null)) {
             return;
