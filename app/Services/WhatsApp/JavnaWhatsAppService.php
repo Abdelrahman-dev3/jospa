@@ -783,6 +783,8 @@ class JavnaWhatsAppService
                             'phone' => $phone,
                             'message_id' => $this->lastAcceptedMessage['message_id'] ?? null,
                             'status' => $response->status(),
+                            'payload_diagnostics' => $this->payloadDiagnostics($payload),
+                            'payload_preview' => $this->truncateBody(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
                             'body' => $this->truncateBody($response->body()),
                         ]);
 
@@ -815,6 +817,28 @@ class JavnaWhatsAppService
         ]);
 
         return false;
+    }
+
+    private function payloadDiagnostics(array $payload): array
+    {
+        $content = data_get($payload, 'Messages.0.Content')
+            ?? data_get($payload, 'messages.0.content')
+            ?? $payload;
+
+        return [
+            'top_level_keys' => array_keys($payload),
+            'content_keys' => is_array($content) ? array_keys($content) : [],
+            'parameters_count' => is_array(data_get($content, 'Parameters')) ? count(data_get($content, 'Parameters')) : null,
+            'template_data_body_placeholders_count' => is_array(data_get($content, 'TemplateData.Body.Placeholders'))
+                ? count(data_get($content, 'TemplateData.Body.Placeholders'))
+                : null,
+            'template_data_body_localizable_params_count' => is_array(data_get($content, 'TemplateData.Body.localizable_params'))
+                ? count(data_get($content, 'TemplateData.Body.localizable_params'))
+                : null,
+            'template_data_lower_body_placeholders_count' => is_array(data_get($content, 'templateData.body.placeholders'))
+                ? count(data_get($content, 'templateData.body.placeholders'))
+                : null,
+        ];
     }
 
     private function resolveTransportModes(string $style): array

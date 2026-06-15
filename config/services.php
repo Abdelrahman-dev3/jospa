@@ -74,7 +74,7 @@ return [
         'whatsapp_sender' => env('JAVNA_WHATSAPP_SENDER'),
         'whatsapp_channel_id' => env('JAVNA_WHATSAPP_CHANNEL_ID'),
         'whatsapp_timeout' => (int) env('JAVNA_WHATSAPP_TIMEOUT', 15),
-        'whatsapp_payload_style' => env('JAVNA_WHATSAPP_PAYLOAD_STYLE', 'javna_template_messages_destinations_string_template_language_parameters_objects'),
+        'whatsapp_payload_style' => env('JAVNA_WHATSAPP_PAYLOAD_STYLE', 'javna_template_messages_destinations_string_template_language_data'),
         'whatsapp_template_name' => env('JAVNA_WHATSAPP_TEMPLATE_NAME'),
         'whatsapp_template_language' => env('JAVNA_WHATSAPP_TEMPLATE_LANGUAGE', 'ar'),
         'whatsapp_template_namespace' => env('JAVNA_WHATSAPP_TEMPLATE_NAMESPACE'),
