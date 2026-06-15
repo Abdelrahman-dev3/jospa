@@ -103,7 +103,7 @@ class PaidInvoiceWhatsAppService
             return false;
         }
 
-        Log::info('Paid invoice WhatsApp send completed successfully.', [
+        Log::info('Paid invoice WhatsApp request accepted by provider.', [
             'invoice_id' => $invoiceId,
             'user_id' => $invoice->user_id,
             'phone' => $invoice->user->mobile,

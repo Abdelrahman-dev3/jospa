@@ -118,6 +118,15 @@ class JavnaWebhookController extends Controller
                 'failure_reason' => $failureReason,
                 'payload' => $payload,
             ]);
+
+            if ((string) $failureCode === '132000') {
+                Log::error('WhatsApp template parameters mismatch detected.', [
+                    'message_id' => $messageId,
+                    'to' => $toNumber,
+                    'template_hint' => 'The approved template expects a different body parameter structure/count than what the provider forwarded to Meta.',
+                    'meta_details' => $failureReason,
+                ]);
+            }
         }
 
         if (config('services.javna.enabled')) {
