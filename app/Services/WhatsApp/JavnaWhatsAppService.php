@@ -310,6 +310,22 @@ class JavnaWhatsAppService
                     ], fn ($value) => $value !== null && $value !== ''),
                 ]],
             ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_template_language_data_body_localizable' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'TemplateLanguage' => $language,
+                        'TemplateData' => [
+                            'Body' => [
+                                'localizable_params' => $localizableParameters,
+                            ],
+                        ],
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_messages_destinations_string_template_language_data_placeholders_lower' => array_filter([
                 'Messages' => [[
                     'From' => $sender,
