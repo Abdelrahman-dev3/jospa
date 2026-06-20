@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Invoice;
 use App\Models\JavnaWebhookEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class JavnaWebhookController extends Controller
 {
     public function whatsapp(Request $request): JsonResponse
     {
+        if ($request->isMethod('get')) {
+            return $this->verify($request);
+        }
+
         $payload = $request->all();
         $event = (string) Arr::get($payload, 'event', '');
         $messageId = $this->firstValue($payload, [
@@ -143,6 +149,8 @@ class JavnaWebhookController extends Controller
                     'headers' => $request->headers->all(),
                     'processed_at' => now(),
                 ]);
+
+                $this->updateInvoiceWhatsAppStatus($messageId, $status ?: $event);
             } catch (\Throwable $exception) {
                 Log::error('Failed to store Javna WhatsApp webhook', [
                     'message' => $exception->getMessage(),
@@ -152,6 +160,38 @@ class JavnaWebhookController extends Controller
         }
 
         return response()->json(['status' => 'received']);
+    }
+
+    private function verify(Request $request): JsonResponse
+    {
+        $challenge = $this->firstValue($request->query(), [
+            'challenge',
+            'hub.challenge',
+            'verification_challenge',
+            'verificationChallenge',
+        ]);
+
+        Log::info('Javna WhatsApp webhook verification requested.', [
+            'has_challenge' => filled($challenge),
+            'query_keys' => array_keys($request->query()),
+        ]);
+
+        return response()->json([
+            'status' => 'verified',
+            'challenge' => $challenge,
+        ]);
+    }
+
+    private function updateInvoiceWhatsAppStatus(?string $messageId, ?string $status): void
+    {
+        if (blank($messageId) || ! Schema::hasColumn('invoices', 'javna_whatsapp_message_id')) {
+            return;
+        }
+
+        Invoice::where('javna_whatsapp_message_id', $messageId)->update([
+            'javna_whatsapp_status' => $status,
+            'javna_whatsapp_last_event_at' => now(),
+        ]);
     }
 
     private function firstValue(array $payload, array $keys): mixed

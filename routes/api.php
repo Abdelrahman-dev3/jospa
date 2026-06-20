@@ -45,7 +45,7 @@ use Modules\Service\Http\Controllers\Backend\API\ServiceController;
 |
 */
 
-Route::post('/webhooks/javna/whatsapp', [JavnaWebhookController::class, 'whatsapp'])->name('webhooks.javna.whatsapp');
+Route::match(['get', 'post'], '/webhooks/javna/whatsapp', [JavnaWebhookController::class, 'whatsapp'])->name('webhooks.javna.whatsapp');
 
 Route::prefix('var')->group(function () {
     Route::controller(AdController::class)->group(function () {

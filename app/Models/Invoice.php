@@ -23,12 +23,19 @@ class Invoice extends Model
         'taxs_service',
         'loyalty_points_discount',
         'final_total',
+        'javna_whatsapp_message_id',
+        'javna_whatsapp_status',
+        'javna_whatsapp_payload_style',
+        'javna_whatsapp_sent_at',
+        'javna_whatsapp_last_event_at',
     ];
 
     protected $casts = [
         'cart_ids' => 'array',
         'gift_ids' => 'array',
         'product_ids' => 'array',
+        'javna_whatsapp_sent_at' => 'datetime',
+        'javna_whatsapp_last_event_at' => 'datetime',
     ];
 
     public function user()

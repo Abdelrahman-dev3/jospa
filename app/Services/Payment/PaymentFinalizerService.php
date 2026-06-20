@@ -189,8 +189,8 @@ class PaymentFinalizerService
         $giftAmount = (float) ($subPayments['used_gift'] ?? 0);
         $invoice = Invoice::create([
             'user_id' => $userId,
-            'cart_ids' => json_encode($cartIds),
-            'gift_ids' => json_encode($giftIds),
+            'cart_ids' => $cartIds,
+            'gift_ids' => $giftIds,
             'product_ids' => $product_ids,
             'coupon_code' => $couponCode ?: null,
             'gift_code' => $giftCode ?: null,

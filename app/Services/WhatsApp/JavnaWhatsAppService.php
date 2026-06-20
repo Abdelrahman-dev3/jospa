@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class JavnaWhatsAppService
 {
+    private ?array $lastAcceptedMessage = null;
+
     public function isEnabled(): bool
     {
         return (bool) config('services.javna.whatsapp_enabled')
@@ -23,6 +25,8 @@ class JavnaWhatsAppService
 
     public function sendText(string $phone, string $message): bool
     {
+        $this->lastAcceptedMessage = null;
+
         if (! $this->isEnabled()) {
             Log::warning('WhatsApp sending is disabled or incomplete.', [
                 'enabled' => (bool) config('services.javna.whatsapp_enabled'),
@@ -69,6 +73,8 @@ class JavnaWhatsAppService
 
     public function sendTemplate(string $phone, array $variables, ?string $templateName = null, ?string $language = null): bool
     {
+        $this->lastAcceptedMessage = null;
+
         if (! $this->isEnabled()) {
             Log::warning('WhatsApp template sending is disabled or incomplete.', [
                 'enabled' => (bool) config('services.javna.whatsapp_enabled'),
@@ -127,6 +133,11 @@ class JavnaWhatsAppService
             exceptionLogMessage: 'Failed to send outbound WhatsApp template.',
             finalErrorLogMessage: 'All outbound WhatsApp template payload styles failed.'
         );
+    }
+
+    public function getLastAcceptedMessage(): ?array
+    {
+        return $this->lastAcceptedMessage;
     }
 
     private function buildTextPayloadCandidates(string $phone, string $message): array
@@ -207,6 +218,55 @@ class JavnaWhatsAppService
         ], $parameterValues);
 
         $candidates = [
+            'javna_official_template_body_params' => array_filter([
+                'messages' => [[
+                    'from' => $sender,
+                    'destinations' => [$phone],
+                    'content' => array_filter([
+                        'templateName' => $templateName,
+                        'templateLanguage' => $language,
+                        'bodyParams' => $parameterValues,
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_content_template_components' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'Template' => array_filter([
+                            'Name' => $templateName,
+                            'Language' => [
+                                'Code' => $language,
+                            ],
+                            'Components' => [[
+                                'Type' => 'body',
+                                'Parameters' => $textParameters,
+                            ]],
+                        ], fn ($value) => $value !== null && $value !== ''),
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_content_template_components_lower' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'type' => 'template',
+                        'template' => array_filter([
+                            'name' => $templateName,
+                            'language' => [
+                                'code' => $language,
+                            ],
+                            'components' => [[
+                                'type' => 'body',
+                                'parameters' => $textParameters,
+                            ]],
+                        ], fn ($value) => $value !== null && $value !== ''),
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
             'javna_template_messages_destinations_string_template_language_data_body_localizable_params' => array_filter([
                 'Messages' => [[
                     'From' => $sender,
@@ -293,6 +353,22 @@ class JavnaWhatsAppService
                         'TemplateLanguage' => $language,
                         'TemplateData' => [
                             'body' => [
+                                'localizable_params' => $localizableParameters,
+                            ],
+                        ],
+                    ], fn ($value) => $value !== null && $value !== ''),
+                ]],
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_template_messages_destinations_string_template_language_data_body_localizable' => array_filter([
+                'Messages' => [[
+                    'From' => $sender,
+                    'Destinations' => [$phone],
+                    'Content' => array_filter([
+                        'Type' => 'template',
+                        'TemplateName' => $templateName,
+                        'TemplateLanguage' => $language,
+                        'TemplateData' => [
+                            'Body' => [
                                 'localizable_params' => $localizableParameters,
                             ],
                         ],
@@ -748,11 +824,16 @@ class JavnaWhatsAppService
                     $response = $this->sendPayload($endpoint, $apiToken, $timeout, $payload, $transport);
 
                     if ($response->successful() && $this->responseRepresentsAcceptedSend($response)) {
+                        $this->lastAcceptedMessage = $this->extractAcceptedMessageData($response, $style, $transport);
+
                         Log::info($successLogMessage, [
                             'style' => $style,
                             'transport' => $transport,
                             'phone' => $phone,
+                            'message_id' => $this->lastAcceptedMessage['message_id'] ?? null,
                             'status' => $response->status(),
+                            'payload_diagnostics' => $this->payloadDiagnostics($payload),
+                            'payload_preview' => $this->truncateBody(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
                             'body' => $this->truncateBody($response->body()),
                         ]);
 
@@ -785,6 +866,37 @@ class JavnaWhatsAppService
         ]);
 
         return false;
+    }
+
+    private function payloadDiagnostics(array $payload): array
+    {
+        $content = data_get($payload, 'Messages.0.Content')
+            ?? data_get($payload, 'messages.0.content')
+            ?? $payload;
+
+        return [
+            'top_level_keys' => array_keys($payload),
+            'content_keys' => is_array($content) ? array_keys($content) : [],
+            'parameters_count' => is_array(data_get($content, 'Parameters')) ? count(data_get($content, 'Parameters')) : null,
+            'body_params_count' => is_array(data_get($content, 'bodyParams'))
+                ? count(data_get($content, 'bodyParams'))
+                : null,
+            'template_components_body_parameters_count' => is_array(data_get($content, 'Template.Components.0.Parameters'))
+                ? count(data_get($content, 'Template.Components.0.Parameters'))
+                : null,
+            'template_lower_components_body_parameters_count' => is_array(data_get($content, 'template.components.0.parameters'))
+                ? count(data_get($content, 'template.components.0.parameters'))
+                : null,
+            'template_data_body_placeholders_count' => is_array(data_get($content, 'TemplateData.Body.Placeholders'))
+                ? count(data_get($content, 'TemplateData.Body.Placeholders'))
+                : null,
+            'template_data_body_localizable_params_count' => is_array(data_get($content, 'TemplateData.Body.localizable_params'))
+                ? count(data_get($content, 'TemplateData.Body.localizable_params'))
+                : null,
+            'template_data_lower_body_placeholders_count' => is_array(data_get($content, 'templateData.body.placeholders'))
+                ? count(data_get($content, 'templateData.body.placeholders'))
+                : null,
+        ];
     }
 
     private function resolveTransportModes(string $style): array
@@ -904,5 +1016,25 @@ class JavnaWhatsAppService
         }
 
         return $response->successful();
+    }
+
+    private function extractAcceptedMessageData($response, string $style, string $transport): array
+    {
+        $data = $response->json();
+        $acceptedMessage = is_array($data) ? data_get($data, 'acceptedMessages.0', []) : [];
+
+        if (! is_array($acceptedMessage)) {
+            $acceptedMessage = [];
+        }
+
+        return [
+            'message_id' => data_get($acceptedMessage, 'messageId') ?: data_get($acceptedMessage, 'message_id') ?: data_get($data, 'messageId'),
+            'from' => data_get($acceptedMessage, 'from'),
+            'to' => data_get($acceptedMessage, 'to'),
+            'status' => data_get($acceptedMessage, 'messageStatus.status') ?: data_get($data, 'status'),
+            'style' => $style,
+            'transport' => $transport,
+            'raw' => is_array($data) ? $data : null,
+        ];
     }
 }
