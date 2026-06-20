@@ -7,6 +7,7 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 
 class UrPayPaymentStrategy extends BasePaymentStrategy
@@ -376,12 +377,29 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'errorURL' => $merchantUrls['failure'],
         ]];
 
+        Log::info('URPAY hosted checkout request prepared.', [
+            'base_url' => $baseUrl,
+            'endpoint_path' => $endpointPath,
+            'track_id' => $trackId,
+            'currency_code' => $plainTrandata[0]['currencyCode'],
+            'tranportal_id' => $this->maskUrPaySecret($tranportalId),
+            'tranportal_password_length' => strlen($tranportalPassword),
+            'tranportal_password_fingerprint' => $this->fingerprintUrPaySecret($tranportalPassword),
+            'resource_key_length' => strlen(trim((string) config('urpay.token'))),
+            'resource_key_fingerprint' => $this->fingerprintUrPaySecret((string) config('urpay.token')),
+        ]);
+
         $response = Http::acceptJson()
             ->asJson()
             ->withHeaders([
                 'X-FORWARDED-FOR' => $this->buildForwardedForHeader(request()),
             ])
             ->post($baseUrl . '/' . ltrim($endpointPath, '/'), $requestBody);
+
+        Log::info('URPAY hosted checkout response received.', [
+            'status_code' => $response->status(),
+            'body' => $response->body(),
+        ]);
 
         if (! $response->successful()) {
             throw new \RuntimeException('UrPay token generation failed: ' . $response->body());
@@ -937,6 +955,31 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return false;
+    }
+
+    private function maskUrPaySecret(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '[empty]';
+        }
+
+        $length = strlen($value);
+        if ($length <= 4) {
+            return str_repeat('*', $length);
+        }
+
+        return substr($value, 0, 2) . str_repeat('*', max(0, $length - 4)) . substr($value, -2);
+    }
+
+    private function fingerprintUrPaySecret(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '[empty]';
+        }
+
+        return substr(hash('sha256', $value), 0, 12);
     }
 
     protected function presentableErrorMessage(\Throwable $e): string
