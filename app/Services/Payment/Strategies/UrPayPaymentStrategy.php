@@ -341,20 +341,11 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     ): array {
         $tranportalId = trim((string) config('urpay.username'));
         $tranportalPassword = trim((string) config('urpay.password'));
-        $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
-
         if ($tranportalId === '' || $tranportalPassword === '') {
             throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
         }
 
-        if (! $this->isTranportalPath($verifyOrderPath)) {
-            throw new \RuntimeException('URPAY hosted payment requires URPAY_VERIFY_ORDER_PATH to point to tranportal.htm.');
-        }
-
         $mobileNumber = $this->normalizeUrPayMobileNumber((string) (auth()->user()->mobile ?? ''));
-        if ($mobileNumber === null) {
-            throw new \RuntimeException('تعذر بدء دفع URPAY لأن رقم جوال العميل غير صالح لصيغة URPAY المطلوبة. يجب إرسال رقم جوال مكوّن من 9 أرقام بدون 0 أو +966.');
-        }
 
         $trackId = $this->buildNumericTrackId($invoiceRef);
         $merchantReference = $this->sanitizeUrPayAlphaNum($invoiceRef) ?: $trackId;
@@ -368,15 +359,16 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'trackId' => $trackId,
             'responseURL' => $merchantUrls['success'],
             'errorURL' => $merchantUrls['failure'],
+        ] + array_filter([
             'udf1' => $merchantReference,
             'udf2' => $this->sanitizeUrPayAlphaNum((string) (auth()->id() ?? '')),
             'udf5' => $merchantReference,
             'langid' => app()->getLocale() === 'ar' ? 'ar' : 'en',
             'cust_mobile_number' => $mobileNumber,
-            'cust_emailId' => (string) (auth()->user()->email ?? ''),
-        ]];
+            'cust_emailId' => trim((string) (auth()->user()->email ?? '')),
+        ], static fn ($value) => $value !== null && $value !== '')];
 
-        $endpointPath = $this->resolveTokenGenerationPath($createOrderPath);
+        $endpointPath = $this->resolveHostedGatewayRequestPath($createOrderPath);
         $requestBody = [[
             'id' => $tranportalId,
             'trandata' => $this->encryptTrandataPayload($plainTrandata),
@@ -611,21 +603,30 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         };
     }
 
-    private function resolveTokenGenerationPath(string $createOrderPath): string
+    private function resolveHostedGatewayRequestPath(string $createOrderPath): string
     {
         $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
 
-        if ($this->isHostedPagePath($createOrderPath) && $this->isTranportalPath($verifyOrderPath)) {
+        if ($this->isHostedIntegrationPath($createOrderPath)) {
+            return $createOrderPath;
+        }
+
+        if ($this->isHostedIntegrationPath($verifyOrderPath)) {
             return $verifyOrderPath;
         }
 
-        return $createOrderPath;
+        throw new \RuntimeException('URPAY hosted payment requires URPAY_CREATE_ORDER_PATH or URPAY_VERIFY_ORDER_PATH to point to hosted.htm or tranportal.htm.');
     }
 
     private function isHostedGatewayConfiguration(string $createOrderPath): bool
     {
-        return $this->isHostedPagePath($createOrderPath)
-            || $this->isTranportalPath(trim((string) config('urpay.verify_order_path'), '/'));
+        return $this->isHostedIntegrationPath($createOrderPath)
+            || $this->isHostedIntegrationPath(trim((string) config('urpay.verify_order_path'), '/'));
+    }
+
+    private function isHostedIntegrationPath(string $path): bool
+    {
+        return $this->isHostedPagePath($path) || $this->isTranportalPath($path);
     }
 
     private function buildForwardedForHeader(Request $request): string
@@ -962,8 +963,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             return 'تعذر بدء دفع URPAY لأن Resource Key غير موجودة في الإعدادات.';
         }
 
-        if (str_contains($message, 'URPAY hosted payment requires URPAY_VERIFY_ORDER_PATH to point to tranportal.htm.')) {
-            return 'تعذر بدء دفع URPAY لأن قيمة URPAY_VERIFY_ORDER_PATH يجب أن تشير إلى tranportal.htm الخاص بالبنك.';
+        if (str_contains($message, 'URPAY hosted payment requires URPAY_CREATE_ORDER_PATH or URPAY_VERIFY_ORDER_PATH to point to hosted.htm or tranportal.htm.')) {
+            return 'تعذر بدء دفع URPAY لأن أحد المسارين URPAY_CREATE_ORDER_PATH أو URPAY_VERIFY_ORDER_PATH يجب أن يشير إلى hosted.htm أو tranportal.htm طبقًا لإعدادات البنك.';
         }
 
         if (str_contains($message, 'URPAY gateway rejected the hosted payment request with InvalidAccess.')) {
