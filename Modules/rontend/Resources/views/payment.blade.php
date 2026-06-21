@@ -37,6 +37,7 @@
         :wallet="$wallet->amount ?? 0"
         :loyalty-balance="$loyaltyBalance ?? 0"
         :branches="$branches"  
+        :gatewayDiscounts="$gatewayDiscounts"
         :tapPaymentSources="$tapPaymentSources"
         :defaultPaymentMethod="$defaultPaymentMethod"  
         :defaultPaymentSource="$defaultPaymentSource"

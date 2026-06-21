@@ -76,11 +76,12 @@ class PaymentController extends Controller
         })->unique('branch_id')->values();   
 
         $paymentMethods = FrontendPaymentSettings::paymentMethods();
+        $gatewayDiscounts = FrontendPaymentSettings::gatewayDiscounts();
         $tapPaymentSources = FrontendPaymentSettings::tapPaymentSources();
         $defaultPaymentMethod = FrontendPaymentSettings::defaultPaymentMethod($paymentMethods);
         $defaultPaymentSource = FrontendPaymentSettings::defaultTapPaymentSource($tapPaymentSources);
 
-        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'tapPaymentSources', 'defaultPaymentMethod', 'defaultPaymentSource'));
+        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'gatewayDiscounts', 'tapPaymentSources', 'defaultPaymentMethod', 'defaultPaymentSource'));
     }
 
     public function payment(Request $request)
