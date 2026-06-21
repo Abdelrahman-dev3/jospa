@@ -215,6 +215,18 @@
         font-size: 13px;
         font-weight: 300;
     }
+    .gateway-discount-note{
+      display:inline-flex;
+      align-items:center;
+      padding:4px 10px;
+      border-radius:999px;
+      background:#ecfff7;
+      color:#00835f;
+      font-size:12px;
+      font-weight:700;
+      margin-inline-start:8px;
+      white-space:nowrap;
+    }
 
     /* animation */
     @keyframes fadeUp {
@@ -261,6 +273,23 @@
   </style>
   @php
     $paymentError = session('error') ?: $errors->first('payment');
+    $formatGatewayDiscount = function (string $method) use ($gatewayDiscounts) {
+        $discount = $gatewayDiscounts[$method] ?? null;
+        $value = (float) ($discount['value'] ?? 0);
+
+        if ($value <= 0) {
+            return null;
+        }
+
+        $type = $discount['type'] ?? 'fixed';
+        $label = app()->getLocale() === 'ar' ? 'خصم' : 'Discount';
+
+        if ($type === 'percent') {
+            return $label . ' ' . rtrim(rtrim(number_format($value, 2), '0'), '.') . '%';
+        }
+
+        return $label . ' ' . number_format($value, 2) . ' ' . __('messagess.SR');
+    };
   @endphp
   @if($paymentError)
     <div class="payment-alert" role="alert">
@@ -536,9 +565,9 @@
                                 </div>
                                 <div class="flex-fill muted" style="width: 25%;">
                                     {{ __('messagess.debit_credit_card') }}
-                                    @if(($gatewayDiscounts['card']['value'] ?? 0) > 0)
-                                        <span class="badge bg-success ms-2">
-                                            -{{ number_format((float) ($gatewayDiscounts['card']['value'] ?? 0), 2) }}{{ ($gatewayDiscounts['card']['type'] ?? 'fixed') === 'percent' ? '%' : ' ' . __('messagess.SR') }}
+                                    @if($cardDiscountLabel = $formatGatewayDiscount('card'))
+                                        <span class="gateway-discount-note">
+                                            {{ $cardDiscountLabel }}
                                         </span>
                                     @endif
                                 </div>
@@ -656,9 +685,9 @@
                             </div>
                             <div class="flex-fill muted">
                                 {{__('messagess.installments_4')}}
-                                @if(($gatewayDiscounts['tabby']['value'] ?? 0) > 0)
-                                    <span class="badge bg-success ms-2">
-                                        -{{ number_format((float) ($gatewayDiscounts['tabby']['value'] ?? 0), 2) }}{{ ($gatewayDiscounts['tabby']['type'] ?? 'fixed') === 'percent' ? '%' : ' ' . __('messagess.SR') }}
+                                @if($tabbyDiscountLabel = $formatGatewayDiscount('tabby'))
+                                    <span class="gateway-discount-note">
+                                        {{ $tabbyDiscountLabel }}
                                     </span>
                                 @endif
                             </div>
@@ -676,9 +705,9 @@
                             </div>
                             <div class="flex-fill muted">
                                 {{__('messagess.split_bill_4_payments')}}
-                                @if(($gatewayDiscounts['tamara']['value'] ?? 0) > 0)
-                                    <span class="badge bg-success ms-2">
-                                        -{{ number_format((float) ($gatewayDiscounts['tamara']['value'] ?? 0), 2) }}{{ ($gatewayDiscounts['tamara']['type'] ?? 'fixed') === 'percent' ? '%' : ' ' . __('messagess.SR') }}
+                                @if($tamaraDiscountLabel = $formatGatewayDiscount('tamara'))
+                                    <span class="gateway-discount-note">
+                                        {{ $tamaraDiscountLabel }}
                                     </span>
                                 @endif
                             </div>
@@ -793,6 +822,41 @@
      <script>
         const baseTotal = {{$totalPrice + getBookingTaxamount($totalPrice, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
         const gatewayDiscounts = @json($gatewayDiscounts);
+        const gatewayDiscountPrefix = "{{ app()->getLocale() === 'ar' ? 'خصم' : 'Discount' }}";
+        const gatewayDiscountCurrency = "{{ __('messagess.SR') }}";
+
+        function formatGatewayDiscountBadge(method) {
+            const config = gatewayDiscounts[method] || {};
+            const amount = parseFloat(config.value || 0);
+
+            if (!amount) {
+                return '';
+            }
+
+            if ((config.type || 'fixed') === 'percent') {
+                return `${gatewayDiscountPrefix} ${amount.toFixed(2).replace(/\.?0+$/, '')}%`;
+            }
+
+            return `${gatewayDiscountPrefix} ${amount.toFixed(2)} ${gatewayDiscountCurrency}`;
+        }
+
+        function appendGatewayDiscountBadges() {
+            document.querySelectorAll('.method[data-method]').forEach((methodCard) => {
+                const method = methodCard.dataset.method;
+                const badgeLabel = formatGatewayDiscountBadge(method);
+                const content = methodCard.querySelector('.flex-fill');
+
+                if (!badgeLabel || !content || content.querySelector('.gateway-discount-note')) {
+                    return;
+                }
+
+                const badge = document.createElement('span');
+                badge.className = 'gateway-discount-note';
+                badge.textContent = badgeLabel;
+                content.appendChild(badge);
+            });
+        }
+
         let couponState = {
             applied: false,
             type: null,
@@ -800,6 +864,7 @@
             amount: 0,
         };
         let appliedGiftAmount = 0;
+        appendGatewayDiscountBadges();
         
         document.querySelectorAll('.method').forEach(method => {
             method.addEventListener('click', function () {
