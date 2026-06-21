@@ -21,6 +21,7 @@ class Payment extends Component
         public float $loyaltyBalance = 0,
         public $branches = [],
         public ?array $paymentMethods = null,
+        public ?array $gatewayDiscounts = null,
         public ?array $tapPaymentSources = null,
         public ?string $defaultPaymentMethod = null,
         public ?string $defaultPaymentSource = null
@@ -28,6 +29,10 @@ class Payment extends Component
     {
         if ($this->paymentMethods === null) {
             $this->paymentMethods = FrontendPaymentSettings::paymentMethods();
+        }
+
+        if ($this->gatewayDiscounts === null) {
+            $this->gatewayDiscounts = FrontendPaymentSettings::gatewayDiscounts();
         }
 
         if ($this->tapPaymentSources === null) {

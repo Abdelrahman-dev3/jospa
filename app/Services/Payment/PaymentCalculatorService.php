@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Services\Payment;
+
+use App\Support\FrontendPaymentSettings;
 use Modules\Booking\Models\Booking;
 use Modules\Product\Models\Cart;
 use App\Models\GiftCard;
@@ -8,7 +10,7 @@ use Modules\Promotion\Models\Coupon;
 
 class PaymentCalculatorService
 {
-    public function calculateTotal(string $typePage, ?string $couponCode = null): array
+    public function calculateTotal(string $typePage, ?string $couponCode = null, ?string $paymentMethod = null): array
     {
         $total = 0;
         $productTotal = 0;
@@ -52,8 +54,8 @@ class PaymentCalculatorService
 
         $tax = getBookingTaxamount($total, 0, null)['total_tax_amount'] + getTaxamount($productTotal)['total_tax_amount'];
 
-        $finalTotal = $total + $tax;
-        $discount = 0;
+        $grossTotal = $total + $tax;
+        $couponDiscount = 0;
 
         if ($couponCode  && $couponCode != '') {
             $coupon = Coupon::query()
@@ -69,16 +71,30 @@ class PaymentCalculatorService
 
             $coupon->syncExpiredState();
 
-            $discount = $coupon->discount_type === 'percent'
-                ? ($finalTotal * $coupon->discount_percentage) / 100
+            $couponDiscount = $coupon->discount_type === 'percent'
+                ? ($grossTotal * $coupon->discount_percentage) / 100
                 : $coupon->discount_amount;
-
-            $finalTotal = max($finalTotal - $discount, 0);
         }
+
+        $couponDiscount = min($couponDiscount, $grossTotal);
+
+        $grossAfterCoupon = max($grossTotal - $couponDiscount, 0);
+        $paymentGatewayDiscount = min(
+            FrontendPaymentSettings::paymentGatewayDiscountAmount($paymentMethod, $grossAfterCoupon),
+            $grossAfterCoupon
+        );
+        $finalTotal = max($grossAfterCoupon - $paymentGatewayDiscount, 0);
+        $discount = $couponDiscount + $paymentGatewayDiscount;
 
         return [
             'total' => $finalTotal,
             'discountAmount' => $discount,
+            'couponDiscountAmount' => $couponDiscount,
+            'paymentGatewayDiscountAmount' => $paymentGatewayDiscount,
+            'paymentGatewayDiscountMethod' => $paymentGatewayDiscount > 0 ? $paymentMethod : null,
+            'paymentGatewayDiscountLabel' => $paymentGatewayDiscount > 0
+                ? FrontendPaymentSettings::paymentGatewayDiscountLabel($paymentMethod)
+                : null,
             'tax' => $tax,
             'cart_ids'      => $cartIds,
             'gift_ids'      => $giftIds,

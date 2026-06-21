@@ -187,6 +187,10 @@ class PaymentFinalizerService
     {
         $giftCode = $subPayments['gift_code'] ?? null;
         $giftAmount = (float) ($subPayments['used_gift'] ?? 0);
+        $couponDiscountAmount = (float) ($subPayments['coupon_discount_amount'] ?? 0);
+        $paymentGatewayDiscountAmount = (float) ($subPayments['payment_gateway_discount_amount'] ?? 0);
+        $paymentGatewayDiscountMethod = $subPayments['payment_gateway_discount_method'] ?? null;
+        $paymentGatewayDiscountLabel = $subPayments['payment_gateway_discount_label'] ?? null;
         $invoice = Invoice::create([
             'user_id' => $userId,
             'cart_ids' => $cartIds,
@@ -197,11 +201,15 @@ class PaymentFinalizerService
             'gift_amount' => $giftAmount,
             'payment_method' => $paymentMethod ?: null,
             'discount_amount' => $discountAmount,
+            'coupon_discount_amount' => $couponDiscountAmount,
+            'payment_gateway_discount_amount' => $paymentGatewayDiscountAmount,
+            'payment_gateway_discount_method' => $paymentGatewayDiscountMethod,
+            'payment_gateway_discount_label' => $paymentGatewayDiscountLabel,
             'taxs_service' => $tax,
             'loyalty_points_discount' => 0,
             'final_total' => $finalTotal,
         ]);
-        $this->recordInvoiceCouponRedeem($invoice->id, $userId, $couponCode, $discountAmount, $cartIds);
+        $this->recordInvoiceCouponRedeem($invoice->id, $userId, $couponCode, $couponDiscountAmount, $cartIds);
         return $invoice->id;
     }
 

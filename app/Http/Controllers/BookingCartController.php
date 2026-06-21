@@ -441,7 +441,7 @@ class BookingCartController extends Controller
             $clientDiscount = (float) $clientDiscountRaw;
         }
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal('cart', $couponCode);
+        $totalData = $calculator->calculateTotal('cart', $couponCode, $paymentMethod);
 
         if (isset($totalData['error'])) {
             if ($request->expectsJson()) {
@@ -493,6 +493,10 @@ class BookingCartController extends Controller
         $finalizer = app(PaymentFinalizerService::class);
         $subPayments = array_merge($subResult ?? [], [
             'gift_code' => $request->get('gift_code'),
+            'coupon_discount_amount' => $totalData['couponDiscountAmount'] ?? 0,
+            'payment_gateway_discount_amount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
+            'payment_gateway_discount_method' => $totalData['paymentGatewayDiscountMethod'] ?? null,
+            'payment_gateway_discount_label' => $totalData['paymentGatewayDiscountLabel'] ?? null,
         ]);
         $finalizer->finalizePayment(
             $user->id,
@@ -545,7 +549,7 @@ class BookingCartController extends Controller
             $clientDiscount = (float) $clientDiscountRaw;
         }
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal('cart', $couponCode);
+        $totalData = $calculator->calculateTotal('cart', $couponCode, $paymentMethod);
 
         if (isset($totalData['error'])) {
             return response()->json(['status' => false, 'message' => $totalData['error']], 422);
@@ -576,6 +580,10 @@ class BookingCartController extends Controller
             $finalizer = app(PaymentFinalizerService::class);
             $subPayments = array_merge($subResult ?? [], [
                 'gift_code' => $request->get('gift_code'),
+                'coupon_discount_amount' => $totalData['couponDiscountAmount'] ?? 0,
+                'payment_gateway_discount_amount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
+                'payment_gateway_discount_method' => $totalData['paymentGatewayDiscountMethod'] ?? null,
+                'payment_gateway_discount_label' => $totalData['paymentGatewayDiscountLabel'] ?? null,
             ]);
             $finalizer->finalizePayment(
                 $user->id,

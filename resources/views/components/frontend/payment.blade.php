@@ -9,6 +9,7 @@
         'defaultPaymentMethod' => '',
         'defaultPaymentSource' => '',
         'paymentMethods' => [],
+        'gatewayDiscounts' => [],
         'tapPaymentSources' => [],
     ])
   <style>
@@ -490,6 +491,7 @@
         <input type="hidden" name="items_count" id="form_items_count" value="0">
     <input type="hidden" name="total_price" id="form_total_price" value="0">
     <input type="hidden" name="total_amount" id="form_total_amount" value="0">
+    <input type="hidden" name="discount_amount" id="form_discount_amount" value="0">
 
     <div class="page-wrap">
         <div class="row gx-4 gy-4">
@@ -532,7 +534,14 @@
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }}>
                                 </div>
-                                <div class="flex-fill muted" style="width: 25%;">{{ __('messagess.debit_credit_card') }}</div>
+                                <div class="flex-fill muted" style="width: 25%;">
+                                    {{ __('messagess.debit_credit_card') }}
+                                    @if(($gatewayDiscounts['card']['value'] ?? 0) > 0)
+                                        <span class="badge bg-success ms-2">
+                                            -{{ number_format((float) ($gatewayDiscounts['card']['value'] ?? 0), 2) }}{{ ($gatewayDiscounts['card']['type'] ?? 'fixed') === 'percent' ? '%' : ' ' . __('messagess.SR') }}
+                                        </span>
+                                    @endif
+                                </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <img src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
@@ -645,7 +654,14 @@
                             <div class="d-flex align-items-center gap-2">
                                 <img src="{{asset('images/icons/tabby (2).png')}}" alt="tabby" style="height:28px">
                             </div>
-                            <div class="flex-fill muted"> {{__('messagess.installments_4')}} </div>
+                            <div class="flex-fill muted">
+                                {{__('messagess.installments_4')}}
+                                @if(($gatewayDiscounts['tabby']['value'] ?? 0) > 0)
+                                    <span class="badge bg-success ms-2">
+                                        -{{ number_format((float) ($gatewayDiscounts['tabby']['value'] ?? 0), 2) }}{{ ($gatewayDiscounts['tabby']['type'] ?? 'fixed') === 'percent' ? '%' : ' ' . __('messagess.SR') }}
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                     @endif
 
@@ -658,7 +674,14 @@
                             <div class="d-flex align-items-center gap-2">
                                 <img src="{{asset('images/icons/tmara.png')}}" alt="tamara" style="height:28px">
                             </div>
-                            <div class="flex-fill muted"> {{__('messagess.split_bill_4_payments')}} </div>
+                            <div class="flex-fill muted">
+                                {{__('messagess.split_bill_4_payments')}}
+                                @if(($gatewayDiscounts['tamara']['value'] ?? 0) > 0)
+                                    <span class="badge bg-success ms-2">
+                                        -{{ number_format((float) ($gatewayDiscounts['tamara']['value'] ?? 0), 2) }}{{ ($gatewayDiscounts['tamara']['type'] ?? 'fixed') === 'percent' ? '%' : ' ' . __('messagess.SR') }}
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                     @endif
 
@@ -752,6 +775,10 @@
                         <div>{{ __('messagess.Invoice_code') }}</div>
                         <div id="Invoice_code" style="color:green"><span>0</span> {{ __('messagess.SR') }}</div>
                     </div>
+                    <div class="inv-m" id="gatewayDiscountRow" style="display:none;">
+                        <div id="gatewayDiscountLabel">{{ app()->getLocale() === 'ar' ? 'خصم بوابة الدفع' : 'Payment Gateway Discount' }}</div>
+                        <div id="gatewayDiscountValue" style="color:green"><span>0</span> {{ __('messagess.SR') }}</div>
+                    </div>
                     
                     <div class="summary-total">
                         <div>{{ __('messagess.total_amount') }}</div>
@@ -764,30 +791,104 @@
     </div>
   </form>
      <script>
-        let totalBeforeDiscount = {{$totalPrice + getBookingTaxamount($totalPrice, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
+        const baseTotal = {{$totalPrice + getBookingTaxamount($totalPrice, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
+        const gatewayDiscounts = @json($gatewayDiscounts);
+        let couponState = {
+            applied: false,
+            type: null,
+            percentage: 0,
+            amount: 0,
+        };
+        let appliedGiftAmount = 0;
         
         document.querySelectorAll('.method').forEach(method => {
             method.addEventListener('click', function () {
                 const radio = this.querySelector('input[type="radio"]');
-                if (radio) radio.checked = true;
+                if (radio) {
+                    radio.checked = true;
+                    updateTotal();
+                }
             });
         });
+
+        document.querySelectorAll('input[name="paymentMethod"]').forEach(input => {
+            input.addEventListener('change', updateTotal);
+        });
+
+        function getSelectedPaymentMethod() {
+            return document.querySelector('input[name="paymentMethod"]:checked')?.value || '';
+        }
+
+        function getCouponDiscountAmount() {
+            if (!couponState.applied) {
+                return 0;
+            }
+
+            if (couponState.type === 'percent') {
+                return (baseTotal * parseFloat(couponState.percentage || 0)) / 100;
+            }
+
+            return parseFloat(couponState.amount || 0);
+        }
+
+        function getGatewayDiscountAmount(amountAfterCoupon) {
+            const method = getSelectedPaymentMethod();
+            const config = gatewayDiscounts[method] || {};
+            const configuredAmount = parseFloat(config.value || 0);
+            const configuredType = config.type || 'fixed';
+
+            if (!method || configuredAmount <= 0) {
+                return 0;
+            }
+
+            if (configuredType === 'percent') {
+                return Math.min((Math.max(amountAfterCoupon, 0) * configuredAmount) / 100, Math.max(amountAfterCoupon, 0));
+            }
+
+            return Math.min(configuredAmount, Math.max(amountAfterCoupon, 0));
+        }
         
         function updateTotal() {
             let walletCheckbox = document.querySelector('input[name="wallet"]');
             let loyaltyCheckbox = document.querySelector('input[name="loyalty"]');
             let walletAmount = parseFloat(document.getElementById('wallet').dataset.amount || 0);
             let loyaltyAmount = parseFloat(document.getElementById('loyalty').dataset.amount || 0);
+            let couponDiscount = Math.min(getCouponDiscountAmount(), baseTotal);
+            let amountAfterCoupon = Math.max(baseTotal - couponDiscount, 0);
+            let gatewayDiscount = getGatewayDiscountAmount(amountAfterCoupon);
+            let totalDiscount = couponDiscount + gatewayDiscount;
         
-            let total = totalBeforeDiscount;
+            let total = Math.max(amountAfterCoupon - gatewayDiscount, 0);
+            total -= appliedGiftAmount;
         
             if (walletCheckbox.checked) total -= walletAmount;
             if (loyaltyCheckbox.checked) total -= loyaltyAmount;
         
             if (total < 0) total = 0;
+
+            document.getElementById('Invoice_code').innerHTML = "-" + couponDiscount.toFixed(2) + " {{ __('messagess.SAR') }}";
+
+            const gatewayDiscountRow = document.getElementById('gatewayDiscountRow');
+            const gatewayDiscountLabel = document.getElementById('gatewayDiscountLabel');
+            const gatewayDiscountValue = document.getElementById('gatewayDiscountValue');
+            const selectedMethod = getSelectedPaymentMethod();
+            const selectedMethodConfig = gatewayDiscounts[selectedMethod] || {};
+            const selectedMethodLabel = selectedMethodConfig.label || selectedMethod;
+
+            if (gatewayDiscount > 0) {
+                gatewayDiscountRow.style.display = 'flex';
+                gatewayDiscountLabel.textContent = "{{ app()->getLocale() === 'ar' ? 'خصم بوابة الدفع' : 'Payment Gateway Discount' }}" + " (" + selectedMethodLabel + ")";
+                gatewayDiscountValue.innerHTML = "-" + gatewayDiscount.toFixed(2) + " {{ __('messagess.SAR') }}";
+            } else {
+                gatewayDiscountRow.style.display = 'none';
+                gatewayDiscountLabel.textContent = "{{ app()->getLocale() === 'ar' ? 'خصم بوابة الدفع' : 'Payment Gateway Discount' }}";
+                gatewayDiscountValue.innerHTML = "<span>0</span> {{ __('messagess.SR') }}";
+            }
         
             document.getElementById('totalPrice').innerText = total.toFixed(2) + " {{ __('messagess.SR') }}";
             document.getElementById('form_total_price').value = total;
+            document.getElementById('form_total_amount').value = total;
+            document.getElementById('form_discount_amount').value = totalDiscount.toFixed(2);
         }
         
         document.querySelector('input[name="wallet"]').addEventListener('change', updateTotal);
@@ -810,21 +911,17 @@
                 if (data.valid) {
                     toastr.success("{{ __('messagess.coupon_applied') }}: " + couponCode);
         
-                    let discount = 0;
-                    if (data.discount_type === 'percent') {
-                        discount = (totalBeforeDiscount * parseFloat(data.discount_percentage)) / 100;
-                    } else { // fixed
-                        discount = parseFloat(data.discount_amount) || 0;
-                    }
-        
-                    totalBeforeDiscount -= discount;
-                    if (totalBeforeDiscount < 0) totalBeforeDiscount = 0;
+                    couponState = {
+                        applied: true,
+                        type: data.discount_type,
+                        percentage: parseFloat(data.discount_percentage || 0),
+                        amount: parseFloat(data.discount_amount || 0),
+                    };
         
                     button.disabled = true;
                     button.classList.add('disabled');
                         
                     document.querySelector('.inv-m').style.display = 'flex';
-                    document.querySelector('#Invoice_code').innerHTML = "-" + discount + "{{ __('messagess.SAR') }}";
                     
                     updateTotal();
                 } else {
@@ -850,10 +947,7 @@
                     if (data.status) {
                         toastr.success("{{ __('messagess.code_applied') }}: " + giftCode);
             
-                        let discount = data.balance ?? 0;
-            
-                        totalBeforeDiscount -= discount;
-                        if (totalBeforeDiscount < 0) totalBeforeDiscount = 0;
+                        appliedGiftAmount = parseFloat(data.balance ?? 0);
             
                         button.disabled = true;
                         button.classList.add('disabled');
@@ -864,6 +958,8 @@
                     }
               })
         });
+
+        updateTotal();
 
     </script>
 

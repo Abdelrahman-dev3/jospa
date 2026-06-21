@@ -25,12 +25,16 @@ abstract class BasePaymentStrategy
             ],
             'final_before_sub' => $request->total ?? 0,
             'discountAmount' => $request->discountAmount ?? 0,
+            'couponDiscountAmount' => 0,
+            'paymentGatewayDiscountAmount' => 0,
+            'paymentGatewayDiscountMethod' => null,
+            'paymentGatewayDiscountLabel' => null,
             'cart_ids' => [],
             'gift_ids' => [],
         ];
 
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal($typePage, $request->invoiceCopon);
+        $totalData = $calculator->calculateTotal($typePage, $request->invoiceCopon, $paymentMethod);
         if (isset($totalData['error'])) {
             return [
                 'response' => $this->respondPaymentInputError($request, $totalData['error']),
@@ -39,6 +43,10 @@ abstract class BasePaymentStrategy
 
         $data['final_before_sub'] = $totalData['total'];
         $data['discountAmount'] = $totalData['discountAmount'];
+        $data['couponDiscountAmount'] = $totalData['couponDiscountAmount'] ?? 0;
+        $data['paymentGatewayDiscountAmount'] = $totalData['paymentGatewayDiscountAmount'] ?? 0;
+        $data['paymentGatewayDiscountMethod'] = $totalData['paymentGatewayDiscountMethod'] ?? null;
+        $data['paymentGatewayDiscountLabel'] = $totalData['paymentGatewayDiscountLabel'] ?? null;
         $data['tax'] = $totalData['tax'];
         $data['cart_ids'] = $totalData['cart_ids'];
         $data['gift_ids'] = $totalData['gift_ids'];
@@ -66,6 +74,10 @@ abstract class BasePaymentStrategy
         $subMethodService = app(PaymentSubMethodsService::class);
         $subPayments = array_merge($subResult, [
             'gift_code' => $request->get('gift_code'),
+            'coupon_discount_amount' => $paymentData['couponDiscountAmount'] ?? 0,
+            'payment_gateway_discount_amount' => $paymentData['paymentGatewayDiscountAmount'] ?? 0,
+            'payment_gateway_discount_method' => $paymentData['paymentGatewayDiscountMethod'] ?? null,
+            'payment_gateway_discount_label' => $paymentData['paymentGatewayDiscountLabel'] ?? null,
         ]);
 
         $invoiceId = $finalizer->finalizePayment(

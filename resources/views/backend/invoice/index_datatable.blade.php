@@ -445,7 +445,11 @@ use App\Models\GiftCard;
                     $bookingsGift = GiftCard::whereIn('id', $giftIds)->get();
                     $productItems = $invoice->product_items;
                     $couponCode = $invoice->coupon_code ?? null;
-                    $couponLabel = $couponCode ?: ((float) $invoice->discount_amount > 0 ? 'Applied' : '---');
+                    $couponAmount = (float) ($invoice->coupon_discount_amount ?? 0);
+                    $gatewayAmount = (float) ($invoice->payment_gateway_discount_amount ?? 0);
+                    $gatewayLabel = $invoice->payment_gateway_discount_label
+                        ?: ($invoice->payment_gateway_discount_method ? ucfirst($invoice->payment_gateway_discount_method) : null);
+                    $couponLabel = $couponCode ?: ($couponAmount > 0 ? 'Applied' : '---');
                 @endphp
 
                 <div class="invoice-card" id="invoice-card-{{ $invoice->id }}" onclick="toggleInvoiceDetails({{ $invoice->id }})">
@@ -566,6 +570,18 @@ use App\Models\GiftCard;
                             <div>{{ __('messagess.coupon_code') }}</div>
                             <div>{{ $couponLabel }}</div>
                         </div>
+                        @if($couponAmount > 0)
+                            <div class="summary-row">
+                                <div>{{ app()->getLocale() === 'ar' ? 'خصم الكوبون' : 'Coupon Discount' }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($couponAmount, 2) }} SR</div>
+                            </div>
+                        @endif
+                        @if($gatewayAmount > 0)
+                            <div class="summary-row">
+                                <div>{{ app()->getLocale() === 'ar' ? 'خصم بوابة الدفع' : 'Payment Gateway Discount' }}{{ $gatewayLabel ? ' (' . $gatewayLabel . ')' : '' }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($gatewayAmount, 2) }} SR</div>
+                            </div>
+                        @endif
                         @if(($invoice->gift_amount ?? 0) > 0 || !empty($invoice->gift_code))
                             <div class="summary-row">
                                 <div>{{ __('messages.gift_card_code') }}</div>

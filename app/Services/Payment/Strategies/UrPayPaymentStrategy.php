@@ -180,7 +180,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode']);
+        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'urpay');
         if (isset($totalData['error'])) {
             return $this->respondFailure($request, $totalData['error'], 422);
         }
@@ -208,6 +208,10 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'final_before_sub' => $totalData['total'],
             'tax' => $totalData['tax'],
             'discountAmount' => $totalData['discountAmount'],
+            'couponDiscountAmount' => $totalData['couponDiscountAmount'] ?? 0,
+            'paymentGatewayDiscountAmount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
+            'paymentGatewayDiscountMethod' => $totalData['paymentGatewayDiscountMethod'] ?? null,
+            'paymentGatewayDiscountLabel' => $totalData['paymentGatewayDiscountLabel'] ?? null,
             'page' => $context['page'],
             'cart_ids' => $totalData['cart_ids'] ?? [],
             'gift_ids' => $totalData['gift_ids'] ?? [],

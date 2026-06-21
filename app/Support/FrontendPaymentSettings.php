@@ -18,6 +18,52 @@ class FrontendPaymentSettings
         ];
     }
 
+    public static function gatewayDiscounts(): array
+    {
+        return [
+            'card' => self::gatewayDiscountConfig('card'),
+            'urpay' => self::gatewayDiscountConfig('urpay'),
+            'tabby' => self::gatewayDiscountConfig('tabby'),
+            'tamara' => self::gatewayDiscountConfig('tamara'),
+        ];
+    }
+
+    public static function paymentGatewayDiscountAmount(?string $method, float $baseAmount): float
+    {
+        $normalizedMethod = self::normalizePaymentMethod($method);
+
+        if (! $normalizedMethod || $baseAmount <= 0) {
+            return 0.0;
+        }
+
+        $config = self::gatewayDiscounts()[$normalizedMethod] ?? null;
+        if (! is_array($config)) {
+            return 0.0;
+        }
+
+        $value = max((float) ($config['value'] ?? 0), 0);
+        $type = (string) ($config['type'] ?? 'fixed');
+
+        if ($type === 'percent') {
+            $value = min($value, 100);
+
+            return max(($baseAmount * $value) / 100, 0);
+        }
+
+        return min($value, $baseAmount);
+    }
+
+    public static function paymentGatewayDiscountLabel(?string $method): ?string
+    {
+        return match (self::normalizePaymentMethod($method)) {
+            'card' => 'Tap',
+            'urpay' => 'UrPay',
+            'tabby' => 'Tabby',
+            'tamara' => 'Tamara',
+            default => null,
+        };
+    }
+
     public static function tapPaymentSources(): array
     {
         return [
@@ -71,5 +117,58 @@ class FrontendPaymentSettings
         }
 
         return false;
+    }
+
+    private static function normalizePaymentMethod(?string $method): ?string
+    {
+        return match ($method) {
+            'tap', 'card' => 'card',
+            'urpay' => 'urpay',
+            'tabby' => 'tabby',
+            'tamara' => 'tamara',
+            default => null,
+        };
+    }
+
+    private static function gatewayDiscountConfig(string $method): array
+    {
+        $config = match ($method) {
+            'card' => [
+                'type' => self::normalizeDiscountType(Setting::get('tap_payment_discount_type', 'fixed')),
+                'value' => self::normalizeDiscountValue(Setting::get('tap_payment_discount_amount', 0)),
+                'label' => 'Tap',
+            ],
+            'urpay' => [
+                'type' => self::normalizeDiscountType(Setting::get('urpay_payment_discount_type', 'fixed')),
+                'value' => self::normalizeDiscountValue(Setting::get('urpay_payment_discount_amount', 0)),
+                'label' => 'UrPay',
+            ],
+            'tabby' => [
+                'type' => self::normalizeDiscountType(Setting::get('tabby_payment_discount_type', 'fixed')),
+                'value' => self::normalizeDiscountValue(Setting::get('tabby_payment_discount_amount', 0)),
+                'label' => 'Tabby',
+            ],
+            'tamara' => [
+                'type' => self::normalizeDiscountType(Setting::get('tamara_payment_discount_type', 'fixed')),
+                'value' => self::normalizeDiscountValue(Setting::get('tamara_payment_discount_amount', 0)),
+                'label' => 'Tamara',
+            ],
+        };
+
+        if (($config['type'] ?? 'fixed') === 'percent') {
+            $config['value'] = min((float) ($config['value'] ?? 0), 100);
+        }
+
+        return $config;
+    }
+
+    private static function normalizeDiscountType(?string $type): string
+    {
+        return $type === 'percent' ? 'percent' : 'fixed';
+    }
+
+    private static function normalizeDiscountValue($value): float
+    {
+        return max((float) $value, 0);
     }
 }
