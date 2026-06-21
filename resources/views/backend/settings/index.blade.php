@@ -94,4 +94,5 @@
 @endpush
 @push('after-scripts')
 <script src="{{ asset('js/setting-vue.min.js')}}"></script>
+<script src="{{ asset('js/payment-gateway-discount-settings.js') }}"></script>
 @endpush

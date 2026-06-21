@@ -43,6 +43,19 @@
         </div>
       </div>
     </div>
+    <div class="row ms-1 mb-4" v-if="tap_payment_method == 1">
+      <div class="col-md-6">
+        <label class="form-label" for="tap_payment_discount_type">نوع خصم Tap</label>
+        <select class="form-control" id="tap_payment_discount_type" v-model="tap_payment_discount_type">
+          <option value="fixed">مبلغ ثابت</option>
+          <option value="percent">نسبة مئوية</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="tap_payment_discount_amount">قيمة خصم Tap</label>
+        <input class="form-control" id="tap_payment_discount_amount" type="number" min="0" step="0.01" v-model="tap_payment_discount_amount" />
+      </div>
+    </div>
     <div class="form-group">
       <div class="d-flex justify-content-between align-items-center">
         <label class="form-label" for="payment_method_urpay">{{ $t('setting_payment_method.lbl_urpay') }} </label>
@@ -51,6 +64,19 @@
             :checked="urpay_payment_method == 1 ? true : false" name="urpay_payment_method" id="payment_method_urpay"
             type="checkbox" v-model="urpay_payment_method" />
         </div>
+      </div>
+    </div>
+    <div class="row ms-1 mb-4" v-if="urpay_payment_method == 1">
+      <div class="col-md-6">
+        <label class="form-label" for="urpay_payment_discount_type">نوع خصم UrPay</label>
+        <select class="form-control" id="urpay_payment_discount_type" v-model="urpay_payment_discount_type">
+          <option value="fixed">مبلغ ثابت</option>
+          <option value="percent">نسبة مئوية</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="urpay_payment_discount_amount">قيمة خصم UrPay</label>
+        <input class="form-control" id="urpay_payment_discount_amount" type="number" min="0" step="0.01" v-model="urpay_payment_discount_amount" />
       </div>
     </div>
     <div class="form-group">
@@ -63,6 +89,19 @@
         </div>
       </div>
     </div>
+    <div class="row ms-1 mb-4" v-if="tabby_payment_method == 1">
+      <div class="col-md-6">
+        <label class="form-label" for="tabby_payment_discount_type">نوع خصم Tabby</label>
+        <select class="form-control" id="tabby_payment_discount_type" v-model="tabby_payment_discount_type">
+          <option value="fixed">مبلغ ثابت</option>
+          <option value="percent">نسبة مئوية</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="tabby_payment_discount_amount">قيمة خصم Tabby</label>
+        <input class="form-control" id="tabby_payment_discount_amount" type="number" min="0" step="0.01" v-model="tabby_payment_discount_amount" />
+      </div>
+    </div>
     <div class="form-group">
       <div class="d-flex justify-content-between align-items-center">
         <label class="form-label" for="payment_method_tamara">{{ $t('setting_payment_method.lbl_tamara') }} </label>
@@ -71,6 +110,19 @@
             :checked="tamara_payment_method == 1 ? true : false" name="tamara_payment_method" id="payment_method_tamara"
             type="checkbox" v-model="tamara_payment_method" />
         </div>
+      </div>
+    </div>
+    <div class="row ms-1 mb-4" v-if="tamara_payment_method == 1">
+      <div class="col-md-6">
+        <label class="form-label" for="tamara_payment_discount_type">نوع خصم Tamara</label>
+        <select class="form-control" id="tamara_payment_discount_type" v-model="tamara_payment_discount_type">
+          <option value="fixed">مبلغ ثابت</option>
+          <option value="percent">نسبة مئوية</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="tamara_payment_discount_amount">قيمة خصم Tamara</label>
+        <input class="form-control" id="tamara_payment_discount_amount" type="number" min="0" step="0.01" v-model="tamara_payment_discount_amount" />
       </div>
     </div>
     <SubmitButton :IS_SUBMITED="IS_SUBMITED"></SubmitButton>
@@ -98,9 +150,17 @@ const setFormData = (data) => {
       tap_card_payment_method: data.tap_card_payment_method ?? 1,
       tap_apple_pay_payment_method: data.tap_apple_pay_payment_method ?? 1,
       tap_mada_payment_method: data.tap_mada_payment_method ?? 1,
+      tap_payment_discount_type: data.tap_payment_discount_type ?? 'fixed',
+      tap_payment_discount_amount: data.tap_payment_discount_amount ?? 0,
       urpay_payment_method: data.urpay_payment_method ?? 0,
+      urpay_payment_discount_type: data.urpay_payment_discount_type ?? 'fixed',
+      urpay_payment_discount_amount: data.urpay_payment_discount_amount ?? 0,
       tabby_payment_method: data.tabby_payment_method ?? 1,
+      tabby_payment_discount_type: data.tabby_payment_discount_type ?? 'fixed',
+      tabby_payment_discount_amount: data.tabby_payment_discount_amount ?? 0,
       tamara_payment_method: data.tamara_payment_method ?? 1,
+      tamara_payment_discount_type: data.tamara_payment_discount_type ?? 'fixed',
+      tamara_payment_discount_amount: data.tamara_payment_discount_amount ?? 0,
       razor_payment_method: data.razor_payment_method ?? 0,
       razorpay_secretkey: data.razorpay_secretkey ?? '',
       razorpay_publickey: data.razorpay_publickey ?? '',
@@ -302,9 +362,17 @@ const { value: tap_payment_method } = useField('tap_payment_method')
 const { value: tap_card_payment_method } = useField('tap_card_payment_method')
 const { value: tap_apple_pay_payment_method } = useField('tap_apple_pay_payment_method')
 const { value: tap_mada_payment_method } = useField('tap_mada_payment_method')
+const { value: tap_payment_discount_type } = useField('tap_payment_discount_type')
+const { value: tap_payment_discount_amount } = useField('tap_payment_discount_amount')
 const { value: urpay_payment_method } = useField('urpay_payment_method')
+const { value: urpay_payment_discount_type } = useField('urpay_payment_discount_type')
+const { value: urpay_payment_discount_amount } = useField('urpay_payment_discount_amount')
 const { value: tabby_payment_method } = useField('tabby_payment_method')
+const { value: tabby_payment_discount_type } = useField('tabby_payment_discount_type')
+const { value: tabby_payment_discount_amount } = useField('tabby_payment_discount_amount')
 const { value: tamara_payment_method } = useField('tamara_payment_method')
+const { value: tamara_payment_discount_type } = useField('tamara_payment_discount_type')
+const { value: tamara_payment_discount_amount } = useField('tamara_payment_discount_amount')
 const { value: razor_payment_method } = useField('razor_payment_method')
 const { value: razorpay_secretkey } = useField('razorpay_secretkey')
 const { value: razorpay_publickey } = useField('razorpay_publickey')
@@ -410,6 +478,30 @@ watch(() => midtrans_payment_method.value, (value) => {
     midtrans_clientid.value = ''
   }
 }, { deep: true })
+watch(() => tap_payment_method.value, (value) => {
+  if (value == '0') {
+    tap_payment_discount_type.value = 'fixed'
+    tap_payment_discount_amount.value = 0
+  }
+}, { deep: true })
+watch(() => urpay_payment_method.value, (value) => {
+  if (value == '0') {
+    urpay_payment_discount_type.value = 'fixed'
+    urpay_payment_discount_amount.value = 0
+  }
+}, { deep: true })
+watch(() => tabby_payment_method.value, (value) => {
+  if (value == '0') {
+    tabby_payment_discount_type.value = 'fixed'
+    tabby_payment_discount_amount.value = 0
+  }
+}, { deep: true })
+watch(() => tamara_payment_method.value, (value) => {
+  if (value == '0') {
+    tamara_payment_discount_type.value = 'fixed'
+    tamara_payment_discount_amount.value = 0
+  }
+}, { deep: true })
 // message
 const display_submit_message = (res) => {
   IS_SUBMITED.value = false
@@ -422,7 +514,7 @@ const display_submit_message = (res) => {
 }
 
 //fetch data
-const data = 'tap_payment_method,tap_card_payment_method,tap_apple_pay_payment_method,tap_mada_payment_method,urpay_payment_method,tabby_payment_method,tamara_payment_method,razor_payment_method,razorpay_secretkey,razorpay_publickey,str_payment_method,stripe_secretkey,stripe_publickey,paystack_payment_method,paystack_secretkey,paystack_publickey,paypal_payment_method,paypal_secretkey,paypal_clientid,flutterwave_payment_method,flutterwave_secretkey,flutterwave_publickey,cinet_payment_method,cinet_clientid,cinet_apikey,cinet_secretkey,sadad_payment_method,sadad_clientid,sadad_secretkey,sadad_domain,airtelmoney_payment_method,airtelmoney_is_status,airtelmoney_clientid,airtelmoney_secretkey,phonepay_payment_method,phonepay_is_status,phonepay_appid,phonepay_merchentid,phonepay_saltid,phonepay_saltkey,midtrans_payment_method,midtrans_is_status,midtrans_clientid'
+const data = 'tap_payment_method,tap_card_payment_method,tap_apple_pay_payment_method,tap_mada_payment_method,tap_payment_discount_type,tap_payment_discount_amount,urpay_payment_method,urpay_payment_discount_type,urpay_payment_discount_amount,tabby_payment_method,tabby_payment_discount_type,tabby_payment_discount_amount,tamara_payment_method,tamara_payment_discount_type,tamara_payment_discount_amount,razor_payment_method,razorpay_secretkey,razorpay_publickey,str_payment_method,stripe_secretkey,stripe_publickey,paystack_payment_method,paystack_secretkey,paystack_publickey,paypal_payment_method,paypal_secretkey,paypal_clientid,flutterwave_payment_method,flutterwave_secretkey,flutterwave_publickey,cinet_payment_method,cinet_clientid,cinet_apikey,cinet_secretkey,sadad_payment_method,sadad_clientid,sadad_secretkey,sadad_domain,airtelmoney_payment_method,airtelmoney_is_status,airtelmoney_clientid,airtelmoney_secretkey,phonepay_payment_method,phonepay_is_status,phonepay_appid,phonepay_merchentid,phonepay_saltid,phonepay_saltkey,midtrans_payment_method,midtrans_is_status,midtrans_clientid'
 onMounted(() => {
   createRequest(GET_URL(data)).then((response) => {
     setFormData(response)
