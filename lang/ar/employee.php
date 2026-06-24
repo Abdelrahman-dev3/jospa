@@ -44,6 +44,7 @@ return [
     'lbl_select_shift' => 'اختر الوردية',
     'lbl_select_service' => 'اختر الخدمة',
     'lbl_status' => 'الحالة',
+    'No_expiry' => 'لا انتهاء الصلاحية',
     'lbl_role' => 'الدور',
     'lbl_shift' => 'الوردية',
     'lbl_verification_status' => 'حالة التحقق',

@@ -54,7 +54,7 @@
             <div class="col-md-4 d-flex align-items-end">
               <div class="form-check form-switch">
                 <input class="form-check-input" id="no_expiry" type="checkbox" v-model="isUnlimited" />
-                <label class="form-label mb-0 ms-2" for="no_expiry">No expiry</label>
+                <label class="form-label mb-0 ms-2" for="no_expiry">{{ $t('employee.No_expiry') }}</label>
               </div>
             </div>
           </div>

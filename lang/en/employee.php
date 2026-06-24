@@ -43,6 +43,7 @@ return [
     'lbl_select_shift' => 'Select Shift',
     'lbl_select_service' => 'Select Service',
     'lbl_status' => 'Status',
+    'No_expiry' => 'No Expiry',
     'lbl_role' => 'Role',
     'lbl_shift' => 'Shift',
     'lbl_verification_status' => 'Verification Status',
