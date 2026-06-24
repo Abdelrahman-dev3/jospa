@@ -100,13 +100,13 @@ class PackagesController extends Controller
                 // If branch_id is provided, filter by it
                 return $query->where('branch_id', $branchId);
             })
-            ->selectRaw("*, JSON_EXTRACT(name, '$.\"{$locale}\"') as name") 
+            ->selectRaw("*, JSON_EXTRACT(name, '$.\"{$locale}\"') as name")
             ->get();
 
         $data = [];
         $today = date('Y-m-d');
         foreach ($query_data as $row) {
-            if ($row->status == 1 && $row->end_date >= $today) {
+            if ($row->status == 1 && (is_null($row->end_date) || $row->end_date >= $today)) {
                 $services = [];
                 foreach ($row->service as $service) {
                     if ($service->qty > 0) {
@@ -153,7 +153,7 @@ class PackagesController extends Controller
         foreach ($query_data as $row) {
             $services = [];
             foreach ($row->userPackageServices as $service) {
-                if ($service->qty > 0 && $row->package->end_date >= $today) {
+                if ($service->qty > 0 && (is_null($row->package->end_date) || $row->package->end_date >= $today)) {
                     $services[] = [
                         'id' => $service->packageService->id,
                         'user_package_id' => $row->id,
@@ -188,7 +188,6 @@ class PackagesController extends Controller
                     'payment_status' => $row->bookingTransaction ? 1 : 0,
                 ];
             }
-
         }
 
         return response()->json($data);
@@ -265,7 +264,6 @@ class PackagesController extends Controller
             ->rawColumns(['action', 'status', 'package_price', 'check', 'qty', 'branch']) // Include branch
             ->orderColumns(['id'], '-:column $1')
             ->make(true);
-
     }
 
     public function services_index_list(Request $request)
@@ -302,14 +300,15 @@ class PackagesController extends Controller
     {
         if (is_string($request->name) && $this->isJson($request->name)) {
             $request['name'] = json_decode($request->name, true);
-        }else {
+        } else {
             $request['name'] = ['ar' => $request->name, 'en' => $request->name];
         }
+        $request = $this->normalizePackageDates($request);
         $request['services'] = is_string($request->services) && !empty(is_string($request->services)) ? json_decode($request->services) : [];
         $request['employee_id'] = is_string($request->employee_id) && !empty($request->employee_id) ? explode(',', $request->employee_id) : [];
         $request['category_id'] = is_string($request->category_id) && !empty($request->category_id) ? explode(',', $request->category_id) : [];
 
-    
+
         $totalprice = 0;
         foreach ($request['services'] as $serviceItem) {
             $filteredService = [];
@@ -319,29 +318,28 @@ class PackagesController extends Controller
                 } else {
                     $totalprice = $totalprice + $value;
                 }
-
             }
             $service[] = $filteredService;
         }
-    
+
         $request['package_price'] = $totalprice;
-    
+
         $data = Package::create($request->all());
-    
+
         $data->employees()->sync($request['employee_id']);
-    
+
         $data->services()->sync($service);
 
         if ($request->hasFile('package_image')) {
             storeMediaFile($data, $request->file('package_image'), 'package_image');
         }
-    
+
         $message = 'New Package Added';
 
 
 
         $message = __('messages.create_form', ['form' => __('package.singular_title')]);
-    
+
         return response()->json(['message' => $message, 'status' => true], 200);
     }
 
@@ -355,9 +353,9 @@ class PackagesController extends Controller
     {
         $locale = app()->getLocale();
         $data = Package::where('id', $id)
-        ->selectRaw("*, JSON_EXTRACT(name, '$.\"{$locale}\"') as translated_name")
-        ->with('service')->first();
-        
+            ->selectRaw("*, JSON_EXTRACT(name, '$.\"{$locale}\"') as translated_name")
+            ->with('service')->first();
+
         $data['employee_id'] = $data->employee()->pluck('employee_id');
 
         $media = $data->getFirstMedia('package_image');
@@ -377,9 +375,10 @@ class PackagesController extends Controller
     {
         if (is_string($request->name) && $this->isJson($request->name)) {
             $request['name'] = json_decode($request->name, true);
-        }else {
+        } else {
             $request['name'] = ['ar' => $request->name, 'en' => $request->name];
         }
+        $request = $this->normalizePackageDates($request);
         $request['services'] = is_string($request->services) && !empty(is_string($request->services)) ? json_decode($request->services) : [];
         $request['employee_id'] = is_string($request->employee_id) && !empty($request->employee_id) ? explode(',', $request->employee_id) : [];
         $request['category_id'] = is_string($request->category_id) && !empty($request->category_id) ? explode(',', $request->category_id) : [];
@@ -417,7 +416,6 @@ class PackagesController extends Controller
                     ['package_id' => $data->id]
                 )
             );
-
         }
 
 
@@ -432,10 +430,20 @@ class PackagesController extends Controller
         if ($request->hasFile('package_image')) {
             storeMediaFile($data, $request->file('package_image'), 'package_image');
         }
-        
+
         $message = 'Packages Updated Successfully';
 
         return response()->json(['message' => $message, 'status' => true], 200);
+    }
+
+    private function normalizePackageDates(Request $request): Request
+    {
+        $request->merge([
+            'start_date' => blank($request->input('start_date')) ? null : $request->input('start_date'),
+            'end_date' => blank($request->input('end_date')) ? null : $request->input('end_date'),
+        ]);
+
+        return $request;
     }
 
     /**
@@ -543,7 +551,7 @@ class PackagesController extends Controller
     {
         $query = UserPackage::with('booking.user', 'package.service', 'userPackageServices');
         $query->whereHas('bookingTransaction');
-        
+
 
         return Datatables::of($query)
             ->addColumn('check', function ($data) {
@@ -623,7 +631,6 @@ class PackagesController extends Controller
             ->rawColumns(['action', 'check', 'package_price'])
             ->orderColumns(['id'], '-:column $1')
             ->make(true);
-
     }
 
     public function clientPackageView($id)
@@ -634,12 +641,10 @@ class PackagesController extends Controller
 
         return response()->json(['data' => $data, 'status' => true]);
     }
-    
+
     private function isJson($string)
     {
         json_decode($string);
         return json_last_error() === JSON_ERROR_NONE;
     }
-
 }
-

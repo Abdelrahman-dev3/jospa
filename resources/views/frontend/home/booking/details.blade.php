@@ -722,14 +722,12 @@
                             <h3>{{  $service->service_name }}</h3>
                             <p class="duration">{{ (int) ($service->duration_min ?? 0) }} {{ __('messagess.minutes') }}</p>
                             <div class="service-meta">
-                                <p class="service-qty">{{ __('booking.qty') }}: {{ (int) ($service->qty ?? 1) }}</p>
-                                <p class="service-price">SR {{ $service->discounted_price }}</p>
+                                <p class="service-price">{{ __('booking.qty') }}: {{ (int) ($service->qty ?? 1) }}</p>
                             </div>
                         </div>
                     </div>
                 @endforeach
             </div>
-            <p class="branch"><strong>{{ $branchName }} </strong> : {{ $branchDes }}</p>
             <p class="price"><strong style="color:white">{{ __('messagess.price') }} :</strong>  {{$totalService}} </p>
             <div style="width:100%;display: flex;justify-content: end;">
                 <a href="/giffte?pack={{$package['id']}}" class="more-btn">{{ __('messagess.bookNow') }}</a>

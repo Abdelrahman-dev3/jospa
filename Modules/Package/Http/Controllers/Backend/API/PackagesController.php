@@ -18,15 +18,18 @@ use Modules\Package\Trait\PackageTrait;
 class PackagesController extends Controller
 {
     use PackageTrait;
-    
-    public function Package(Request $request){
-      $today = Carbon::today();
-      $nextWeek = $today->copy()->addWeek();
-      $data = Package::with('service','service.services','branch','media')->whereDate('end_date', '>=', $today);
 
-      
-         // Filter by service_id
-         if ($request->has('service_id')) {
+    public function Package(Request $request)
+    {
+        $today = Carbon::today();
+        $nextWeek = $today->copy()->addWeek();
+        $data = Package::with('service', 'service.services', 'branch', 'media')->where(function ($query) use ($today) {
+            $query->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+        });
+
+
+        // Filter by service_id
+        if ($request->has('service_id')) {
             $serviceId = explode(',', $request->service_id);
             $data->whereHas('service', function ($query) use ($serviceId) {
                 $query->whereIn('service_id', $serviceId);
@@ -46,9 +49,9 @@ class PackagesController extends Controller
 
             $data->whereHas('userPackage.bookingTransaction');
             if (!$activePackage) {
-                return response()->json(['status' => true, 'data' => [], 'message' => 'No active package for this user' ], 200);
+                return response()->json(['status' => true, 'data' => [], 'message' => 'No active package for this user'], 200);
             }
-        }else {
+        } else {
             // Normal get package API call - check for active status
             $data->where('status', 1);
         }
@@ -62,19 +65,19 @@ class PackagesController extends Controller
 
         // Check if there are any packages available
         if ($data->exists()) {
-            $data=$data->get();
+            $data = $data->get();
             $packageCollection = PackageResource::collection($data);
-           // Send notification for packages that are about to expire
-           if ($request->has('expiry')) {
-           
-            foreach ($data as $package) {
-                $type = 'package_expiry';
-                $messageTemplate = 'Your package #[[package_id]] is about to expire soon.';
-                $notify_message = str_replace('[[package_id]]', $package->id, $messageTemplate);
+            // Send notification for packages that are about to expire
+            if ($request->has('expiry')) {
 
-                $this->sendPackageExpireNotification($type, $notify_message, $package, $user_id);
+                foreach ($data as $package) {
+                    $type = 'package_expiry';
+                    $messageTemplate = 'Your package #[[package_id]] is about to expire soon.';
+                    $notify_message = str_replace('[[package_id]]', $package->id, $messageTemplate);
+
+                    $this->sendPackageExpireNotification($type, $notify_message, $package, $user_id);
+                }
             }
-        }
 
             return response()->json([
                 'status' => true,
@@ -97,5 +100,5 @@ class PackagesController extends Controller
                 'message' => $message,
             ], 200);
         }
-        }
+    }
 }

@@ -29,22 +29,6 @@
                     </div>
                 </div>
             @endforeach
-                <div class="col-12 col-md-3" style="display: flex;justify-content: center;">
-                    <div class="branch-card">
-                        <!-- صورة -->
-                        <div class="branch-image">
-                        <img src="{{ asset('images/frontend/jospahomeservises.png') }}" alt="Home Booking">
-                        </div>
-                        <!-- المحتوى -->
-                        <div class="branch-content">
-                            <h3 class="branch-title"> {{ __('messagess.home_services') }}</h3>
-                            <p class="branch-address"></p>
-                            <a href="{{ route('home.create', ['branch_id' => 0]) }}" class="more-btn-hero">
-                              <p style="color:white;font-size: 16px;margin: 0 13px;">{{ __('messagess.book_now') }} <img style="width: 15px;" src="{{ asset('images/icons/Vector (2).png') }}" ></p>
-                            </a>
-                        </div>
-                    </div>
-                </div>
         </div>
 </div>
 

@@ -30,6 +30,9 @@
         }
     }
 </style>
+@php
+    $hasOffers = \App\Models\Ouroffersection::where('end_date', '>', \Carbon\Carbon::now())->exists();
+@endphp
     <div class="m-nav d-none d-lg-flex flex-column">
         <div class="top-bar d-flex align-items-center gap-3 px-3 py-1" style="background: transparent;width: 100%;justify-content: space-between;padding: 5px 34px !important;">
             <div class="other d-flex" style="gap: 35px;">
@@ -91,19 +94,21 @@
                             </a>
                         </li>
     
+                        @if($hasOffers)
                         <li class="nav-item h5">
                             <a class="nav-link text-white {{ request()->routeIs('frontend.Ouroffers') ? 'text-active' : '' }}"
                                href="{{ route('frontend.Ouroffers') }}">
                                 {{ __('messagess.our_offers') }}
                             </a>
                         </li>
+                        @endif
     
-                        <li class="nav-item h5">
+                        {{-- <li class="nav-item h5">
                             <a class="nav-link text-white {{ request()->routeIs('frontend.Shop') ? 'text-active' : '' }}"
                                href="{{ route('frontend.Shop') }}">
                                 {{ __('messagess.store') }}
                             </a>
-                        </li>
+                        </li> --}}
     
                         <li class="nav-item h5">
                             <a class="nav-link text-white {{ request()->routeIs('gift.page') ? 'text-active' : '' }}"
@@ -236,16 +241,18 @@
                 {{ __('messagess.nav_package') }}
             </a>
           </li>
+          @if($hasOffers)
           <li class="nav-item">
             <a class="nav-link  {{ request()->routeIs('frontend.Ouroffers') ? 'text-active' : '' }}"href="{{ route('frontend.Ouroffers') }}">
                 {{ __('messagess.our_offers') }}
             </a>
           </li>
-          <li class="nav-item">
+          @endif
+          {{-- <li class="nav-item">
             <a class="nav-link  {{ request()->routeIs('frontend.Shop') ? 'text-active' : '' }}"href="{{ route('frontend.Shop') }}">
                 {{ __('messagess.store') }}
             </a>
-          </li>
+          </li> --}}
          <li class="nav-item">
             <a class="nav-link  {{ request()->routeIs('gift.page') ? 'text-active' : '' }}"href="{{ route('gift.page') }}">
                {{ __('messagess.gift_cards') }}
