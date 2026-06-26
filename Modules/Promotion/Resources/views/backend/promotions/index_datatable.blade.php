@@ -71,7 +71,8 @@
         default-image="{{promotion_image()}}"
         create-title="{{ __('messages.new') }} {{ __('promotion.singular_title') }}"
         edit-title="{{ __('messages.edit') }} {{ __('promotion.singular_title') }}"
-        :services='@json($services)'  
+        :services='@json($services)'
+        :categories='@json($categories)'
         :customefield='@json($customefield)'
     ></form-offcanvas>
     </div>

@@ -87,6 +87,7 @@ class PaymentFinalizerService
 
             //  Create Booking Transactions
             $this->createTransactions($cartIds, $invoiceId, 'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
+            $this->markBookingsAsConfirmed($cartIds);
 
             $this->createBookingCommissions($cartIds);
             $this->sendPaidCartBookingNotifications($bookingIdsToNotify);
@@ -227,6 +228,17 @@ class PaymentFinalizerService
                 'payment_status' => 1,
             ]);
         }
+    }
+
+    private function markBookingsAsConfirmed(array $cartIds): void
+    {
+        if (empty($cartIds)) {
+            return;
+        }
+
+        Booking::whereIn('id', $cartIds)
+            ->where('status', 'pending')
+            ->update(['status' => 'confirmed']);
     }
 
     private function createBookingCommissions(array $cartIds): void

@@ -1149,6 +1149,12 @@ public function index_list(Request $request)
             ]
         );
 
+        if ($paymentStatus === 1) {
+            Booking::where('id', $id)
+                ->where('status', 'pending')
+                ->update(['status' => 'confirmed']);
+        }
+
         $message = __('booking.status_update');
 
         $booking = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($id);

@@ -800,6 +800,10 @@ class BookingCartController extends Controller
                 'payment_status' => 1,
             ]);
         }
+
+        Booking::whereIn('id', $cartIds)
+            ->where('status', 'pending')
+            ->update(['status' => 'confirmed']);
     }
     
     private function activateGiftCards($userId)

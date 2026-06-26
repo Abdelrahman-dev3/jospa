@@ -1,6 +1,7 @@
 <?php
 
 namespace Modules\Promotion\Http\Controllers\Backend;
+use Modules\Category\Models\Category;
 use Modules\Service\Models\Service;
 
 use App\Authorizable;
@@ -52,25 +53,40 @@ class PromotionsController extends Controller
         $columns = CustomFieldGroup::columnJsonValues(new Promotion());
         $customefield = CustomField::exportCustomFields(new Promotion());
 
-        $services = Service::active()->get()->map(function ($service) {
-            
-            $name = 'Service ' . $service->id; 
-            
-            if ($service->name) {
-                if (is_array($service->name) && isset($service->name['en'])) {
-                    $name = $service->name['en'];
-                } elseif (is_string($service->name)) {
-                    $name = $service->name;
-                }
-            } elseif ($service->description) {
-                $name = $service->description;
+        $resolveName = function ($value, string $fallback) {
+            if (is_array($value)) {
+                return $value[app()->getLocale()]
+                    ?? $value['en']
+                    ?? collect($value)->filter()->first()
+                    ?? $fallback;
             }
-            
+
+            return is_string($value) && $value !== '' ? $value : $fallback;
+        };
+
+        $services = Service::active()->get()->map(function ($service) {
+            $name = $service->name
+                ? (is_array($service->name)
+                    ? ($service->name[app()->getLocale()] ?? $service->name['en'] ?? collect($service->name)->filter()->first())
+                    : $service->name)
+                : null;
+
             return [
                 'id' => $service->id,
-                'name' => $name
+                'name' => $name ?: 'Service ' . $service->id,
+                'category_id' => $service->category_id,
             ];
         });
+
+        $categories = Category::active()
+            ->whereNull('parent_id')
+            ->get()
+            ->map(function ($category) use ($resolveName) {
+                return [
+                    'id' => $category->id,
+                    'name' => $resolveName($category->name, 'Category ' . $category->id),
+                ];
+            });
 
         $export_import = true;
         $export_columns = [
@@ -91,7 +107,7 @@ class PromotionsController extends Controller
 
         $export_url = route('backend.promotions.export');
 
-        return view('promotion::backend.promotions.index_datatable', compact('module_action', 'filter', 'columns', 'services' , 'customefield', 'export_import', 'export_columns', 'export_url'));
+        return view('promotion::backend.promotions.index_datatable', compact('module_action', 'filter', 'columns', 'services', 'categories', 'customefield', 'export_import', 'export_columns', 'export_url'));
     }
 
     /**

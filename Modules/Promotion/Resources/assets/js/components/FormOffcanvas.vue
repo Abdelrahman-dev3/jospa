@@ -47,15 +47,13 @@
         </div>
         <div class="form-group">
           <div class="col-md-12">
-            <label class="form-label">
-              {{ $t('service.lbl_category') }}
-              <span class="text-danger">*</span>
-            </label>
+            <label class="form-label">{{ $t('category.lbl_category') }}</label>
 
             <Multiselect
               v-model="category_id"
               :options="categoryOptions"
               v-bind="singleSelectOption"
+              :placeholder="$t('category.lbl_parent_category')"
               label="label"
               track-by="value"
               valueProp="value"
@@ -76,7 +74,7 @@
                 class="btn btn-sm btn-primary me-2" 
                 @click="selectAllServices"
                 :disabled="ISREADONLY">
-                Select All ({{ serviceOptions.length }})
+                Select All ({{ filteredServices.length }})
               </button>
               <button 
                 type="button" 
@@ -175,17 +173,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { readFile } from '@/helpers/utilities'
-import { EDIT_URL, STORE_URL, UPDATE_URL, TIME_ZONE_LIST, UNIQUE_CHECK } from '../constant'
+import { EDIT_URL, STORE_URL, UPDATE_URL, UNIQUE_CHECK } from '../constant'
 import { useField, useForm } from 'vee-validate'
 import InputField from '@/vue/components/form-elements/InputField.vue'
 import { useModuleId, useRequest, useOnOffcanvasHide } from '@/helpers/hooks/useCrudOpration'
-import { buildMultiSelectObject } from '@/helpers/utilities'
 import * as yup from 'yup'
 import FormHeader from '@/vue/components/form-elements/FormHeader.vue'
 import FormFooter from '@/vue/components/form-elements/FormFooter.vue'
-import FormElement from '@/helpers/custom-field/FormElement.vue'
 import FlatPickr from 'vue-flatpickr-component'
 
 // props
@@ -243,7 +239,7 @@ const removeImage = ({ imageViewerBS64, changeFile }) => {
 
 const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile: feature_image })
 
-const { getRequest, storeRequest, updateRequest, listingRequest } = useRequest()
+const { getRequest, storeRequest, updateRequest } = useRequest()
 
 // flatpicker
 const config = ref({
@@ -254,8 +250,12 @@ const config = ref({
 
 const singleSelectOption = ref({
   closeOnSelect: true,
-  searchable: true
+  searchable: true,
+  canClear: true
 })
+
+const INVOICE_OPTION_VALUE = 0
+const isSyncingCategoryFilter = ref(false)
 
 
 const currentId = useModuleId(() => {
@@ -316,6 +316,27 @@ const defaultData = () => {
   }
 }
 
+const normalizeSelectedServices = (value) => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((serviceId) => Number(serviceId))
+    .filter((serviceId) => !Number.isNaN(serviceId))
+}
+
+const inferCategoryIdFromServices = (selectedServices) => {
+  const matchedCategoryIds = props.services
+    .filter((service) => selectedServices.includes(Number(service.id)))
+    .map((service) => Number(service.category_id))
+    .filter((serviceCategoryId) => !Number.isNaN(serviceCategoryId))
+
+  const uniqueCategoryIds = [...new Set(matchedCategoryIds)]
+
+  return uniqueCategoryIds.length === 1 ? uniqueCategoryIds[0] : null
+}
+
 //  Reset Form
 const setFormData = (data) => {
   if (data.feature_image === props.defaultImage) {
@@ -339,14 +360,19 @@ const setFormData = (data) => {
     }
   }
 
+  parsedServices = normalizeSelectedServices(parsedServices)
+
   // Safe access to coupon data
   const firstCoupon = data.coupon && data.coupon[0] ? data.coupon[0] : {}
+  const derivedCategoryId = data.category_id ?? inferCategoryIdFromServices(parsedServices)
+
+  isSyncingCategoryFilter.value = true
 
   resetForm({
     values: {
       name: data.name || '',
       description: data.description || '',
-      category_id: data.category_id || null,
+      category_id: derivedCategoryId,
       services: parsedServices,
       start_date_time: data.start_date_time,
       end_date_time: data.end_date_time,
@@ -360,6 +386,10 @@ const setFormData = (data) => {
       coupon_code: firstCoupon.coupon_code || '',
       use_limit: firstCoupon.use_limit || 1
     }
+  })
+
+  Promise.resolve().then(() => {
+    isSyncingCategoryFilter.value = false
   })
 }
 // Reload Datatable, SnackBar Message, Alert, Offcanvas Close
@@ -380,13 +410,14 @@ const reset_datatable_close_offcanvas = (res) => {
 const validationSchema = yup.object({
   name: yup.string().required('Name is a required field'),
   category_id: yup
-  .number()
-  .required('Category is required'),
+    .number()
+    .transform((value, originalValue) => (originalValue === '' || originalValue === null ? null : value))
+    .nullable(),
   services: yup
     .array()
     .of(
       yup.number().oneOf(
-        [0, ...props.services.map(s => s.id)], 
+        [INVOICE_OPTION_VALUE, ...props.services.map((service) => Number(service.id))],
         'Selected service is invalid'
       )
     )
@@ -478,51 +509,54 @@ const categoryOptions = computed(() => {
   }))
 })
 
+const filteredServices = computed(() => {
+  const selectedCategoryId = Number(category_id.value)
 
+  if (!selectedCategoryId) {
+    return props.services
+  }
+
+  return props.services.filter((service) => Number(service.category_id) === selectedCategoryId)
+})
 
 const serviceOptions = computed(() => {
+  const invoiceOption = {
+    label: 'On Invoice',
+    value: INVOICE_OPTION_VALUE
+  }
+
   if (!props.services?.length) {
-    return [{ label: 'علي الفاتورة', value: 0 }]
-  }
-
-  watch(category_id, () => {
-    services.value = []
-  })
-
-  const defaultOption = {
-    label: 'علي الفاتورة',
-    value: 0
-  }
-
-  let filteredServices = props.services
-
-  if (category_id.value) {
-    filteredServices = props.services.filter(service => {
-      return service.category_id == category_id.value
-    })
+    return [invoiceOption]
   }
 
   return [
-    defaultOption,
-    ...filteredServices.map(service => ({
+    invoiceOption,
+    ...filteredServices.value.map((service) => ({
       label: service.name || `Service ${service.id}`,
-      value: service.id
+      value: Number(service.id)
     }))
   ]
+})
+
+watch(category_id, () => {
+  if (isSyncingCategoryFilter.value) {
+    return
+  }
+
+  const allowedServiceIds = new Set(serviceOptions.value.map((option) => option.value))
+  services.value = normalizeSelectedServices(services.value).filter((serviceId) => allowedServiceIds.has(serviceId))
 })
 
 
 // Select all services function
 const selectAllServices = () => {
-  const allServiceIds = serviceOptions.value.map(option => option.value)
+  const allServiceIds = filteredServices.value.map((service) => Number(service.id))
   services.value = [...allServiceIds]
-  console.log('Selected all services:', services.value)
 }
 
 // Clear all services function  
 const clearAllServices = () => {
   services.value = []
-  console.log('Cleared all services')
 }
 
 
