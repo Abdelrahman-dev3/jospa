@@ -45,6 +45,25 @@
             </div>
           </div>
         </div>
+        <div class="form-group">
+          <div class="col-md-12">
+            <label class="form-label">
+              {{ $t('service.lbl_category') }}
+              <span class="text-danger">*</span>
+            </label>
+
+            <Multiselect
+              v-model="category_id"
+              :options="categoryOptions"
+              v-bind="singleSelectOption"
+              label="label"
+              track-by="value"
+              valueProp="value"
+            />
+
+            <span class="text-danger">{{ errors['category_id'] }}</span>
+          </div>
+        </div>
         <!-- Services Selection Field -->
         <div class="form-group">
           <div class="col-md-12">
@@ -176,8 +195,11 @@ const props = defineProps({
   editTitle: { type: String, default: '' },
   customefield: { type: Array, default: () => [] },
   defaultImage: { type: String, default: 'https://dummyimage.com/600x300/cfcfcf/000000.png' },
-  services: { type: Array, default: () => [] } // ADD THIS
+
+  services: { type: Array, default: () => [] },
+  categories: { type: Array, default: () => [] }
 })
+
 const multiSelectOption = ref({
   mode: 'tags',
   searchable: true,
@@ -265,6 +287,7 @@ const defaultData = () => {
   return {
     name: '',
     description: '',
+    category_id: null,
     services: [],
     start_date_time: new Date().toJSON().slice(0, 10),
     end_date_time: new Date(new Date().setDate(new Date().getDate() + 1)).toJSON().slice(0, 10),
@@ -323,6 +346,7 @@ const setFormData = (data) => {
     values: {
       name: data.name || '',
       description: data.description || '',
+      category_id: data.category_id || null,
       services: parsedServices,
       start_date_time: data.start_date_time,
       end_date_time: data.end_date_time,
@@ -355,6 +379,9 @@ const reset_datatable_close_offcanvas = (res) => {
 // Validations
 const validationSchema = yup.object({
   name: yup.string().required('Name is a required field'),
+  category_id: yup
+  .number()
+  .required('Category is required'),
   services: yup
     .array()
     .of(
@@ -413,6 +440,7 @@ const { handleSubmit, errors, resetForm } = useForm({
 })
 
 const { value: name } = useField('name')
+const { value: category_id } = useField('category_id')
 const { value: services } = useField('services')
 const { value: description } = useField('description')
 const { value: start_date_time } = useField('start_date_time')
@@ -443,19 +471,45 @@ onMounted(() => {
   setFormData(defaultData())
 })
 
-const serviceOptions = computed(() => {
-  if (!props.services?.length) return [{ label: 'علي الفاتورة', value: 0 }]
-
-  const defaultOption = { label: 'علي الفاتورة', value: 0 }
-
-  const otherOptions = props.services.map(service => ({
-    label: service.name || `Service ${service.id}`,
-    value: service.id
+const categoryOptions = computed(() => {
+  return props.categories.map(category => ({
+    label: category.name,
+    value: category.id
   }))
-
-  return [defaultOption, ...otherOptions]
 })
 
+
+
+const serviceOptions = computed(() => {
+  if (!props.services?.length) {
+    return [{ label: 'علي الفاتورة', value: 0 }]
+  }
+
+  watch(category_id, () => {
+    services.value = []
+  })
+
+  const defaultOption = {
+    label: 'علي الفاتورة',
+    value: 0
+  }
+
+  let filteredServices = props.services
+
+  if (category_id.value) {
+    filteredServices = props.services.filter(service => {
+      return service.category_id == category_id.value
+    })
+  }
+
+  return [
+    defaultOption,
+    ...filteredServices.map(service => ({
+      label: service.name || `Service ${service.id}`,
+      value: service.id
+    }))
+  ]
+})
 
 
 // Select all services function
