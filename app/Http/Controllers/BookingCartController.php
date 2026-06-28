@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 use Modules\Booking\Models\BookingTransaction;
 use Carbon\Carbon;
 use App\Models\GiftCard;
+use App\Services\GiftCardActivationService;
 use Illuminate\Support\Str;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\Cart;
@@ -808,6 +809,13 @@ class BookingCartController extends Controller
     
     private function activateGiftCards($userId)
     {
+        $giftCardActivationService = app(GiftCardActivationService::class);
+        $giftCards = $giftCardActivationService->activatePendingForUser((int) $userId);
+
+        $giftCardActivationService->sendNotifications($giftCards);
+
+        return;
+
         // sms
         $smsService = new TaqnyatSmsService();
         

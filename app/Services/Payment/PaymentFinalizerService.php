@@ -26,6 +26,7 @@ use App\Models\GiftCard;
 use Illuminate\Support\Facades\DB;
 use App\Models\Setting;
 use Illuminate\Support\Str;
+use App\Services\GiftCardActivationService;
 
 class PaymentFinalizerService
 {
@@ -107,6 +108,10 @@ class PaymentFinalizerService
 
         if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
             app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+        }
+
+        if (! empty($giftIds)) {
+            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds);
         }
 
         if ($invoiceId > 0) {
