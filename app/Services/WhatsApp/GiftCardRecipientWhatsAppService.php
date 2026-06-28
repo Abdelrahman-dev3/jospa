@@ -74,12 +74,26 @@ class GiftCardRecipientWhatsAppService
                 : "وصلك جيفت كارد جديدة من {$appName}.",
         ];
 
-        if ($amount !== null) {
-            $lines[] = "قيمة الهدية: {$amount} ر.س.";
-        }
+        if ($this->isElectronicCard($giftCard)) {
+            if ($amount !== null) {
+                $lines[] = "قيمة الهدية: {$amount} ر.س.";
+            }
 
-        if ($reference !== '') {
-            $lines[] = "كود الجيفت كارد: {$reference}.";
+            if ($reference !== '') {
+                $lines[] = "كود الجيفت كارد: {$reference}.";
+            }
+        } else {
+            $details = $this->buildGiftDetails($giftCard);
+
+            if (! empty($details)) {
+                $lines[] = 'تفاصيل الهدية:';
+
+                foreach ($details as $detail) {
+                    $lines[] = "- {$detail}";
+                }
+            } elseif ($amount !== null) {
+                $lines[] = "قيمة الهدية: {$amount} ر.س.";
+            }
         }
 
         if ($personalMessage !== '') {
@@ -105,5 +119,65 @@ class GiftCardRecipientWhatsAppService
         $appName = trim((string) setting('app_name'));
 
         return $appName !== '' ? $appName : 'JOSPA';
+    }
+
+    private function isElectronicCard(GiftCard $giftCard): bool
+    {
+        return in_array($giftCard->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true);
+    }
+
+    private function buildGiftDetails(GiftCard $giftCard): array
+    {
+        $details = [];
+
+        $services = $giftCard->services_list
+            ->map(fn ($service) => trim((string) ($service->name ?? '')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($services)) {
+            $details[] = 'الخدمات: ' . implode('، ', $services);
+        }
+
+        $packages = $giftCard->packages
+            ->map(fn ($package) => trim((string) ($package->name ?? '')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($packages)) {
+            $details[] = 'الباقات: ' . implode('، ', $packages);
+        }
+
+        $coupons = collect($giftCard->coupons ?? [])
+            ->map(function ($coupon) {
+                if (! is_array($coupon)) {
+                    return null;
+                }
+
+                $name = trim((string) ($coupon['name'] ?? ''));
+                if ($name === '') {
+                    return null;
+                }
+
+                $price = isset($coupon['price']) ? (float) $coupon['price'] : null;
+
+                return $price && $price > 0
+                    ? "{$name} ({$this->formatAmount($price)} ر.س)"
+                    : $name;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($coupons)) {
+            $details[] = 'الكوبونات: ' . implode('، ', $coupons);
+        }
+
+        return $details;
     }
 }
