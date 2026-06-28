@@ -60,47 +60,48 @@ class GiftCardRecipientWhatsAppService
 
     private function buildMessage(GiftCard $giftCard): string
     {
-        $recipientName = trim((string) $giftCard->recipient_name);
         $senderName = trim((string) $giftCard->sender_name);
         $personalMessage = trim((string) $giftCard->message);
         $reference = trim((string) $giftCard->ref);
         $amount = $this->formatAmount((float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0));
         $appName = $this->resolveAppName();
-
-        $lines = [
-            $recipientName !== '' ? "مرحبا {$recipientName}" : 'مرحبا',
-            $senderName !== ''
-                ? "أرسل لك {$senderName} جيفت كارد من {$appName}."
-                : "وصلك جيفت كارد جديدة من {$appName}.",
-        ];
+        $domain = $this->resolveDomain();
 
         if ($this->isElectronicCard($giftCard)) {
-            if ($amount !== null) {
-                $lines[] = "قيمة الهدية: {$amount} ر.س.";
-            }
+            $lines = [
+                $senderName !== ''
+                    ? "لقد تلقيت من {$senderName} بطاقة إهداء من {$appName} بقيمة {$amount} ر.س."
+                    : "لقد تلقيت بطاقة إهداء من {$appName} بقيمة {$amount} ر.س.",
+            ];
 
             if ($reference !== '') {
-                $lines[] = "كود الجيفت كارد: {$reference}.";
+                $lines[] = "الرقم المرجعي لبطاقتك هو: {$reference}";
+                $lines[] = "يمكنك استخدام هذا الرقم المرجعي عند الحجز من خلال الموقع الإلكتروني الخاص بـ {$appName}:";
+                $lines[] = $domain;
             }
         } else {
             $details = $this->buildGiftDetails($giftCard);
+            $lines = [
+                $senderName !== ''
+                    ? "لقد أرسل لك {$senderName} هدية من {$appName}."
+                    : "لقد أرسلنا لك هدية من {$appName}.",
+            ];
 
             if (! empty($details)) {
                 $lines[] = 'تفاصيل الهدية:';
-
-                foreach ($details as $detail) {
-                    $lines[] = "- {$detail}";
-                }
+                $lines[] = implode("\n", array_map(fn ($detail) => "- {$detail}", $details));
             } elseif ($amount !== null) {
                 $lines[] = "قيمة الهدية: {$amount} ر.س.";
             }
+
+            $lines[] = 'يمكنك الاستفادة منها من خلال زيارة أقرب فرع لجوسبا';
         }
 
         if ($personalMessage !== '') {
             $lines[] = "رسالة مرفقة: {$personalMessage}";
         }
 
-        $lines[] = 'نتمنى لك تجربة جميلة ومميزة.';
+        $lines[] = 'نتمنى لك تجربة جميلة.';
 
         return implode("\n", $lines);
     }
@@ -119,6 +120,13 @@ class GiftCardRecipientWhatsAppService
         $appName = trim((string) setting('app_name'));
 
         return $appName !== '' ? $appName : 'JOSPA';
+    }
+
+    private function resolveDomain(): string
+    {
+        $domain = trim((string) config('app.url'));
+
+        return $domain !== '' ? rtrim($domain, '/') : url('/');
     }
 
     private function isElectronicCard(GiftCard $giftCard): bool
