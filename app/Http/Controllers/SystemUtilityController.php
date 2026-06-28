@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OdooBookingSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
@@ -80,6 +81,19 @@ class SystemUtilityController extends Controller
     public function currentUser(Request $request)
     {
         return $request->user();
+    }
+
+    public function syncOdooInvoice(int $invoiceId)
+    {
+        $synced = app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+
+        return response()->json([
+            'status' => $synced,
+            'invoice_id' => $invoiceId,
+            'message' => $synced
+                ? 'Odoo sync completed successfully.'
+                : 'Odoo sync failed. Check application logs for details.',
+        ], $synced ? 200 : 422);
     }
 
     public function testUpload()

@@ -136,6 +136,7 @@ Route::controller(PackageBookingController::class)->group(function () {
 
 Route::middleware('auth:sanctum')->controller(SystemUtilityController::class)->group(function () {
     Route::get('/user', 'currentUser');
+    Route::post('/system/odoo/sync-invoice/{invoiceId}', 'syncOdooInvoice');
 });
 
 Route::controller(AuthController::class)->group(function () {

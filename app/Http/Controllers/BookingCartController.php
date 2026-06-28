@@ -14,6 +14,7 @@ use Modules\Booking\Models\BookingTransaction;
 use Carbon\Carbon;
 use App\Models\GiftCard;
 use App\Services\GiftCardActivationService;
+use App\Services\OdooBookingSyncService;
 use Illuminate\Support\Str;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\Cart;
@@ -416,6 +417,7 @@ class BookingCartController extends Controller
             $this->paymentSuccess($cartIds, 'card', $tapId, $invoiceId);
 
             $this->activateGiftCards($user->id);
+            app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
 
             if ($request->expectsJson()) {
                 return response()->json([

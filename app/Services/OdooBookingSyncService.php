@@ -58,7 +58,7 @@ class OdooBookingSyncService
         $cartIds = array_values(array_filter((array) $cartIds));
         $giftIds = array_values(array_filter((array) ($giftIds ?? [])));
         
-        if ($cartIds === []) {
+        if ($cartIds === [] && $giftIds === []) {
             return false;
         }
 
