@@ -96,9 +96,13 @@ class CategoriesController extends Controller
             ->where('status', 1);
 
         if (! empty($branchId)) {
-            $query_data->whereHas('branches', function ($q) use ($branchId) {
-                $q->where('branch_id', $branchId)
-                    ->where('is_visible', 1);
+            $query_data->where(function ($q) use ($branchId) {
+                $q->whereHas('branches', function ($branchQuery) use ($branchId) {
+                    $branchQuery->where('branch_id', $branchId)
+                        ->where('is_visible', 1);
+                })->orWhereHas('services.branches', function ($serviceBranchQuery) use ($branchId) {
+                    $serviceBranchQuery->where('branch_id', $branchId);
+                });
             });
         }
 
