@@ -32,9 +32,27 @@
             <div class="form-group col-md-4">
               <label class="form-label" for="branch">{{ $t('employee.lbl_select_branch') }}</label
               ><span class="text-danger">*</span>
-              <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group"> </Multiselect>
+              <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch" v-bind="singleSelectOption" :options="branch.options" @select="onBranchChange" class="form-group"> </Multiselect>
               <span class="text-danger">{{ errors.branch_id }}</span>
             </div>
+            <div class="form-group col-md-8">
+              <label class="form-label" for="package_category_ids">{{ $t('service.lbl_category') }}</label>
+              <Multiselect
+                id="package_category_ids"
+                v-model="category_ids"
+                :value="category_ids"
+                placeholder="Select categories first to filter services"
+                v-bind="multiSelectOption"
+                :options="category.options"
+                :disabled="!branch_id"
+                class="form-group"
+              >
+              </Multiselect>
+              <small class="text-muted">Selected categories will filter the services available in this package.</small>
+            </div>
+          </div>
+
+          <div class="row">
             <div class="col-md-4">
               <div class="form-group">
                 <label class="form-label" for="start_date">{{ $t('package.lbl_start_at') }}</label>
@@ -93,7 +111,7 @@
                 </tr>
                 <tr v-for="(service, index) in selectedServices" :key="index">
                   <td class="w-50">
-                    <div><Multiselect v-model="service.service_id" :value="service.service_id" v-bind="singleSelectOption" @select="selectService(index)" :options="serviceList.options.filter((d) => !service_id.includes(d.value))" placeholder="Select Service" id="type" autocomplete="off"></Multiselect></div>
+                    <div><Multiselect v-model="service.service_id" :value="service.service_id" v-bind="singleSelectOption" @select="selectService(index)" :options="availableServiceOptions(service.service_id)" placeholder="Select Service" id="type" autocomplete="off"></Multiselect></div>
                   </td>
                   <td>
                     <div><input class="form-control" type="number" min="0" placeholder="0" v-model="service.discounted_price" disabled /></div>
@@ -131,7 +149,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch, watchEffect } from 'vue'
-import { EDIT_URL, STORE_URL, UPDATE_URL, BRANCH_LIST, SERVICE_LIST, EMPLOYEE_LIST } from '../constant'
+import { EDIT_URL, STORE_URL, UPDATE_URL, BRANCH_LIST, CATEGORY_LIST, SERVICE_LIST, EMPLOYEE_LIST } from '../constant'
 import { useField, useForm } from 'vee-validate'
 import InputField from '@/vue/components/form-elements/InputField.vue'
 import { useSelect } from '@/helpers/hooks/useSelect'
@@ -154,19 +172,53 @@ const formatCurrencyVue = (value) => {
   return value
 }
 
-const defaultService = () => {
-  return { service_name: '', service_id: '', service_price: 0, qty: 1, discounted_price: 0 }
+const normalizeId = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numericValue = Number(value)
+
+  return Number.isNaN(numericValue) ? value : numericValue
 }
+
+const normalizedIdsSignature = (ids = []) =>
+  ids
+    .map((id) => normalizeId(id))
+    .filter((id) => id !== null)
+    .sort((left, right) => String(left).localeCompare(String(right)))
+    .join(',')
+
+const defaultService = () => {
+  return { service_name: '', service_id: '', service_price: 0, qty: 1, discounted_price: 0, totalPrice: 0 }
+}
+const syncSelectedServiceFields = () => {
+  service_id.value = selectedServices.value.map((service) => service.service_id).filter((id) => id !== '' && id !== null && id !== undefined)
+  service_name.value = selectedServices.value.map((service) => service.service_name).filter((name) => !!name)
+}
+
+const selectedServiceIds = computed(() => selectedServices.value.map((service) => normalizeId(service.service_id)).filter((id) => id !== null))
+
+const availableServiceOptions = (currentServiceId = null) => {
+  const normalizedCurrentId = normalizeId(currentServiceId)
+  const blockedIds = selectedServiceIds.value.filter((id) => id !== normalizedCurrentId)
+
+  return serviceList.value.options.filter((option) => {
+    const normalizedOptionId = normalizeId(option.value)
+
+    return normalizedOptionId === normalizedCurrentId || !blockedIds.includes(normalizedOptionId)
+  })
+}
+
 const removeService = (index) => {
-  service_id.value.splice(service_id.value.findIndex((e) => selectedServices.value[index].service_id))
   selectedServices.value.splice(index, 1)
+  syncSelectedServiceFields()
 }
 
 const selectService = (index) => {
-  const serviceId = selectedServices.value[index].service_id
-  service_id.value.push(serviceId)
-  service_name.value.push(serviceId)
-  const selectedSingleService = serviceList.value.list.find((s) => s.service_id == serviceId)
+  const serviceId = normalizeId(selectedServices.value[index].service_id)
+  selectedServices.value[index].service_id = serviceId
+  const selectedSingleService = serviceList.value.list.find((s) => normalizeId(s.service_id) === serviceId)
   if (selectedSingleService !== undefined) {
     selectedServices.value[index].service_price = selectedSingleService.service_price
     selectedServices.value[index].service_name = selectedSingleService.service_name
@@ -174,6 +226,7 @@ const selectService = (index) => {
     selectedServices.value[index].totalPrice = selectedServices.value[index].service_price
     selectedServices.value[index].discounted_price = selectedServices.value[index].totalPrice / selectedServices.value[index].qty
   }
+  syncSelectedServiceFields()
 }
 
 function changeTotal(index) {
@@ -234,7 +287,7 @@ const currentId = useModuleId(() => {
     getRequest({ url: EDIT_URL, id: currentId.value }).then((res) => {
       if (res.status) {
         setFormData(res.data)
-        branchSelect()
+        branchSelect({ syncCategoriesFromServices: true })
       }
     })
   } else {
@@ -242,6 +295,7 @@ const currentId = useModuleId(() => {
   }
 })
 const branch = ref({ options: [], list: [] })
+const category = ref({ options: [], list: [] })
 const employee = ref({ options: [], list: [] })
 const serviceList = ref({ options: [], list: [] })
 useOnOffcanvasHide('form-offcanvas', () => setFormData(defaultData()))
@@ -313,9 +367,9 @@ const defaultData = () => {
 
 //  Reset Form
 const setFormData = (data) => {
-  console.log(data)
   ImageViewer.value = data.package_image
-  selectedServices.value = data.service
+  category_ids.value = []
+  selectedServices.value = Array.isArray(data.service) ? data.service.map((service) => ({ ...service })) : []
   let parsedName = { ar: '', en: '' }
 
   try {
@@ -350,6 +404,7 @@ const setFormData = (data) => {
   selectedServices.value.forEach((service, index) => {
     service.totalPrice = service.discounted_price * service.qty
   })
+  syncSelectedServiceFields()
 }
 // Reload Datatable, SnackBar Message, Alert, Offcanvas Close
 const reset_datatable_close_offcanvas = (res) => {
@@ -445,6 +500,7 @@ const { value: end_date } = useField('end_date')
 const isUnlimited = ref(false)
 const { value: service_id } = useField('service_id')
 const { value: service_name } = useField('service_name')
+const category_ids = ref([])
 const { value: description } = useField('description')
 const { value: package_validity } = useField('package_validity')
 const { value: package_image } = useField('package_image')
@@ -468,9 +524,72 @@ onMounted(() => {
   isFirstUpdate.value = true
   setFormData(defaultData())
 })
-const branchSelect = () => {
-  useSelect({ url: EMPLOYEE_LIST, data: { branch_id: branch_id.value } }, { value: 'id', label: 'name' }).then((data) => (employee.value = data))
-  useSelect({ url: SERVICE_LIST, data: { branch_id: branch_id.value } }, { value: 'service_id', label: 'service_name' }).then((data) => (serviceList.value = data))
+
+const syncCategoriesFromSelectedServices = () => {
+  if (selectedServices.value.length === 0 || serviceList.value.list.length === 0) {
+    return
+  }
+
+  const inferredCategoryIds = [
+    ...new Set(
+      selectedServices.value
+        .map((service) => serviceList.value.list.find((item) => normalizeId(item.service_id) === normalizeId(service.service_id))?.category_id)
+        .map((categoryId) => normalizeId(categoryId))
+        .filter((categoryId) => categoryId !== null)
+    )
+  ]
+
+  if (normalizedIdsSignature(category_ids.value) !== normalizedIdsSignature(inferredCategoryIds)) {
+    category_ids.value = inferredCategoryIds
+  }
+}
+
+const pruneSelectedServicesToAvailable = () => {
+  if (serviceList.value.list.length === 0) {
+    selectedServices.value = selectedServices.value.filter((service) => !service.service_id)
+    syncSelectedServiceFields()
+    return
+  }
+
+  const availableIds = serviceList.value.list.map((service) => normalizeId(service.service_id))
+  selectedServices.value = selectedServices.value.filter((service) => {
+    const normalizedServiceId = normalizeId(service.service_id)
+    return normalizedServiceId === null || availableIds.includes(normalizedServiceId)
+  })
+  syncSelectedServiceFields()
+}
+
+const branchSelect = ({ syncCategoriesFromServices = false } = {}) => {
+  if (!branch_id.value) {
+    category.value = { options: [], list: [] }
+    serviceList.value = { options: [], list: [] }
+    employee.value = { options: [], list: [] }
+    return Promise.resolve()
+  }
+
+  return Promise.all([
+    useSelect({ url: EMPLOYEE_LIST, data: { branch_id: branch_id.value } }, { value: 'id', label: 'name' }),
+    useSelect({ url: CATEGORY_LIST, data: { branch_id: branch_id.value } }, { value: 'id', label: 'name' }),
+    useSelect({ url: SERVICE_LIST, data: { branch_id: branch_id.value, category_ids: category_ids.value } }, { value: 'service_id', label: 'service_name' })
+  ]).then(([employeeData, categoryData, serviceData]) => {
+    employee.value = employeeData
+    category.value = categoryData
+    serviceList.value = serviceData
+
+    if (syncCategoriesFromServices) {
+      syncCategoriesFromSelectedServices()
+      return
+    }
+
+    pruneSelectedServicesToAvailable()
+  })
+}
+
+const onBranchChange = () => {
+  category_ids.value = []
+  selectedServices.value = []
+  syncSelectedServiceFields()
+  branchSelect()
 }
 
 // Form Submit
@@ -519,6 +638,33 @@ watchEffect(() => {
   } else {
     services.value = servicesComputed.value
   }
+})
+
+watch(
+  category_ids,
+  (value, oldValue) => {
+    if (!branch_id.value) {
+      return
+    }
+
+    if (normalizedIdsSignature(value) === normalizedIdsSignature(oldValue)) {
+      return
+    }
+
+    branchSelect()
+  },
+  { deep: true }
+)
+
+watch(branch_id, (value) => {
+  if (value) {
+    return
+  }
+
+  category_ids.value = []
+  selectedServices.value = []
+  syncSelectedServiceFields()
+  branchSelect()
 })
 
 watch(isUnlimited, (value) => {

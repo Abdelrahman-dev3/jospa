@@ -81,8 +81,9 @@ class CategoriesController extends Controller
     {
         $term = trim($request->q);
         $parentID = $request->parent_id;
+        $branchId = $request->branch_id;
 
-        $query_data = Category::where(function ($q) use ($parentID) {
+        $query_data = Category::where(function ($q) use ($parentID, $term) {
             if (! empty($term)) {
                 $q->orWhere('name', 'LIKE', "%$term%");
             }
@@ -92,7 +93,16 @@ class CategoriesController extends Controller
                 $q->whereNull('parent_id');
             }
         })
-            ->where('status', 1) // Add this line to filter by status
+            ->where('status', 1);
+
+        if (! empty($branchId)) {
+            $query_data->whereHas('branches', function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId)
+                    ->where('is_visible', 1);
+            });
+        }
+
+        $query_data = $query_data
             ->get();
 
         $data = [];

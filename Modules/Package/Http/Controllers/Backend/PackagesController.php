@@ -270,8 +270,9 @@ class PackagesController extends Controller
     {
         $employee_id = $request->employee_id;
         $branch_id = $request->branch_id;
+        $category_ids = $request->input('category_ids', $request->input('category_id'));
         $locale = app()->getLocale();
-        $data = Service::selectRaw("JSON_UNQUOTE(JSON_EXTRACT(services.name, '$.\"$locale\"')) as service_name,service_branches.*")
+        $data = Service::selectRaw("JSON_UNQUOTE(JSON_EXTRACT(services.name, '$.\"$locale\"')) as service_name, services.category_id as category_id, service_branches.*")
             // select('services.name as service_name', 'service_branches.*')
             ->with('employee')
             ->leftJoin('service_branches', 'service_branches.service_id', 'services.id')
@@ -279,6 +280,16 @@ class PackagesController extends Controller
                 $q->active();
             })
             ->where('branch_id', $branch_id);
+
+        if (! empty($category_ids)) {
+            if (! is_array($category_ids)) {
+                $category_ids = preg_split('/[,\s]+/', trim((string) $category_ids), -1, PREG_SPLIT_NO_EMPTY);
+            }
+
+            if (! empty($category_ids)) {
+                $data = $data->whereIn('services.category_id', $category_ids);
+            }
+        }
 
         if (isset($employee_id)) {
             $data = $data->whereHas('employee', function ($q) use ($employee_id) {
