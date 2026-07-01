@@ -315,31 +315,17 @@ class PackagesController extends Controller
             $request['name'] = ['ar' => $request->name, 'en' => $request->name];
         }
         $request = $this->normalizePackageDates($request);
-        $request['services'] = is_string($request->services) && !empty(is_string($request->services)) ? json_decode($request->services) : [];
+        $request['services'] = $this->decodeServicesPayload($request->services);
         $request['employee_id'] = is_string($request->employee_id) && !empty($request->employee_id) ? explode(',', $request->employee_id) : [];
         $request['category_id'] = is_string($request->category_id) && !empty($request->category_id) ? explode(',', $request->category_id) : [];
 
-
-        $totalprice = 0;
-        foreach ($request['services'] as $serviceItem) {
-            $filteredService = [];
-            foreach ($serviceItem as $key => $value) {
-                if ($key !== 'totalPrice') {
-                    $filteredService[$key] = $value;
-                } else {
-                    $totalprice = $totalprice + $value;
-                }
-            }
-            $service[] = $filteredService;
-        }
-
-        $request['package_price'] = $totalprice;
+        $servicePayload = $this->preparePackageServices($request['services']);
+        $request['package_price'] = $this->resolvePackagePrice($request, $request['services']);
 
         $data = Package::create($request->all());
 
         $data->employees()->sync($request['employee_id']);
-
-        $data->services()->sync($service);
+        $this->syncPackageServices($data, $servicePayload);
 
         if ($request->hasFile('package_image')) {
             storeMediaFile($data, $request->file('package_image'), 'package_image');
@@ -390,7 +376,7 @@ class PackagesController extends Controller
             $request['name'] = ['ar' => $request->name, 'en' => $request->name];
         }
         $request = $this->normalizePackageDates($request);
-        $request['services'] = is_string($request->services) && !empty(is_string($request->services)) ? json_decode($request->services) : [];
+        $request['services'] = $this->decodeServicesPayload($request->services);
         $request['employee_id'] = is_string($request->employee_id) && !empty($request->employee_id) ? explode(',', $request->employee_id) : [];
         $request['category_id'] = is_string($request->category_id) && !empty($request->category_id) ? explode(',', $request->category_id) : [];
 
@@ -398,40 +384,18 @@ class PackagesController extends Controller
 
 
         $data->employees()->sync($request['employee_id']);
-        $totalprice = 0;
-        $serviceId = collect($request['services'])->pluck('service_id')->toArray();
+        $servicePayload = $this->preparePackageServices($request['services']);
+        $serviceId = collect($servicePayload)->pluck('service_id')->toArray();
 
         $PackageService = PackageService::where('package_id', $data->id);
-        if (count($request['services']) > 0) {
+        if (count($servicePayload) > 0) {
             $PackageService = $PackageService->whereNotIn('service_id', $serviceId);
         }
         $PackageService->delete();
 
+        $this->syncPackageServices($data, $servicePayload);
 
-
-        foreach ($request['services'] as $serviceItem) {
-            $filteredService = [];
-            foreach ($serviceItem as $key => $value) {
-                if ($key !== 'totalPrice') {
-                    $filteredService[$key] = $value;
-                } else {
-                    $totalprice = $totalprice + $value;
-                }
-            }
-
-            // Update or create the package_service
-            PackageService::updateOrCreate(
-                ['service_id' => $filteredService['service_id'], 'package_id' => $data->id],
-                array_merge(
-                    $filteredService,
-                    ['package_id' => $data->id]
-                )
-            );
-        }
-
-
-
-        $request['package_price'] = $totalprice;
+        $request['package_price'] = $this->resolvePackagePrice($request, $request['services']);
         $data->update($request->all());
 
         if ($request->package_image == null) {
@@ -455,6 +419,75 @@ class PackagesController extends Controller
         ]);
 
         return $request;
+    }
+
+    private function decodeServicesPayload($services): array
+    {
+        if (is_string($services)) {
+            $decodedServices = json_decode($services, true);
+
+            return is_array($decodedServices) ? $decodedServices : [];
+        }
+
+        return is_array($services) ? $services : [];
+    }
+
+    private function preparePackageServices(array $services): array
+    {
+        return collect($services)
+            ->map(function ($serviceItem) {
+                $serviceId = (int) data_get($serviceItem, 'service_id', 0);
+                $qty = max(1, (int) data_get($serviceItem, 'qty', 1));
+                $servicePrice = $this->normalizePackageAmount(data_get($serviceItem, 'service_price', 0));
+                $lineTotal = $this->normalizePackageAmount(data_get($serviceItem, 'totalPrice', $servicePrice * $qty));
+                $discountedPrice = $this->normalizePackageAmount(data_get($serviceItem, 'discounted_price', $qty > 0 ? $lineTotal / $qty : $servicePrice));
+
+                return [
+                    'service_id' => $serviceId,
+                    'service_price' => $servicePrice,
+                    'qty' => $qty,
+                    'service_name' => data_get($serviceItem, 'service_name'),
+                    'discounted_price' => $discountedPrice,
+                ];
+            })
+            ->filter(fn ($serviceItem) => $serviceItem['service_id'] > 0)
+            ->values()
+            ->all();
+    }
+
+    private function resolvePackagePrice(Request $request, array $services): float
+    {
+        if (! blank($request->input('package_price'))) {
+            return $this->normalizePackageAmount($request->input('package_price'));
+        }
+
+        return collect($services)->sum(function ($serviceItem) {
+            return $this->normalizePackageAmount(data_get($serviceItem, 'totalPrice', 0));
+        });
+    }
+
+    private function normalizePackageAmount($amount): float
+    {
+        if (is_string($amount)) {
+            $amount = str_replace(',', '', $amount);
+        }
+
+        return round((float) $amount, 2);
+    }
+
+    private function syncPackageServices(Package $package, array $services): void
+    {
+        foreach ($services as $serviceItem) {
+            PackageService::updateOrCreate(
+                [
+                    'service_id' => $serviceItem['service_id'],
+                    'package_id' => $package->id,
+                ],
+                array_merge($serviceItem, [
+                    'package_id' => $package->id,
+                ])
+            );
+        }
     }
 
     /**

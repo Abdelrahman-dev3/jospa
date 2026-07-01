@@ -54,6 +54,18 @@
 
           <div class="row">
             <div class="col-md-4">
+              <InputField
+                type="number"
+                min="0"
+                step="0.01"
+                :is-required="true"
+                :label="$t('package.lbl_package_price')"
+                placeholder="0.00"
+                v-model="package_price"
+                :error-message="errors.package_price"
+              ></InputField>
+            </div>
+            <div class="col-md-4">
               <div class="form-group">
                 <label class="form-label" for="start_date">{{ $t('package.lbl_start_at') }}</label>
                 <div class="w-100">
@@ -100,7 +112,7 @@
                 <thead>
                   <tr>
                     <th>Service</th>
-                    <th>Discounted Price</th>
+                    <th>Unit Price</th>
                     <th>Quantity</th>
                     <th>Total Price</th>
                     <th>Action</th>
@@ -114,13 +126,13 @@
                     <div><Multiselect v-model="service.service_id" :value="service.service_id" v-bind="singleSelectOption" @select="selectService(index)" :options="availableServiceOptions(service.service_id)" placeholder="Select Service" id="type" autocomplete="off"></Multiselect></div>
                   </td>
                   <td>
-                    <div><input class="form-control" type="number" min="0" placeholder="0" v-model="service.discounted_price" disabled /></div>
+                    <div><input class="form-control" type="number" min="0" placeholder="0" :value="service.service_price" disabled /></div>
                   </td>
                   <td>
                     <QtyButton v-model="service.qty" :value="service.qty" @click="changeQty(index)"></QtyButton>
                   </td>
                   <td>
-                    <div><input class="form-control" type="number" placeholder="0" v-model="service.totalPrice" @input="changeTotal(index)" /></div>
+                    <div><input class="form-control" type="number" placeholder="0" :value="serviceLineTotal(service)" disabled /></div>
                   </td>
                   <td>
                     <div>
@@ -138,7 +150,7 @@
       </div>
       <div class="form-group m-0 p-3 d-flex justify-content-end border-top gap-3">
         <label for=""
-          ><strong>{{ $t('package.lbl_service_price') }} </strong>
+          ><strong>Services total value</strong>
         </label>
         <span>{{ formatCurrencyVue(SUB_TOTAL_SERVICE_AMOUNT) }}</span>
       </div>
@@ -215,6 +227,8 @@ const removeService = (index) => {
   syncSelectedServiceFields()
 }
 
+const serviceLineTotal = (service) => Number(service.service_price || 0) * Number(service.qty || 0)
+
 const selectService = (index) => {
   const serviceId = normalizeId(selectedServices.value[index].service_id)
   selectedServices.value[index].service_id = serviceId
@@ -223,21 +237,20 @@ const selectService = (index) => {
     selectedServices.value[index].service_price = selectedSingleService.service_price
     selectedServices.value[index].service_name = selectedSingleService.service_name
     selectedServices.value[index].qty = 1
-    selectedServices.value[index].totalPrice = selectedServices.value[index].service_price
-    selectedServices.value[index].discounted_price = selectedServices.value[index].totalPrice / selectedServices.value[index].qty
+    selectedServices.value[index].totalPrice = serviceLineTotal(selectedServices.value[index])
+    selectedServices.value[index].discounted_price = selectedServices.value[index].service_price
   }
   syncSelectedServiceFields()
 }
 
-function changeTotal(index) {
-  if (selectedServices.value[index]) {
-    selectedServices.value[index].discounted_price = selectedServices.value[index].totalPrice / selectedServices.value[index].qty
-  }
-}
-
 function changeQty(index) {
-  selectedServices.value[index].totalPrice = selectedServices.value[index].discounted_price * selectedServices.value[index].qty
-  changeTotal(index)
+  if (!selectedServices.value[index]) {
+    return
+  }
+
+  selectedServices.value[index].qty = Math.max(1, Number(selectedServices.value[index].qty || 1))
+  selectedServices.value[index].totalPrice = serviceLineTotal(selectedServices.value[index])
+  selectedServices.value[index].discounted_price = selectedServices.value[index].service_price
 }
 
 const addMore = () => {
@@ -352,6 +365,7 @@ const defaultData = () => {
     end_date: null,
     start_date: null,
     branch_id: '',
+    package_price: 0,
     status: 1,
     is_featured: 0,
     package_validity: 1,
@@ -392,6 +406,7 @@ const setFormData = (data) => {
       start_date: data.start_date,
       end_date: data.end_date,
       status: data.status ? true : false,
+      package_price: data.package_price ?? 0,
       is_featured: data.is_featured || 0,
       service_id: data.service_id || [],
       service_name: data.service_name || [],
@@ -402,7 +417,7 @@ const setFormData = (data) => {
     }
   })
   selectedServices.value.forEach((service, index) => {
-    service.totalPrice = service.discounted_price * service.qty
+    service.totalPrice = serviceLineTotal(service)
   })
   syncSelectedServiceFields()
 }
@@ -433,6 +448,7 @@ const validationSchema = yup.object({
     en: yup.string().required('English name is required')
   }),
   branch_id: yup.string().required('Branch is a required field'),
+  package_price: yup.number().typeError('Package price must be a number').min(0, 'Package price must be greater than or equal to 0').required('Package price is required'),
   start_date: yup
     .string()
     .nullable()
@@ -463,11 +479,11 @@ const validationSchema = yup.object({
         qty: yup.number().required('Quantity is required'),
         discounted_price: yup
           .number()
-          .required('Discounted price is required')
+          .required('Service price is required')
           .test('is-valid-discounted-price', 'Discounted price must be less than or equal to service price', function (value) {
             return value <= this.parent.service_price
           }),
-        totalPrice: yup.number().required('Service selection is required').typeError('Total price must be a number').min(1, 'Total price must be greater than or equal to 1')
+        totalPrice: yup.number().required('Service total is required').typeError('Total price must be a number').min(1, 'Total price must be greater than or equal to 1')
       })
     )
     .test('unique-service-id', 'Please do not select the same service more than once', (services) => {
@@ -484,7 +500,8 @@ const { handleSubmit, errors, resetForm } = useForm({
     name: {
       ar: '',
       en: ''
-    }
+    },
+    package_price: 0
     // services: selectedServices.value // Initial value for services from selectedServices
   }
 })
@@ -492,6 +509,7 @@ const { handleSubmit, errors, resetForm } = useForm({
 const { value: nameAr, errorMessage: nameArError } = useField('name.ar')
 const { value: nameEn, errorMessage: nameEnError } = useField('name.en')
 const { value: branch_id } = useField('branch_id')
+const { value: package_price } = useField('package_price')
 const { value: status } = useField('status')
 const { value: is_featured } = useField('is_featured')
 
@@ -514,7 +532,7 @@ const servicesComputed = computed(() => {
     service_id: service.service_id,
     qty: service.qty,
     discounted_price: service.discounted_price,
-    totalPrice: service.totalPrice,
+    totalPrice: serviceLineTotal(service),
     service_price: service.service_price,
     service_name: service.service_name
   }))
@@ -594,7 +612,7 @@ const onBranchChange = () => {
 
 // Form Submit
 const IS_SUBMITED = ref(false)
-const SUB_TOTAL_SERVICE_AMOUNT = computed(() => selectedServices.value.reduce((total, service) => total + service.discounted_price * service.qty, 0))
+const SUB_TOTAL_SERVICE_AMOUNT = computed(() => selectedServices.value.reduce((total, service) => total + serviceLineTotal(service), 0))
 
 const formSubmit = handleSubmit((values) => {
   if (IS_SUBMITED.value) return false
