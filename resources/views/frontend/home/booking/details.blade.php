@@ -728,7 +728,7 @@
                     </div>
                 @endforeach
             </div>
-            <p class="price"><strong style="color:white">{{ __('messagess.price') }} :</strong>  {{$totalService}} </p>
+            <p class="price"><strong style="color:white">{{ __('messagess.price') }} :</strong> {{ \Currency::format($package['package_price'] ?? 0) }}</p>
             <div style="width:100%;display: flex;justify-content: end;">
                 <a href="/giffte?pack={{$package['id']}}" class="more-btn">{{ __('messagess.bookNow') }}</a>
             </div>
@@ -771,7 +771,7 @@
             notes: document.getElementById('notesTextarea').value,
             package_id: "{{ $package['id'] ?? null }}",
             branch_id: "{{ $package['branch_id'] ?? 0 }}",
-            total_price: "{{ $totalService ?? 0 }}",
+            total_price: "{{ $package['package_price'] ?? 0 }}",
             _token: "{{ csrf_token() }}"
         };
 
