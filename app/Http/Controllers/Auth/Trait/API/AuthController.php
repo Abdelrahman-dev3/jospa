@@ -51,7 +51,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.invalid_phone'), [], 422);
         }
 
-        $user = User::where('mobile', $phone)->first();
+        $user = User::whereMobileMatches($phone)->first();
 
         if (! $user) {
             return $this->sendError(__('messages.register_before_login'));
@@ -64,20 +64,22 @@ class AuthController extends Controller
         $dailyKey = 'login_otp_count_' . $phone . '_' . date('Y-m-d');
         $dailyCount = (int) Cache::get($dailyKey, 0);
 
-        if ($dailyCount >= 711) {
+        if (! $this->usesEmployeeCustomOtp($user) && $dailyCount >= 711) {
             return $this->sendError(__('messagess.sms_daily_limit_reached'), [], 429);
         }
 
-        $otp = self::TEST_OTP;
+        $otp = $this->resolveOtpForUser($user);
 
         Cache::put('login_otp_' . $phone, [
             'otp' => $otp,
             'user_id' => $user->id,
         ], now()->addMinutes(5));
 
-        Cache::put($dailyKey, $dailyCount + 1, now()->endOfDay());
+        if (! $this->usesEmployeeCustomOtp($user)) {
+            Cache::put($dailyKey, $dailyCount + 1, now()->endOfDay());
+        }
 
-        if ((int) setting('is_taqnyat_sms') === 1) {
+        if (! $this->usesEmployeeCustomOtp($user) && (int) setting('is_taqnyat_sms') === 1) {
             $message = __('messagess.otp_sms', ['code' => $otp]);
             $sent = $smsService->sendSms($phone, $message);
 
@@ -89,11 +91,12 @@ class AuthController extends Controller
         return $this->sendResponse([
             'mobile' => $phone,
             'expires_in' => 300,
-        ], __('messages.otp_sent'));
+            'otp_delivery' => $this->usesEmployeeCustomOtp($user) ? 'employee_login_otp' : 'sms',
+        ], $this->usesEmployeeCustomOtp($user) ? __('employee.custom_login_otp_hint') : __('messages.otp_sent'));
     }
     public function resendLoginOtp(Request $request)
     {
-        return $this->sendLoginOtp($request);
+        return $this->login($request);
     }
 
     public function verifyLoginOtp(Request $request)
@@ -132,7 +135,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.invalid_otp'), [], 422);
         }
 
-        $user = User::where('id', $cached['user_id'])->where('mobile', $phone)->first();
+        $user = User::where('id', $cached['user_id'])->whereMobileMatches($phone)->first();
 
         if (! $user) {
             Cache::forget('login_otp_'.$phone);
@@ -168,7 +171,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'username' => ['required', 'string', 'max:191', 'unique:users,username'],
-            'mobile' => ['required', 'string', 'max:20', 'unique:users,mobile'],
+            'mobile' => ['required', 'string', 'max:20'],
         ]);
 
         if ($validator->fails()) {
@@ -185,6 +188,10 @@ class AuthController extends Controller
     
         if (! $phone) {
             return $this->sendError(__('messagess.invalid_phone'), [], 422);
+        }
+
+        if (User::whereMobileMatches($phone)->exists()) {
+            return $this->sendError(__('validation.unique', ['attribute' => 'mobile']), [], 422);
         }
     
         $dailyKey = 'register_otp_count_'.$phone.'_'.date('Y-m-d');
@@ -259,7 +266,7 @@ class AuthController extends Controller
         Cache::forget('register_otp_'.$phone);
         Cache::forget($attemptKey);
     
-        if (User::where('mobile', $phone)->exists() || User::where('username', $cached['username'])->exists()) {
+        if (User::whereMobileMatches($phone)->exists() || User::where('username', $cached['username'])->exists()) {
             return $this->sendError(__('validation.unique', ['attribute' => 'mobile/username']), [], 422);
         }
     
@@ -413,6 +420,21 @@ class AuthController extends Controller
             $user->fresh()->load(['profile', 'addresses']),
             __('messages.profile_update')
         );
+    }
+
+    private function usesEmployeeCustomOtp(?User $user): bool
+    {
+        return $user?->hasRole('employee')
+            && preg_match('/^\d{4}$/', (string) $user->employee_login_otp) === 1;
+    }
+
+    private function resolveOtpForUser(?User $user): string
+    {
+        if ($this->usesEmployeeCustomOtp($user)) {
+            return (string) $user->employee_login_otp;
+        }
+
+        return self::TEST_OTP;
     }
 
     public function deleteAccount(Request $request)

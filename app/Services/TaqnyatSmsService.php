@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Models\Setting;
+use App\Support\SaudiPhoneNumber;
 
 class TaqnyatSmsService
 {
@@ -138,21 +139,7 @@ class TaqnyatSmsService
      */
     public function validatePhoneNumber($phone)
     {
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-    
-        if (preg_match('/^(966)/', $phone)) {
-            $phone = '0' . substr($phone, 3);
-        }
-    
-        if (preg_match('/^5[0-9]{8}$/', $phone)) {
-            $phone = '0' . $phone;
-        }
-    
-        if (preg_match('/^05[0-9]{8}$/', $phone)) {
-            return $phone;
-        }
-    
-        return false;
+        return SaudiPhoneNumber::normalize($phone) ?: false;
     }
 
 }

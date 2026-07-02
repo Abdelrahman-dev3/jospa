@@ -641,8 +641,14 @@ class EmployeesController extends Controller
         $data['twitter_link'] = $data->profile->twitter_link ?? null;
 
         $data['dribbble_link'] = $data->profile->dribbble_link ?? null;
+        $data['employee_login_otp'] = $data->employee_login_otp;
 
-        return response()->json(['data' => $data, 'status' => true]);
+        return response()->json([
+            'data' => array_merge($data->toArray(), [
+                'employee_login_otp' => $data->employee_login_otp,
+            ]),
+            'status' => true,
+        ]);
     }
 
     /**

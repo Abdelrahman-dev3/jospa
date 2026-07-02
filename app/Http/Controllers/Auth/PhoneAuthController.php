@@ -40,13 +40,19 @@ class PhoneAuthController extends Controller
     {
         $validated = $request->validate([
             'username' => 'required|string|max:191|unique:users,username',
-            'mobile' => 'required|string|max:20|unique:users,mobile',
+            'mobile' => 'required|string|max:20',
         ]);
 
         $phone = $this->normalizePhone($validated['mobile']);
 
         if (! $phone) {
             return back()->withInput()->with('error', __('messagess.invalid_phone'));
+        }
+
+        if (User::whereMobileMatches($phone)->exists()) {
+            return back()->withInput()->withErrors([
+                'mobile' => __('validation.unique', ['attribute' => 'mobile']),
+            ]);
         }
 
         if ($this->hasReachedRegistrationSmsLimit($phone)) {
@@ -144,7 +150,7 @@ class PhoneAuthController extends Controller
             return back()->withInput()->with('error', __('messagess.invalid_phone'));
         }
 
-        $user = User::where('mobile', $phone)->first();
+        $user = User::whereMobileMatches($phone)->first();
 
         if (! $user) {
             return back()->withInput()->with('error', __('messages.invalid_credentials'));
@@ -152,11 +158,11 @@ class PhoneAuthController extends Controller
 
         Session::put(self::LOGIN_PHONE_SESSION_KEY, $phone);
 
-        if (! $this->sendOtp($phone, $this->loginOtpKey($phone))) {
+        if (! $this->sendOtp($phone, $this->loginOtpKey($phone), $user)) {
             return back()->withInput()->with('error', __('messagess.error_sending_sms'));
         }
 
-        return redirect()->route('login.verify.form')->with('success', __('messages.otp_sent'));
+        return redirect()->route('login.verify.form')->with('success', $this->loginOtpSuccessMessage($user));
     }
 
     public function showLoginOtpForm(): View|RedirectResponse
@@ -183,7 +189,7 @@ class PhoneAuthController extends Controller
 
         $this->clearLoginState($phone);
 
-        $user = User::where('mobile', $phone)->first();
+        $user = User::whereMobileMatches($phone)->first();
 
         if (! $user) {
             return redirect()->route('signin')->with('error', __('messages.invalid_credentials'));
@@ -276,7 +282,7 @@ class PhoneAuthController extends Controller
     private function createOrUpdateUser(string $phone, string $username): User
     {
         $displayName = trim($username) !== '' ? $username : $phone;
-        $user = User::firstOrNew(['mobile' => $phone]);
+        $user = User::whereMobileMatches($phone)->first() ?? new User();
 
         $user->fill([
             'username' => $user->username ?: $displayName,
@@ -471,11 +477,15 @@ class PhoneAuthController extends Controller
         );
     }
 
-    private function sendOtp(string $phone, string $cacheKey): bool
+    private function sendOtp(string $phone, string $cacheKey, ?User $user = null): bool
     {
-        $otp = self::TEST_OTP;
+        $otp = $this->resolveOtpForUser($user);
 
         Cache::put($cacheKey, $otp, now()->addMinutes(self::OTP_TTL_MINUTES));
+
+        if ($this->usesEmployeeCustomOtp($user)) {
+            return true;
+        }
 
         try {
             app(TaqnyatSmsService::class)->sendSms($phone, __('messagess.otp_sms', ['code' => $otp]));
@@ -491,6 +501,30 @@ class PhoneAuthController extends Controller
     private function normalizePhone(string $mobile): ?string
     {
         return app(TaqnyatSmsService::class)->validatePhoneNumber($mobile);
+    }
+
+    private function usesEmployeeCustomOtp(?User $user): bool
+    {
+        return $user?->hasRole('employee')
+            && preg_match('/^\d{4}$/', (string) $user->employee_login_otp) === 1;
+    }
+
+    private function resolveOtpForUser(?User $user): string
+    {
+        if ($this->usesEmployeeCustomOtp($user)) {
+            return (string) $user->employee_login_otp;
+        }
+
+        return self::TEST_OTP;
+    }
+
+    private function loginOtpSuccessMessage(User $user): string
+    {
+        if ($this->usesEmployeeCustomOtp($user)) {
+            return __('employee.custom_login_otp_hint');
+        }
+
+        return __('messages.otp_sent');
     }
 
     private function registerOtpKey(string $phone): string

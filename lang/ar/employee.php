@@ -90,4 +90,8 @@ return [
     'select_employee' => 'اختر موظفًا',
     'singular_title_manager' => 'مدير',
 
+    'lbl_login_otp' => 'رمز OTP خاص بالموظف',
+    'login_otp_placeholder' => 'أدخل 4 أرقام',
+    'login_otp_help' => 'عند تحديده سيسجل الموظف بهذا الرمز دون إرسال SMS.',
+    'custom_login_otp_hint' => 'استخدم رمز الموظف المحدد له من إدارة الموظفين.',
 ];

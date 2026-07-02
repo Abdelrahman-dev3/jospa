@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Presenters\UserPresenter;
 use App\Models\Traits\HasHashedMediaTrait;
+use App\Support\SaudiPhoneNumber;
 use App\Trait\CustomFieldsTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -46,6 +47,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         'last_name',
         'email',
         'mobile',
+        'employee_login_otp',
         'login_type',
         'gender',
         'date_of_birth',
@@ -87,6 +89,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'employee_login_otp',
     ];
 
     protected $casts = [
@@ -255,6 +258,29 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
             ->active()
             ->varified()
             ->calenderResource()->employee()->branch()->orderBy('id', 'ASC');
+    }
+
+    public static function normalizeSaudiMobile(?string $mobile): ?string
+    {
+        return SaudiPhoneNumber::normalize($mobile);
+    }
+
+    public function scopeWhereMobileMatches($query, string $mobile)
+    {
+        $candidates = SaudiPhoneNumber::lookupDigits($mobile);
+
+        if (empty($candidates)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $table = $query->getModel()->getTable();
+        $normalizedColumn = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE({$table}.mobile, ' ', ''), '+', ''), '-', ''), '(', ''), ')', '')";
+
+        return $query->where(function ($mobileQuery) use ($candidates, $normalizedColumn) {
+            foreach ($candidates as $candidate) {
+                $mobileQuery->orWhereRaw("{$normalizedColumn} = ?", [$candidate]);
+            }
+        });
     }
 
     public function rating()

@@ -32,6 +32,7 @@ return [
     'lbl_last_name' => 'Last Name',
     'lbl_Email' => 'Email',
     'lbl_phone_number' => 'Phone Number',
+    'lbl_login_otp' => 'Employee Login OTP',
     'lbl_password' => 'Password',
     'lbl_confirm_password' => 'Confirm Password',
     'lbl_gender' => 'Gender',
@@ -86,6 +87,9 @@ return [
     'instagram_link'=>'Enter Instagram Link',
     'Twitter_link'=>'Enter Twitter Link',
     'dribble_link'=>'Enter Dribbble Link',
+    'login_otp_placeholder' => 'Enter 4 digits',
+    'login_otp_help' => 'If set, this employee will log in with this OTP without sending an SMS.',
+    'custom_login_otp_hint' => 'Use the employee OTP assigned from staff management.',
     'select_employee'=>'Select an employee',
     'singular_title_manager'=>'Manager',
 

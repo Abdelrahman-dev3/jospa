@@ -28,6 +28,18 @@
                     v-bind="{ mode: 'international', maxLen: 15 }" autocomplete="new-password"></vue-tel-input>
                   <span class="text-danger">{{ errors['mobile'] }}</span>
                 </div>
+                <div class="col-md-6">
+                  <InputField
+                    :label="$t('employee.lbl_login_otp')"
+                    :placeholder="$t('employee.login_otp_placeholder')"
+                    v-model="employee_login_otp"
+                    :error-message="errors['employee_login_otp']"
+                    :error-messages="errorMessages['employee_login_otp']"
+                    maxlength="4"
+                    inputmode="numeric"
+                  />
+                  <small class="text-muted d-block mt-1">{{ $t('employee.login_otp_help') }}</small>
+                </div>
               </div>
             </div>
             <div class="col-md-4 text-center">
@@ -487,6 +499,7 @@ const defaultData = () => {
     last_name: '',
     email: '',
     mobile: '',
+    employee_login_otp: '',
     password: '',
     confirm_password: '',
     gender: 'male',
@@ -531,6 +544,7 @@ const setFormData = (data) => {
       last_name: data.last_name,
       email: data.email,
       mobile: data.mobile,
+      employee_login_otp: data.employee_login_otp ?? '',
       password: data.password,
       confirm_password: data.confirm_password,
       gender: data.gender,
@@ -609,6 +623,15 @@ const validationSchema = yup.object({
     .matches(EMAIL_REGX, 'Must be a valid email'),
     mobile: yup.string()
       .required('Phone Number is a required field').matches(/^(\+?\d+)?(\s?\d+)*$/, 'Phone Number must contain only digits'),
+    employee_login_otp: yup.string()
+      .nullable()
+      .test('employee_login_otp', 'Employee OTP must be exactly 4 digits', (value) => {
+        if (!value) {
+          return true
+        }
+
+        return /^\d{4}$/.test(value)
+      }),
     password : yup.string().test('password','Password is required' , function(value) {
       if(currentId === 0 && !value){
         return false;
@@ -644,6 +667,7 @@ const { value: password } = useField('password')
 const { value: confirm_password } = useField('confirm_password')
 const { value: gender } = useField('gender')
 const { value: mobile } = useField('mobile')
+const { value: employee_login_otp } = useField('employee_login_otp')
 const { value: branch_id } = useField('branch_id')
 const { value: shift_id } = useField('shift_id')
 const { value: category_id } = useField('category_id')
@@ -669,6 +693,8 @@ const handleInput = (phone, phoneObject) => {
   // Handle the input event
   if (phoneObject?.formatted) {
     mobile.value = phoneObject.formatted
+  } else {
+    mobile.value = phone
   }
 };
 
@@ -680,6 +706,7 @@ const formSubmit = handleSubmit((values) => {
   IS_SUBMITED.value = true;
   values.show_in_home_booking = show_in_home_booking.value ? 1 : 0;
   values.services_edited = servicesEdited.value ? 1 : 0;
+  values.employee_login_otp = values.employee_login_otp ? values.employee_login_otp.replace(/\D/g, '').slice(0, 4) : ''
   values.custom_fields_data = JSON.stringify(values.custom_fields_data)
   console.log("submit",values);
   if (currentId.value > 0) {
