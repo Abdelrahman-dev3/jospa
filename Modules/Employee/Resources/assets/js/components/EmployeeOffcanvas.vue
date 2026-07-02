@@ -2,7 +2,7 @@
   <form @submit="formSubmit">
     <div class="offcanvas offcanvas-end" tabindex="-1" id="form-offcanvas" aria-labelledby="form-offcanvasLabel">
       <FormHeader :currentId="currentId" :editTitle="editTitle" :createTitle="createTitle"></FormHeader>
-      <div class="offcanvas-body">
+      <div class="offcanvas-body" :key="formRenderKey">
         <div v-if="isFormLoading" class="employee-form-loader">
           <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
           <span>Loading employee data...</span>
@@ -44,6 +44,7 @@
             </div>
             <div class="col-md-4 text-center">
               <img :src="ImageViewer || defaultImage" class="img-fluid avatar avatar-120 avatar-rounded mb-2"
+                @error="handleImageError"
                 alt="profile-image" />
                 <div v-if="validationMessage" class="text-danger mb-2">{{ validationMessage }}</div>
               <div class="d-flex align-items-center justify-content-center gap-2">
@@ -288,6 +289,8 @@ const { getRequest, storeRequest, updateRequest } = useRequest()
 const isFormLoading = ref(false)
 const isHydratingForm = ref(false)
 const servicesEdited = ref(false)
+const formRenderKey = ref(0)
+let activePrepareToken = 0
 
 // Edit Form Or Create Form
 const currentId = useModuleId(async () => {
@@ -319,10 +322,23 @@ const applyDefaultBranchAndShift = () => {
   }
 }
 
+const refreshFormDom = () => {
+  formRenderKey.value += 1
+}
+
+const nextPrepareToken = () => {
+  activePrepareToken += 1
+  return activePrepareToken
+}
+
+const isPrepareTokenActive = (prepareToken) => prepareToken === activePrepareToken
+
 const prepareForm = async (formId) => {
+  const prepareToken = nextPrepareToken()
   isFormLoading.value = true
   servicesEdited.value = false
   isHydratingForm.value = true
+  refreshFormDom()
 
   try {
     const [branchData, shiftData, categoryData, commissionData] = await Promise.all([
@@ -332,6 +348,10 @@ const prepareForm = async (formId) => {
       useSelect({ url: COMMISSION_LIST }, { value: 'id', label: 'name' }),
     ])
 
+    if (!isPrepareTokenActive(prepareToken)) {
+      return
+    }
+
     branch.value = branchData
     shift.value = shiftData
     categories.value = categoryData
@@ -339,6 +359,9 @@ const prepareForm = async (formId) => {
 
     if (formId > 0) {
       const res = await getRequest({ url: EDIT_URL, id: formId })
+      if (!isPrepareTokenActive(prepareToken)) {
+        return
+      }
       if (res.status && res.data) {
         setFormData(res.data)
       }
@@ -347,8 +370,15 @@ const prepareForm = async (formId) => {
       applyDefaultBranchAndShift()
     }
 
-    await loadServicesForCurrentFilters()
+    await loadServicesForCurrentFilters({ prepareToken })
+  } catch (error) {
+    if (isPrepareTokenActive(prepareToken)) {
+      console.error('Failed to prepare employee form', error)
+    }
   } finally {
+    if (!isPrepareTokenActive(prepareToken)) {
+      return
+    }
     await nextTick()
     isHydratingForm.value = false
     servicesEdited.value = false
@@ -395,7 +425,7 @@ const removeServicesForCategories = (removedCategoryIds = []) => {
   markServicesEdited()
 }
 
-const loadServicesForCurrentFilters = async ({ resetSelected = false } = {}) => {
+const loadServicesForCurrentFilters = async ({ resetSelected = false, prepareToken = activePrepareToken } = {}) => {
   if (resetSelected) {
     service_id.value = []
   }
@@ -408,6 +438,10 @@ const loadServicesForCurrentFilters = async ({ resetSelected = false } = {}) => 
       category_id: category_id.value
     }
   }, { value: 'id', label: 'name' })
+
+  if (!isPrepareTokenActive(prepareToken)) {
+    return
+  }
 
   services.value = data
   rememberServiceCategories(data.list)
@@ -449,6 +483,16 @@ const markServicesEdited = () => {
 const ImageViewer = ref(null)
 const validationMessage = ref('');
 const profileInputRef = ref(null)
+
+const handleImageError = (event) => {
+  if (event?.target && event.target.src !== props.defaultImage) {
+    event.target.src = props.defaultImage
+  }
+
+  if (ImageViewer.value !== props.defaultImage) {
+    ImageViewer.value = props.defaultImage
+  }
+}
 
 const fileUpload = async (e) => {
   let file = e.target.files[0];
@@ -536,7 +580,7 @@ const normalizeCategoryIds = (value) => {
 const setFormData = (data) => {
   isHydratingForm.value = true
   serviceCategoryMap.value = {}
-  ImageViewer.value = data.profile_image
+  ImageViewer.value = data.profile_image || null
   resetForm({
     values: {
       id: data.id,
@@ -579,7 +623,8 @@ const reset_datatable_close_offcanvas = (res) => {
   if (res.status) {
     window.successSnackbar(res.message)
     renderedDataTable.ajax.reload(null, false)
-    bootstrap.Offcanvas.getInstance('#form-offcanvas').hide()
+    const formOffcanvasElement = document.getElementById('form-offcanvas')
+    bootstrap.Offcanvas.getInstance(formOffcanvasElement)?.hide()
     setFormData(defaultData())
   } else {
     window.errorSnackbar(res.message)
@@ -716,7 +761,14 @@ const formSubmit = handleSubmit((values) => {
   }
 })
 
-useOnOffcanvasHide('form-offcanvas', () => setFormData(defaultData()))
+useOnOffcanvasHide('form-offcanvas', () => {
+  nextPrepareToken()
+  isFormLoading.value = false
+  isHydratingForm.value = false
+  servicesEdited.value = false
+  refreshFormDom()
+  setFormData(defaultData())
+})
 </script>
 
 <style scoped>
