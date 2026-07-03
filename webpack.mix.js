@@ -61,6 +61,18 @@ mix.scripts(
 mix.alias({
     '@': path.join(__dirname, 'resources/js')
 });
+
+mix.webpackConfig({
+    resolve: {
+        alias: {
+            svelte: path.resolve(__dirname, 'node_modules/svelte'),
+            'svelte/internal': path.resolve(__dirname, 'node_modules/svelte/internal/index.mjs'),
+            'svelte/store': path.resolve(__dirname, 'node_modules/svelte/store/index.mjs')
+        },
+        mainFields: ['svelte', 'browser', 'module', 'main']
+    }
+});
+
 mix.js('resources/js/app.js', 'public/js')
 .sass('resources/sass/app.scss', 'public/css');
 
