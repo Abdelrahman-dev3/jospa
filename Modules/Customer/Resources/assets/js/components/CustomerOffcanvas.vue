@@ -22,7 +22,7 @@
             <InputField :is-required="true" :label="$t('customer.lbl_Email')" :placeholder="$t('customer.email_address')" v-model="email" :error-message="errors['email']" :error-messages="errorMessages['email']"></InputField>
             <div class="form-group">
               <label class="form-label">{{ $t('customer.lbl_phone_number') }}<span class="text-danger">*</span> </label>
-              <vue-tel-input :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
+              <vue-tel-input :value="safeMobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
               <span class="text-danger">{{ errors['mobile'] }}</span>
             </div>
 
@@ -68,7 +68,7 @@
   </form>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL,EMAIL_UNIQUE_CHECK } from '../constant/customer'
 import { useField, useForm } from 'vee-validate'
 
@@ -159,6 +159,18 @@ const defaultData = () => {
   }
 }
 
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+}
+
 //  Reset Form
 const setFormData = (data) => {
   ImageViewer.value = data.profile_image
@@ -169,7 +181,7 @@ const setFormData = (data) => {
       first_name: data.first_name,
       last_name: data.last_name,
       email: data.email,
-      mobile: data.mobile,
+      mobile: normalizePhoneValue(data.mobile),
       password: data.password,
       confirm_password: data.confirm_password,
       gender: data.gender,
@@ -253,13 +265,11 @@ const { value: custom_fields_data } = useField('custom_fields_data')
 const { value: password } = useField('password')
 const { value: confirm_password } = useField('confirm_password')
 const errorMessages = ref({})
+const safeMobile = computed(() => normalizePhoneValue(mobile.value))
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    mobile.value = phoneObject.formatted
-  }
+  mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 }
 
 // Form Submit

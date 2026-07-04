@@ -8,7 +8,7 @@
     <InputField :is-required="true" :label="$t('quick_booking.lbl_Email')" :placeholder="$t('customer.email_address')" v-model="email" :error-message="errors['email']" :error-messages="errorMessages['email']"></InputField>
     <div class="form-group">
       <label class="form-label">{{ $t('quick_booking.lbl_phone_number') }}<span class="text-danger">*</span> </label>
-      <vue-tel-input :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
+      <vue-tel-input :value="safeMobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
       <span class="text-danger">{{ errors['mobile'] }}</span>
     </div>
 
@@ -43,7 +43,7 @@
   </div>
 </template>
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useField, useForm } from 'vee-validate'
 import { VueTelInput } from 'vue3-tel-input'
 import InputField from '@/vue/components/form-elements/InputField.vue'
@@ -72,6 +72,18 @@ const defaultData = () => {
     mobile: '',
     gender: ''
   }
+}
+
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
 }
 
 const numberRegex = /^\d+$/
@@ -109,13 +121,11 @@ const { value: gender } = useField('gender')
 const { value: mobile } = useField('mobile')
 const errorMessages = ref({})
 const IS_SUBMITED = ref(false)
+const safeMobile = computed(() => normalizePhoneValue(mobile.value))
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    mobile.value = phoneObject.formatted
-  }
+  mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 }
 
 // Form Submit

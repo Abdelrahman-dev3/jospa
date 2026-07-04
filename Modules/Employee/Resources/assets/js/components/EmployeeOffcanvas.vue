@@ -24,7 +24,7 @@
                 <div class="form-group col-md-6">
                   <label class="form-label">{{ $t('employee.lbl_phone_number') }}<span class="text-danger">*</span>
                   </label>
-                  <vue-tel-input :value="mobile" @input="handleInput"
+                  <vue-tel-input :value="safeMobile" @input="handleInput"
                     v-bind="{ mode: 'international', maxLen: 20 }" autocomplete="new-password"></vue-tel-input>
                   <span class="text-danger">{{ errors['mobile'] }}</span>
                 </div>
@@ -241,7 +241,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, BRANCH_LIST, SHIFT_LIST, CATEGORY_LIST, SERVICE_LIST, COMMISSION_LIST, EMAIL_UNIQUE_CHECK } from '../constant/employee'
 import { useField, useForm } from 'vee-validate'
 
@@ -568,6 +568,20 @@ const defaultData = () => {
   }
 }
 
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+}
+
+const safeMobile = computed(() => normalizePhoneValue(mobile.value))
+
 
 
 const normalizeCategoryIds = (value) => {
@@ -587,7 +601,7 @@ const setFormData = (data) => {
       first_name: data.first_name,
       last_name: data.last_name,
       email: data.email,
-      mobile: data.mobile,
+      mobile: normalizePhoneValue(data.mobile),
       employee_login_otp: data.employee_login_otp ?? '',
       password: data.password,
       confirm_password: data.confirm_password,
@@ -735,13 +749,8 @@ const errorMessages = ref({})
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    mobile.value = phoneObject.formatted
-  } else {
-    mobile.value = phone
-  }
-};
+  mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
+}
 
 // Form Submit
 const IS_SUBMITED = ref(false)

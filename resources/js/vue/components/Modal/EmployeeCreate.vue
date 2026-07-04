@@ -16,7 +16,7 @@
                           <InputField class="col-md-6" :is-required="true" :label="$t('customer.lbl_Email')" :placeholder="$t('customer.lbl_Email')" v-model="email" :error-message="errors['email']" :error-messages="errorMessages['email']"></InputField>
                           <div class="form-group col-md-6">
                             <label class="form-label">{{ $t('branch.lbl_contact_number') }}<span class="text-danger">*</span> </label>
-                            <vue-tel-input :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 20, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
+                            <vue-tel-input :value="safeMobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 20, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
                             <span class="text-danger">{{ errors['mobile'] }}</span>
                           </div>
                             <InputField type="password" class="col-md-6" :is-required="true" :label="$t('employee.lbl_password')" :placeholder="$t('employee.lbl_password')" v-model="password" :error-message="errors['password']" :error-messages="errorMessages['password']"></InputField>
@@ -56,7 +56,7 @@
     </form>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 import { useRequest } from '@/helpers/hooks/useCrudOpration'
 import InputField from '@/vue/components/form-elements/InputField.vue'
@@ -91,6 +91,20 @@ const defaultData = () => {
   }
 }
 
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+}
+
+const safeMobile = computed(() => normalizePhoneValue(mobile.value))
+
 onMounted(() => {
   setFormData(defaultData())
 })
@@ -102,7 +116,7 @@ const setFormData = (data) => {
       first_name: data.first_name,
       last_name: data.last_name,
       email: data.email,
-      mobile: data.mobile,
+      mobile: normalizePhoneValue(data.mobile),
       password: data.password,
       confirm_password: data.confirm_password,
       gender: data.gender,
@@ -166,11 +180,8 @@ const errorMessages = ref({})
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    mobile.value = phoneObject.formatted
-  }
-};
+  mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
+}
 
 const resetform = () => {
 

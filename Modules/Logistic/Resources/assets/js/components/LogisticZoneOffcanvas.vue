@@ -9,7 +9,7 @@
         <div class="form-group col-md-12">
                   <label class="form-label">{{ $t('employee.lbl_phone_number') }}<span class="text-danger">*</span>
                   </label>
-                  <vue-tel-input :value="mobile" @input="handleInput"
+                  <vue-tel-input :value="safeMobile" @input="handleInput"
                     v-bind="{ mode: 'international', maxLen: 15 }" ></vue-tel-input>
                   <span class="text-danger">{{ errors['mobile'] }}</span>
         </div>
@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, LOGISTIC_URL, COUNTRY_URL, STATE_URL, CITY_URL } from '../logistic-zone'
 import { useField, useForm } from 'vee-validate'
 import InputField from '@/vue/components/form-elements/InputField.vue'
@@ -114,12 +114,24 @@ const defaultData = () => {
   }
 }
 
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+}
+
 //  Reset Form
 const setFormData = (data) => {
   resetForm({
     values: {
       name: data.name,
-      mobile: data.mobile,
+      mobile: normalizePhoneValue(data.mobile),
       description: data.description,
       logistic_id: data.logistic_id,
       standard_delivery_charge: data.standard_delivery_charge,
@@ -177,13 +189,11 @@ const { value: mobile } = useField('mobile')
 const { value: description } = useField('description')
 
 const errorMessages = ref({})
+const safeMobile = computed(() => normalizePhoneValue(mobile.value))
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    mobile.value = phoneObject.formatted
-  }
+  mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 }
 
 onMounted(() => {

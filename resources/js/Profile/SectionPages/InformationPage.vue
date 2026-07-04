@@ -12,7 +12,7 @@
             <InputField class="col-md-6" :is-required="true" :label="$t('profile.lbl_email')" :value="email" v-model="email" :placeholder="$t('profile.enter_email')" :error-message="errors['email']"></InputField>
             <div class="form-group col-md-6">
               <label class="form-label"> {{ $t('profile.lbl_contact_number') }} <span class="text-danger">*</span> </label>
-              <vue-tel-input type="number" :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
+              <vue-tel-input type="number" :value="safeMobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
               <span class="text-danger">{{ errors['mobile'] }}</span>
             </div>
           </div>
@@ -62,7 +62,7 @@
 <script setup>
 import CardTitle from '@/Setting/Components/CardTitle.vue'
 import InputField from '@/vue/components/form-elements/InputField.vue'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useField, useForm } from 'vee-validate'
 import { VueTelInput } from 'vue3-tel-input'
 import { INFORMATION_STORE, GET_URL } from '@/vue/constants/users'
@@ -100,6 +100,18 @@ const removeImage = ({ imageViewerBS64, changeFile }) => {
 const changeLogo = (e) => fileUpload(e, { imageViewerBS64: ImageViewer, changeFile: profile_image })
 const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile: profile_image })
 
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+}
+
 //  Reset Form
 const setFormData = (data, defaultImage) => {
   if (data.profile_image === defaultImage) {
@@ -112,7 +124,7 @@ const setFormData = (data, defaultImage) => {
       first_name: data.first_name,
       last_name: data.last_name,
       email: data.email,
-      mobile: data.mobile,
+      mobile: normalizePhoneValue(data.mobile),
       show_in_calender: data.show_in_calender,
       gender: data.gender,
       profile_image: data.profile_image
@@ -122,10 +134,7 @@ const setFormData = (data, defaultImage) => {
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    mobile.value = phoneObject.formatted
-  }
+  mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 }
 
 const validationSchema = yup.object({
@@ -147,6 +156,7 @@ const { value: mobile } = useField('mobile')
 const { value: show_in_calender } = useField('show_in_calender')
 const { value: gender } = useField('gender')
 const { value: profile_image } = useField('profile_image')
+const safeMobile = computed(() => normalizePhoneValue(mobile.value))
 
 //fetch data
 const data = 'first_name'

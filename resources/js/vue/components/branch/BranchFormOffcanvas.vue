@@ -74,7 +74,7 @@
             </div>
             <div class="form-group col-md-6">
               <label class="form-label"> {{ $t('branch.lbl_contact_number') }} <span class="text-danger">*</span> </label>
-              <vue-tel-input type="number" :value="contact_number" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
+              <vue-tel-input type="number" :value="safeContactNumber" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
               <span class="text-danger">{{ errors['contact_number'] }}</span>
             </div>
             <InputField class="col-md-6" :is-required="true" :label="$t('branch.lbl_contact_email')" :placeholder="$t('branch.enter_email')" v-model="contact_email" :error-message="errors.contact_email" :error-messages="errorMessages['contact_email']"></InputField>
@@ -159,7 +159,7 @@
   <EmployeeCreate @submit="updateManagerDetail"></EmployeeCreate>
 </template>
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, SERVICE_LIST, EMPLOYEE_LIST, COUNTRY_URL, STATE_URL, CITY_URL, CATEGORY_LIST} from '../../constants/branch'
 import { useField, useForm } from 'vee-validate'
 import { readFile } from '@/helpers/utilities'
@@ -377,6 +377,18 @@ const removeImage = ({ imageViewerBS64, changeFile }) => {
 
 const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile: feature_image })
 
+const normalizePhoneValue = (value) => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  return String(value)
+}
+
 const defaultData = () => {
   ImageViewer.value = props.defaultImage
   errorMessages.value = {}
@@ -430,7 +442,7 @@ const setFormData = (data) => {
     values: {
       name: parsedName,
       contact_email:data.contact_email,
-      contact_number:data.contact_number,
+      contact_number: normalizePhoneValue(data.contact_number),
       feature_image: data.feature_image,
       address: {
         postal_code: data.address.postal_code,
@@ -456,11 +468,10 @@ const setFormData = (data) => {
 
 // phone number
 const handleInput = (phone, phoneObject) => {
-  // Handle the input event
-  if (phoneObject?.formatted) {
-    contact_number.value = phoneObject.formatted
-  }
+  contact_number.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 };
+
+const safeContactNumber = computed(() => normalizePhoneValue(contact_number.value))
 
 const countries = ref({ options: [], list: [] })
 
