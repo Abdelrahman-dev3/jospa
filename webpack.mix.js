@@ -65,12 +65,18 @@ mix.alias({
 mix.webpackConfig({
     resolve: {
         alias: {
+            '@popperjs/core$': path.resolve(__dirname, 'node_modules/@popperjs/core/dist/cjs/popper.js'),
             svelte: path.resolve(__dirname, 'node_modules/svelte'),
             'svelte/internal': path.resolve(__dirname, 'node_modules/svelte/internal/index.mjs'),
             'svelte/store': path.resolve(__dirname, 'node_modules/svelte/store/index.mjs')
         },
         mainFields: ['svelte', 'browser', 'module', 'main']
     }
+});
+
+mix.override((config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.extensions = ['.*', '.wasm', '.mjs', '.js', '.jsx', '.json', '.vue'];
 });
 
 mix.js('resources/js/app.js', 'public/js')
