@@ -500,7 +500,7 @@ class PhoneAuthController extends Controller
 
     private function normalizePhone(string $mobile): ?string
     {
-        return app(TaqnyatSmsService::class)->validatePhoneNumber($mobile);
+        return User::normalizeMobile($mobile);
     }
 
     private function usesEmployeeCustomOtp(?User $user): bool

@@ -45,7 +45,7 @@ class AuthController extends Controller
         $validated = $validator->validated();
 
         $smsService = new TaqnyatSmsService();
-        $phone = $smsService->validatePhoneNumber($validated['mobile']);
+        $phone = User::normalizeMobile($validated['mobile']);
 
         if (! $phone) {
             return $this->sendError(__('messagess.invalid_phone'), [], 422);
@@ -107,7 +107,7 @@ class AuthController extends Controller
         ]);
 
         $smsService = new TaqnyatSmsService();
-        $phone = $smsService->validatePhoneNumber($validated['mobile']);
+        $phone = User::normalizeMobile($validated['mobile']);
 
         if (! $phone) {
             return $this->sendError(__('messagess.invalid_phone'), [], 422);
@@ -184,7 +184,7 @@ class AuthController extends Controller
 
         $validated = $validator->validated();
         $smsService = new TaqnyatSmsService();
-        $phone = $smsService->validatePhoneNumber($validated['mobile']);
+        $phone = User::normalizeMobile($validated['mobile']);
     
         if (! $phone) {
             return $this->sendError(__('messagess.invalid_phone'), [], 422);
@@ -235,7 +235,7 @@ class AuthController extends Controller
         ]);
     
         $smsService = new TaqnyatSmsService();
-        $phone = $smsService->validatePhoneNumber($validated['mobile']);
+        $phone = User::normalizeMobile($validated['mobile']);
     
         if (! $phone) {
             return $this->sendError(__('messagess.invalid_phone'), [], 422);

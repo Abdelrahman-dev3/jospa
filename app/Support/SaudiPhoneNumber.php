@@ -6,23 +6,39 @@ class SaudiPhoneNumber
 {
     public static function normalize(?string $phone): ?string
     {
-        $digits = preg_replace('/\D+/', '', (string) $phone);
+        $phone = trim((string) $phone);
+
+        if ($phone === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone);
 
         if (blank($digits)) {
             return null;
         }
 
-        if (str_starts_with($digits, '00966')) {
-            $digits = substr($digits, 5);
-        } elseif (str_starts_with($digits, '966')) {
-            $digits = substr($digits, 3);
+        if (str_starts_with($phone, '+')) {
+            return self::normalizeInternational($digits);
+        }
+
+        if (str_starts_with($digits, '00')) {
+            return self::normalizeInternational(substr($digits, 2));
+        }
+
+        if (preg_match('/^05\d{8}$/', $digits)) {
+            return '+966'.substr($digits, 1);
         }
 
         if (preg_match('/^5\d{8}$/', $digits)) {
-            $digits = '0'.$digits;
+            return '+966'.$digits;
         }
 
-        return preg_match('/^05\d{8}$/', $digits) ? $digits : null;
+        if (preg_match('/^[1-9]\d{7,14}$/', $digits)) {
+            return '+'.$digits;
+        }
+
+        return null;
     }
 
     public static function lookupDigits(?string $phone): array
@@ -33,13 +49,25 @@ class SaudiPhoneNumber
             return [];
         }
 
-        $withoutLeadingZero = substr($normalized, 1);
+        $digits = ltrim($normalized, '+');
 
-        return array_values(array_unique([
+        $candidates = [
             $normalized,
-            $withoutLeadingZero,
-            '966'.$withoutLeadingZero,
-            '00966'.$withoutLeadingZero,
-        ]));
+            $digits,
+            '00'.$digits,
+        ];
+
+        if (str_starts_with($digits, '9665') && strlen($digits) === 12) {
+            $localDigits = '0'.substr($digits, 3);
+            $candidates[] = $localDigits;
+            $candidates[] = substr($localDigits, 1);
+        }
+
+        return array_values(array_unique($candidates));
+    }
+
+    private static function normalizeInternational(string $digits): ?string
+    {
+        return preg_match('/^[1-9]\d{7,14}$/', $digits) ? '+'.$digits : null;
     }
 }

@@ -3,7 +3,6 @@
 namespace Modules\Employee\Http\Requests;
 
 use App\Models\User;
-use App\Support\SaudiPhoneNumber;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,12 +19,25 @@ class EmployeeRequest extends FormRequest
         $mobileRules = [
             'required',
             'string',
-            function ($attribute, $value, $fail) {
-                if (! SaudiPhoneNumber::normalize((string) $value)) {
+            function ($attribute, $value, $fail) use ($employeeId) {
+                $normalizedMobile = User::normalizeMobile((string) $value);
+
+                if (! $normalizedMobile) {
                     $fail(__('messagess.invalid_phone'));
+
+                    return;
+                }
+
+                $mobileExists = User::query()
+                    ->whereNull('deleted_at')
+                    ->whereMobileMatches($normalizedMobile)
+                    ->when($employeeId, fn ($query) => $query->where('id', '!=', $employeeId))
+                    ->exists();
+
+                if ($mobileExists) {
+                    $fail(__('users.mobile_already_exists'));
                 }
             },
-            Rule::unique('users', 'mobile')->ignore($employeeId)->whereNull('deleted_at'),
         ];
 
         switch (strtolower($this->getMethod())) {
@@ -45,7 +57,7 @@ class EmployeeRequest extends FormRequest
                 return [
                     'first_name' => 'required|string|max:255',
                     'last_name' => 'required|string|max:255',
-                    'email' => ['required', 'string', Rule::unique('users', 'email')->ignore($this->id)->whereNull('deleted_at')],
+                    'email' => ['required', 'string', Rule::unique('users', 'email')->ignore($employeeId)->whereNull('deleted_at')],
                     'mobile' => $mobileRules,
                     'employee_login_otp' => 'nullable|digits:4',
                 ];
@@ -58,7 +70,7 @@ class EmployeeRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $mobile = User::normalizeSaudiMobile((string) $this->input('mobile', ''));
+        $mobile = User::normalizeMobile((string) $this->input('mobile', ''));
         $employeeLoginOtp = preg_replace('/\D+/', '', (string) $this->input('employee_login_otp', ''));
 
         if ($mobile) {

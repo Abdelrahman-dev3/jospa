@@ -16,7 +16,7 @@
                           <InputField class="col-md-6" :is-required="true" :label="$t('customer.lbl_Email')" :placeholder="$t('customer.lbl_Email')" v-model="email" :error-message="errors['email']" :error-messages="errorMessages['email']"></InputField>
                           <div class="form-group col-md-6">
                             <label class="form-label">{{ $t('branch.lbl_contact_number') }}<span class="text-danger">*</span> </label>
-                            <vue-tel-input :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
+                            <vue-tel-input :value="mobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 20, defaultCountry: 'SA', preferredCountries: ['SA'] }"></vue-tel-input>
                             <span class="text-danger">{{ errors['mobile'] }}</span>
                           </div>
                             <InputField type="password" class="col-md-6" :is-required="true" :label="$t('employee.lbl_password')" :placeholder="$t('employee.lbl_password')" v-model="password" :error-message="errors['password']" :error-messages="errorMessages['password']"></InputField>

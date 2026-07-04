@@ -260,9 +260,14 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
             ->calenderResource()->employee()->branch()->orderBy('id', 'ASC');
     }
 
-    public static function normalizeSaudiMobile(?string $mobile): ?string
+    public static function normalizeMobile(?string $mobile): ?string
     {
         return SaudiPhoneNumber::normalize($mobile);
+    }
+
+    public static function normalizeSaudiMobile(?string $mobile): ?string
+    {
+        return self::normalizeMobile($mobile);
     }
 
     public function scopeWhereMobileMatches($query, string $mobile)

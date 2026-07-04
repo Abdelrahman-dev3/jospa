@@ -25,7 +25,7 @@
                   <label class="form-label">{{ $t('employee.lbl_phone_number') }}<span class="text-danger">*</span>
                   </label>
                   <vue-tel-input :value="mobile" @input="handleInput"
-                    v-bind="{ mode: 'international', maxLen: 15 }" autocomplete="new-password"></vue-tel-input>
+                    v-bind="{ mode: 'international', maxLen: 20 }" autocomplete="new-password"></vue-tel-input>
                   <span class="text-danger">{{ errors['mobile'] }}</span>
                 </div>
                 <div class="col-md-6">
