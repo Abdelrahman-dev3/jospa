@@ -125,6 +125,9 @@ const safeMobile = computed(() => normalizePhoneValue(mobile.value))
 
 // phone number
 const handleInput = (phone, phoneObject) => {
+  if (phone instanceof Event) {
+    return
+  }
   mobile.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 }
 
