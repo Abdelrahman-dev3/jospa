@@ -59,13 +59,14 @@ mix.scripts(
 );
 
 mix.alias({
-    '@': path.join(__dirname, 'resources/js')
+    '@': path.join(__dirname, 'resources/js'),
+    '@popperjs/core': path.resolve(__dirname, 'node_modules/@popperjs/core/dist/cjs/popper.js')
 });
 
 mix.webpackConfig({
     resolve: {
         alias: {
-            '@popperjs/core$': path.resolve(__dirname, 'node_modules/@popperjs/core/dist/cjs/popper.js'),
+            '@popperjs/core': path.resolve(__dirname, 'node_modules/@popperjs/core/dist/cjs/popper.js'),
             svelte: path.resolve(__dirname, 'node_modules/svelte'),
             'svelte/internal': path.resolve(__dirname, 'node_modules/svelte/internal/index.mjs'),
             'svelte/store': path.resolve(__dirname, 'node_modules/svelte/store/index.mjs')

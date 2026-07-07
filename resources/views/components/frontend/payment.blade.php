@@ -187,26 +187,6 @@
       border-radius:var(--radius);
       padding:18px;
       box-shadow: 0 6px 20px rgba(12,12,30,0.04);
-      border:1px solid rgba(0,0,0,0.04);
-      animation: fadeUp .6s ease both;
-    }
-    .panel h5{ font-weight:700; margin-bottom:14px; }
-
-    /* payment method card */
-    .method{
-      border-radius:10px;
-      padding:12px;
-      border:1px solid #eee;
-      transition:all .18s ease;
-      background: #fff;
-      margin-bottom:12px;
-      cursor:pointer;
-    }
-    .method:hover{ box-shadow:0 6px 18px rgba(0,0,0,0.04); border-color: rgba(207,146,51,0.2); transform:translateY(-3px); }
-    .method input[type="radio"]{ accent-color: var(--gold); transform:scale(1.05); margin-inline-start:6px }
-    .method img{ height:28px; }
-
-    .card-fields .form-control{border-radius:8px;background: #F9F6F0; }
     .card-fields{width: 50% !important;}
 
     /* small helper */

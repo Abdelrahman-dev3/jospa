@@ -6,15 +6,19 @@ use App\Authorizable;
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyPointTransaction;
 use App\Models\User;
+use App\Support\SaudiPhoneNumber;
 use Carbon\Carbon;
 use Currency;
 use Hash;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 use Modules\Booking\Models\Booking;
 use Modules\Customer\Http\Requests\CustomerRequest;
 use Modules\CustomField\Models\CustomField;
 use Modules\CustomField\Models\CustomFieldGroup;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use Yajra\DataTables\DataTables;
 
 class CustomersController extends Controller
@@ -41,7 +45,7 @@ class CustomersController extends Controller
         ]);
         $this->middleware(['permission:view_customer'])->only('index');
         $this->middleware(['permission:edit_customer'])->only('edit', 'update');
-        $this->middleware(['permission:add_customer'])->only('store');
+        $this->middleware(['permission:add_customer'])->only('store', 'import', 'downloadImportTemplate');
         $this->middleware(['permission:delete_customer'])->only('destroy');
         $this->middleware(['permission:view_loyalty'])->only('loyalty_history');
     }
@@ -490,5 +494,235 @@ class CustomersController extends Controller
                         ->doesntExist();
 
         return response()->json(['isUnique' => $isUnique]);
+    }
+
+    public function downloadImportTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ];
+
+        return response()->streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($handle, ['first_name', 'mobile', 'email', 'gender']);
+            fputcsv($handle, ['Ahmed', '0551234567', 'ahmed@example.com', 'male']);
+            fclose($handle);
+        }, 'customers-import-template.csv', $headers);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|file|mimes:csv,xls,xlsx,txt',
+        ]);
+
+        $spreadsheet = IOFactory::load($request->file('import_file')->getRealPath());
+        $rows = $spreadsheet->getActiveSheet()->toArray();
+
+        if (count($rows) < 2) {
+            flash('ملف الاستيراد فارغ أو لا يحتوي على بيانات صالحة.')->error()->important();
+
+            return redirect()->back();
+        }
+
+        $headings = array_map(fn ($heading) => $this->normalizeImportHeading($heading), $rows[0]);
+
+        $importedCount = 0;
+        $skippedCount = 0;
+        $issues = [];
+
+        foreach (array_slice($rows, 1) as $index => $row) {
+            if ($this->rowIsEmpty($row)) {
+                continue;
+            }
+
+            $rowNumber = $index + 2;
+            $mappedRow = $this->mapImportRow($headings, $row);
+            $firstName = $this->extractImportValue($mappedRow, ['first_name', 'name', 'customer_name', 'full_name', 'الاسم', 'اسم']);
+            $mobileValue = $this->extractImportValue($mappedRow, ['mobile', 'phone', 'phone_number', 'number', 'رقم_الجوال', 'الجوال', 'رقم']);
+            $email = $this->extractImportValue($mappedRow, ['email', 'e_mail', 'البريد', 'البريد_الالكتروني']);
+            $gender = $this->normalizeImportedGender($this->extractImportValue($mappedRow, ['gender', 'sex', 'الجنس']));
+
+            $displayMobile = $this->sanitizeDisplayMobile($mobileValue);
+            $normalizedMobile = SaudiPhoneNumber::normalize($displayMobile);
+
+            if (filled($displayMobile) && ! $normalizedMobile) {
+                $skippedCount++;
+                $issues[] = "السطر {$rowNumber}: رقم الجوال غير صالح.";
+                continue;
+            }
+
+            $payload = [
+                'first_name' => $this->sanitizeImportCell($firstName),
+                'mobile' => $normalizedMobile,
+                'email' => filled($email) ? Str::lower(trim($email)) : null,
+                'gender' => $gender,
+            ];
+
+            $validator = Validator::make($payload, [
+                'first_name' => 'required|string|max:255',
+                'mobile' => 'required|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'gender' => 'nullable|in:male,female',
+            ]);
+
+            if ($validator->fails()) {
+                $skippedCount++;
+                $issues[] = "السطر {$rowNumber}: ".$validator->errors()->first();
+                continue;
+            }
+
+            $existingCustomerQuery = User::withTrashed()
+                ->where('mobile', $payload['mobile']);
+
+            if ($payload['email']) {
+                $existingCustomerQuery->orWhere('email', $payload['email']);
+            }
+
+            if ($existingCustomerQuery->exists()) {
+                $skippedCount++;
+                $issues[] = "السطر {$rowNumber}: العميل موجود بالفعل بنفس الجوال أو البريد الإلكتروني.";
+                continue;
+            }
+
+            DB::transaction(function () use ($payload, $displayMobile, &$importedCount) {
+                $customer = User::create([
+                    'first_name' => $payload['first_name'],
+                    'last_name' => "({$displayMobile})",
+                    'email' => $payload['email'],
+                    'mobile' => $payload['mobile'],
+                    'gender' => $payload['gender'] ?? 'male',
+                    'status' => 1,
+                    'is_banned' => 0,
+                    'email_verified_at' => filled($payload['email']) ? now() : null,
+                    'password' => Hash::make(Str::random(12)),
+                ]);
+
+                $customer->syncRoles(['user']);
+                $importedCount++;
+            });
+        }
+
+        \Artisan::call('cache:clear');
+
+        $message = "تم استيراد {$importedCount} عميل";
+
+        if ($skippedCount > 0) {
+            $message .= " وتخطي {$skippedCount}";
+        }
+
+        if (! empty($issues)) {
+            $message .= ' — '.implode(' | ', array_slice($issues, 0, 5));
+        }
+
+        flash($message)->success()->important();
+
+        return redirect()->back();
+    }
+
+    private function normalizeImportHeading($heading): string
+    {
+        $heading = $this->sanitizeImportCell($heading);
+
+        return Str::of($heading ?? '')
+            ->lower()
+            ->replace([' ', '-', '.'], '_')
+            ->replace('__', '_')
+            ->trim('_')
+            ->value();
+    }
+
+    private function mapImportRow(array $headings, array $row): array
+    {
+        $mappedRow = [];
+
+        foreach ($headings as $index => $heading) {
+            if ($heading === '') {
+                continue;
+            }
+
+            $mappedRow[$heading] = $this->sanitizeImportCell($row[$index] ?? null);
+        }
+
+        return $mappedRow;
+    }
+
+    private function extractImportValue(array $mappedRow, array $aliases): ?string
+    {
+        foreach ($aliases as $alias) {
+            if (array_key_exists($alias, $mappedRow) && filled($mappedRow[$alias])) {
+                return $mappedRow[$alias];
+            }
+        }
+
+        return null;
+    }
+
+    private function sanitizeImportCell($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return (string) $value;
+        }
+
+        if (is_float($value)) {
+            return rtrim(rtrim(number_format($value, 10, '.', ''), '0'), '.');
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d+\.0+$/', $value)) {
+            return strstr($value, '.', true);
+        }
+
+        if (preg_match('/^\d+(\.\d+)?E\+\d+$/i', $value)) {
+            return sprintf('%.0f', (float) $value);
+        }
+
+        return $value;
+    }
+
+    private function sanitizeDisplayMobile(?string $mobile): ?string
+    {
+        $mobile = $this->sanitizeImportCell($mobile);
+
+        if (! $mobile) {
+            return null;
+        }
+
+        return preg_replace('/\s+/', '', $mobile);
+    }
+
+    private function normalizeImportedGender(?string $gender): ?string
+    {
+        $gender = Str::lower(trim((string) $gender));
+
+        if ($gender === '' || $gender === 'nan') {
+            return null;
+        }
+
+        return match ($gender) {
+            'female', 'f', 'انثى', 'أنثى', 'بنت' => 'female',
+            default => 'male',
+        };
+    }
+
+    private function rowIsEmpty(array $row): bool
+    {
+        foreach ($row as $value) {
+            if (filled($this->sanitizeImportCell($value))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

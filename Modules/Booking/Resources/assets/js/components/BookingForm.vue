@@ -1228,7 +1228,7 @@ const customerSelect = (value) => {
       first_name: value.split(' ')[0] || '',
       last_name: value.split(' ')[1] || ''
     }
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('exampleModal')).show()
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('create-customer-modal')).show()
     user_id.value = null
   }
 }

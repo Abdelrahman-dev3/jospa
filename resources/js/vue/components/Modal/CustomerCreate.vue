@@ -1,11 +1,11 @@
 <template>
     <!-- Modal -->
-    <form @submit="formSubmit" class="">
-        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <form @submit.prevent="formSubmit" class="">
+        <div class="modal fade" :id="CUSTOMER_MODAL_ID" tabindex="-1" :aria-labelledby="CUSTOMER_MODAL_LABEL_ID" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h1 class="modal-title fs-5" id="exampleModalLabel">{{ $t('messages.create') }} {{ $t('messages.customer')}}</h1>
+                        <h1 class="modal-title fs-5" :id="CUSTOMER_MODAL_LABEL_ID">{{ $t('messages.create') }} {{ $t('messages.customer')}}</h1>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -14,21 +14,25 @@
                                 <label for="first_name">{{ $t('customer.lbl_first_name') }} <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" :placeholder="$t('employee.first_name')" v-model="first_name" />
                                 <small v-if="errors.first_name" class="text-danger">{{ errors.first_name }}</small>
+                                <small v-else-if="errorMessages.first_name?.[0]" class="text-danger">{{ errorMessages.first_name[0] }}</small>
                             </div>
                             <div class="form-group col-md-6">
                                 <label for="last_name">{{ $t('customer.lbl_last_name') }} <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" :placeholder="$t('employee.last_name')" v-model="last_name" />
                                 <small v-if="errors.last_name" class="text-danger">{{ errors.last_name }}</small>
+                                <small v-else-if="errorMessages.last_name?.[0]" class="text-danger">{{ errorMessages.last_name[0] }}</small>
                             </div>
                             <div class="form-group col-md-12">
                                 <label for="e-mail">{{ $t('customer.lbl_Email') }}</label>
                                 <input type="text" class="form-control" :placeholder="$t('customer.email_address')" v-model="email" />
                                 <small v-if="errors.email" class="text-danger">{{ errors.email }}</small>
+                                <small v-else-if="errorMessages.email?.[0]" class="text-danger">{{ errorMessages.email[0] }}</small>
                             </div>
                             <div class="form-group col-md-12">
                                 <label for="mobile">{{ $t('customer.lbl_phone_number') }} <span class="text-danger">*</span></label>
                                 <input type="text" :placeholder="$t('messages.placeholder_phone')" class="form-control" v-model="mobile" />
                                 <small v-if="errors.mobile" class="text-danger">{{ errors.mobile }}</small>
+                                <small v-else-if="errorMessages.mobile?.[0]" class="text-danger">{{ errorMessages.mobile[0] }}</small>
                             </div>
                             <div class="form-group col-md-12">
                               <label for="" class="w-100">{{ $t('customer.lbl_gender') }}</label>
@@ -75,14 +79,16 @@ import { CUSTOMER_STORE } from '@/vue/constants/users'
 const emit = defineEmits(['submit'])
 const props = defineProps({
   data: {
-    first_name: '',
-    last_name: ''
+    type: Object,
+    default: () => ({
+      first_name: '',
+      last_name: ''
+    })
   }
 })
-watch(() => props.data, (value) => {
-  first_name.value = value.first_name,
-  last_name.value = value.last_name
-} ,{deep: true})
+const CUSTOMER_MODAL_ID = 'create-customer-modal'
+const CUSTOMER_MODAL_LABEL_ID = 'create-customer-modal-label'
+
 const { storeRequest } = useRequest()
 
 
@@ -106,11 +112,11 @@ const defaultData = () => {
 const setFormData = (data) => {
   resetForm({
     values: {
-      first_name: data.first_name,
-      last_name: data.last_name,
-      email: data.email,
-      mobile: data.mobile,
-      gender: data.gender,
+      first_name: data?.first_name ?? '',
+      last_name: data?.last_name ?? '',
+      email: data?.email ?? '',
+      mobile: data?.mobile ?? '',
+      gender: data?.gender ?? 'male',
     }
   })
 }
@@ -137,16 +143,35 @@ const errorMessages = ref({})
 
 onMounted(() => {
   setFormData(defaultData())
+
+  const modalElement = document.getElementById(CUSTOMER_MODAL_ID)
+  if (modalElement) {
+    modalElement.addEventListener('hidden.bs.modal', () => {
+      setFormData(defaultData())
+    })
+  }
 })
 
+watch(() => props.data, (value) => {
+  setFormData({
+    ...defaultData(),
+    first_name: value?.first_name ?? '',
+    last_name: value?.last_name ?? ''
+  })
+}, { deep: true })
+
 const formSubmit = handleSubmit((value) => {
-  console.log(value)
+  errorMessages.value = {}
   storeRequest({ url: CUSTOMER_STORE, body: value }).then((res) => {
     if(res.status) {
       emit('submit', {type: 'create_customer', value: res.data.id})
       setFormData(defaultData())
-      bootstrap.Modal.getInstance(document.getElementById("exampleModal")).hide()
+      bootstrap.Modal.getOrCreateInstance(document.getElementById(CUSTOMER_MODAL_ID)).hide()
+      successSnackbar(res.message)
+      return
     }
+    errorMessages.value = res.errors || res.all_message || {}
+    errorSnackbar(res.message || 'Unable to create customer')
   })
 })
 

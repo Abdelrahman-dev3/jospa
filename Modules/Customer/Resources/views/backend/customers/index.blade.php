@@ -38,9 +38,11 @@
           <button type="button" class="btn btn-secondary" data-modal="export">
             <i class="fa-solid fa-download"></i> {{ __('messages.export') }}
           </button>
-{{--          <button type="button" class="btn btn-secondary" data-modal="import">--}}
-{{--            <i class="fa-solid fa-upload"></i> Import--}}
-{{--          </button>--}}
+          @hasPermission('add_customer')
+          <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#customerImportModal">
+            <i class="fa-solid fa-upload"></i> استيراد
+          </button>
+          @endhasPermission
         </div>
       </div>
 
@@ -64,6 +66,41 @@
     edit-title="{{ __('messages.edit') }} {{ __('customer.singular_title') }}" :customefield="{{ json_encode($customefield) }}">
   </customer-offcanvas>
   <change-password create-title="{{ __('messages.change_password') }}"></change-password>
+</div>
+
+<div class="modal fade" id="customerImportModal" tabindex="-1" aria-labelledby="customerImportModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="{{ route('backend.customers.import') }}" method="POST" enctype="multipart/form-data">
+        @csrf
+        <div class="modal-header">
+          <h5 class="modal-title" id="customerImportModalLabel">استيراد العملاء</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="customer-import-file" class="form-label">اختر ملف الاستيراد</label>
+            <input type="file" class="form-control" id="customer-import-file" name="import_file" accept=".csv,.xls,.xlsx" required>
+          </div>
+
+          <div class="alert alert-info mb-0">
+            <div class="fw-semibold mb-2">الأعمدة المدعومة</div>
+            <div class="small">`first_name` أو `name` للاسم، `mobile` أو `phone` للجوال، و`email` و`gender` اختياري.</div>
+            <div class="small mt-2">أثناء الاستيراد سيتم تكوين `last_name` تلقائيًا بهذه الصيغة: `(رقم_الجوال)`</div>
+          </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <a href="{{ route('backend.customers.import-template') }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-file-arrow-down"></i> تحميل قالب
+          </a>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('messages.close') }}</button>
+            <button type="submit" class="btn btn-primary">استيراد</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 @endsection
 

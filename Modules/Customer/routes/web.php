@@ -47,6 +47,8 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::post('block-customer/{id}', [CustomersController::class, 'block_customer'])->name('block-customer');
         Route::post('verify-customer/{id}', [CustomersController::class, 'verify_customer'])->name('verify-customer');
         Route::get('export', [CustomersController::class, 'export'])->name('export');
+        Route::get('import-template', [CustomersController::class, 'downloadImportTemplate'])->name('import-template');
+        Route::post('import', [CustomersController::class, 'import'])->name('import');
         Route::post('unique_email', [CustomersController::class, 'uniqueEmail'])->name('unique_email');
 
     });
