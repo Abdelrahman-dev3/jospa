@@ -520,10 +520,21 @@ class CustomersController extends Controller
     {
         $request->validate([
             'import_file' => 'required|file|mimes:csv,xls,xlsx,txt',
+        ], [
+            'import_file.required' => 'يرجى اختيار ملف الاستيراد أولًا.',
+            'import_file.file' => 'الملف المرفوع غير صالح.',
+            'import_file.mimes' => 'صيغة الملف غير مدعومة. استخدم CSV أو XLS أو XLSX.',
         ]);
 
-        $spreadsheet = IOFactory::load($request->file('import_file')->getRealPath());
-        $rows = $spreadsheet->getActiveSheet()->toArray();
+        try {
+            $spreadsheet = IOFactory::load($request->file('import_file')->getRealPath());
+            $rows = $spreadsheet->getActiveSheet()->toArray();
+        } catch (\Throwable $exception) {
+            report($exception);
+            flash('تعذر قراءة ملف الاستيراد. تأكد من أن الملف سليم وبصيغة صحيحة ثم حاول مرة أخرى.')->error()->important();
+
+            return redirect()->back();
+        }
 
         if (count($rows) < 2) {
             flash('ملف الاستيراد فارغ أو لا يحتوي على بيانات صالحة.')->error()->important();
@@ -533,9 +544,22 @@ class CustomersController extends Controller
 
         $headings = array_map(fn ($heading) => $this->normalizeImportHeading($heading), $rows[0]);
 
+        if (! $this->hasAnyHeading($headings, ['first_name', 'name', 'customer_name', 'full_name', 'الاسم', 'اسم'])) {
+            flash('ملف الاستيراد يجب أن يحتوي على عمود للاسم الأول مثل: first_name أو name.')->error()->important();
+
+            return redirect()->back();
+        }
+
+        if (! $this->hasAnyHeading($headings, ['mobile', 'phone', 'phone_number', 'number', 'رقم_الجوال', 'الجوال', 'رقم'])) {
+            flash('ملف الاستيراد يجب أن يحتوي على عمود لرقم الجوال مثل: mobile أو phone.')->error()->important();
+
+            return redirect()->back();
+        }
+
         $importedCount = 0;
         $skippedCount = 0;
         $issues = [];
+        $seenMobiles = [];
 
         foreach (array_slice($rows, 1) as $index => $row) {
             if ($this->rowIsEmpty($row)) {
@@ -570,11 +594,28 @@ class CustomersController extends Controller
                 'mobile' => 'required|string|max:20',
                 'email' => 'nullable|email|max:255',
                 'gender' => 'nullable|in:male,female',
+            ], [
+                'first_name.required' => 'الاسم الأول مطلوب.',
+                'mobile.required' => 'رقم الجوال مطلوب.',
+                'email.email' => 'البريد الإلكتروني غير صحيح.',
+                'gender.in' => 'قيمة الجنس غير صحيحة.',
             ]);
 
             if ($validator->fails()) {
                 $skippedCount++;
                 $issues[] = "السطر {$rowNumber}: ".$validator->errors()->first();
+                continue;
+            }
+
+            if (in_array($payload['mobile'], $seenMobiles, true)) {
+                $skippedCount++;
+                $issues[] = "السطر {$rowNumber}: تم تخطي العميل لأن رقم الجوال مكرر داخل ملف الاستيراد.";
+                continue;
+            }
+
+            if (User::withTrashed()->whereMobileMatches($payload['mobile'])->exists()) {
+                $skippedCount++;
+                $issues[] = "السطر {$rowNumber}: تم تخطي العميل لأن رقم الجوال موجود بالفعل.";
                 continue;
             }
 
@@ -590,7 +631,6 @@ class CustomersController extends Controller
                 $issues[] = "السطر {$rowNumber}: العميل موجود بالفعل بنفس الجوال أو البريد الإلكتروني.";
                 continue;
             }
-
             DB::transaction(function () use ($payload, $displayMobile, &$importedCount) {
                 $customer = User::create([
                     'first_name' => $payload['first_name'],
@@ -607,6 +647,8 @@ class CustomersController extends Controller
                 $customer->syncRoles(['user']);
                 $importedCount++;
             });
+
+            $seenMobiles[] = $payload['mobile'];
         }
 
         \Artisan::call('cache:clear');
@@ -729,5 +771,16 @@ class CustomersController extends Controller
         }
 
         return true;
+    }
+
+    private function hasAnyHeading(array $headings, array $aliases): bool
+    {
+        foreach ($aliases as $alias) {
+            if (in_array($this->normalizeImportHeading($alias), $headings, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

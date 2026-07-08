@@ -286,6 +286,13 @@ let detachTopScroll = null
 let topScrollState = null
 let fixedTimeColumnFrame = null
 let lastResourceSizingWidth = 0
+let calendarFetchController = null
+let calendarFetchTimeoutId = null
+let calendarRetryTimeoutId = null
+let calendarFetchRequestId = 0
+let calendarFetchErrorShown = false
+const CALENDAR_FETCH_TIMEOUT = 15000
+const CALENDAR_RETRY_DELAY = 1200
 
 const getHorizontalScrollTargets = () => {
   if (!calenderRef.value) return []
@@ -336,9 +343,147 @@ const resetFixedTimeColumns = () => {
   })
 }
 
+const clearCalendarFetchTimeout = () => {
+  if (calendarFetchTimeoutId) {
+    window.clearTimeout(calendarFetchTimeoutId)
+    calendarFetchTimeoutId = null
+  }
+}
+
+const clearCalendarRetryTimeout = () => {
+  if (calendarRetryTimeoutId) {
+    window.clearTimeout(calendarRetryTimeoutId)
+    calendarRetryTimeoutId = null
+  }
+}
+
+const notifyCalendarFetchError = (message) => {
+  if (calendarFetchErrorShown) {
+    return
+  }
+
+  calendarFetchErrorShown = true
+
+  if (window.errorSnackbar) {
+    window.errorSnackbar(message)
+    return
+  }
+
+  window.alert(message)
+}
+
+const scheduleCalendarRetry = () => {
+  if (calendarRetryTimeoutId || !calenderInit.value) {
+    return
+  }
+
+  calendarRetryTimeoutId = window.setTimeout(() => {
+    calendarRetryTimeoutId = null
+    reloadCalendarEvents()
+  }, CALENDAR_RETRY_DELAY)
+}
+
+const applyCalendarResponse = (response = {}) => {
+  const employees = response.employees || []
+  const data = response.data || []
+
+  totalEmployees.value = response.total_count || employees.length || 0
+  EMPLOYEE_LIST.value = employees
+  ORDER_EMPLOYEE_LIST.value = (response.order_employees || employees).map((employee) => normalizeOrderEmployee(employee))
+  selectedCalendarEmployeeIds.value = selectedCalendarEmployeeIds.value.filter((id) =>
+    ORDER_EMPLOYEE_LIST.value.some((employee) => Number(employee.id) === Number(id) && employee.is_visible !== false)
+  )
+
+  if (!orderPanelOpen.value) {
+    syncEmployeeOrderList()
+  }
+
+  employeeAvailability.value = response.availability || {}
+  calendarEventList.value = data
+  calenderInit.value?.setOption('resources', employees)
+  refreshResourceSizing()
+
+  calendarFetchErrorShown = false
+  clearCalendarRetryTimeout()
+
+  return data
+}
+
+const fetchCalendarEvents = async (fetchInfo) => {
+  const visibleDate = fetchInfo && fetchInfo.start ? fetchInfo.start : selectedCalendarDate.value
+  if (selectedCalendarView.value !== 'list') {
+    selectedCalendarDate.value = moment(visibleDate).format('YYYY-MM-DD')
+  }
+
+  const dateRange = getFetchInfoRange(fetchInfo)
+  const params = {
+    employee_id: props.canReorder ? null : selectedEmployeeId.value,
+    employee_ids: props.canReorder && selectedCalendarEmployeeIds.value.length ? selectedCalendarEmployeeIds.value : null,
+    branch_id: props.branchId,
+    date: selectedCalendarDate.value,
+    date_start: dateRange.start,
+    date_end: dateRange.end
+  }
+
+  if (calendarFetchController) {
+    calendarFetchController.abort()
+  }
+
+  clearCalendarFetchTimeout()
+
+  const requestId = ++calendarFetchRequestId
+  const controller = new AbortController()
+  let didTimeout = false
+  calendarFetchController = controller
+  calendarFetchTimeoutId = window.setTimeout(() => {
+    didTimeout = true
+    controller.abort()
+  }, CALENDAR_FETCH_TIMEOUT)
+
+  try {
+    const response = await createRequest(INDEX_URL(params), {}, {}, {
+      signal: controller.signal,
+      cache: 'no-store'
+    })
+
+    if (requestId !== calendarFetchRequestId) {
+      return calendarEventList.value
+    }
+
+    if (!response || response.status === false) {
+      throw new Error(response?.message || 'تعذر تحميل بيانات الكالندر')
+    }
+
+    return applyCalendarResponse(response)
+  } catch (error) {
+    if (requestId !== calendarFetchRequestId) {
+      return calendarEventList.value
+    }
+
+    if (error?.name === 'AbortError' && !didTimeout) {
+      return calendarEventList.value
+    }
+
+    notifyCalendarFetchError(didTimeout ? 'تحميل الكالندر استغرق وقتًا طويلًا. جارٍ إعادة المحاولة تلقائيًا.' : 'حصلت مشكلة أثناء تحميل الكالندر. جارٍ إعادة المحاولة.')
+    scheduleCalendarRetry()
+
+    return calendarEventList.value
+  } finally {
+    if (calendarFetchController === controller) {
+      calendarFetchController = null
+    }
+    clearCalendarFetchTimeout()
+  }
+}
+
 const refreshPage = () => {
-  window.location.reload();
-};
+  if (calenderInit.value) {
+    reloadCalendarEvents()
+    return
+  }
+
+  window.location.reload()
+}
 
 const getCalendarRange = (dateValue = selectedCalendarDate.value, viewKey = selectedCalendarView.value) => {
   const baseDate = moment(dateValue)
@@ -962,6 +1107,12 @@ const attachResizeHandlers = () => {
 
 onUnmounted(() => {
   window.removeEventListener('booking:create', createBooking)
+  if (calendarFetchController) {
+    calendarFetchController.abort()
+    calendarFetchController = null
+  }
+  clearCalendarFetchTimeout()
+  clearCalendarRetryTimeout()
   const elem = document.getElementById('booking-form')
   if(elem !== null) {
     updateBodyClass('hide')
@@ -1053,39 +1204,7 @@ onMounted(() => {
           },
           eventSources: [
             {
-              events: async function (fetchInfo) {
-                const visibleDate = fetchInfo && fetchInfo.start ? fetchInfo.start : selectedCalendarDate.value
-                if (selectedCalendarView.value !== 'list') {
-                  selectedCalendarDate.value = moment(visibleDate).format('YYYY-MM-DD')
-                }
-                const dateRange = getFetchInfoRange(fetchInfo)
-                const params = {
-                    employee_id: props.canReorder ? null : selectedEmployeeId.value,
-                    employee_ids: props.canReorder && selectedCalendarEmployeeIds.value.length ? selectedCalendarEmployeeIds.value : null,
-                    branch_id: props.branchId,
-                    date: selectedCalendarDate.value,
-                    date_start: dateRange.start,
-                    date_end: dateRange.end
-                };
-              const events = await createRequest(INDEX_URL(params)).then((res) => {
-                  const { employees, data } = res
-                  totalEmployees.value = res.total_count
-                  EMPLOYEE_LIST.value = employees
-                  ORDER_EMPLOYEE_LIST.value = (res.order_employees || employees).map((employee) => normalizeOrderEmployee(employee))
-                  selectedCalendarEmployeeIds.value = selectedCalendarEmployeeIds.value.filter((id) =>
-                    ORDER_EMPLOYEE_LIST.value.some((employee) => Number(employee.id) === Number(id) && employee.is_visible !== false)
-                  )
-                  if (!orderPanelOpen.value) {
-                    syncEmployeeOrderList()
-                  }
-                  employeeAvailability.value = res.availability || {}
-                  calendarEventList.value = data || []
-                  calenderInit.value.setOption('resources', employees)
-                  refreshResourceSizing()
-                  return data
-                })
-                return events
-              }
+              events: fetchCalendarEvents
             }
           ],
           dateClick: function (info) {

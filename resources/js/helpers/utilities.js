@@ -20,7 +20,7 @@ export const createRequest = async (URL, header, bodyData = {}, options = {}) =>
   let response
   switch (URL.method) {
     case 'GET':
-      response = await fetch(URL.path, { headers: headerMerged })
+      response = await fetch(URL.path, { headers: headerMerged, ...options })
       return response.json()
 
     case 'POST':
