@@ -21,7 +21,6 @@ use Modules\Service\Models\Service;
 
 class PhoneAuthController extends Controller
 {
-    private const TEST_OTP = '1111';
     private const OTP_TTL_MINUTES = 5;
     private const REGISTER_DAILY_SMS_LIMIT = 3;
     private const REGISTER_PHONE_SESSION_KEY = 'auth.register.mobile';
@@ -515,7 +514,12 @@ class PhoneAuthController extends Controller
             return (string) $user->employee_login_otp;
         }
 
-        return self::TEST_OTP;
+        return $this->generateOtp();
+    }
+
+    private function generateOtp(): string
+    {
+        return str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
     }
 
     private function loginOtpSuccessMessage(User $user): string

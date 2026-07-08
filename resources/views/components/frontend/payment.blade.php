@@ -650,10 +650,10 @@
 
                     @if(($paymentMethods['card'] ?? 1) == 1)
                         <!-- METHOD: CARD -->
-                        <div class="method payment-method-card is-coming-soon" data-method="card" data-coming-soon="true" tabindex="0">
+                        <div class="method payment-method-card" data-method="card" tabindex="0">
                             <div class="con-card">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }} disabled>
+                                    <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }}>
                                 </div>
                                 <div class="flex-fill muted payment-method-copy">
                                     {{ __('messagess.debit_credit_card') }}
@@ -667,8 +667,7 @@
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
-                                    <span class="payment-brand-pill">Tap</span>
-                                    <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
+                                    <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
                         <style>
@@ -705,53 +704,20 @@
                         </style>
                             <!-- card fields -->
                             <div class="payment-methods mt-4 mb-3 px-2">
-                            
                                 <label class="l-payment mb-2 d-block">
-                                    {{ __('messagess.choose_payment_method') }}
+                                    {{ app()->getLocale() === 'ar' ? 'البطاقات المدعومة' : 'Supported cards' }}
                                 </label>
-                            
                                 <div class="row g-2">
-                            
-                                    <!-- Visa / MasterCard -->
-                                    @if(($tapPaymentSources['src_card'] ?? 1) == 1)
                                     <div class="col-12">
                                         <label class="payment-option">
-                                            <input class="tap-payment-source" type="radio" name="payment_source" value="src_card" {{ $defaultPaymentSource === 'src_card' ? 'checked' : '' }}>
                                             <div class="payment-box">
                                                 <img src="{{ asset('images/icons/visa (2).png') }}" alt="Visa">
                                                 <img src="{{ asset('images/icons/master.png') }}" alt="MasterCard">
-                                                <span>Visa / MasterCard</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                    @endif
-                            
-                                    <!-- Apple Pay -->
-                                    @if(($tapPaymentSources['src_apple_pay'] ?? 1) == 1)
-                                    <div class="col-12">
-                                        <label class="payment-option">
-                                            <input class="tap-payment-source" type="radio" name="payment_source" value="src_apple_pay" {{ $defaultPaymentSource === 'src_apple_pay' ? 'checked' : '' }}>
-                                            <div class="payment-box">
-                                                <img src="{{ asset('images/icons/applepay.png') }}" alt="Apple Pay">
-                                                <span>Apple Pay</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                    @endif
-                            
-                                    <!-- Mada -->
-                                    @if(($tapPaymentSources['src_sa.mada'] ?? 1) == 1)
-                                    <div class="col-12">
-                                        <label class="payment-option">
-                                            <input class="tap-payment-source" type="radio" name="payment_source" value="src_sa.mada" {{ $defaultPaymentSource === 'src_sa.mada' ? 'checked' : '' }}>
-                                            <div class="payment-box">
                                                 <img src="{{ asset('images/icons/mada (2).png') }}" alt="Mada">
-                                                <span>Mada</span>
+                                                <span>Visa / MasterCard / Mada</span>
                                             </div>
                                         </label>
                                     </div>
-                                    @endif
-                            
                                 </div>
                             </div>
 

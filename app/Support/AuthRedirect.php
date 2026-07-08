@@ -12,11 +12,7 @@ class AuthRedirect
     {
         $user ??= auth()->user();
 
-        if ($user?->hasRole('employee')) {
-            return RouteServiceProvider::EMPLOYEE_LOGIN_REDIRECT;
-        }
-
-        if ($user?->hasRole('admin')) {
+        if ($user && ! $user->hasRole('user')) {
             return RouteServiceProvider::HOME;
         }
 

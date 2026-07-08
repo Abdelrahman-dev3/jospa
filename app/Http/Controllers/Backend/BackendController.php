@@ -25,9 +25,6 @@ class BackendController extends Controller
      */
     public function index(Request $request)
     {
-        if (auth()->user()->hasRole('employee')) {
-            return redirect(RouteServiceProvider::EMPLOYEE_LOGIN_REDIRECT);
-        }
         $global_booking = false;
         $today = Carbon::today();
         $action = $request->action ?? 'reset';

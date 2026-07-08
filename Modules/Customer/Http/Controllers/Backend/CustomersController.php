@@ -296,7 +296,7 @@ class CustomersController extends Controller
 
         $message = __('messages.create_form', ['form' => __('customer.singular_title')]);
 
-        return response()->json(['message' => $message, 'status' => true], 200);
+        return response()->json(['message' => $message, 'status' => true, 'data' => $data->fresh()], 200);
     }
 
     public function edit($id)

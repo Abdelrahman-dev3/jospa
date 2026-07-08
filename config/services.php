@@ -22,9 +22,10 @@ return [
         'scheme' => 'https',
     ],
     'hyperpay' => [
+        'raw_key'   => env('HYPERPAY_KEY'),
         'entity_id' => env('HYPERPAY_ENTITY_ID'),
         'token'     => env('HYPERPAY_TOKEN'),
-        'base_url'  => env('HYPERPAY_BASE_URL'),
+        'base_url'  => env('HYPERPAY_BASE_URL', 'https://eu-test.oppwa.com'),
     ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),

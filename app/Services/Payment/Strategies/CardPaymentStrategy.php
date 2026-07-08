@@ -2,252 +2,279 @@
 
 namespace App\Services\Payment\Strategies;
 
+use App\Services\HyperpayService;
 use Illuminate\Http\Request;
-use App\Services\Payment\PaymentSubMethodsService;
-use App\Services\TapPaymentService;
-use App\Support\FrontendPaymentSettings;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class CardPaymentStrategy extends BasePaymentStrategy
 {
+    private const CACHE_TTL_MINUTES = 40;
+
     public function pay(Request $request, string $typePage)
     {
-        $PaymentSource = $request->payment_source ?? 'src_card';
+        $prepared = $this->preparePaymentFlow($request, $typePage, 'card');
 
-        if (! FrontendPaymentSettings::isEnabledTapSource($PaymentSource)) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => __('messages.invalid_payment_method'),
-                ], 422);
-            }
-
-            return redirect()->back()->with('error', __('messages.invalid_payment_method'));
-        }
-
-        $prepared = $this->preparePaymentFlow($request, $typePage, 'tap');
-        
         if (isset($prepared['response'])) {
             return $prepared['response'];
         }
 
         $data = $prepared['data'];
-        $data['payment_source'] = $PaymentSource;
         $subResult = $prepared['subResult'];
         $remainingAmount = $prepared['remainingAmount'];
 
         if ($remainingAmount <= 0) {
             try {
                 $this->commitFinalizedPayment($data['user_id'], $request, $data, $subResult);
+
                 return $this->respondSubMethodOnlySuccess($request, $data);
             } catch (\Throwable $e) {
                 return $this->respondPayException($request, $e);
             }
         }
 
-        if ($request->expectsJson()) {
-            $tap = new TapPaymentService();
-            $redirectUrl = $this->buildApiRedirectUrl($request, $data['user_id'], $data['couponCode'] ?? '');
-            $charge = $tap->createCharge(
+        try {
+            $hyperpay = app(HyperpayService::class);
+            $merchantTransactionId = $this->generateMerchantTransactionId($data['user_id']);
+            $callbackUrl = $this->buildShopperResultUrl($request, $data, $merchantTransactionId);
+            $checkout = $hyperpay->createCheckout(
                 $remainingAmount,
-                [
-                    "name"         => auth()->user()->first_name . auth()->user()->last_name,
-                    "country_code" => "966",
-                    "phone"        => auth()->user()->mobile,
-                    "method"       => $data['payment_source'] ?? 'src_card',
-                ],
-                $redirectUrl
+                $merchantTransactionId,
+                $callbackUrl,
+                $this->buildCustomerData()
             );
 
-            if (!isset($charge['transaction']['url'])) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Failed to create payment charge.',
-                    'data' => $charge,
-                ], 502);
+            $checkoutId = (string) ($checkout['id'] ?? '');
+            if ($checkoutId === '') {
+                throw new \RuntimeException(
+                    app()->getLocale() === 'ar'
+                        ? 'تعذر إنشاء جلسة الدفع في Hyperpay.'
+                        : 'Failed to create Hyperpay checkout.'
+                );
             }
 
-            $paymentUrl = $this->applyTapLanguage($charge['transaction']['url']);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Redirect to payment gateway.',
-                'data' => [
-                    'payment_url' => $paymentUrl,
-                    'charge_id' => $charge['id'] ?? null,
+            Cache::put(
+                $this->paymentCacheKey($merchantTransactionId),
+                array_merge($data, [
                     'amount' => $remainingAmount,
-                    'payment_method' => $data['payment_method'],
-                    'discount_amount' => $data['discountAmount'] ?? 0,
-                ],
-            ]);
-        }
+                    'subResult' => $subResult,
+                    'checkout_id' => $checkoutId,
+                    'merchant_transaction_id' => $merchantTransactionId,
+                    'callback_url' => $callbackUrl,
+                ]),
+                now()->addMinutes(self::CACHE_TTL_MINUTES)
+            );
 
-        session(['tap_payment' => array_merge($data, ['amount' => $remainingAmount])]);
+            $paymentUrl = $this->buildHostedCheckoutUrl($checkoutId, $merchantTransactionId);
 
-        try {
-            $paymentUrl = $this->createTapCharge($request , $remainingAmount);
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            if ($this->wantsJson($request)) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Redirect to payment gateway.',
+                    'data' => [
+                        'payment_url' => $paymentUrl,
+                        'checkout_id' => $checkoutId,
+                        'merchant_transaction_id' => $merchantTransactionId,
+                        'amount' => $remainingAmount,
+                        'payment_method' => $data['payment_method'],
+                        'discount_amount' => $data['discountAmount'] ?? 0,
+                    ],
+                ]);
+            }
+
+            return redirect()->to($paymentUrl);
+        } catch (\Throwable $e) {
+            return $this->respondPayException($request, $e);
         }
-        
-        $lang = app()->getLocale() ?? 'en';
-        
-        $paymentUrl = preg_replace('/([&?])language=[^&]+/', '$1language=' . $lang, $paymentUrl);
-        
-        if (!str_contains($paymentUrl, 'language=')) {
-            $paymentUrl .= (str_contains($paymentUrl, '?') ? '&' : '?') . 'language=' . $lang;
-        }
-        
-        return redirect()->away($paymentUrl);
     }
-    
-    private function createTapCharge(Request $request , float $remainingAmount)
+
+    public function checkout(Request $request)
     {
-        $tap = new TapPaymentService();
-        
-        $data = session('tap_payment');
-        if (!$data) {
-            throw new \Exception('Tap session missing');
+        if (! $request->hasValidSignature()) {
+            abort(403);
         }
-        $user = auth()->user();
-        $amount = $remainingAmount;
-        $source  = $data['payment_source'] ?? 'src_card';
 
-        if (!$amount || !is_numeric($amount)) {
-            throw new \Exception(__('messages.invalid_amount'));
-        }
-        
-        $charge = $tap->createCharge(
-            amount: $amount,
-            customerData: [
-                "name"         => $user->first_name . $user->last_name ,
-                "country_code" => "966",
-                "phone"        => $user->mobile,
-                "method"       => $source, 
-            ],
-            redirectUrl: route('tap.callback')
-        );
+        $merchantTransactionId = (string) $request->get('mtid');
+        $checkoutId = (string) $request->get('checkoutId');
+        $data = Cache::get($this->paymentCacheKey($merchantTransactionId));
 
-        if (!isset($charge['transaction']['url'])) {
-            throw new \Exception('Tap charge URL not found');
+        if (! $data || ($data['checkout_id'] ?? null) !== $checkoutId) {
+            return $this->respondFailure(
+                $request,
+                app()->getLocale() === 'ar'
+                    ? 'انتهت جلسة الدفع. حاول مرة أخرى.'
+                    : 'Payment session expired.',
+                410
+            );
         }
-        
-        return $charge['transaction']['url'];
+
+        $hyperpay = app(HyperpayService::class);
+
+        return view('frontend.payment-status.hyperpay', [
+            'widgetScriptUrl' => $hyperpay->widgetScriptUrl($checkoutId),
+            'brands' => implode(' ', $hyperpay->brands()),
+            'brandLabels' => ['Visa', 'Mastercard', 'Mada'],
+            'resultUrl' => $data['callback_url'],
+        ]);
     }
-
 
     public function callback(Request $request)
     {
-        $tap = new TapPaymentService();
-        $subMethodService = app(PaymentSubMethodsService::class);
-
-        $data = session('tap_payment');
-        
-        if (!$data || $data['user_id'] !== auth()->id()) {
+        if (! $request->hasValidSignatureWhileIgnoring(['id', 'resourcePath'])) {
             abort(403);
         }
-        
-        $chargeId = $request->tap_id;
-        $finalBeforeSubMethods = $data['final_before_sub'];
-        $tax = $data['tax'];
-        $page_type = $data['page'];
-        $discountAmount = $data['discountAmount'] ?? 0;
 
-        if (!$chargeId) {
-            return "خطأ: لم يتم العثور على معرف العملية tap_id";
+        $resourcePath = (string) $request->get('resourcePath');
+        $merchantTransactionId = (string) $request->get('mtid');
+
+        if ($resourcePath === '') {
+            return $this->respondFailure(
+                $request,
+                app()->getLocale() === 'ar'
+                    ? 'تعذر التحقق من عملية الدفع.'
+                    : 'Unable to verify payment.',
+                400
+            );
         }
-    
-        $charge = $tap->getCharge($chargeId);
-        
-        $failed = function($message, $sub = '', $redirect = null) {
-            $datas = [ 'message' => $message, 'sub' => $sub];
-            if ($redirect) {
-                $datas['redirect'] = $redirect;
+
+        try {
+            $hyperpay = app(HyperpayService::class);
+            $payment = $hyperpay->fetchPaymentStatus($resourcePath);
+            $resultCode = (string) data_get($payment, 'result.code', '');
+            $merchantTransactionId = (string) (data_get($payment, 'merchantTransactionId') ?: $merchantTransactionId);
+            $cacheKey = $this->paymentCacheKey($merchantTransactionId);
+            $data = Cache::get($cacheKey);
+
+            if (! $data) {
+                return $this->respondFailure(
+                    $request,
+                    app()->getLocale() === 'ar'
+                        ? 'انتهت جلسة الدفع. حاول مرة أخرى.'
+                        : 'Payment session expired.',
+                    410
+                );
             }
-            return view('frontend.payment-status.failed', $datas);
-        };
-    
 
-        if (!isset($charge['status'])) {
-            return $failed("Unexpected response: " . json_encode($charge), '', null);
-        }
+            if (! $hyperpay->isSuccessfulResult($resultCode)) {
+                Cache::forget($cacheKey);
 
-        $expectedAmount = $data['amount'] ?? null;
-        $paidAmount = $charge['amount'] ?? null;
-        if ($expectedAmount !== null && $paidAmount !== null) {
-            if (abs((float) $paidAmount - (float) $expectedAmount) > 0.01) {
-                session()->forget('tap_payment');
-                return $failed('Paid amount mismatch', '', null);
+                return $this->respondFailure(
+                    $request,
+                    (string) data_get(
+                        $payment,
+                        'result.description',
+                        app()->getLocale() === 'ar' ? 'فشلت عملية الدفع.' : 'Payment failed.'
+                    ),
+                    402
+                );
             }
-        }
 
-        $status = $charge['status'];
-        switch ($status) {
-            case "CAPTURED":
-                if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
-                    session()->forget('tap_payment');
-                    return view('frontend.payment-status.captured');
-                }
-                $fakeRequest = new Request([
-                    'wallet'    => $data['submethods']['wallet'] ?? false,
-                    'loyalty'   => $data['submethods']['loyalty'] ?? false,
-                    'gift_code' => $data['submethods']['gift_code'] ?? null,
+            $expectedAmount = (float) ($data['amount'] ?? 0);
+            $paidAmount = (float) data_get($payment, 'amount', 0);
+
+            if ($expectedAmount > 0 && $paidAmount > 0 && abs($expectedAmount - $paidAmount) > 0.01) {
+                Cache::forget($cacheKey);
+
+                return $this->respondFailure(
+                    $request,
+                    app()->getLocale() === 'ar'
+                        ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                        : 'Paid amount does not match expected amount.',
+                    422
+                );
+            }
+
+            if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                Cache::forget($cacheKey);
+
+                return $this->respondSuccess($request, 'Payment already finalized.', [
+                    'payment_id' => data_get($payment, 'id'),
                 ]);
-                $subResult = $subMethodService->apply($data['user_id'], $fakeRequest, $data['final_before_sub']);
-                if (isset($subResult['error'])) {
-                    return $failed($subResult['error'], '', null);
-                }
-                $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult);
-                session()->forget('tap_payment');
-                return view('frontend.payment-status.captured');
-            case "FAILED":
-                session()->forget('tap_payment');
-                return $failed(__('messages.failed_status'), __('messages.failed_message'));
+            }
 
-            case "CANCELLED":
-                session()->forget('tap_payment');
-                return $failed(__('messages.cancelled_status'), __('messages.cancelled_message'));
-        
-            case "INITIATED":
-                session()->forget('tap_payment');
-                return $failed(__('messages.initiated_status'), __('messages.initiated_message'));
-            default:
-                session()->forget('tap_payment');
-                return $failed(__('messages.unknown_status') . ": " . $status);
+            $fakeRequest = new Request([
+                'wallet' => data_get($data, 'submethods.wallet', false),
+                'loyalty' => data_get($data, 'submethods.loyalty', false),
+                'gift_code' => data_get($data, 'submethods.gift_code'),
+            ]);
+
+            $this->commitFinalizedPayment(
+                (int) $data['user_id'],
+                $fakeRequest,
+                $data,
+                $data['subResult'] ?? []
+            );
+
+            Cache::forget($cacheKey);
+
+            return $this->respondSuccess($request, 'Payment successful.', [
+                'payment_id' => data_get($payment, 'id'),
+                'checkout_id' => $data['checkout_id'] ?? null,
+                'amount' => $paidAmount,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->respondPayException($request, $e, 502);
         }
     }
 
-    private function buildApiRedirectUrl(Request $request, int $userId, ?string $couponCode): string
+    private function buildHostedCheckoutUrl(string $checkoutId, string $merchantTransactionId): string
+    {
+        return URL::temporarySignedRoute(
+            'hyperpay.checkout',
+            now()->addMinutes(30),
+            [
+                'checkoutId' => $checkoutId,
+                'mtid' => $merchantTransactionId,
+            ]
+        );
+    }
+
+    private function buildShopperResultUrl(Request $request, array $paymentData, string $merchantTransactionId): string
     {
         $params = array_filter([
-            'user_id' => $userId,
-            'coupon_code' => $couponCode,
-            'wallet' => $request->boolean('wallet') ? 1 : null,
-            'loyalty' => $request->boolean('loyalty') ? 1 : null,
-            'gift_code' => $request->get('gift_code'),
+            'user_id' => $paymentData['user_id'] ?? null,
+            'coupon_code' => $paymentData['couponCode'] ?? null,
+            'wallet' => data_get($paymentData, 'submethods.wallet') ? 1 : null,
+            'loyalty' => data_get($paymentData, 'submethods.loyalty') ? 1 : null,
+            'gift_code' => data_get($paymentData, 'submethods.gift_code'),
             'payment_method' => 'card',
-            'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
-        ], function ($value) {
+            'discount_amount' => $request->get('discount_amount', $request->get('discountAmount', $paymentData['discountAmount'] ?? null)),
+            'page' => $paymentData['page'] ?? null,
+            'mtid' => $merchantTransactionId,
+        ], static function ($value) {
             return $value !== null && $value !== '';
         });
 
         return URL::temporarySignedRoute(
-            'api.cart.payment.success',
+            'hyperpay.callback',
             now()->addMinutes(30),
             $params
         );
     }
 
-    private function applyTapLanguage(string $paymentUrl): string
+    private function buildCustomerData(): array
     {
-        $lang = app()->getLocale() ?? 'en';
-        $paymentUrl = preg_replace('/([&?])language=[^&]+/', '$1language=' . $lang, $paymentUrl);
+        $user = auth()->user();
+        $givenName = trim((string) ($user->first_name ?? ''));
+        $surname = trim((string) ($user->last_name ?? ''));
 
-        if (!str_contains($paymentUrl, 'language=')) {
-            $paymentUrl .= (str_contains($paymentUrl, '?') ? '&' : '?') . 'language=' . $lang;
-        }
-
-        return $paymentUrl;
+        return [
+            'given_name' => $givenName !== '' ? $givenName : 'Customer',
+            'surname' => $surname !== '' ? $surname : ($givenName !== '' ? $givenName : 'Customer'),
+            'mobile' => trim((string) ($user->mobile ?? '')),
+            'email' => trim((string) ($user->email ?? '')),
+            'country' => 'SA',
+        ];
     }
-    
+
+    private function generateMerchantTransactionId(int $userId): string
+    {
+        return 'JOSPA-' . $userId . '-' . Str::upper(Str::random(16));
+    }
+
+    private function paymentCacheKey(string $merchantTransactionId): string
+    {
+        return 'hyperpay_payment_' . $merchantTransactionId;
+    }
 }

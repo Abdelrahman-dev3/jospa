@@ -102,38 +102,61 @@ class UserController extends Controller
 
     public function user_list(Request $request)
     {
-        $term = trim($request->q);
-
+        $term = trim((string) $request->q);
         $role = $request->role;
+        $termDigits = preg_replace('/\D+/', '', $term);
 
-        $query_data = [];
+        $query = null;
 
         if ($role == 'employee') {
-            $query_data = User::role(['manager', 'employee'])->with('media')->where(function ($q) {
-                if (!empty($term)) {
-                    $q->orWhere('first_name', 'LIKE', "%$term%")->
-                    $q->orWhere('last_name', 'LIKE', "%$term%");
-                }
-            })->where('is_show_calender', 1)->get();
+            $query = User::role(['manager', 'employee'])
+                ->with('media')
+                ->where('is_show_calender', 1);
         } elseif ($role == 'user') {
-            $query_data = User::role(['user'])->where(function ($q) {
-                if (!empty($term)) {
-                    $q->orWhere('first_name', 'LIKE', "%$term%")->
-                    $q->orWhere('last_name', 'LIKE', "%$term%");
-                }
-            })->active()->get();
+            $query = User::role(['user'])->active();
         }
+
+        if (! $query) {
+            return response()->json([]);
+        }
+
+        if ($term !== '') {
+            $query->where(function ($builder) use ($term, $termDigits) {
+                $builder
+                    ->where('first_name', 'LIKE', "%{$term}%")
+                    ->orWhere('last_name', 'LIKE', "%{$term}%")
+                    ->orWhereRaw("CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) LIKE ?", ["%{$term}%"]);
+
+                if ($termDigits !== '') {
+                    $builder->orWhere('mobile', 'LIKE', "%{$termDigits}%");
+                } else {
+                    $builder->orWhere('mobile', 'LIKE', "%{$term}%");
+                }
+            });
+        }
+
+        $query->orderByRaw("CASE WHEN mobile IS NULL OR mobile = '' THEN 1 ELSE 0 END")
+            ->orderBy('first_name');
+
+        if ($term !== '') {
+            $query->limit($role == 'user' ? 200 : 100);
+        }
+
+        $query_data = $query->get();
 
         $data = [];
 
         foreach ($query_data as $row) {
+            $fullName = trim(implode(' ', array_filter([$row->first_name, $row->last_name])));
             $data[] = [
                 'id' => $row->id,
-                'full_name' => $row->first_name . ' ' . $row->last_name,
+                'full_name' => $fullName !== '' ? $fullName : __('messages.unknown'),
                 'email' => $row->email,
                 'mobile' => $row->mobile,
                 'profile_image' => $row->profile_image,
                 'created_at' => $row->created_at,
+                'first_name' => $row->first_name,
+                'last_name' => $row->last_name,
             ];
         }
 

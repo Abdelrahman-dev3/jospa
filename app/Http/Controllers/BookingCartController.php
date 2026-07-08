@@ -21,7 +21,6 @@ use Modules\Product\Models\Cart;
 use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
-use App\Services\TapPaymentService;
 use Illuminate\Support\Facades\URL;
 use App\Models\User;
 use App\Models\Setting;
@@ -540,120 +539,13 @@ class BookingCartController extends Controller
         if ($paymentMethod === 'card' && (int) Setting::get('tap_payment_method', 1) !== 1) {
             return response()->json(['status' => false, 'message' => 'Payment method not available.'], 422);
         }
-        if ($paymentMethod !== 'card') {
-            return app(\App\Http\Controllers\PaymentController::class)->payment($request);
-        }
-        $clientDiscountRaw = $request->get('discount_amount', $request->get('discountAmount'));
-        $clientDiscount = null;
-        if ($clientDiscountRaw !== null && $clientDiscountRaw !== '') {
-            if (!is_numeric($clientDiscountRaw)) {
-                return response()->json(['status' => false, 'message' => 'Invalid discount amount.'], 422);
-            }
-            $clientDiscount = (float) $clientDiscountRaw;
-        }
-        $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal('cart', $couponCode, $paymentMethod);
+        $request->merge([
+            'paymentMethod' => $paymentMethod,
+            'invoiceCopon' => $couponCode,
+            'discountAmount' => $request->get('discountAmount', $request->get('discount_amount')),
+        ]);
 
-        if (isset($totalData['error'])) {
-            return response()->json(['status' => false, 'message' => $totalData['error']], 422);
-        }
-        
-        if ($clientDiscount !== null) {
-            $expectedDiscount = (float) $totalData['discountAmount'];
-            if (abs($clientDiscount - $expectedDiscount) > 0.01) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Discount amount mismatch.',
-                    'expected' => $expectedDiscount,
-                    'provided' => $clientDiscount,
-                ], 422);
-            }
-        }
-
-        $subMethodService = app(PaymentSubMethodsService::class);
-        $subResult = $subMethodService->apply($user->id, $request, $totalData['total']);
-
-        if (isset($subResult['error'])) {
-            return response()->json(['status' => false, 'message' => $subResult['error']], 422);
-        }
-
-        $remainingAmount = (float) $subResult['remaining_amount'];
-
-        if ($remainingAmount <= 0) {
-            $finalizer = app(PaymentFinalizerService::class);
-            $subPayments = array_merge($subResult ?? [], [
-                'gift_code' => $request->get('gift_code'),
-                'coupon_discount_amount' => $totalData['couponDiscountAmount'] ?? 0,
-                'payment_gateway_discount_amount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
-                'payment_gateway_discount_method' => $totalData['paymentGatewayDiscountMethod'] ?? null,
-                'payment_gateway_discount_label' => $totalData['paymentGatewayDiscountLabel'] ?? null,
-            ]);
-            $finalizer->finalizePayment(
-                $user->id,
-                $totalData['total'],
-                $totalData['tax'],
-                $totalData['discountAmount'],
-                'cart',
-                $totalData['cart_ids'] ?? [],
-                $totalData['gift_ids'] ?? [],
-                'sub_methods',
-                $couponCode ?? '',
-                true,
-                $subPayments
-            );
-            $subMethodService->apply($user->id, $request, $totalData['total'], true);
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Payment completed using sub methods.',
-                'data' => [
-                    'paid' => true,
-                    'amount' => $totalData['total'],
-                ],
-            ]);
-        }
-
-        $tap = new TapPaymentService();
-        $paymentSource = $request->get('payment_source') ?? 'src_card';
-
-        $redirectUrl = $this->buildCartPaymentRedirectUrl($request, $user->id, $couponCode);
-
-        $charge = $tap->createCharge(
-            $remainingAmount,
-            [
-                "name"         => $user->first_name . $user->last_name,
-                "country_code" => "966",
-                "phone"        => $user->mobile,
-                "method"       => $paymentSource,
-            ],
-            $redirectUrl
-        );
-
-        if (!isset($charge['transaction']['url'])) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Failed to create payment charge.',
-                'data' => $charge,
-            ], 502);
-        }
-
-        $paymentUrl = $this->applyTapLanguage($charge['transaction']['url']);
-
-        if ($request->expectsJson()) {
-            return response()->json([
-                'status' => true,
-                'message' => 'Redirect to payment gateway.',
-                'data' => [
-                    'payment_url' => $paymentUrl,
-                    'charge_id' => $charge['id'] ?? null,
-                    'amount' => $remainingAmount,
-                    'payment_method' => $paymentMethod,
-                    'discount_amount' => $totalData['discountAmount'] ?? 0,
-                ],
-            ]);
-        }
-
-        return redirect()->away($paymentUrl);
+        return app(\App\Http\Controllers\PaymentController::class)->payment($request);
     }
 
     private function buildCartPaymentRedirectUrl(Request $request, int $userId, ?string $couponCode): string

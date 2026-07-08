@@ -8,10 +8,8 @@ class FrontendPaymentSettings
 {
     public static function paymentMethods(): array
     {
-        $tapSources = self::tapPaymentSources();
-
         return [
-            'card' => (int) (Setting::get('tap_payment_method', 1) && self::hasEnabledTapSource($tapSources)),
+            'card' => (int) Setting::get('tap_payment_method', 1),
             'urpay' => (int) Setting::get('urpay_payment_method', 0),
             'tabby' => (int) Setting::get('tabby_payment_method', 1),
             'tamara' => (int) Setting::get('tamara_payment_method', 1),
@@ -56,7 +54,7 @@ class FrontendPaymentSettings
     public static function paymentGatewayDiscountLabel(?string $method): ?string
     {
         return match (self::normalizePaymentMethod($method)) {
-            'card' => 'Tap',
+            'card' => 'Hyperpay',
             'urpay' => 'UrPay',
             'tabby' => 'Tabby',
             'tamara' => 'Tamara',
@@ -136,7 +134,7 @@ class FrontendPaymentSettings
             'card' => [
                 'type' => self::normalizeDiscountType(Setting::get('tap_payment_discount_type', 'fixed')),
                 'value' => self::normalizeDiscountValue(Setting::get('tap_payment_discount_amount', 0)),
-                'label' => 'Tap',
+                'label' => 'Hyperpay',
             ],
             'urpay' => [
                 'type' => self::normalizeDiscountType(Setting::get('urpay_payment_discount_type', 'fixed')),

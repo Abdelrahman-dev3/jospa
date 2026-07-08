@@ -83,7 +83,8 @@
         Route::get('/tamara/failure', [TamaraPaymentStrategy::class, 'failure'])->name('tamara.failure');
         Route::get('/tamara/cancel', [TamaraPaymentStrategy::class, 'cancel'])->name('tamara.cancel');
     });
-    Route::get('/payment/callback', [CardPaymentStrategy::class, 'callback'])->name('tap.callback');
+    Route::get('/payment/hyperpay/checkout', [CardPaymentStrategy::class, 'checkout'])->name('hyperpay.checkout');
+    Route::get('/payment/callback', [CardPaymentStrategy::class, 'callback'])->name('hyperpay.callback');
 
     Route::controller(EmployeesController::class)->group(function () {
         Route::post('/staff/working-hours/{id}', 'store_working_houer')->name('staff.working-hours.store');

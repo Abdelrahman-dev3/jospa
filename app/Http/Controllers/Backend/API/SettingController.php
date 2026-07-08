@@ -175,7 +175,7 @@ class SettingController extends Controller
             'card' => [
                 'type' => $settings['tap_payment_discount_type'] ?? 'fixed',
                 'value' => (float) ($settings['tap_payment_discount_amount'] ?? 0),
-                'label' => 'Tap',
+                'label' => 'Hyperpay',
             ],
             'urpay' => [
                 'type' => $settings['urpay_payment_discount_type'] ?? 'fixed',

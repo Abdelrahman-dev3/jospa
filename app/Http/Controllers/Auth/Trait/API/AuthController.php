@@ -21,8 +21,6 @@ class AuthController extends Controller
 {
     use AuthTrait;
 
-    private const TEST_OTP = '1111';
-
     /**
      * Login api
      *
@@ -201,7 +199,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.sms_daily_limit_reached'), [], 429);
         }
     
-        $otp = self::TEST_OTP;
+        $otp = $this->generateOtp();
     
         Cache::put('register_otp_'.$phone, [
             'username' => $validated['username'],
@@ -434,7 +432,12 @@ class AuthController extends Controller
             return (string) $user->employee_login_otp;
         }
 
-        return self::TEST_OTP;
+        return $this->generateOtp();
+    }
+
+    private function generateOtp(): string
+    {
+        return str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
     }
 
     public function deleteAccount(Request $request)

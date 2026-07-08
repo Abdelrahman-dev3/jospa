@@ -77,7 +77,12 @@
                     </p>
                   </div>
                 </div>
-                <button type="button" v-if="canEditFullBooking && !id" @click="removeCustomer()" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                <div class="d-flex align-items-center gap-2">
+                  <button type="button" @click="openCustomerEditModal()" class="btn btn-sm btn-outline-primary">
+                    <i class="fa-regular fa-pen-to-square"></i>
+                  </button>
+                  <button type="button" v-if="canEditFullBooking && !id" @click="removeCustomer()" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
               </div>
               <div class="row">
                 <label class="col-3"
@@ -101,7 +106,7 @@
             <Multiselect
               id="user_id"
               v-else v-model="user_id"
-              :placeholder="$t('booking.customer_name')"
+              :placeholder="customerSearchPlaceholder"
               :disabled="isPaidBooking || filterStatus(status).is_disabled"
               :value="user_id"
               v-bind="singleSelectOption"
@@ -110,16 +115,19 @@
               class="form-group"
             >
               <template #option="{ option }">
-                    <span v-if="option.__CREATE__">
-                      {{ option.label }} {{ $t('booking.add_customer_label') }}
-                    </span>
+                <span v-if="option.__CREATE__">
+                  {{ option.label }} {{ $t('booking.add_customer_label') }}
+                </span>
                 <span v-else>
-                      {{ option.label }}
-                    </span>
+                  <div class="d-flex flex-column">
+                    <strong>{{ option.mobile || '-' }}</strong>
+                    <small>{{ option.full_name }}</small>
+                  </div>
+                </span>
               </template>
 
               <template #singlelabel="{ option }">
-                <span>{{ option.label }}</span>
+                <span>{{ option.mobile ? `${option.mobile} - ${option.full_name}` : option.full_name || option.label }}</span>
               </template>
             </Multiselect>
           </div>
@@ -654,6 +662,7 @@ import {
   USER_PACKAGE_LIST
 } from '../constant/booking'
 import { BRANCH_LIST, IS_HOLIDAY } from '@/vue/constants/branch'
+import { CUSTOMER_EDIT } from '@/vue/constants/users'
 
 import { useField, useForm } from 'vee-validate'
 import * as yup from 'yup'
@@ -719,6 +728,7 @@ const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLocke
 const isScheduleDisabled = computed(() => !isPaidBooking.value && filterStatus(status.value).is_disabled)
 const canSaveBooking = computed(() => status.value !== 'check_in' && (isPaidBooking.value || !filterStatus(status.value).is_disabled))
 const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('booking.status_paid') : t('booking.status_unpaid')))
+const customerSearchPlaceholder = computed(() => t('booking.lbl_phone'))
 
 const holidays = ref([])
 const current_date = ref(moment().format('YYYY-MM-DD'))
@@ -920,6 +930,9 @@ const externalFormCreation = (e) => {
     case 'create_customer':
       getCustomers(() => (user_id.value = e.value))
       break
+    case 'update_customer':
+      getCustomers(() => (user_id.value = e.value))
+      break
   }
 }
 
@@ -952,9 +965,21 @@ const buildBookingCustomer = (data) => {
     profile_image: data.user_profile_image || '',
     created_at: data.user_created || null,
     mobile: data.user_mobile || '',
-    email: data.user_email || ''
+    email: data.user_email || '',
+    first_name: data.user_first_name || '',
+    last_name: data.user_last_name || ''
   }
 }
+
+const buildCustomerOption = (customerItem) => ({
+  value: customerItem.id,
+  label: customerItem.mobile ? `${customerItem.mobile} - ${customerItem.full_name}` : customerItem.full_name,
+  full_name: customerItem.full_name,
+  mobile: customerItem.mobile,
+  email: customerItem.email,
+  profile_image: customerItem.profile_image,
+  created_at: customerItem.created_at
+})
 
 const ensureSelectedCustomerOption = () => {
   if (!selectedBookingCustomer.value?.id) {
@@ -965,7 +990,7 @@ const ensureSelectedCustomerOption = () => {
   if (!hasCustomer) {
     customer.value.list = [selectedBookingCustomer.value, ...customer.value.list]
     customer.value.options = [
-      { value: selectedBookingCustomer.value.id, label: selectedBookingCustomer.value.full_name },
+      buildCustomerOption(selectedBookingCustomer.value),
       ...customer.value.options
     ]
   }
@@ -1020,7 +1045,10 @@ useOnOffcanvasShow('booking-form', () => {
 
 const getCustomers = (cb) =>
   useSelect({ url: CUSTOMER_LIST }, { value: 'id', label: 'full_name' }).then((data) => {
-    customer.value = data
+    customer.value = {
+      ...data,
+      options: data.list.map((item) => buildCustomerOption(item))
+    }
     ensureSelectedCustomerOption()
     if (typeof cb == 'function') {
       cb()
@@ -1222,15 +1250,46 @@ const removeEmployee = () => {
 
 const newCustomerData = ref(null)
 const customerSelect = (value) => {
-  getUserPackages(value)
   if (_.isString(value)) {
+    const trimmedValue = value.trim()
+    const looksLikePhone = /^\+?[\d\s\-()]+$/.test(trimmedValue)
     newCustomerData.value = {
-      first_name: value.split(' ')[0] || '',
-      last_name: value.split(' ')[1] || ''
+      id: null,
+      first_name: looksLikePhone ? '' : trimmedValue.split(' ')[0] || '',
+      last_name: looksLikePhone ? '' : trimmedValue.split(' ').slice(1).join(' '),
+      email: '',
+      mobile: looksLikePhone ? trimmedValue : '',
+      gender: 'female'
     }
     bootstrap.Modal.getOrCreateInstance(document.getElementById('create-customer-modal')).show()
     user_id.value = null
+    return
   }
+
+  getUserPackages(value)
+}
+
+const openCustomerEditModal = () => {
+  if (!selectedCustomer.value?.id) {
+    return
+  }
+
+  getRequest({ url: CUSTOMER_EDIT, id: selectedCustomer.value.id }).then((res) => {
+    if (res.status && res.data) {
+      newCustomerData.value = {
+        id: res.data.id,
+        first_name: res.data.first_name || '',
+        last_name: res.data.last_name || '',
+        email: res.data.email || '',
+        mobile: res.data.mobile || '',
+        gender: res.data.gender || 'female'
+      }
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('create-customer-modal')).show()
+      return
+    }
+
+    errorSnackbar(res.message || 'Unable to load customer data')
+  })
 }
 
 const slotSelect = () => {
