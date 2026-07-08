@@ -17,44 +17,13 @@
             </div>
 
             <InputField :is-required="true" :label="$t('customer.lbl_first_name')" :placeholder="$t('customer.first_name')" v-model="first_name" :error-message="errors.first_name" :error-messages="errorMessages['first_name']"></InputField>
-            <InputField :is-required="true" :label="$t('customer.lbl_last_name')" :placeholder="$t('customer.last_name')" v-model="last_name" :error-message="errors['last_name']" :error-messages="errorMessages['last_name']"></InputField>
+            <InputField :is-required="false" :label="$t('customer.lbl_last_name')" :placeholder="$t('customer.last_name')" v-model="last_name" :error-message="errors['last_name']" :error-messages="errorMessages['last_name']"></InputField>
 
-            <InputField :is-required="true" :label="$t('customer.lbl_Email')" :placeholder="$t('customer.email_address')" v-model="email" :error-message="errors['email']" :error-messages="errorMessages['email']"></InputField>
+            <InputField :is-required="false" :label="$t('customer.lbl_Email')" :placeholder="$t('customer.email_address')" v-model="email" :error-message="errors['email']" :error-messages="errorMessages['email']"></InputField>
             <div class="form-group">
               <label class="form-label">{{ $t('customer.lbl_phone_number') }}<span class="text-danger">*</span> </label>
               <vue-tel-input :value="safeMobile" @input="handleInput" v-bind="{ mode: 'international', maxLen: 15 }"></vue-tel-input>
               <span class="text-danger">{{ errors['mobile'] }}</span>
-            </div>
-
-            <div class="row" v-if="currentId === 0">
-              <InputField type="password" class="col-md-12" :is-required="true" :autocomplete="newpassword" :label="$t('employee.lbl_password')"
-               :placeholder="$t('customer.password')" v-model="password" :error-message="errors['password']"
-                :error-messages="errorMessages['password']"></InputField>
-
-              <InputField type="password" class="col-md-12" :is-required="true" :label="$t('employee.lbl_confirm_password')"
-                :placeholder="$t('customer.confirm_password')" v-model="confirm_password" :error-message="errors['confirm_password']"
-                :error-messages="errorMessages['confirm_password']"></InputField>
-            </div>
-
-            <div class="form-group col-md-4">
-              <label for="" class="w-100">{{ $t('employee.lbl_gender') }}</label>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="gender" v-model="gender" id="male" value="male"
-                  :checked="gender == 'male'" />
-                <label class="form-check-label" for="male"> Male </label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="gender" v-model="gender" id="female" value="female"
-                  :checked="gender == 'female'" />
-                <label class="form-check-label" for="female"> Female </label>
-              </div>
-
-               <!-- <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="gender" v-model="gender" id="other" value="other"
-                  :checked="gender == 'other'" />
-                <label class="form-check-label" for="other"> Intersex </label>
-              </div> -->
-              <p class="mb-0 text-danger">{{ errors.gender }}</p>
             </div>
 
             <div v-for="field in customefield" :key="field.id">
@@ -151,9 +120,7 @@ const defaultData = () => {
     last_name: '',
     email: '',
     mobile: '',
-    password: '',
-    confirm_password: '',
-    gender: 'male',
+    gender: 'female',
     profile_image: '',
     custom_fields_data: {}
   }
@@ -182,9 +149,7 @@ const setFormData = (data) => {
       last_name: data.last_name,
       email: data.email,
       mobile: normalizePhoneValue(data.mobile),
-      password: data.password,
-      confirm_password: data.confirm_password,
-      gender: data.gender,
+      gender: data.gender || 'female',
       profile_image: data.profile_image,
       custom_fields_data: data.custom_field_data
     }
@@ -218,36 +183,37 @@ const reset_datatable_close_offcanvas = (res) => {
     }),
 
     last_name: yup.string()
-    .required('Last Name is a required field')
-    .test('is-string', 'Only strings are allowed', (value) => {
+    .nullable()
+    .test('is-string', 'اسم العائلة يجب أن يحتوي على حروف فقط', (value) => {
+      if (!value) {
+        return true
+      }
       // Regular expressions to disallow special characters and numbers
       const specialCharsRegex = /[!@#$%^&*(),.?":{}|<>\-_;'\/+=\[\]\\]/
       return !specialCharsRegex.test(value) && !numberRegex.test(value)
     }),
-    email: yup.string().required('Email is a required field')
-    .matches(EMAIL_REGX, 'Must be a valid email')
+    email: yup.string()
+    .nullable()
+    .test('valid-email', 'يرجى إدخال بريد إلكتروني صحيح', (value) => {
+      if (!value) {
+        return true
+      }
+      return EMAIL_REGX.test(value)
+    })
     .test('unique', 'Email must be unique', async function(value) {
-      if (!EMAIL_REGX.test(value)) {
-        return true;
+      if (!value || !EMAIL_REGX.test(value)) {
+        return true
       }
       const userId  = id.value;
           const isUnique = await storeRequest({ url: EMAIL_UNIQUE_CHECK, body: { email: value, user_id: userId }, type: 'file' });
           if (!isUnique.isUnique) {
-              return this.createError({ path: 'email', message: 'email must be unique' });
+              return this.createError({ path: 'email', message: 'هذا البريد الإلكتروني مستخدم بالفعل' });
               }
           return true;
         }),
         mobile: yup.string()
-        .required('Phone Number is a required field').matches(/^(\+?\d+)?(\s?\d+)*$/, 'Phone Number must contain only digits'),
-        password: yup.string()
-        .min(8, 'Password must be at least 8 characters long')
-        .when('currentId', {
-          is: 0,
-          then: yup.string().required('Password is required'),
-        }),
-      confirm_password: yup.string()
-        .required('Confirm password is required')
-        .oneOf([yup.ref('password')], 'Passwords must match'),
+        .required('يرجى إدخال رقم الجوال')
+        .matches(/^(\+?\d+)?(\s?\d+)*$/, 'رقم الجوال يجب أن يحتوي على أرقام فقط'),
   })
 
 
@@ -262,8 +228,6 @@ const { value: gender } = useField('gender')
 const { value: mobile } = useField('mobile')
 const { value: profile_image } = useField('profile_image')
 const { value: custom_fields_data } = useField('custom_fields_data')
-const { value: password } = useField('password')
-const { value: confirm_password } = useField('confirm_password')
 const errorMessages = ref({})
 const safeMobile = computed(() => normalizePhoneValue(mobile.value))
 
@@ -280,7 +244,9 @@ const IS_SUBMITED = ref(false)
 const formSubmit = handleSubmit((values) => {
   if(IS_SUBMITED.value) return false
   IS_SUBMITED.value = true
-  // console.log(values);
+  values.last_name = values.last_name?.trim() || ''
+  values.email = values.email?.trim() || null
+  values.gender = values.gender || 'female'
   values.custom_fields_data = JSON.stringify(values.custom_fields_data)
 
   if (currentId.value > 0) {

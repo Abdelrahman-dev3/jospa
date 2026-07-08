@@ -187,6 +187,7 @@
       border-radius:var(--radius);
       padding:18px;
       box-shadow: 0 6px 20px rgba(12,12,30,0.04);
+    }
     .card-fields{width: 50% !important;}
 
     /* small helper */
@@ -221,8 +222,93 @@
     }
     .con-card{
         display: flex;
-        padding-bottom: 7px;
-        border-bottom: 1px solid #D9D9D9;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+    }
+    .method.payment-method-card{
+        display:flex;
+        align-items:center;
+        gap:14px;
+        padding:16px 18px;
+        margin-bottom:14px;
+        border:1px solid #e7ddcf;
+        border-radius:14px;
+        background:#fff;
+        cursor:pointer;
+        transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+    .method.payment-method-card:hover{
+        border-color:rgba(191,148,86,.65);
+        box-shadow:0 8px 20px rgba(191,148,86,.10);
+        transform:translateY(-1px);
+    }
+    .method.payment-method-card.is-coming-soon{
+        cursor:not-allowed;
+    }
+    .method.payment-method-card:has(input[type="radio"]:checked){
+        border-color:#CF9233;
+        box-shadow:0 10px 24px rgba(207,146,51,.14);
+        background:#fffdfa;
+    }
+    .payment-method-card .form-check{
+        margin:0;
+        flex:0 0 auto;
+    }
+    .payment-method-copy{
+        display:flex;
+        align-items:center;
+        flex-wrap:wrap;
+        gap:8px;
+        line-height:1.7;
+        font-size:14px;
+        min-width:0;
+    }
+    .payment-brand-group{
+        display:flex;
+        align-items:center;
+        justify-content:flex-end;
+        gap:8px;
+        flex-wrap:wrap;
+        margin-inline-start:auto;
+    }
+    .payment-brand-logo{
+        width:auto;
+        height:24px;
+        max-width:44px;
+        object-fit:contain;
+        display:block;
+    }
+    .payment-brand-logo.is-wide{
+        height:26px;
+        max-width:72px;
+    }
+    .payment-brand-pill{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        min-width:78px;
+        height:30px;
+        padding:0 12px;
+        border-radius:999px;
+        background:#ecfff7;
+        color:#00835f;
+        font-size:13px;
+        font-weight:700;
+        white-space:nowrap;
+    }
+    .coming-soon-badge{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:5px 10px;
+        border-radius:999px;
+        background:#fff4df;
+        color:#9b690e;
+        border:1px solid #f2d39a;
+        font-size:12px;
+        font-weight:700;
+        line-height:1;
     }
     .l-payment{
         color: var(--muted);
@@ -249,6 +335,32 @@
       box-shadow: 0 6px 20px rgba(143,45,45,0.08);
       font-size: 15px;
       line-height: 1.7;
+    }
+    @media (max-width: 767px){
+      .method.payment-method-card{
+        gap:10px;
+        padding:14px;
+      }
+      .payment-method-copy{
+        font-size:13px;
+      }
+      .payment-brand-group{
+        gap:6px;
+      }
+      .payment-brand-logo{
+        height:20px;
+        max-width:38px;
+      }
+      .payment-brand-logo.is-wide{
+        height:22px;
+        max-width:60px;
+      }
+      .payment-brand-pill{
+        min-width:68px;
+        height:28px;
+        font-size:12px;
+        padding:0 10px;
+      }
     }
   </style>
   @php
@@ -538,12 +650,12 @@
 
                     @if(($paymentMethods['card'] ?? 1) == 1)
                         <!-- METHOD: CARD -->
-                        <div class="method" data-method="card" tabindex="0">
+                        <div class="method payment-method-card is-coming-soon" data-method="card" data-coming-soon="true" tabindex="0">
                             <div class="con-card">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }} disabled>
                                 </div>
-                                <div class="flex-fill muted" style="width: 25%;">
+                                <div class="flex-fill muted payment-method-copy">
                                     {{ __('messagess.debit_credit_card') }}
                                     @if($cardDiscountLabel = $formatGatewayDiscount('card'))
                                         <span class="gateway-discount-note">
@@ -551,10 +663,12 @@
                                         </span>
                                     @endif
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <img src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
-                                    <img src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
-                                    <img src="{{ asset('images/icons/master.png') }}" alt="mc">
+                                <div class="payment-brand-group">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
+                                    <span class="payment-brand-pill">Tap</span>
+                                    <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
                                 </div>
                             </div>
                         <style>
@@ -584,7 +698,9 @@
                             }
                             
                             .payment-box img {
-                                height: 26px;
+                                height: 24px;
+                                width: auto;
+                                object-fit: contain;
                             }
                         </style>
                             <!-- card fields -->
@@ -603,6 +719,7 @@
                                             <input class="tap-payment-source" type="radio" name="payment_source" value="src_card" {{ $defaultPaymentSource === 'src_card' ? 'checked' : '' }}>
                                             <div class="payment-box">
                                                 <img src="{{ asset('images/icons/visa (2).png') }}" alt="Visa">
+                                                <img src="{{ asset('images/icons/master.png') }}" alt="MasterCard">
                                                 <span>Visa / MasterCard</span>
                                             </div>
                                         </label>
@@ -643,27 +760,27 @@
 
                     @if(($paymentMethods['urpay'] ?? 0) == 1)
                         <!-- METHOD: UrPay -->
-                        <div class="method d-flex" style="gap: 20px;" data-method="urpay" tabindex="0">
+                        <div class="method payment-method-card" data-method="urpay" tabindex="0">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="paymentMethod" value="urpay" {{ $defaultPaymentMethod === 'urpay' ? 'checked' : '' }}>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <span style="display:inline-flex;align-items:center;justify-content:center;min-width:88px;height:32px;padding:0 14px;border-radius:999px;background:#ecfff7;color:#00835f;font-weight:700;">UrPay</span>
+                            <div class="flex-fill muted payment-method-copy">&#1575;&#1604;&#1583;&#1601;&#1593; &#1593;&#1576;&#1585; &#1605;&#1581;&#1601;&#1592;&#1577; urpay</div>
+                            <div class="payment-brand-group">
+                                <span class="payment-brand-pill">UrPay</span>
+                                <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
+                                <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
+                                <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
                             </div>
-                            <div class="flex-fill muted">{{ app()->getLocale() === 'ar' ? 'الدفع عبر محفظة urpay' : 'Pay with urpay wallet' }}</div>
                         </div>
                     @endif
 
                     @if(($paymentMethods['tabby'] ?? 1) == 1)
                         <!-- METHOD: Tabby -->
-                        <div class="method d-flex" style="gap: 20px;" data-method="tabby" tabindex="0">
+                        <div class="method payment-method-card is-coming-soon" data-method="tabby" data-coming-soon="true" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }}>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }} disabled>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <img src="{{asset('images/icons/tabby (2).png')}}" alt="tabby" style="height:28px">
-                            </div>
-                            <div class="flex-fill muted">
+                            <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.installments_4')}}
                                 @if($tabbyDiscountLabel = $formatGatewayDiscount('tabby'))
                                     <span class="gateway-discount-note">
@@ -671,25 +788,30 @@
                                     </span>
                                 @endif
                             </div>
+                            <div class="payment-brand-group">
+                                <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tabby (2).png')}}" alt="tabby">
+                                <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
+                            </div>
                         </div>
                     @endif
 
                     @if(($paymentMethods['tamara'] ?? 1) == 1)
                         <!-- METHOD: Tamara -->
-                        <div class="method d-flex" style="gap: 20px;" data-method="tamara" tabindex="0">
+                        <div class="method payment-method-card is-coming-soon" data-method="tamara" data-coming-soon="true" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }}>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }} disabled>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <img src="{{asset('images/icons/tmara.png')}}" alt="tamara" style="height:28px">
-                            </div>
-                            <div class="flex-fill muted">
+                            <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.split_bill_4_payments')}}
                                 @if($tamaraDiscountLabel = $formatGatewayDiscount('tamara'))
                                     <span class="gateway-discount-note">
                                         {{ $tamaraDiscountLabel }}
                                     </span>
                                 @endif
+                            </div>
+                            <div class="payment-brand-group">
+                                <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tmara.png')}}" alt="tamara">
+                                <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
                             </div>
                         </div>
                     @endif
@@ -846,12 +968,50 @@
         let appliedGiftAmount = 0;
         appendGatewayDiscountBadges();
         
+        const showComingSoonNotification = () => {
+            const message = "{{ app()->getLocale() === 'ar' ? '\u0644\u0627 \u062a\u0632\u0627\u0644 \u0647\u0630\u0647 \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0642\u064a\u062f \u0627\u0644\u062a\u062c\u0647\u064a\u0632.' : 'This payment gateway is still being prepared.' }}";
+            if (window.toastr && typeof window.toastr.info === 'function') {
+                window.toastr.info(message);
+                return;
+            }
+            if (typeof window.createNotify === 'function') {
+                window.createNotify({
+                    title: "{{ app()->getLocale() === 'ar' ? '\u0642\u0631\u064a\u0628\u0627\u064b' : 'Coming Soon' }}",
+                    desc: message
+                });
+                return;
+            }
+            alert(message);
+        };
+
+        const firstAvailablePaymentMethod = document.querySelector('.method[data-coming-soon!="true"] input[name="paymentMethod"]:not(:disabled)');
+        const checkedComingSoonMethod = document.querySelector('.method[data-coming-soon="true"] input[name="paymentMethod"]:checked');
+
+        if (checkedComingSoonMethod) {
+            checkedComingSoonMethod.checked = false;
+            if (firstAvailablePaymentMethod) {
+                firstAvailablePaymentMethod.checked = true;
+            }
+        }
+
         document.querySelectorAll('.method').forEach(method => {
             method.addEventListener('click', function () {
+                if (this.dataset.comingSoon === 'true') {
+                    showComingSoonNotification();
+                    return;
+                }
+
                 const radio = this.querySelector('input[type="radio"]');
                 if (radio) {
                     radio.checked = true;
                     updateTotal();
+                }
+            });
+
+            method.addEventListener('keydown', function (event) {
+                if ((event.key === 'Enter' || event.key === ' ') && this.dataset.comingSoon === 'true') {
+                    event.preventDefault();
+                    showComingSoonNotification();
                 }
             });
         });

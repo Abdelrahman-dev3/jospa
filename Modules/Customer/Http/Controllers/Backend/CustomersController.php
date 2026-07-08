@@ -272,9 +272,11 @@ class CustomersController extends Controller
      */
     public function store(CustomerRequest $request)
     {
-        $data = $request->all();
-
-        $data['password'] = Hash::make($data['password']);
+        $data = $request->except(['password', 'confirm_password']);
+        $data['last_name'] = trim((string) ($data['last_name'] ?? ''));
+        $data['email'] = $request->filled('email') ? trim((string) $request->email) : null;
+        $data['gender'] = $data['gender'] ?? 'female';
+        $data['password'] = Hash::make('123456789');
 
         $data = User::create($data);
 
@@ -326,6 +328,9 @@ class CustomersController extends Controller
         $data = User::findOrFail($id);
 
         $request_data = $request->except('profile_image');
+        $request_data['last_name'] = trim((string) ($request_data['last_name'] ?? ''));
+        $request_data['email'] = $request->filled('email') ? trim((string) $request->email) : null;
+        $request_data['gender'] = $request_data['gender'] ?? $data->gender ?? 'female';
 
         $data->update($request_data);
 
@@ -592,11 +597,11 @@ class CustomersController extends Controller
                     'last_name' => "({$displayMobile})",
                     'email' => $payload['email'],
                     'mobile' => $payload['mobile'],
-                    'gender' => $payload['gender'] ?? 'male',
+                    'gender' => $payload['gender'] ?? 'female',
                     'status' => 1,
                     'is_banned' => 0,
                     'email_verified_at' => filled($payload['email']) ? now() : null,
-                    'password' => Hash::make(Str::random(12)),
+                    'password' => Hash::make('123456789'),
                 ]);
 
                 $customer->syncRoles(['user']);

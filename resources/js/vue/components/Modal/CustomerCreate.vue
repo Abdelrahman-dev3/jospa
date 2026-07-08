@@ -17,7 +17,7 @@
                                 <small v-else-if="errorMessages.first_name?.[0]" class="text-danger">{{ errorMessages.first_name[0] }}</small>
                             </div>
                             <div class="form-group col-md-6">
-                                <label for="last_name">{{ $t('customer.lbl_last_name') }} <span class="text-danger">*</span></label>
+                                <label for="last_name">{{ $t('customer.lbl_last_name') }}</label>
                                 <input type="text" class="form-control" :placeholder="$t('employee.last_name')" v-model="last_name" />
                                 <small v-if="errors.last_name" class="text-danger">{{ errors.last_name }}</small>
                                 <small v-else-if="errorMessages.last_name?.[0]" class="text-danger">{{ errorMessages.last_name[0] }}</small>
@@ -35,26 +35,7 @@
                                 <small v-else-if="errorMessages.mobile?.[0]" class="text-danger">{{ errorMessages.mobile[0] }}</small>
                             </div>
                             <div class="form-group col-md-12">
-                              <label for="" class="w-100">{{ $t('customer.lbl_gender') }}</label>
-                                <div class="form-check form-check-inline">
-                                  <input class="form-check-input" type="radio" name="gender" v-model="gender" id="male" value="male">
-                                  <label class="form-check-label" for="male">
-                                    {{ $t('messages.male') }}
-                                  </label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                  <input class="form-check-input" type="radio" name="gender" v-model="gender" id="female" value="female">
-                                  <label class="form-check-label" for="female">
-                                    {{ $t('messages.female') }}
-                                  </label>
-                                </div>
-
-                                <!-- <div class="form-check form-check-inline">
-                                  <input class="form-check-input" type="radio" name="gender" v-model="gender" id="other" value="other">
-                                  <label class="form-check-label" for="other">
-                                    Intersex
-                                  </label>
-                                </div> -->
+                              <small class="text-muted">{{ $t('messages.female') }}</small>
                             </div>
                         </div>
                     </div>
@@ -103,7 +84,7 @@ const defaultData = () => {
     last_name: '',
     email: '',
     mobile: '',
-    gender: 'male',
+    gender: 'female',
 
   }
 }
@@ -116,17 +97,17 @@ const setFormData = (data) => {
       last_name: data?.last_name ?? '',
       email: data?.email ?? '',
       mobile: data?.mobile ?? '',
-      gender: data?.gender ?? 'male',
+      gender: data?.gender ?? 'female',
     }
   })
 }
 
 // Validations
 const validationSchema = yup.object({
-    first_name: yup.string().required(),
-    last_name: yup.string().required(),
-    email: yup.string().nullable().email(),
-    mobile: yup.string().required(),
+    first_name: yup.string().required('يرجى إدخال الاسم الأول'),
+    last_name: yup.string().nullable(),
+    email: yup.string().nullable().email('يرجى إدخال بريد إلكتروني صحيح'),
+    mobile: yup.string().required('يرجى إدخال رقم الجوال'),
 })
 
 const { handleSubmit, errors, resetForm } = useForm({
@@ -162,6 +143,9 @@ watch(() => props.data, (value) => {
 
 const formSubmit = handleSubmit((value) => {
   errorMessages.value = {}
+  value.last_name = value.last_name?.trim() || ''
+  value.email = value.email?.trim() || null
+  value.gender = 'female'
   storeRequest({ url: CUSTOMER_STORE, body: value }).then((res) => {
     if(res.status) {
       emit('submit', {type: 'create_customer', value: res.data.id})

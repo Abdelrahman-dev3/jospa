@@ -144,14 +144,25 @@ class UserController extends Controller
     {
         $request->validate([
             'first_name' => 'required|min:3|max:191',
-            'last_name' => 'required|min:3|max:191',
-            'email' => 'nullable|email|regex:/(.+)@(.+)\.(.+)/i|max:191|unique:users,email',
+            'last_name' => 'nullable|max:191',
+            'email' => 'nullable|email|max:191|unique:users,email',
             'mobile' => 'required|string|max:20|unique:users,mobile',
+        ], [
+            'first_name.required' => 'يرجى إدخال الاسم الأول.',
+            'first_name.min' => 'الاسم الأول يجب أن يكون 3 أحرف على الأقل.',
+            'last_name.max' => 'اسم العائلة طويل جدًا.',
+            'email.email' => 'يرجى إدخال بريد إلكتروني صحيح أو ترك الحقل فارغًا.',
+            'email.unique' => 'هذا البريد الإلكتروني مستخدم بالفعل.',
+            'mobile.required' => 'يرجى إدخال رقم الجوال.',
+            'mobile.unique' => 'رقم الجوال مستخدم بالفعل.',
         ]);
 
         $data_array = $request->except('_token', 'roles', 'permissions', 'password_confirmation');
+        $data_array['last_name'] = trim((string) $request->last_name);
         $data_array['email'] = $request->filled('email') ? $request->email : null;
-        $data_array['name'] = $request->first_name . ' ' . $request->last_name;
+        $data_array['gender'] = $request->input('gender', 'female');
+        $data_array['password'] = Hash::make('123456789');
+        $data_array['name'] = trim($request->first_name . ' ' . $data_array['last_name']);
 
         if ($request->confirmed == 1) {
             $data_array = Arr::add($data_array, 'email_verified_at', Carbon::now());
@@ -176,7 +187,7 @@ class UserController extends Controller
 
         if ($request->email_credentials == 1) {
             $data = [
-                'password' => $request->password,
+                'password' => '123456789',
             ];
 
             try {
