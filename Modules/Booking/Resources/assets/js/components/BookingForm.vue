@@ -769,10 +769,14 @@ watch(
             couponRedeem.value = res.data.coupon_redeem
           }
 
+          // ✅ Fix: Set current_date from the actual booking date (not today's date)
+          if (res.data.start_date_time) {
+            current_date.value = moment(res.data.start_date_time).format('YYYY-MM-DD')
+          }
+
           branchSelect(res.data.branch_id, true)
           employeeSelect(res.data.employee_id, true)
           getUserPackages(res.data.user_id)
-          console.log(res.data)
         }
       })
     } else {

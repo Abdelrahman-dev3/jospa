@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('gift_cards')) {
+            return;
+        }
         Schema::table('gift_cards', function (Blueprint $table) {
             $table->string('ref')->nullable()->after('id');
             $table->decimal('balance', 10, 2)->default(0)->after('ref');

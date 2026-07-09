@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('gift_cards')) {
+            return;
+        }
         Schema::table('gift_cards', function (Blueprint $table) {
             $table->tinyInteger('payment_status')->default(0)->after('subtotal');
         });

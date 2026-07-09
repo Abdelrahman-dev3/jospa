@@ -8,6 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('staff_working_hours')) {
+            return;
+        }
         Schema::table('staff_working_hours', function (Blueprint $table) {
             $table->tinyInteger('is_holiday')->nullable()->after('end_time');
             $table->longText('breaks')->nullable()->default('[]')->after('is_holiday');
