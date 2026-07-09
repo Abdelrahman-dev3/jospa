@@ -7,14 +7,16 @@ use Illuminate\Support\Facades\Http;
 
 class HyperpayService
 {
+    private const DEFAULT_BASE_URL = 'https://eu-test.oppwa.com';
+
     private string $baseUrl;
     private ?string $entityId;
-    private ?string $token;
+    private ?string $authorizationToken;
 
     public function __construct()
     {
-        $this->baseUrl = rtrim((string) config('services.hyperpay.base_url', 'https://eu-test.oppwa.com'), '/');
-        [$this->entityId, $this->token] = $this->resolveCredentials();
+        $this->baseUrl = $this->resolveBaseUrl();
+        [$this->entityId, $this->authorizationToken] = $this->resolveCredentials();
     }
 
     public function createCheckout(float $amount, string $merchantTransactionId, string $shopperResultUrl, array $customer = []): array
@@ -36,7 +38,7 @@ class HyperpayService
         ], static fn ($value) => $value !== null && $value !== '');
 
         $response = Http::asForm()
-            ->withToken($this->token)
+            ->withToken($this->authorizationToken)
             ->acceptJson()
             ->post($this->baseUrl . '/v1/checkouts', $payload);
 
@@ -51,7 +53,7 @@ class HyperpayService
             ? $resourcePath
             : $this->baseUrl . '/' . ltrim($resourcePath, '/');
 
-        $response = Http::withToken($this->token)
+        $response = Http::withToken($this->authorizationToken)
             ->acceptJson()
             ->get($normalizedPath, [
                 'entityId' => $this->entityId,
@@ -81,11 +83,12 @@ class HyperpayService
 
     private function resolveCredentials(): array
     {
-        $entityId = trim((string) config('services.hyperpay.entity_id'));
-        $token = trim((string) config('services.hyperpay.token'));
-        $rawKey = trim((string) config('services.hyperpay.raw_key'));
+        $entityId = $this->normalizeConfigValue(config('services.hyperpay.entity_id'));
+        $token = $this->normalizeConfigValue(config('services.hyperpay.token'));
+        $rawKey = $this->normalizeConfigValue(config('services.hyperpay.raw_key'));
+        $authorizationToken = $token;
 
-        if (($entityId === '' || $token === '') && $rawKey !== '') {
+        if (($entityId === '' || $authorizationToken === '') && $rawKey !== '') {
             $decoded = base64_decode($rawKey, true);
             $candidate = $decoded !== false ? $decoded : $rawKey;
 
@@ -93,19 +96,37 @@ class HyperpayService
                 [$entityFromKey, $tokenFromKey] = array_pad(explode('|', $candidate, 2), 2, null);
 
                 $entityId = $entityId !== '' ? $entityId : trim((string) $entityFromKey);
-                $token = $token !== '' ? $token : trim((string) $tokenFromKey);
+                $authorizationToken = $rawKey;
+            } elseif ($authorizationToken === '') {
+                $authorizationToken = $rawKey;
             }
         }
 
         return [
             $entityId !== '' ? $entityId : null,
-            $token !== '' ? $token : null,
+            $authorizationToken !== '' ? $authorizationToken : null,
         ];
+    }
+
+    private function resolveBaseUrl(): string
+    {
+        $configured = $this->normalizeConfigValue(config('services.hyperpay.base_url'));
+        $baseUrl = $configured !== '' ? $configured : self::DEFAULT_BASE_URL;
+
+        if (! filter_var($baseUrl, FILTER_VALIDATE_URL)) {
+            throw new \RuntimeException(
+                app()->getLocale() === 'ar'
+                    ? 'رابط Hyperpay غير صالح. تأكد من HYPERPAY_BASE_URL في ملف .env.'
+                    : 'Invalid Hyperpay base URL. Verify HYPERPAY_BASE_URL in the .env file.'
+            );
+        }
+
+        return rtrim($baseUrl, '/');
     }
 
     private function guardCredentials(): void
     {
-        if ($this->entityId && $this->token) {
+        if ($this->entityId && $this->authorizationToken) {
             return;
         }
 
@@ -137,6 +158,14 @@ class HyperpayService
                 );
             }
 
+            if ($this->isInvalidOrMissingParameterFailure($data)) {
+                throw new \RuntimeException(
+                    app()->getLocale() === 'ar'
+                        ? 'رفض Hyperpay طلب التحقق لوجود باراميتر ناقص أو غير صحيح. غالبًا السبب هو HYPERPAY_ENTITY_ID غير صحيح، أو HYPERPAY_BASE_URL لا يطابق بيئة الحساب، أو أن عملية الدفع أُنشئت ببيانات تختلف عن بيانات التحقق بعد الرجوع.'
+                        : 'Hyperpay rejected the verification request because a parameter is missing or invalid. This usually means HYPERPAY_ENTITY_ID is incorrect, HYPERPAY_BASE_URL does not match the account environment, or the payment was created with credentials that differ from the ones used during callback verification.'
+                );
+            }
+
             throw new \RuntimeException(
                 (string) data_get(
                     $data,
@@ -154,5 +183,31 @@ class HyperpayService
         $description = strtolower((string) data_get($data, 'result.description', ''));
 
         return str_contains($description, 'invalid authentication information');
+    }
+
+    private function isInvalidOrMissingParameterFailure(array $data): bool
+    {
+        $description = strtolower((string) data_get($data, 'result.description', ''));
+
+        return str_contains($description, 'invalid or missing parameter');
+    }
+
+    private function normalizeConfigValue(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '' || $this->looksLikePlaceholder($value)) {
+            return '';
+        }
+
+        return $value;
+    }
+
+    private function looksLikePlaceholder(string $value): bool
+    {
+        $upperValue = strtoupper($value);
+
+        return str_starts_with($upperValue, 'YOUR_')
+            || str_contains($upperValue, 'PLACEHOLDER');
     }
 }
