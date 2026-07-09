@@ -38,8 +38,6 @@ class HyperpayService
             'billing.country' => $customer['country'] ?? 'SA',
         ], static fn ($value) => $value !== null && $value !== '');
 
-        dd($payload);
-
         $response = Http::asForm()
             ->withToken($this->authorizationToken)
             ->acceptJson()
