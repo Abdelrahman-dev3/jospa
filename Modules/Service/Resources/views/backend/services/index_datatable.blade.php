@@ -189,6 +189,22 @@
                 title: "{{ __('service.lbl_status') }}",
                 width: '5%'
             },
+            {
+                data: 'show_in_online_booking',
+                name: 'show_in_online_booking',
+                orderable: true,
+                searchable: false,
+                title: "{{ __('service.lbl_show_in_online_booking') }}",
+                width: '5%'
+            },
+            {
+                data: 'show_in_gift_card',
+                name: 'show_in_gift_card',
+                orderable: true,
+                searchable: false,
+                title: "{{ __('service.lbl_show_in_gift_card') }}",
+                width: '5%'
+            },
 
             {
               data: 'updated_at',
@@ -217,6 +233,7 @@
             ...customFieldColumns,
             ...actionColumn
         ]
+        const updatedAtColumnIndex = finalColumns.findIndex((column) => column.name === 'updated_at')
 
         // document.addEventListener('DOMContentLoaded', (event) => {
         //     initDatatable({
@@ -242,7 +259,7 @@
             initDatatable({
                 url: '{{ route("backend.$module_name.index_data") }}',
                 finalColumns,
-                orderColumn: [[ 8, "desc" ]],
+                orderColumn: [[updatedAtColumnIndex, "desc"]],
                 advanceFilter: () => {
                     return {
                         category_id: $('#column_category').val(), // Add category filter value

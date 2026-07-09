@@ -57,6 +57,8 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::post('/gallery-images/{id}', [ServicesController::class, 'uploadGalleryImages']);
         Route::post('bulk-action', [ServicesController::class, 'bulk_action'])->name('bulk_action');
         Route::post('update-status/{id}', [ServicesController::class, 'update_status'])->name('update_status');
+        Route::post('update-online-booking-visibility/{id}', [ServicesController::class, 'update_online_booking_visibility'])->name('update_online_booking_visibility');
+        Route::post('update-gift-card-visibility/{id}', [ServicesController::class, 'update_gift_card_visibility'])->name('update_gift_card_visibility');
         Route::get('export', [ServicesController::class, 'export'])->name('export');
         Route::post('uniqueServices', [ServicesController::class, 'uniqueServices'])->name('uniqueServices');
     });

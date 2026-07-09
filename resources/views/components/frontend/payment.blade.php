@@ -707,7 +707,7 @@
 
                     @if(($paymentMethods['urpay'] ?? 0) == 1)
                         <!-- METHOD: UrPay -->
-                        {{-- <div class="method payment-method-card" data-method="urpay" tabindex="0">
+                        <div class="method payment-method-card" data-method="urpay" tabindex="0">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="paymentMethod" value="urpay" {{ $defaultPaymentMethod === 'urpay' ? 'checked' : '' }}>
                             </div>
@@ -718,7 +718,7 @@
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
                             </div>
-                        </div> --}}
+                        </div>
                     @endif
 
                     @if(($paymentMethods['tabby'] ?? 1) == 1)

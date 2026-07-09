@@ -204,6 +204,7 @@ public function index_list(Request $request)
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
+        $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $service_updated[$key] = [
             'id' => $value->booking_id,
@@ -212,7 +213,7 @@ public function index_list(Request $request)
             'resourceId' => $value->employee_id,
             'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
-            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
+            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
@@ -222,6 +223,7 @@ public function index_list(Request $request)
                 'customer_name' => $customerName,
                 'employee_name' => $employeeName,
                 'service_name' => $serviceName,
+                'created_by_name' => $createdByName,
                 'status' => $value->booking->status,
                 'status_title' => $statusTitle,
                 'duration' => $duration,
@@ -244,6 +246,7 @@ public function index_list(Request $request)
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
+        $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $package_updated[$key] = [
             'id' => $value->booking_id,
@@ -252,7 +255,7 @@ public function index_list(Request $request)
             'resourceId' => $value->employee_id,
             'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
-            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName'))->render(),
+            'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
             'color' => $statusList[$value->booking->status]['color_hex'],
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
@@ -262,6 +265,7 @@ public function index_list(Request $request)
                 'customer_name' => $customerName,
                 'employee_name' => $employeeName,
                 'service_name' => $serviceName,
+                'created_by_name' => $createdByName,
                 'status' => $value->booking->status,
                 'status_title' => $statusTitle,
                 'duration' => $duration,

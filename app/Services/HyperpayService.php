@@ -24,6 +24,31 @@ class HyperpayService
     {
         $this->guardCredentials();
 
+        // Sanitize givenName and surname (must be valid strings, min 2 chars, fallback to 'Customer')
+        $givenName = preg_replace('/[^a-zA-Z\p{Arabic}\s]/u', '', (string) ($customer['given_name'] ?? ''));
+        $givenName = trim($givenName);
+        if (mb_strlen($givenName) < 2) {
+            $givenName = 'Customer';
+        }
+
+        $surname = preg_replace('/[^a-zA-Z\p{Arabic}\s]/u', '', (string) ($customer['surname'] ?? ''));
+        $surname = trim($surname);
+        if (mb_strlen($surname) < 2) {
+            $surname = 'Customer';
+        }
+
+        // Validate email format
+        $email = trim((string) ($customer['email'] ?? ''));
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = null;
+        }
+
+        // Sanitize mobile format (numeric only, min 7 digits)
+        $mobile = preg_replace('/[^0-9]/', '', (string) ($customer['mobile'] ?? ''));
+        if (strlen($mobile) < 7) {
+            $mobile = null;
+        }
+
         $payload = array_filter([
             'entityId' => $this->entityId,
             'amount' => number_format($amount, 2, '.', ''),
@@ -31,23 +56,17 @@ class HyperpayService
             'paymentType' => 'DB',
             'merchantTransactionId' => $merchantTransactionId,
             'shopperResultUrl' => $shopperResultUrl,
-            'customer.givenName' => $customer['given_name'] ?? null,
-            'customer.surname' => $customer['surname'] ?? null,
-            'customer.mobile' => $customer['mobile'] ?? null,
-            'customer.email' => $customer['email'] ?? null,
-            'billing.country' => $customer['country'] ?? 'SA',
+            'customer.givenName' => $givenName,
+            'customer.surname' => $surname,
+            'customer.mobile' => $mobile,
+            'customer.email' => $email,
+            // Exclude billing.country to avoid triggering strict billing address validation rules
         ], static fn ($value) => $value !== null && $value !== '');
 
         $response = Http::asForm()
             ->withToken($this->authorizationToken)
             ->acceptJson()
             ->post($this->baseUrl . '/v1/checkouts', $payload);
-
-        $this->logGatewayResponse('create_checkout', $response, [
-            'merchant_transaction_id' => $merchantTransactionId,
-            'amount' => $payload['amount'] ?? null,
-            'shopper_result_url' => $shopperResultUrl,
-        ]);
 
         return $this->decodeResponse($response);
     }

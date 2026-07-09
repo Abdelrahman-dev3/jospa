@@ -98,7 +98,14 @@ class GiftCardController extends Controller
         };
         
         $selectedServices = array_map('intval', $data['requested_services']);
-        $services = ServiceModel::whereIn('id', $selectedServices)->get();
+        $services = ServiceModel::whereIn('id', $selectedServices)
+            ->where('status', 1)
+            ->where('show_in_gift_card', 1)
+            ->get();
+
+        if ($services->count() !== count($selectedServices)) {
+            return back()->with('error', __('messages.gift_card_validation_error'));
+        }
         $services_total = $services->sum('default_price');
 
 

@@ -58,4 +58,6 @@ return [
     'select_role' => 'اختر الدور',
     'placeholder_name' => ' أدخل اسم الخدمة',
     'lbl_visible_home' => 'إظهار في الخدمات المنزلية',
+    'lbl_show_in_online_booking' => 'إظهار أونلاين',
+    'lbl_show_in_gift_card' => 'إظهار في الجيفت كارد',
 ];

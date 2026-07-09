@@ -181,6 +181,7 @@
         <div class="booking-list-card__details">
           <span><i class="fa-regular fa-user"></i>{{ bookingEvent.extendedProps?.customer_name || 'عميل غير محدد' }}</span>
           <span><i class="fa-solid fa-user-tie"></i>{{ bookingEvent.extendedProps?.employee_name || getEventEmployeeName(bookingEvent.resourceId) }}</span>
+          <span v-if="bookingEvent.extendedProps?.created_by_name"><i class="fa-solid fa-user-shield"></i>حجز بواسطة: {{ bookingEvent.extendedProps.created_by_name }}</span>
           <span><i class="fa-regular fa-clock"></i>{{ bookingEvent.extendedProps?.duration || getEventDuration(bookingEvent) }} دقيقة</span>
           <span v-if="bookingEvent.extendedProps?.branch_name"><i class="fa-solid fa-location-dot"></i>{{ bookingEvent.extendedProps.branch_name }}</span>
         </div>
@@ -232,7 +233,7 @@ const selectedCalendarDate = ref(moment(props.date).format('YYYY-MM-DD'))
 const calendarDatePickerConfig = {
   dateFormat: 'Y-m-d',
   altInput: true,
-  altFormat: 'd-m-Y',
+  altFormat: 'l d-m-Y',
   locale: Arabic
 }
 const selectedCalendarView = ref('day')
@@ -563,7 +564,7 @@ const bookingListEvents = computed(() => {
     .sort((firstEvent, secondEvent) => moment(firstEvent.start).valueOf() - moment(secondEvent.start).valueOf())
 })
 
-const formatEventDate = (dateValue) => moment(dateValue).format('YYYY-MM-DD')
+const formatEventDate = (dateValue) => moment(dateValue).locale('ar').format('dddd YYYY-MM-DD')
 
 const formatEventTime = (dateValue) => moment(dateValue).format('hh:mm A')
 

@@ -194,6 +194,16 @@ class ServicesController extends Controller
         return response()->json(['status' => true, 'message' => __('branch.status_update')]);
     }
 
+    public function update_online_booking_visibility(Request $request, Service $id)
+    {
+        return $this->updateBooleanField($id, 'show_in_online_booking', $request->status);
+    }
+
+    public function update_gift_card_visibility(Request $request, Service $id)
+    {
+        return $this->updateBooleanField($id, 'show_in_gift_card', $request->status);
+    }
+
     public function index_data(Datatables $datatable, Request $request)
     {
         $userId = Auth()->user()->id;
@@ -251,16 +261,28 @@ class ServicesController extends Controller
                 return $data->duration_min . ' Min';
             })
             ->editColumn('status', function ($row) {
-                $checked = '';
-                if ($row->status) {
-                    $checked = 'checked="checked"';
-                }
-
-                return '
-                    <div class="form-check form-switch ">
-                        <input type="checkbox" data-url="' . route('backend.services.update_status', $row->id) . '" data-token="' . csrf_token() . '" class="switch-status-change form-check-input"  id="datatable-row-' . $row->id . '"  name="status" value="' . $row->id . '" ' . $checked . '>
-                    </div>
-                ';
+                return $this->renderBooleanSwitch(
+                    route('backend.services.update_status', $row->id),
+                    $row->status,
+                    'status',
+                    $row->id
+                );
+            })
+            ->editColumn('show_in_online_booking', function ($row) {
+                return $this->renderBooleanSwitch(
+                    route('backend.services.update_online_booking_visibility', $row->id),
+                    $row->show_in_online_booking,
+                    'show_in_online_booking',
+                    $row->id
+                );
+            })
+            ->editColumn('show_in_gift_card', function ($row) {
+                return $this->renderBooleanSwitch(
+                    route('backend.services.update_gift_card_visibility', $row->id),
+                    $row->show_in_gift_card,
+                    'show_in_gift_card',
+                    $row->id
+                );
             })
             ->editColumn('category_id', function ($data) {
                 $category = isset($data->category->name) ? $data->category->name : '-';
@@ -297,8 +319,26 @@ class ServicesController extends Controller
         // Custom Fields For export
         $customFieldColumns = CustomField::customFieldData($datatable, Service::CUSTOM_FIELD_MODEL, null);
 
-        return $datatable->rawColumns(array_merge(['action', 'image', 'status', 'check', 'branches_count', 'employee_count'], $customFieldColumns))
+        return $datatable->rawColumns(array_merge(['action', 'image', 'status', 'show_in_online_booking', 'show_in_gift_card', 'check', 'branches_count', 'employee_count'], $customFieldColumns))
             ->toJson();
+    }
+
+    private function updateBooleanField(Service $service, string $field, mixed $value)
+    {
+        $service->update([$field => (int) ((bool) $value)]);
+
+        return response()->json(['status' => true, 'message' => __('branch.status_update')]);
+    }
+
+    private function renderBooleanSwitch(string $url, mixed $value, string $field, int $serviceId): string
+    {
+        $checked = $value ? 'checked="checked"' : '';
+
+        return '
+            <div class="form-check form-switch ">
+                <input type="checkbox" data-url="' . $url . '" data-token="' . csrf_token() . '" class="switch-status-change form-check-input" id="datatable-' . $field . '-' . $serviceId . '" name="' . $field . '" value="' . $serviceId . '" ' . $checked . '>
+            </div>
+        ';
     }
 
     public function index_list_data(Request $request)

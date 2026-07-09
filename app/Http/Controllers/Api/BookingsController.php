@@ -46,6 +46,21 @@ public function getServiceGroups(Request $request)
         ->whereNull('deleted_at')
         ->where('status', 1);
 
+    $query->whereExists(function ($serviceQuery) use ($is_home) {
+        $serviceQuery->select(DB::raw(1))
+            ->from('services')
+            ->whereColumn('services.category_id', 'categories.id')
+            ->whereNull('services.deleted_at')
+            ->where('services.status', 1)
+            ->where('services.show_in_online_booking', 1);
+
+        if ($is_home) {
+            $serviceQuery->where('services.is_visible', 1);
+        } else {
+            $serviceQuery->where('services.is_visible', 0);
+        }
+    });
+
     if ($is_home) {
         $query->where('is_visible', 1);
     }
@@ -77,12 +92,14 @@ public function getServicesByGroup($serviceGroupId, $branchId)
     $services = $branch->services()
         ->where('category_id', $serviceGroupId)
         ->where('status', 1)
+        ->where('show_in_online_booking', 1)
         ->where('is_visible', 0)
         ->get();
     }else{
     $services = DB::table('services')
         ->where('category_id', $serviceGroupId)
         ->where('status', 1)
+        ->where('show_in_online_booking', 1)
         ->where('is_visible', 1)
         ->get();
     }

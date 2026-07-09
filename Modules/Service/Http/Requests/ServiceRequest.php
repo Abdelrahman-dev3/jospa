@@ -22,6 +22,9 @@ class ServiceRequest extends FormRequest
                     'duration_min' => 'required|integer',
                     'category_id' => 'required|integer',
                     'default_price' => 'required',
+                    'is_visible' => 'nullable|boolean',
+                    'show_in_online_booking' => 'nullable|boolean',
+                    'show_in_gift_card' => 'nullable|boolean',
                     'status' => 'boolean',
                 ];
                 break;
@@ -33,6 +36,9 @@ class ServiceRequest extends FormRequest
                     'duration_min' => 'required|integer',
                     'category_id' => 'required|integer',
                     'default_price' => 'required',
+                    'is_visible' => 'nullable|boolean',
+                    'show_in_online_booking' => 'nullable|boolean',
+                    'show_in_gift_card' => 'nullable|boolean',
                     'status' => 'boolean',
                 ];
                 break;
