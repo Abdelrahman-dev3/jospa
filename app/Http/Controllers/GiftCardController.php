@@ -22,7 +22,7 @@ class GiftCardController extends Controller
 
         $subCategories = Category::with(['Services' => function ($q) {
             $q->select('id', 'name', 'default_price','category_id', 'sub_category_id')->where('status', 1);
-        }])->whereNull('parent_id')->where('status', 1)->get();
+        }])->whereNull('parent_id')->where('status', 1)->where('is_gift_card', 1)->get();
 
         if (!isset($errors)) {
             $errors = new \Illuminate\Support\MessageBag();

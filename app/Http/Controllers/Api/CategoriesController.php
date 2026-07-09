@@ -10,6 +10,7 @@ class CategoriesController extends Controller
     public function index()
     {
         $categories = Category::where('status', 1)
+            ->where('is_online', 1)
             ->whereNull('parent_id')
             ->with(['services' => function ($query) {
                 $query->where('status', 1);

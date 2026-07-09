@@ -159,6 +159,20 @@ class CategoriesController extends Controller
         return response()->json(['status' => true, 'message' => __('branch.status_update')]);
     }
 
+    public function update_gift_card_status(Request $request, Category $id)
+    {
+        $id->update(['is_gift_card' => $request->status]);
+
+        return response()->json(['status' => true, 'message' => __('branch.status_update')]);
+    }
+
+    public function update_online_status(Request $request, Category $id)
+    {
+        $id->update(['is_online' => $request->status]);
+
+        return response()->json(['status' => true, 'message' => __('branch.status_update')]);
+    }
+
     public function index_data(Datatables $datatable, Request $request)
     {
         $module_name = $this->module_name;
@@ -205,6 +219,30 @@ class CategoriesController extends Controller
                     </div>
                 ';
             })
+            ->editColumn('is_online', function ($row) {
+                $checked = '';
+                if ($row->is_online) {
+                    $checked = 'checked="checked"';
+                }
+
+                return '
+                    <div class="form-check form-switch ">
+                        <input type="checkbox" data-url="'.route('backend.categories.update_online_status', $row->id).'" data-token="'.csrf_token().'" class="switch-status-change form-check-input" id="online-row-'.$row->id.'" name="is_online" value="'.$row->id.'" '.$checked.'>
+                    </div>
+                ';
+            })
+            ->editColumn('is_gift_card', function ($row) {
+                $checked = '';
+                if ($row->is_gift_card) {
+                    $checked = 'checked="checked"';
+                }
+
+                return '
+                    <div class="form-check form-switch ">
+                        <input type="checkbox" data-url="'.route('backend.categories.update_gift_card_status', $row->id).'" data-token="'.csrf_token().'" class="switch-status-change form-check-input" id="gift-card-row-'.$row->id.'" name="is_gift_card" value="'.$row->id.'" '.$checked.'>
+                    </div>
+                ';
+            })
             ->editColumn('updated_at', function ($data) {
                 $module_name = $this->module_name;
 
@@ -232,7 +270,7 @@ class CategoriesController extends Controller
         // Custom Fields For export
         $customFieldColumns = CustomField::customFieldData($datatable, Category::CUSTOM_FIELD_MODEL, null);
 
-        return $datatable->rawColumns(array_merge(['action', 'status', 'image', 'check', 'name'], $customFieldColumns))
+        return $datatable->rawColumns(array_merge(['action', 'status', 'is_online', 'is_gift_card', 'image', 'check', 'name'], $customFieldColumns))
             ->toJson();
     }
 
@@ -327,6 +365,30 @@ class CategoriesController extends Controller
                     </div>
                 ';
             })
+            ->editColumn('is_online', function ($row) {
+                $checked = '';
+                if ($row->is_online) {
+                    $checked = 'checked="checked"';
+                }
+
+                return '
+                    <div class="form-check form-switch ">
+                        <input type="checkbox" data-url="'.route('backend.categories.update_online_status', $row->id).'" data-token="'.csrf_token().'" class="switch-status-change form-check-input" id="online-row-'.$row->id.'" name="is_online" value="'.$row->id.'" '.$checked.'>
+                    </div>
+                ';
+            })
+            ->editColumn('is_gift_card', function ($row) {
+                $checked = '';
+                if ($row->is_gift_card) {
+                    $checked = 'checked="checked"';
+                }
+
+                return '
+                    <div class="form-check form-switch ">
+                        <input type="checkbox" data-url="'.route('backend.categories.update_gift_card_status', $row->id).'" data-token="'.csrf_token().'" class="switch-status-change form-check-input" id="gift-card-row-'.$row->id.'" name="is_gift_card" value="'.$row->id.'" '.$checked.'>
+                    </div>
+                ';
+            })
             ->editColumn('updated_at', function ($data) {
                 $diff = Carbon::now()->diffInHours($data->updated_at);
     
@@ -349,7 +411,7 @@ class CategoriesController extends Controller
     
         // Custom Fields For export
         $customFieldColumns = CustomField::customFieldData($datatable, Category::CUSTOM_FIELD_MODEL, null);
-        return $datatable->rawColumns(array_merge(['action', 'status', 'image', 'check'], $customFieldColumns))
+        return $datatable->rawColumns(array_merge(['action', 'status', 'is_online', 'is_gift_card', 'image', 'check'], $customFieldColumns))
             ->toJson();
     }
     

@@ -40,6 +40,8 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::get('index_data', [CategoriesController::class, 'index_data'])->name('index_data');
         Route::post('bulk-action', [CategoriesController::class, 'bulk_action'])->name('bulk_action');
         Route::post('update-status/{id}', [CategoriesController::class, 'update_status'])->name('update_status');
+        Route::post('update-gift-card-status/{id}', [CategoriesController::class, 'update_gift_card_status'])->name('update_gift_card_status');
+        Route::post('update-online-status/{id}', [CategoriesController::class, 'update_online_status'])->name('update_online_status');
         Route::get('export', [CategoriesController::class, 'export'])->name('export');
     });
     Route::get('sub-categories.export', [CategoriesController::class, 'subCategoryExport'])->name('sub-categories.export');

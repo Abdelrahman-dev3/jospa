@@ -71,6 +71,24 @@
 
             <div class="form-group">
               <div class="d-flex justify-content-between align-items-center">
+                <label class="form-label" for="category-is-gift-card">كرت هدية</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" :value="1" name="is_gift_card" id="category-is-gift-card" type="checkbox" v-model="is_gift_card" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="d-flex justify-content-between align-items-center">
+                <label class="form-label" for="category-is-online">اونلاين</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" :value="1" name="is_online" id="category-is-online" type="checkbox" v-model="is_online" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="d-flex justify-content-between align-items-center">
                 <label class="form-label" for="category-status">{{$t('category.lbl_status')}}</label>
                 <div class="form-check form-switch">
                   <input class="form-check-input" :value="1" name="status" id="category-status" type="checkbox" v-model="status" />
@@ -219,6 +237,8 @@ const defaultData = () => {
     parent_id: props.categoryId ?? null,
     is_visible: 0,
     status: true,
+    is_gift_card: true,
+    is_online: true,
     feature_image: null,
     custom_fields_data: {
     }
@@ -254,6 +274,8 @@ const setFormData = (data) => {
       parent_id: data.parent_id,
       is_visible: data.is_visible ?? 0,
       status: data.status ? true : false,
+      is_gift_card: data.is_gift_card !== 0 ? true : false,
+      is_online: data.is_online !== 0 ? true : false,
       feature_image: data.feature_image,
       custom_fields_data: data.custom_field_data
     }
@@ -303,6 +325,8 @@ const { value: nameAr, errorMessage: nameArError } = useField('name.ar')
 const { value: nameEn, errorMessage: nameEnError } = useField('name.en')
 const { value: parent_id } = useField('parent_id')
 const { value: status } = useField('status')
+const { value: is_gift_card } = useField('is_gift_card')
+const { value: is_online } = useField('is_online')
 const { value: is_visible } = useField('is_visible')
 const { value: feature_image } = useField('feature_image')
 const { value: custom_fields_data } = useField('custom_fields_data')
