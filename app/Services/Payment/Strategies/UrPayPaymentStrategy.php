@@ -344,8 +344,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         string $invoiceRef,
         array $merchantUrls
     ): array {
-        $tranportalId = trim((string) config('urpay.username'));
-        $tranportalPassword = trim((string) config('urpay.password'));
+        $tranportalId = trim((string) config('urpay.tranportal_id'));
+        $tranportalPassword = trim((string) config('urpay.tranportal_password'));
         if ($tranportalId === '' || $tranportalPassword === '') {
             throw new \RuntimeException('URPAY hosted payment requires Tranportal ID and Tranportal Password.');
         }
@@ -1020,6 +1020,10 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
         if (str_contains($message, 'UrPay token generation returned a non-JSON response.')) {
             return 'بوابة URPAY أعادت ردًا غير متوقع بدل JSON. راجع قيم URPAY_CREATE_ORDER_PATH و URPAY_VERIFY_ORDER_PATH وتأكد أنها مطابقة لمسارات البنك.';
+        }
+
+        if (str_contains($message, 'IPAY0100006') || str_contains($message, 'Invalid Tranportal ID')) {
+            return 'بوابة URPAY رفضت الطلب لأن Tranportal ID غير صحيح. راجع قيمة `URPAY_TRANPORTAL_ID` أولًا، وإذا لم تكن تستخدمها فتأكد أن `URPAY_USERNAME` هي نفسها Tranportal ID المرسلة من البنك وليست اسم مستخدم API مختلف.';
         }
 
         return $message;

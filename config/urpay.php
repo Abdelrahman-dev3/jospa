@@ -9,6 +9,8 @@ return [
     'terminal_id' => env('URPAY_TERMINAL_ID'),
     'username' => env('URPAY_USERNAME'),
     'password' => env('URPAY_PASSWORD'),
+    'tranportal_id' => env('URPAY_TRANPORTAL_ID', env('URPAY_USERNAME')),
+    'tranportal_password' => env('URPAY_TRANPORTAL_PASSWORD', env('URPAY_PASSWORD')),
     'checkout_url_template' => env('URPAY_CHECKOUT_URL_TEMPLATE'),
     'currency' => env('URPAY_CURRENCY', 'SAR'),
 ];
