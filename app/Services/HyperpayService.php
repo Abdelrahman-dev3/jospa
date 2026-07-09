@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class HyperpayService
 {
@@ -37,10 +38,17 @@ class HyperpayService
             'billing.country' => $customer['country'] ?? 'SA',
         ], static fn ($value) => $value !== null && $value !== '');
 
+        dd($payload);
+
         $response = Http::asForm()
             ->withToken($this->authorizationToken)
             ->acceptJson()
             ->post($this->baseUrl . '/v1/checkouts', $payload);
+
+        $this->logGatewayResponse('create_checkout', $response, [
+            'merchant_transaction_id' => $merchantTransactionId,
+            'amount' => $payload['amount'] ?? null,
+        ]);
 
         return $this->decodeResponse($response);
     }
@@ -58,6 +66,11 @@ class HyperpayService
             ->get($normalizedPath, [
                 'entityId' => $this->entityId,
             ]);
+
+        $this->logGatewayResponse('fetch_payment_status', $response, [
+            'resource_path' => $resourcePath,
+            'normalized_path' => $normalizedPath,
+        ]);
 
         return $this->decodeResponse($response);
     }
@@ -209,5 +222,23 @@ class HyperpayService
 
         return str_starts_with($upperValue, 'YOUR_')
             || str_contains($upperValue, 'PLACEHOLDER');
+    }
+
+    private function logGatewayResponse(string $operation, Response $response, array $context = []): void
+    {
+        if ($response->successful()) {
+            return;
+        }
+
+        $payload = $response->json();
+
+        Log::warning('Hyperpay request failed', array_merge($context, [
+            'operation' => $operation,
+            'base_url' => $this->baseUrl,
+            'entity_id_prefix' => $this->entityId ? substr($this->entityId, 0, 8) : null,
+            'status' => $response->status(),
+            'result_code' => is_array($payload) ? data_get($payload, 'result.code') : null,
+            'result_description' => is_array($payload) ? data_get($payload, 'result.description') : null,
+        ]));
     }
 }
