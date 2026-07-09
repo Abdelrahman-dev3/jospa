@@ -48,6 +48,7 @@ class HyperpayService
         $this->logGatewayResponse('create_checkout', $response, [
             'merchant_transaction_id' => $merchantTransactionId,
             'amount' => $payload['amount'] ?? null,
+            'shopper_result_url' => $shopperResultUrl,
         ]);
 
         return $this->decodeResponse($response);
@@ -226,19 +227,24 @@ class HyperpayService
 
     private function logGatewayResponse(string $operation, Response $response, array $context = []): void
     {
-        if ($response->successful()) {
-            return;
-        }
-
         $payload = $response->json();
-
-        Log::warning('Hyperpay request failed', array_merge($context, [
+        $logContext = array_merge($context, [
             'operation' => $operation,
             'base_url' => $this->baseUrl,
             'entity_id_prefix' => $this->entityId ? substr($this->entityId, 0, 8) : null,
             'status' => $response->status(),
             'result_code' => is_array($payload) ? data_get($payload, 'result.code') : null,
             'result_description' => is_array($payload) ? data_get($payload, 'result.description') : null,
-        ]));
+            'checkout_id' => is_array($payload) ? data_get($payload, 'id') : null,
+            'ndc' => is_array($payload) ? data_get($payload, 'ndc') : null,
+        ]);
+
+        if ($response->successful()) {
+            Log::info('Hyperpay request succeeded', $logContext);
+
+            return;
+        }
+
+        Log::warning('Hyperpay request failed', $logContext);
     }
 }
