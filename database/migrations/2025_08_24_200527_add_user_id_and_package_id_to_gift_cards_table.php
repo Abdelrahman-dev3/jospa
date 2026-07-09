@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('gift_cards')) {
+            return;
+        }
         Schema::table('gift_cards', function (Blueprint $table) {
             $table->unsignedBigInteger('user_id')->nullable()->after('id');
             $table->json('package_ids')->nullable()->after('requested_services');

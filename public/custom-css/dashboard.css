@@ -370,3 +370,10 @@ legend {
 .dark .multiselect-no-options {
   color: #ffffff !important;
 }
+
+[dir="rtl"] .ec-prev .ec-icon,
+[dir="rtl"] .ec-next .ec-icon,
+[dir="rtl"] .ec-prev svg,
+[dir="rtl"] .ec-next svg {
+  transform: scaleX(-1);
+}
