@@ -139,5 +139,5 @@ for (const key in Modules) {
 
 // !For Production Build Added To Version on File for cache
 if (mix.inProduction()) {
-    mix.version();
+    // mix.version();
 }

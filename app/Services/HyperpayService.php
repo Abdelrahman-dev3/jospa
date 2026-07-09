@@ -129,6 +129,14 @@ class HyperpayService
         }
 
         if ($response->failed()) {
+            if ($this->isInvalidAuthenticationFailure($data)) {
+                throw new \RuntimeException(
+                    app()->getLocale() === 'ar'
+                        ? 'فشل توثيق Hyperpay. تأكد من مطابقة HYPERPAY_BASE_URL مع بيانات test/live الصحيحة، ومن صحة HYPERPAY_ENTITY_ID و HYPERPAY_TOKEN أو صيغة HYPERPAY_KEY.'
+                        : 'Hyperpay authentication failed. Verify that HYPERPAY_BASE_URL matches the correct test/live credentials and that HYPERPAY_ENTITY_ID and HYPERPAY_TOKEN, or the HYPERPAY_KEY format, are valid.'
+                );
+            }
+
             throw new \RuntimeException(
                 (string) data_get(
                     $data,
@@ -139,5 +147,12 @@ class HyperpayService
         }
 
         return $data;
+    }
+
+    private function isInvalidAuthenticationFailure(array $data): bool
+    {
+        $description = strtolower((string) data_get($data, 'result.description', ''));
+
+        return str_contains($description, 'invalid authentication information');
     }
 }

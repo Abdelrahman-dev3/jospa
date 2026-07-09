@@ -702,25 +702,6 @@
                                 object-fit: contain;
                             }
                         </style>
-                            <!-- card fields -->
-                            <div class="payment-methods mt-4 mb-3 px-2">
-                                <label class="l-payment mb-2 d-block">
-                                    {{ app()->getLocale() === 'ar' ? 'البطاقات المدعومة' : 'Supported cards' }}
-                                </label>
-                                <div class="row g-2">
-                                    <div class="col-12">
-                                        <label class="payment-option">
-                                            <div class="payment-box">
-                                                <img src="{{ asset('images/icons/visa (2).png') }}" alt="Visa">
-                                                <img src="{{ asset('images/icons/master.png') }}" alt="MasterCard">
-                                                <img src="{{ asset('images/icons/mada (2).png') }}" alt="Mada">
-                                                <span>Visa / MasterCard / Mada</span>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
                         </div>
                     @endif
 
