@@ -220,7 +220,7 @@
                 </div>
             </div>
             
-            <div class="step-content hidden2" id="summaryCard" style="height: 800px;">
+            <div class="step-content hidden2 booking-summary-host" id="summaryCard">
 
             </div>
             <!-- Navigation -->
@@ -400,8 +400,13 @@
                         card.className = 'service-card';
                         card.dataset.service = service.id;
                         card.innerHTML = `
-                            <img src="${service.image}" alt="${serviceName}" style="position: absolute;width: 100%;height: 100%;border-radius: 6px;"">
-                            <h4 style="position: absolute;top: -28px;width: 100%;text-align: center;">${serviceName}</h4>`;
+                            <div class="service-card__media">
+                                <img src="${service.image}" alt="${serviceName}">
+                            </div>
+                            <div class="service-card__body">
+                                <span class="service-card__label">${lang === 'ar' ? 'القسم' : 'Category'}</span>
+                                <h4 class="service-card__title">${serviceName}</h4>
+                            </div>`;
                             
                         card.addEventListener('click', () => {
                         document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
@@ -1083,6 +1088,213 @@
                 updateSummarySteps()
         }
                 
+        function updateSummarySteps() {
+            const isSummaryStage = summaryCard.classList.contains('show');
+            const summaryContainers = document.querySelectorAll('.sammary-steps');
+
+            summaryContainers.forEach(summaryContainer => {
+                summaryContainer.innerHTML = '';
+                summaryContainer.classList.add('summary-grid');
+
+                if (!selectedData.services || selectedData.services.length === 0) {
+                    const noServicesText = currentLang === 'ar'
+                        ? 'لم يتم اختيار أي خدمات بعد'
+                        : 'No services selected yet';
+                    summaryContainer.innerHTML = `<p class="summary-empty">${noServicesText}</p>`;
+                    return;
+                }
+
+                selectedData.services.forEach(service => {
+                    (service.subServices || []).forEach(sub => {
+                        const card = document.createElement('div');
+                        card.className = 'summary-card';
+
+                        card.innerHTML = `
+                            <div class="summary-card__header">
+                                <div>
+                                    <h4 class="summary-card__service">${service.name}</h4>
+                                    <p class="summary-card__subservice">${sub.name}</p>
+                                </div>
+                                <img src="${service.image || 'https://via.placeholder.com/60'}" alt="${service.name}" class="summary-card__image">
+                            </div>
+                            <div class="summary-card__body">
+                                <div>
+                                    <span class="summary-card__label">${currentLang === 'ar' ? 'الموظفة' : 'Staff'}</span>
+                                    <div class="summary-card__field">${sub.staffName || (currentLang === 'ar' ? 'لم يتم الاختيار بعد' : 'Not selected yet')}</div>
+                                </div>
+                                <div class="summary-card__meta">
+                                    <div class="summary-card__meta-item">
+                                        <span class="summary-card__meta-title">${currentLang === 'ar' ? 'التاريخ' : 'Date'}</span>
+                                        <span class="summary-card__meta-value">${sub.date || '--'}</span>
+                                    </div>
+                                    <div class="summary-card__meta-item">
+                                        <span class="summary-card__meta-title">${currentLang === 'ar' ? 'الوقت' : 'Time'}</span>
+                                        <span class="summary-card__meta-value">${sub.time || '--'}</span>
+                                    </div>
+                                </div>
+                                <div class="summary-card__footer">
+                                    <div class="summary-card__price">${currentLang === 'ar' ? 'السعر' : 'Price'}: ${sub.price || 0} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</div>
+                                </div>
+                            </div>
+                        `;
+
+                        if (!isSummaryStage) {
+                            const deleteBtn = document.createElement('button');
+                            deleteBtn.textContent = currentLang === 'ar' ? 'حذف الخدمة' : 'Delete Service';
+                            deleteBtn.className = 'summary-card__remove';
+                            deleteBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const serviceCard = document.querySelector(`.massage-card[data-massage="${sub.id}"][data-main="${service.id}"]`);
+                                if (serviceCard) {
+                                    serviceCard.classList.remove('selected');
+                                }
+
+                                service.subServices = (service.subServices || []).filter(subSrv => subSrv.id !== sub.id);
+                                if ((service.subServices || []).length === 0) {
+                                    selectedData.services = selectedData.services.filter(s => s !== service);
+                                }
+
+                                updateSummarySteps();
+                                updateUI();
+
+                                if (!selectedData.services || selectedData.services.length === 0) {
+                                    currentStep = 2;
+                                    updateUI();
+                                }
+                            });
+                            card.appendChild(deleteBtn);
+                        }
+
+                        card.addEventListener('click', () => {
+                            if (currentStep === 3) {
+                                document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('selected-card'));
+                                card.classList.add('selected-card');
+                                fetchStaffMembers(selectedData.branch, sub.id);
+                            } else if (currentStep === 4) {
+                                document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('selected-card'));
+                                card.classList.add('selected-card');
+                                activeSubId = sub.id;
+                                activeStaffId = sub.staffId;
+                                generateCalendar(sub.id, sub.staffId);
+                            }
+                        });
+
+                        summaryContainer.appendChild(card);
+                    });
+                });
+
+                if (!isSummaryStage) {
+                    const addServiceBtn = document.createElement('button');
+                    addServiceBtn.textContent = currentLang === 'ar' ? 'اضف خدمة جديدة' : 'Add New Service';
+                    addServiceBtn.className = 'summary-add-service';
+                    addServiceBtn.addEventListener('click', () => {
+                        currentStep = 2;
+                        updateUI();
+                    });
+                    summaryContainer.appendChild(addServiceBtn);
+                }
+            });
+        }
+
+        function getBookingSummaryStats() {
+            let total = 0;
+            let servicesCount = 0;
+
+            (selectedData.services || []).forEach(service => {
+                (service.subServices || []).forEach(sub => {
+                    total += Number(sub.price || 0);
+                    servicesCount += 1;
+                });
+            });
+
+            return { total, servicesCount };
+        }
+
+        function getBookingSummaryLocation() {
+            return selectedData.locationInput || selectedData.neighborhood || selectedData.branchName || '';
+        }
+
+        function closeBookingSummary() {
+            summaryCard.classList.remove('show');
+            summaryCard.classList.add('hidden2');
+            summaryCard.innerHTML = '';
+        }
+
+        function showBookingSummary() {
+            const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+            const { total, servicesCount } = getBookingSummaryStats();
+            const locationLabel = getBookingSummaryLocation();
+
+            summaryCard.classList.remove('hidden');
+            summaryCard.classList.add('show');
+            summaryCard.innerHTML = `
+                <div class="booking-summary-overlay">
+                    <div class="booking-summary-sheet">
+                        <div class="booking-summary-header">
+                            <div>
+                                <span class="booking-summary-kicker">${lang === 'ar' ? 'مراجعة الحجز' : 'Booking review'}</span>
+                                <h2 class="booking-summary-title">${lang === 'ar' ? 'تفاصيل الفاتورة والحجز' : 'Booking and invoice summary'}</h2>
+                                <p class="booking-summary-subtitle">
+                                    ${lang === 'ar'
+                                        ? 'راجعي الخدمات المختارة وموقع الزيارة قبل إتمام العملية أو إضافتها إلى السلة.'
+                                        : 'Review the selected services and visit location before paying or adding them to the cart.'}
+                                </p>
+                            </div>
+                            <button type="button" class="booking-summary-close" onclick="closeBookingSummary()">&times;</button>
+                        </div>
+                        <div class="booking-summary-body">
+                            <div class="booking-summary-top">
+                                <div class="sammary-steps"></div>
+                                <div class="booking-summary-total">
+                                    <span class="booking-summary-total-label">${lang === 'ar' ? 'إجمالي الفاتورة' : 'Invoice total'}</span>
+                                    <strong class="booking-summary-total-amount">${total.toFixed(0)} ${lang === 'ar' ? 'ريال' : 'SAR'}</strong>
+                                    <div class="booking-summary-total-meta">
+                                        <span class="booking-summary-total-pill">${servicesCount} ${lang === 'ar' ? 'خدمة' : 'service(s)'}</span>
+                                        ${locationLabel ? `<span class="booking-summary-total-pill">${locationLabel}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="booking-summary-products">
+                                <div class="booking-summary-products-title">{{ __('messagess.products_you_may_like') }}</div>
+                            @if(isset($suggest) && $suggest->count() > 0)
+                            <div class="row g-4">
+                                @foreach($suggest as $index => $product)
+                                    <div class="col-12 col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="{{ $index * 100 }}">
+                                        @include('components.frontend.products-card', [
+                                            'image' => $product->feature_image,
+                                            'name' => $product->name,
+                                            'des' => $product->short_description,
+                                            'product_id' => $product->id,
+                                            'categories' => $product->categories,
+                                            'min_price' => $product->min_price,
+                                            'max_price' => $product->max_price,
+                                        ])
+                                    </div>
+                                @endforeach
+                            </div>
+                            @endif
+                            </div>
+                            <div class="booking-summary-actions">
+                                <button class="dis-btn btn-e btn-outline" onclick="closeBookingSummary()">
+                                    ${lang === 'ar' ? 'تعديل الحجز' : 'Edit booking'}
+                                </button>
+                                <button class="dis-btn btn-e btn-outline" onclick="completeBooking('cart')">
+                                    <img class="mdi-lightcart" src="{{ asset('images/icons/mdi-light-cart.svg') }}" alt="mdi-light:cart">
+                                    ${lang === 'ar' ? 'اضافة للسلة' : 'Add to cart'}
+                                </button>
+                                <button class="dis-btn btn-e btn-filled" onclick="completeBooking('payment')">
+                                    ${lang === 'ar' ? 'ادفع الآن' : 'Pay now'}
+                                    <img src="{{asset('images/icons/vesa.png')}}">
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            updateSummarySteps()
+        }
+
         function completeBooking(btn) {
 
             const payload = {
