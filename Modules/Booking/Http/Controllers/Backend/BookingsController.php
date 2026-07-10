@@ -217,6 +217,9 @@ public function index_list(Request $request)
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
             'color' => $categoryColor,
+            'backgroundColor' => $categoryColor,
+            'borderColor' => $categoryColor,
+            'textColor' => '#FFFFFF',
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
@@ -262,6 +265,9 @@ public function index_list(Request $request)
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
             'color' => $packageCategoryColor,
+            'backgroundColor' => $packageCategoryColor,
+            'borderColor' => $packageCategoryColor,
+            'textColor' => '#FFFFFF',
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
@@ -345,6 +351,10 @@ public function index_list(Request $request)
     for ($cursor = Carbon::parse($dateStart); $cursor->lte(Carbon::parse($dateEnd)); $cursor->addDay()) {
         $availabilityDates->push($cursor->toDateString());
     }
+    $availabilityContexts = [];
+    foreach ($availabilityDates as $availabilityDate) {
+        $availabilityContexts[$availabilityDate] = $this->availabilityContextForDate($availabilityDate, $branchIds, $employeeIds);
+    }
 
     $resource = [];
     $orderResource = [];
@@ -381,7 +391,7 @@ public function index_list(Request $request)
 
         $availability[$employee->id] = [];
         foreach ($availabilityDates as $availabilityDate) {
-            $availabilityContext = $this->availabilityContextForDate($availabilityDate, $branchIds, $employeeIds);
+            $availabilityContext = $availabilityContexts[$availabilityDate] ?? [];
             $employeeAvailability = $this->buildEmployeeAvailability($employee, $availabilityDate, $employeeBranchId, $availabilityContext);
             $availability[$employee->id] = array_merge($availability[$employee->id], $employeeAvailability['ranges']);
             $availabilityEvents = array_merge($availabilityEvents, $employeeAvailability['events']);

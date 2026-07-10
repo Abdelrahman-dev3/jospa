@@ -133,9 +133,10 @@ body {
 /* Service Grid */
 .service-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
     padding: 10px 0;
+    align-items: stretch;
 }
 
 .service-card {
@@ -143,14 +144,16 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    min-height: 210px;
+    min-height: clamp(210px, 26vw, 280px);
+    aspect-ratio: 4 / 5;
     overflow: hidden;
     border-radius: 22px;
     border: 1px solid rgba(191, 148, 86, 0.18);
-    background: #fff;
+    background: linear-gradient(135deg, #f6efe5 0%, #e7d3b0 100%);
     cursor: pointer;
     transition: 0.25s ease;
     box-shadow: 0 18px 35px rgba(47, 37, 24, 0.08);
+    isolation: isolate;
 }
 
 .service-card.selected {
@@ -174,12 +177,16 @@ body {
 .service-card__media {
     position: absolute;
     inset: 0;
+    background: linear-gradient(135deg, #f6efe5 0%, #e7d3b0 100%);
 }
 
 .service-card__media img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
+    transition: transform 0.35s ease;
 }
 
 .service-card__media::after {
@@ -192,6 +199,10 @@ body {
 .service-card__body {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: flex-end;
     padding: 18px;
     color: #fff;
 }
@@ -214,9 +225,20 @@ body {
     display: -webkit-box;
     overflow: hidden;
     color: #fff;
+    font-size: clamp(1rem, 0.6vw + 0.95rem, 1.2rem);
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+.service-card:hover .service-card__media img,
+.service-card.selected .service-card__media img {
+    transform: scale(1.05);
+}
+
+.service-card.image-fallback .service-card__media img {
+    object-fit: contain;
+    padding: 20px;
 }
 .service-icon {
     width: 80px;
@@ -713,7 +735,8 @@ label {
     }
 
     .service-card {
-        min-height: 170px;
+        min-height: 168px;
+        aspect-ratio: 1 / 1;
         border-radius: 18px;
     }
 
@@ -727,6 +750,17 @@ label {
 
     .summary-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 380px) {
+    .service-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .service-card {
+        min-height: 190px;
+        aspect-ratio: 16 / 10;
     }
 }
 #serviceSearch{

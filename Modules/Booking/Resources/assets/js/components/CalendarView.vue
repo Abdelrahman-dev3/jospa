@@ -42,7 +42,7 @@
                     <li @click="filterByEmployee(null)">
                       <a class="dropdown-item" href="#">All Employees</a>
                     </li>
-                    <li v-for="employee in visibleCalendarEmployees" :key="employee.id" @click="filterByEmployee(employee)">
+                    <li v-for="employee in calendarEmployeeOptions" :key="employee.id" @click="filterByEmployee(employee)">
                       <a class="dropdown-item" href="#">{{ employee.title }}</a>
                     </li>
                   </ul>
@@ -96,7 +96,7 @@
       الكل
     </button>
     <button
-      v-for="employee in visibleCalendarEmployees"
+      v-for="employee in calendarEmployeeOptions"
       :key="employee.id"
       type="button"
       class="calendar-employee-filter__chip"
@@ -170,6 +170,7 @@
       v-for="bookingEvent in bookingListEvents"
       :key="`${bookingEvent.id}-${bookingEvent.start}-${bookingEvent.resourceId}`"
       class="booking-list-card"
+      :style="{ borderInlineStartColor: getEventCategoryColor(bookingEvent) }"
       @click="openBookingListEvent(bookingEvent)"
     >
       <div class="booking-list-card__time">
@@ -295,6 +296,7 @@ let calendarFetchTimeoutId = null
 let calendarRetryTimeoutId = null
 let calendarFetchRequestId = 0
 let calendarFetchErrorShown = false
+let resourceSizingFrame = null
 const CALENDAR_FETCH_TIMEOUT = 15000
 const CALENDAR_RETRY_DELAY = 1200
 
@@ -555,9 +557,13 @@ const normalizeOrderEmployee = (employee) => ({
   is_visible: employee.is_visible !== false
 })
 
-const visibleCalendarEmployees = computed(() => {
+const calendarEmployeeOptions = computed(() => {
   return (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value)
-    .filter((employee) => employee.is_visible !== false)
+    .map((employee) => normalizeOrderEmployee(employee))
+})
+
+const visibleCalendarEmployees = computed(() => {
+  return calendarEmployeeOptions.value.filter((employee) => employee.is_visible !== false)
 })
 
 const findEmployeeById = (employeeId) => {
@@ -575,6 +581,25 @@ const bookingListEvents = computed(() => {
 const formatEventDate = (dateValue) => moment(dateValue).locale('ar').format('dddd YYYY-MM-DD')
 
 const formatEventTime = (dateValue) => moment(dateValue).format('hh:mm A')
+
+const getEventCategoryColor = (event) => {
+  return event?.extendedProps?.category_color || event?.backgroundColor || event?.color || '#BF9456'
+}
+
+const applyEventCategoryColor = (element, event) => {
+  const categoryColor = getEventCategoryColor(event)
+  if (!element || !categoryColor) return
+
+  element.style.backgroundColor = categoryColor
+  element.style.borderColor = categoryColor
+  element.style.color = '#FFFFFF'
+
+  const eventBody = element.querySelector('.ec-event-body')
+  if (eventBody) {
+    eventBody.style.backgroundColor = categoryColor
+    eventBody.style.color = '#FFFFFF'
+  }
+}
 
 const getEventDuration = (event) => {
   if (!event.start || !event.end) return 0
@@ -1029,12 +1054,24 @@ const applyResourceWidths = () => {
 
 const refreshResourceSizing = () => {
   if (!calenderRef.value) return
-  requestAnimationFrame(() => {
+
+  if (resourceSizingFrame) {
+    cancelAnimationFrame(resourceSizingFrame)
+  }
+
+  resourceSizingFrame = requestAnimationFrame(() => {
+    resourceSizingFrame = null
     applyResourceWidths()
     attachResizeHandlers()
     syncTopHorizontalScroll()
     updateTopScrollbarWidth()
   })
+}
+
+const handleBookingFormHide = () => {
+  setBooking({})
+  updateBodyClass('hide')
+  bookingType.value = ''
 }
 
 const attachResizeHandlers = () => {
@@ -1122,14 +1159,14 @@ onUnmounted(() => {
   }
   clearCalendarFetchTimeout()
   clearCalendarRetryTimeout()
+  if (resourceSizingFrame) {
+    cancelAnimationFrame(resourceSizingFrame)
+    resourceSizingFrame = null
+  }
   const elem = document.getElementById('booking-form')
   if(elem !== null) {
     updateBodyClass('hide')
-    elem.removeEventListener('hide.bs.offcanvas', function() {
-      setBooking({})
-      updateBodyClass('hide')
-      bookingType.value = ''
-    })
+    elem.removeEventListener('hide.bs.offcanvas', handleBookingFormHide)
   }
   if (detachResizeHandlers) {
     detachResizeHandlers()
@@ -1146,11 +1183,7 @@ onMounted(() => {
   window.addEventListener('booking:create', createBooking)
   const elem = document.getElementById('booking-form')
   if(elem !== null) {
-    elem.addEventListener('hide.bs.offcanvas', function() {
-      setBooking({})
-      updateBodyClass('hide')
-      bookingType.value = ''
-    })
+    elem.addEventListener('hide.bs.offcanvas', handleBookingFormHide)
     const bkid = new URL(location.href).searchParams.get('booking_id')
     if(bkid !== null && bkid !== undefined) {
       bookingType.value = 'CALENDER_BOOKING'
@@ -1187,6 +1220,13 @@ onMounted(() => {
               return {html: data.event.titleHTML + data.timeText}
             }
             return data.timeText
+          },
+          eventDidMount: function (info) {
+            if (info.event.display === 'background') {
+              return
+            }
+
+            applyEventCategoryColor(info.el, info.event)
           },
           slotLabelFormat: function (data) {
             // Convert the input string to a Date object
@@ -1280,14 +1320,6 @@ const onSubmitEvent = (booking = {}) => {
   resourceWidths.value = []
   calenderInit.value.setOption('date', selectedCalendarDate.value)
   calenderInit.value.refetchEvents()
-  window.setTimeout(() => {
-    calenderInit.value?.refetchEvents()
-    refreshResourceSizing()
-  }, 250)
-  window.setTimeout(() => {
-    calenderInit.value?.refetchEvents()
-    refreshResourceSizing()
-  }, 700)
   refreshResourceSizing()
 }
 
