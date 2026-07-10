@@ -422,7 +422,7 @@ class AuthController extends Controller
 
     private function usesEmployeeCustomOtp(?User $user): bool
     {
-        return $user?->hasRole('employee')
+        return $user?->hasAnyRole(['employee', 'admin'])
             && preg_match('/^\d{4}$/', (string) $user->employee_login_otp) === 1;
     }
 
