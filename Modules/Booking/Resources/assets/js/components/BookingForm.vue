@@ -333,7 +333,7 @@
                 <div class="d-flex flex-column gap-2">
                   <div class="d-flex align-items-center justify-content-between">
                     <h6>{{ packages.name }}</h6>
-                    <button type="button" v-if="!['check_in', 'checkout', 'confirmed'].includes(status) && !is_paid" @click="removePurchasePackage(packages.package_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                    <button type="button" v-if="canEditFullBooking" @click="removePurchasePackage(packages.package_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
                   </div>
                   <p>
                     <span class="text-primary">{{ formatCurrencyVue(packages.package_price) }}</span
@@ -720,11 +720,14 @@ const filterStatus = (value) => {
   return { is_disabled: false }
 }
 
+const BACKEND_EDIT_OVERRIDE_ROLES = ['admin', 'manager']
+const authUserRoles = ref(JSON.parse(document.querySelector('meta[name="auth_user_roles"]')?.getAttribute('content')) || [])
+const canOverrideConfirmedEditLock = computed(() => BACKEND_EDIT_OVERRIDE_ROLES.some((role) => authUserRoles.value.includes(role)))
 const isPaidBooking = computed(() => Number(is_paid.value) === 1)
 const scheduleLockedStatuses = ['check_in', 'checkout']
-const fullEditLockedStatuses = ['check_in', 'checkout', 'confirmed']
+const fullEditLockedStatuses = computed(() => (canOverrideConfirmedEditLock.value ? ['check_in', 'checkout'] : ['check_in', 'checkout', 'confirmed']))
 const canShowScheduleControls = computed(() => !scheduleLockedStatuses.includes(status.value))
-const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLockedStatuses.includes(status.value) && !filterStatus(status.value).is_disabled)
+const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLockedStatuses.value.includes(status.value) && !filterStatus(status.value).is_disabled)
 const isScheduleDisabled = computed(() => !isPaidBooking.value && filterStatus(status.value).is_disabled)
 const canSaveBooking = computed(() => status.value !== 'check_in' && (isPaidBooking.value || !filterStatus(status.value).is_disabled))
 const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('booking.status_paid') : t('booking.status_unpaid')))

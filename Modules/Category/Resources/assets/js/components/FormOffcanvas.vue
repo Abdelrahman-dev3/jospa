@@ -49,6 +49,14 @@
               :error-messages="errorMessages['name'] && errorMessages['name']['en']"
             />
 
+            <InputField
+              :label="'لون الكاتيجوري في الكالندر'"
+              type="color"
+              v-model="calendar_color"
+              :error-message="errors.calendar_color"
+              :error-messages="errorMessages['calendar_color']"
+            />
+
             <div v-for="field in customefield" :key="field.id">
               <FormElement v-model="custom_fields_data" :name="field.name" :label="field.label" :type="field.type" :required="field.required" :options="field.value"  :field_id="field.id"  ></FormElement>
             </div>
@@ -239,6 +247,7 @@ const defaultData = () => {
     status: true,
     is_gift_card: true,
     is_online: true,
+    calendar_color: '#BF9456',
     feature_image: null,
     custom_fields_data: {
     }
@@ -276,6 +285,7 @@ const setFormData = (data) => {
       status: data.status ? true : false,
       is_gift_card: data.is_gift_card !== 0 ? true : false,
       is_online: data.is_online !== 0 ? true : false,
+      calendar_color: data.calendar_color || '#BF9456',
       feature_image: data.feature_image,
       custom_fields_data: data.custom_field_data
     }
@@ -314,7 +324,11 @@ const validationSchema = yup.object({
         .test('is-valid-en', 'English name must not contain numbers or special characters', value =>
           value && !specialCharsRegex.test(value) && !numberRegex.test(value)
         )
-    })
+    }),
+  calendar_color: yup
+    .string()
+    .nullable()
+    .matches(/^#(?:[0-9a-fA-F]{3}){1,2}$/, 'Category color must be a valid hex color')
 })
 
 
@@ -327,6 +341,7 @@ const { value: parent_id } = useField('parent_id')
 const { value: status } = useField('status')
 const { value: is_gift_card } = useField('is_gift_card')
 const { value: is_online } = useField('is_online')
+const { value: calendar_color } = useField('calendar_color')
 const { value: is_visible } = useField('is_visible')
 const { value: feature_image } = useField('feature_image')
 const { value: custom_fields_data } = useField('custom_fields_data')

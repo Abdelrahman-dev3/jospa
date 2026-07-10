@@ -355,7 +355,26 @@ class EmployeesController extends Controller
     public function index_data(Datatables $datatable, Request $request)
     {
         $module_name = $this->module_name;
-        $query = User::select('users.*')->role(['employee', 'manager'])->branch()->with('media', 'mainBranch','mainShift');
+        $selectedSessionBranchId = request()->selected_session_branch_id;
+
+        $branchSortSubquery = BranchEmployee::query()
+            ->select('branch_employee.branch_id')
+            ->whereColumn('branch_employee.employee_id', 'users.id')
+            ->when($selectedSessionBranchId, function ($query) use ($selectedSessionBranchId) {
+                $query->orderByRaw('CASE WHEN branch_employee.branch_id = ? THEN 0 ELSE 1 END', [(int) $selectedSessionBranchId]);
+            })
+            ->orderByDesc('branch_employee.is_primary')
+            ->orderBy('branch_employee.branch_id')
+            ->limit(1);
+
+        $query = User::select('users.*')
+            ->selectSub($branchSortSubquery, 'employee_branch_sort_id')
+            ->role(['employee', 'manager'])
+            ->branch()
+            ->with('media', 'mainBranch', 'mainShift')
+            ->orderBy('employee_branch_sort_id')
+            ->orderBy('users.first_name')
+            ->orderBy('users.last_name');
 
         $filter = $request->filter;
 
@@ -424,6 +443,11 @@ class EmployeesController extends Controller
             })
             ->addColumn('branch_id', function ($data) {
                 return optional($data->mainBranch)->pluck('name')->toArray() ?? '-';
+            })
+            ->orderColumn('branch_id', function ($query, $order) {
+                $query->orderBy('employee_branch_sort_id', $order)
+                    ->orderBy('users.first_name', $order)
+                    ->orderBy('users.last_name', $order);
             })
             ->addColumn('shift_id', function ($data) {
                 return optional($data->mainShift)->pluck('name')->toArray() ?? '-';

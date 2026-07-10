@@ -136,7 +136,7 @@
                 data: 'branch_id',
                 name: 'branch_id',
                 title: "{{ __('branch.title') }}",
-                orderable: false,
+                orderable: true,
                 searchable: false
             },
             {
@@ -217,7 +217,8 @@
                 url: '{{ route("backend.$module_name.index_data") }}',
                 finalColumns,
                 orderColumn: [
-                    [7, "desc"]
+                    [3, "asc"],
+                    [1, "asc"]
                 ],
             })
         })

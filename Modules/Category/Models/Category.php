@@ -21,7 +21,7 @@ class Category extends BaseModel
 
     protected $table = 'categories';
 
-    protected $fillable = ['slug', 'is_visible', 'name', 'status', 'parent_id', 'is_gift_card', 'is_online'];
+    protected $fillable = ['slug', 'is_visible', 'name', 'status', 'parent_id', 'is_gift_card', 'is_online', 'calendar_color'];
 
     const CUSTOM_FIELD_MODEL = 'Modules\Category\Models\Category';
 
@@ -36,6 +36,7 @@ class Category extends BaseModel
         'desc2' => 'array',
         'is_gift_card' => 'integer',
         'is_online' => 'integer',
+        'calendar_color' => 'string',
     ];
 
     /**

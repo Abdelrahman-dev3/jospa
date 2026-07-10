@@ -42,7 +42,7 @@
                     <li @click="filterByEmployee(null)">
                       <a class="dropdown-item" href="#">All Employees</a>
                     </li>
-                    <li v-for="employee in EMPLOYEE_LIST" :key="employee.id" @click="filterByEmployee(employee)">
+                    <li v-for="employee in visibleCalendarEmployees" :key="employee.id" @click="filterByEmployee(employee)">
                       <a class="dropdown-item" href="#">{{ employee.title }}</a>
                     </li>
                   </ul>
@@ -130,7 +130,10 @@
           <i class="fa-solid fa-grip-vertical"></i>
         </span>
         <div class="staff-order-item__content">
-          <span class="staff-order-item__name">{{ employee.title }}</span>
+          <div>
+            <span class="staff-order-item__name">{{ employee.title }}</span>
+            <small v-if="employee.branch_name" class="staff-order-item__meta d-block">{{ employee.branch_name }}</small>
+          </div>
           <div class="staff-order-item__controls">
             <label class="staff-order-item__visibility form-check form-switch" :title="employee.is_visible ? 'إخفاء من التقويم' : 'إظهار في التقويم'">
               <input
@@ -557,6 +560,11 @@ const visibleCalendarEmployees = computed(() => {
     .filter((employee) => employee.is_visible !== false)
 })
 
+const findEmployeeById = (employeeId) => {
+  return EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+    || ORDER_EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+}
+
 const bookingListEvents = computed(() => {
   return calendarEventList.value
     .filter((event) => event.display !== 'background')
@@ -574,12 +582,12 @@ const getEventDuration = (event) => {
 }
 
 const getEventEmployeeName = (employeeId) => {
-  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+  const employee = findEmployeeById(employeeId)
   return employee?.title || ''
 }
 
 const openBookingListEvent = (event) => {
-  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(event.resourceId))
+  const employee = findEmployeeById(event.resourceId)
   const updatedInfo = {
     id: event.extendedProps?.booking_id || event.id,
     resource: {
@@ -702,7 +710,7 @@ const saveEmployeeOrder = async () => {
 
 const setBooking = (info) => {
   const employeeId = getInfoEmployeeId(info)
-  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+  const employee = findEmployeeById(employeeId)
   bookingData.id = info.id || 0
   bookingData.employee_id = employeeId
   bookingData.employee_name = employee?.title || info.employee_name || null
@@ -731,7 +739,7 @@ const resolveBranchId = (info) => {
   }
 
   const employeeId = getInfoEmployeeId(info)
-  const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+  const employee = findEmployeeById(employeeId)
   if (Number(employee?.branch_id) > 0) {
     return employee.branch_id
   }
@@ -1156,6 +1164,7 @@ onMounted(() => {
         plugins: [DayGrid, List, TimeGrid, ResourceTimeGrid, Interaction],
         options: {
           date: selectedCalendarDate.value,
+          locale: 'ar',
           slotEventOverlap: false,
           dragScroll: false,
           view: 'resourceTimeGridDay',
@@ -1201,7 +1210,15 @@ onMounted(() => {
             dayGridMonth: { pointer: true },
             timeGridWeek: { pointer: true },
             resourceTimeGridWeek: { pointer: true },
-            resourceTimeGridDay: { pointer: true }
+            resourceTimeGridDay: {
+              pointer: true,
+              titleFormat: {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }
+            }
           },
           eventSources: [
             {
@@ -1220,7 +1237,7 @@ onMounted(() => {
             }
 
             const resourceId = info.event.resourceIds?.[0] || info.event.extendedProps?.employee_id
-            const employee = EMPLOYEE_LIST.value.find((item) => String(item.id) === String(resourceId))
+            const employee = findEmployeeById(resourceId)
             const updatedInfo = {
               id: info.event.extendedProps?.booking_id || info.event.id,
               resource: {
@@ -1709,6 +1726,12 @@ body.ec-resizing {
   overflow-wrap: anywhere;
   white-space: normal;
   word-break: normal;
+}
+.staff-order-item__meta {
+  color: var(--bs-secondary-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 2px;
 }
 .staff-order-item__controls {
   align-items: center;

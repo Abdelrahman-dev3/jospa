@@ -20,6 +20,7 @@ class CategoryRequest extends FormRequest
                 return [
                     'slug' => 'string',
                     'name' => 'required|string',
+                    'calendar_color' => ['nullable', 'regex:/^#(?:[0-9a-fA-F]{3}){1,2}$/'],
                 ];
                 break;
             case 'put':
@@ -27,6 +28,7 @@ class CategoryRequest extends FormRequest
                 return [
                     'slug' => 'string',
                     'name' => 'required|string',
+                    'calendar_color' => ['nullable', 'regex:/^#(?:[0-9a-fA-F]{3}){1,2}$/'],
                 ];
                 break;
         }
