@@ -190,7 +190,8 @@ class FrontendController extends Controller
 
         // return 0;
         $category = Category::with(['services' => function($query) {
-                $query->where('status', 1);
+                $query->where('status', 1)
+                    ->where('show_in_online_booking', 1);
             }, 'services.category', 'services.sub_category', 'services.media', 'services.branches'])
             ->where('status', 1)
             ->findOrFail($id);
@@ -207,7 +208,8 @@ class FrontendController extends Controller
             ->where('is_online', 1)
             ->whereNull('parent_id')
             ->with(['services' => function($query) {
-                $query->where('status', 1);
+                $query->where('status', 1)
+                    ->where('show_in_online_booking', 1);
             }])
             ->get();
 
@@ -221,11 +223,13 @@ class FrontendController extends Controller
     {
         $service = Service::with(['category', 'sub_category', 'media', 'branches'])
             ->where('status', 1)
+            ->where('show_in_online_booking', 1)
             ->findOrFail($id);
 
         // Get related services from the same category
         $relatedServices = Service::with(['category', 'media'])
             ->where('status', 1)
+            ->where('show_in_online_booking', 1)
             ->where('id', '!=', $id)
             ->where('category_id', $service->category_id)
             ->take(4)

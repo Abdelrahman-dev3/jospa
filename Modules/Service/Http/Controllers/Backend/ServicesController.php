@@ -325,7 +325,13 @@ class ServicesController extends Controller
 
     private function updateBooleanField(Service $service, string $field, mixed $value)
     {
-        $service->update([$field => (int) ((bool) $value)]);
+        $normalizedValue = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        if ($normalizedValue === null) {
+            $normalizedValue = is_numeric($value) ? ((int) $value === 1) : false;
+        }
+
+        $service->update([$field => $normalizedValue ? 1 : 0]);
 
         return response()->json(['status' => true, 'message' => __('branch.status_update')]);
     }

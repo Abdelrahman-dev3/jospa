@@ -13,11 +13,12 @@ class HyperpayService
     private string $baseUrl;
     private ?string $entityId;
     private ?string $authorizationToken;
+    private ?string $fallbackAuthorizationToken;
 
     public function __construct()
     {
         $this->baseUrl = $this->resolveBaseUrl();
-        [$this->entityId, $this->authorizationToken] = $this->resolveCredentials();
+        [$this->entityId, $this->authorizationToken, $this->fallbackAuthorizationToken] = $this->resolveCredentials();
     }
 
     public function createCheckout(float $amount, string $merchantTransactionId, string $shopperResultUrl, array $customer = []): array
@@ -63,10 +64,16 @@ class HyperpayService
             // Exclude billing.country to avoid triggering strict billing address validation rules
         ], static fn ($value) => $value !== null && $value !== '');
 
-        $response = Http::asForm()
-            ->withToken($this->authorizationToken)
-            ->acceptJson()
-            ->post($this->baseUrl . '/v1/checkouts', $payload);
+        $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($payload) {
+            return Http::asForm()
+                ->withToken($authorizationToken)
+                ->acceptJson()
+                ->post($this->baseUrl . '/v1/checkouts', $payload);
+        });
+
+        $this->logGatewayResponse('create_checkout', $response, [
+            'merchant_transaction_id' => $merchantTransactionId,
+        ]);
 
         return $this->decodeResponse($response);
     }
@@ -79,11 +86,13 @@ class HyperpayService
             ? $resourcePath
             : $this->baseUrl . '/' . ltrim($resourcePath, '/');
 
-        $response = Http::withToken($this->authorizationToken)
-            ->acceptJson()
-            ->get($normalizedPath, [
-                'entityId' => $this->entityId,
-            ]);
+        $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($normalizedPath) {
+            return Http::withToken($authorizationToken)
+                ->acceptJson()
+                ->get($normalizedPath, [
+                    'entityId' => $this->entityId,
+                ]);
+        });
 
         $this->logGatewayResponse('fetch_payment_status', $response, [
             'resource_path' => $resourcePath,
@@ -118,6 +127,7 @@ class HyperpayService
         $token = $this->normalizeConfigValue(config('services.hyperpay.token'));
         $rawKey = $this->normalizeConfigValue(config('services.hyperpay.raw_key'));
         $authorizationToken = $token;
+        $fallbackAuthorizationToken = null;
 
         if (($entityId === '' || $authorizationToken === '') && $rawKey !== '') {
             $decoded = base64_decode($rawKey, true);
@@ -127,7 +137,13 @@ class HyperpayService
                 [$entityFromKey, $tokenFromKey] = array_pad(explode('|', $candidate, 2), 2, null);
 
                 $entityId = $entityId !== '' ? $entityId : trim((string) $entityFromKey);
-                $authorizationToken = $rawKey;
+                if ($authorizationToken === '') {
+                    $authorizationToken = trim((string) $tokenFromKey);
+                }
+
+                if ($authorizationToken !== $rawKey) {
+                    $fallbackAuthorizationToken = $rawKey;
+                }
             } elseif ($authorizationToken === '') {
                 $authorizationToken = $rawKey;
             }
@@ -136,6 +152,7 @@ class HyperpayService
         return [
             $entityId !== '' ? $entityId : null,
             $authorizationToken !== '' ? $authorizationToken : null,
+            $fallbackAuthorizationToken !== '' ? $fallbackAuthorizationToken : null,
         ];
     }
 
@@ -263,5 +280,38 @@ class HyperpayService
         }
 
         Log::warning('Hyperpay request failed', $logContext);
+    }
+
+    private function sendAuthorizedRequest(callable $requestFactory): Response
+    {
+        $response = $requestFactory($this->authorizationToken);
+
+        if (
+            $response->failed()
+            && $this->fallbackAuthorizationToken
+            && $this->fallbackAuthorizationToken !== $this->authorizationToken
+            && $this->shouldRetryWithFallbackToken($response)
+        ) {
+            Log::warning('Retrying Hyperpay request with fallback authorization token format', [
+                'base_url' => $this->baseUrl,
+                'entity_id_prefix' => $this->entityId ? substr($this->entityId, 0, 8) : null,
+            ]);
+
+            $response = $requestFactory($this->fallbackAuthorizationToken);
+        }
+
+        return $response;
+    }
+
+    private function shouldRetryWithFallbackToken(Response $response): bool
+    {
+        $data = $response->json();
+
+        if (! is_array($data)) {
+            return false;
+        }
+
+        return $this->isInvalidAuthenticationFailure($data)
+            || $this->isInvalidOrMissingParameterFailure($data);
     }
 }
