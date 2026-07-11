@@ -26,7 +26,6 @@ class PhoneAuthController extends Controller
     private const REGISTER_PHONE_SESSION_KEY = 'auth.register.mobile';
     private const REGISTER_USERNAME_SESSION_KEY = 'auth.register.username';
     private const LOGIN_PHONE_SESSION_KEY = 'auth.login.mobile';
-    private const LOGIN_USER_SESSION_KEY = 'auth.login.user_id';
 
     public function showSignupForm(): View|RedirectResponse
     {
@@ -150,20 +149,13 @@ class PhoneAuthController extends Controller
             return back()->withInput()->with('error', __('messagess.invalid_phone'));
         }
 
-        $user = User::findPreferredLoginUser($phone);
+        $user = User::whereMobileMatches($phone)->first();
 
         if (! $user) {
             return back()->withInput()->with('error', __('messages.invalid_credentials'));
         }
 
-        if ($user->is_banned == 1 || $user->status == 0) {
-            return back()->withInput()->with('error', __('messages.login_error'));
-        }
-
-        Session::put([
-            self::LOGIN_PHONE_SESSION_KEY => $phone,
-            self::LOGIN_USER_SESSION_KEY => $user->id,
-        ]);
+        Session::put(self::LOGIN_PHONE_SESSION_KEY, $phone);
 
         if (! $this->sendOtp($phone, $this->loginOtpKey($phone), $user)) {
             return back()->withInput()->with('error', __('messagess.error_sending_sms'));
@@ -184,7 +176,6 @@ class PhoneAuthController extends Controller
     public function verifyLoginOtp(Request $request): RedirectResponse
     {
         $otp = $this->validatedOtp($request);
-
         $phone = Session::get(self::LOGIN_PHONE_SESSION_KEY);
 
         if ($response = $this->ensureOtpSession($phone, 'signin')) {
@@ -195,16 +186,12 @@ class PhoneAuthController extends Controller
             return $response;
         }
 
-        $user = $this->resolveLoginUserFromSession($phone);
-
         $this->clearLoginState($phone);
+
+        $user = User::whereMobileMatches($phone)->first();
 
         if (! $user) {
             return redirect()->route('signin')->with('error', __('messages.invalid_credentials'));
-        }
-
-        if ($user->is_banned == 1 || $user->status == 0) {
-            return redirect()->route('signin')->with('error', __('messages.login_error'));
         }
 
         return $this->authenticateAndRedirect($request, $user, __('messages.login_successfully'));
@@ -288,10 +275,7 @@ class PhoneAuthController extends Controller
     private function clearLoginState(string $phone): void
     {
         Cache::forget($this->loginOtpKey($phone));
-        Session::forget([
-            self::LOGIN_PHONE_SESSION_KEY,
-            self::LOGIN_USER_SESSION_KEY,
-        ]);
+        Session::forget(self::LOGIN_PHONE_SESSION_KEY);
     }
 
     private function createOrUpdateUser(string $phone, string $username): User
@@ -518,23 +502,9 @@ class PhoneAuthController extends Controller
         return User::normalizeMobile($mobile);
     }
 
-    private function resolveLoginUserFromSession(string $phone): ?User
-    {
-        $userId = Session::get(self::LOGIN_USER_SESSION_KEY);
-
-        if ($userId) {
-            return User::query()
-                ->whereKey($userId)
-                ->whereMobileMatches($phone)
-                ->first();
-        }
-
-        return User::findPreferredLoginUser($phone);
-    }
-
     private function usesEmployeeCustomOtp(?User $user): bool
     {
-        return preg_match('/^\d{4}$/', (string) $user?->employee_login_otp) === 1;
+        return $user && preg_match('/^\d{4}$/', (string) $user->employee_login_otp) === 1;
     }
 
     private function resolveOtpForUser(?User $user): string
