@@ -218,7 +218,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                 }
 
                 $calculator = app(PaymentCalculatorService::class);
-                $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'tabby');
+                $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'tabby', $user->id);
                 if (isset($totalData['error'])) {
                     return $this->respondFailure($request, $totalData['error'], 422);
                 }

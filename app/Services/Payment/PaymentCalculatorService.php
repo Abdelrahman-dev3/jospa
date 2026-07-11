@@ -10,14 +10,20 @@ use Modules\Promotion\Models\Coupon;
 
 class PaymentCalculatorService
 {
-    public function calculateTotal(string $typePage, ?string $couponCode = null, ?string $paymentMethod = null): array
+    public function calculateTotal(string $typePage, ?string $couponCode = null, ?string $paymentMethod = null, ?int $userId = null): array
     {
         $total = 0;
         $productTotal = 0;
-        $userId = auth()->id();
+        $userId ??= auth()->id();
         $cartIds    = [];
         $giftIds    = [];
         $productIds = [];
+
+        if (! $userId) {
+            return [
+                'error' => __('messages.user_notfound'),
+            ];
+        }
         
         if ($typePage === 'payment') {
             $services = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service']);

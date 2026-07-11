@@ -180,7 +180,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'urpay');
+        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'urpay', $user->id);
         if (isset($totalData['error'])) {
             return $this->respondFailure($request, $totalData['error'], 422);
         }
