@@ -1135,15 +1135,11 @@ const loadAvailableEmployees = () => {
       per_page: 1000
     }
   }).then((res) => {
-    const availability = res.availability || {}
-    const availableEmployees = (res.employees || []).filter((item) => {
-      const ranges = availability[item.id] || availability[String(item.id)] || []
-      return ranges.length > 0
-    })
+   const allEmployees = res.employees || []
 
-    setEmployeeOptions(availableEmployees)
+    setEmployeeOptions(allEmployees)
 
-    if (employee_id.value && !availableEmployees.some((item) => String(item.id) === String(employee_id.value))) {
+    if (employee_id.value && !allEmployees.some((item) => String(item.id) === String(employee_id.value))) {
       employee_id.value = null
       service.value = { options: [], list: [] }
       slots.value = []

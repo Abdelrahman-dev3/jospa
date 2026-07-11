@@ -154,7 +154,7 @@ public function index_list(Request $request)
     // ----------------------------
     // Booking Services
     // ----------------------------
-    $data = BookingService::with('booking.user', 'booking.branch', 'employee', 'service.category')
+    $data = BookingService::with('booking.user', 'booking.branch', 'employee', 'service')
         ->whereHas('booking', function ($q) use ($dateStart, $dateEnd, $branchId) {
             if (!empty($dateStart)) {
                 $q->whereDate('start_date_time', '>=', $dateStart)
@@ -173,7 +173,7 @@ public function index_list(Request $request)
     // ----------------------------
     // Booking Packages
     // ----------------------------
-    $package = BookingPackages::with('booking.user', 'booking.branch', 'employee', 'services.services.category', 'package')
+    $package = BookingPackages::with('booking.user', 'booking.branch', 'employee', 'services', 'package')
         ->whereHas('booking', function ($q) use ($dateStart, $dateEnd, $branchId) {
             if (!empty($dateStart)) {
                 $q->whereDate('start_date_time', '>=', $dateStart)
@@ -204,8 +204,6 @@ public function index_list(Request $request)
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
-        $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
-        $categoryColor = $this->resolveCategoryCalendarColor(optional($value->service)->category?->calendar_color, $statusColor);
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $service_updated[$key] = [
@@ -216,15 +214,11 @@ public function index_list(Request $request)
             'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
-            'color' => $categoryColor,
-            'backgroundColor' => $categoryColor,
-            'borderColor' => $categoryColor,
-            'textColor' => '#FFFFFF',
+            'color' => $statusList[$value->booking->status]['color_hex'],
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
                 'employee_id' => $value->employee_id,
-                'category_color' => $categoryColor,
                 'branch_name' => $value->booking->branch->name ?? '',
                 'customer_name' => $customerName,
                 'employee_name' => $employeeName,
@@ -252,8 +246,6 @@ public function index_list(Request $request)
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
-        $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
-        $packageCategoryColor = $this->resolveBookingPackageCategoryColor($value, $statusColor);
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $package_updated[$key] = [
@@ -264,15 +256,11 @@ public function index_list(Request $request)
             'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
-            'color' => $packageCategoryColor,
-            'backgroundColor' => $packageCategoryColor,
-            'borderColor' => $packageCategoryColor,
-            'textColor' => '#FFFFFF',
+            'color' => $statusList[$value->booking->status]['color_hex'],
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
                 'employee_id' => $value->employee_id,
-                'category_color' => $packageCategoryColor,
                 'branch_name' => $value->booking->branch->name ?? '',
                 'customer_name' => $customerName,
                 'employee_name' => $employeeName,
@@ -292,7 +280,7 @@ public function index_list(Request $request)
     // Employees
     // ----------------------------
     $orderEmployeesQuery = User::select('users.*')
-        ->with('branches.getBranch', 'media')
+        ->with('branches', 'media')
         ->active()
         ->varified()
         ->employee()
@@ -306,44 +294,17 @@ public function index_list(Request $request)
     }
 
     $orderEmployees = $this->sortCalendarEmployees($orderEmployeesQuery->get(), $branchId);
-    $requestedStartDateTime = $request->get('start_date_time');
-    $requestedServiceDuration = max(0, (int) $request->get('service_duration', 0));
-    $employees = $orderEmployees->where('show_in_calender', 1)->values();
+    $employees = $orderEmployees->values();
 
     if (! empty($selectedEmployeeIds)) {
         $employees = $employees->whereIn('id', $selectedEmployeeIds)->values();
-    } elseif (! $requestedStartDateTime) {
-        $bookedEmployeeIds = collect($updated_data)
-            ->pluck('resourceId')
-            ->filter()
-            ->map(fn ($employeeId) => (int) $employeeId)
-            ->unique()
-            ->values()
-            ->all();
-
-        $employees = $employees->filter(function ($employee) use ($bookedEmployeeIds) {
-            return in_array((int) $employee->id, $bookedEmployeeIds, true);
-        })->values();
-    }
-
-    if ($requestedStartDateTime) {
-        $requestedStartDateTime = Carbon::parse($requestedStartDateTime)->format('Y-m-d H:i:s');
-        $employees = $employees->filter(function ($employee) use ($branchId, $date, $requestedStartDateTime, $requestedServiceDuration) {
-            $employeeBranchId = $this->effectiveEmployeeBranchId($employee, $branchId);
-            if ($employeeBranchId <= 0) {
-                return false;
-            }
-
-            return collect($this->buildBookingSlotsForEmployee($employee, $date, $employeeBranchId, $requestedServiceDuration))
-                ->contains(fn ($slot) => $slot['value'] === $requestedStartDateTime);
-        })->values();
     }
 
     $employeeIds = $employees->pluck('id')->all();
     $visibleBookingEvents = array_values(array_filter($updated_data, function ($event) use ($employeeIds) {
         return in_array((int) ($event['resourceId'] ?? 0), $employeeIds, true);
     }));
-    $employeeBranchIds = $employees->mapWithKeys(function ($employee) use ($branchId) {
+    $employeeBranchIds = $orderEmployees->mapWithKeys(function ($employee) use ($branchId) {
         return [$employee->id => $this->effectiveEmployeeBranchId($employee, $branchId)];
     });
     $branchIds = $employeeBranchIds->filter()->unique()->values()->all();
@@ -351,20 +312,14 @@ public function index_list(Request $request)
     for ($cursor = Carbon::parse($dateStart); $cursor->lte(Carbon::parse($dateEnd)); $cursor->addDay()) {
         $availabilityDates->push($cursor->toDateString());
     }
-    $availabilityContexts = [];
-    foreach ($availabilityDates as $availabilityDate) {
-        $availabilityContexts[$availabilityDate] = $this->availabilityContextForDate($availabilityDate, $branchIds, $employeeIds);
-    }
 
     $resource = [];
     $orderResource = [];
     foreach ($orderEmployees as $employee) {
-        $employeeBranchAssignment = $this->resolveCalendarBranchAssignment($employee, $branchId);
-        $employeeBranchId = (int) ($employeeBranchAssignment?->branch_id ?? 0);
+        $employeeBranchId = $this->effectiveEmployeeBranchId($employee, $branchId);
         $orderResource[] = [
             'id' => $employee->id,
             'branch_id' => $employeeBranchId,
-            'branch_name' => optional($employeeBranchAssignment?->getBranch)->name ?? '',
             'is_visible' => (bool) $employee->show_in_calender,
             'title' => $employee->full_name,
         ];
@@ -372,13 +327,11 @@ public function index_list(Request $request)
 
     $availabilityEvents = [];
     $availability = [];
-    foreach ($employees as $employee) {
-        $employeeBranchAssignment = $this->resolveCalendarBranchAssignment($employee, $branchId);
+    foreach ($orderEmployees as $employee) {
         $employeeBranchId = (int) $employeeBranchIds->get($employee->id);
         $resource[] = [
             'id' => $employee->id,
             'branch_id' => $employeeBranchId,
-            'branch_name' => optional($employeeBranchAssignment?->getBranch)->name ?? '',
             'extendedProps' => [
                 'branch_id' => $employeeBranchId,
             ],
@@ -391,7 +344,7 @@ public function index_list(Request $request)
 
         $availability[$employee->id] = [];
         foreach ($availabilityDates as $availabilityDate) {
-            $availabilityContext = $availabilityContexts[$availabilityDate] ?? [];
+            $availabilityContext = $this->availabilityContextForDate($availabilityDate, $branchIds, $employeeIds);
             $employeeAvailability = $this->buildEmployeeAvailability($employee, $availabilityDate, $employeeBranchId, $availabilityContext);
             $availability[$employee->id] = array_merge($availability[$employee->id], $employeeAvailability['ranges']);
             $availabilityEvents = array_merge($availabilityEvents, $employeeAvailability['events']);
@@ -475,65 +428,27 @@ public function index_list(Request $request)
     private function sortCalendarEmployees($employees, int $branchId)
     {
         return $employees->sort(function ($first, $second) use ($branchId) {
-            $firstBranch = $this->resolveCalendarBranchAssignment($first, $branchId);
-            $secondBranch = $this->resolveCalendarBranchAssignment($second, $branchId);
-
-            $firstBranchId = (int) ($firstBranch?->branch_id ?? PHP_INT_MAX);
-            $secondBranchId = (int) ($secondBranch?->branch_id ?? PHP_INT_MAX);
+            $firstBranch = $branchId > 0
+                ? $first->branches->firstWhere('branch_id', $branchId)
+                : $first->branches->first();
+            $secondBranch = $branchId > 0
+                ? $second->branches->firstWhere('branch_id', $branchId)
+                : $second->branches->first();
 
             $firstOrder = $firstBranch?->calendar_sort_order ?? PHP_INT_MAX;
             $secondOrder = $secondBranch?->calendar_sort_order ?? PHP_INT_MAX;
 
-            return ($firstBranchId <=> $secondBranchId)
-                ?: (($firstOrder <=> $secondOrder)
-                ?: (strnatcasecmp((string) $first->full_name, (string) $second->full_name)
-                ?: ((int) $first->id <=> (int) $second->id)));
+            return ($firstOrder <=> $secondOrder) ?: ((int) $first->id <=> (int) $second->id);
         })->values();
-    }
-
-    private function resolveCalendarBranchAssignment(User $employee, int $branchId)
-    {
-        if ($branchId > 0) {
-            return $employee->branches->firstWhere('branch_id', $branchId);
-        }
-
-        return $employee->branches
-            ->sort(function ($first, $second) {
-                $firstPrimary = (int) ($first->is_primary ?? 0);
-                $secondPrimary = (int) ($second->is_primary ?? 0);
-                $firstBranchId = (int) ($first->branch_id ?? PHP_INT_MAX);
-                $secondBranchId = (int) ($second->branch_id ?? PHP_INT_MAX);
-                $firstOrder = $first->calendar_sort_order ?? PHP_INT_MAX;
-                $secondOrder = $second->calendar_sort_order ?? PHP_INT_MAX;
-
-                return ($secondPrimary <=> $firstPrimary)
-                    ?: (($firstBranchId <=> $secondBranchId)
-                    ?: (($firstOrder <=> $secondOrder)
-                    ?: ((int) $first->id <=> (int) $second->id)));
-            })
-            ->first();
     }
 
     private function effectiveEmployeeBranchId(User $employee, int $branchId): int
     {
-        return (int) optional($this->resolveCalendarBranchAssignment($employee, $branchId))->branch_id;
-    }
-
-    private function resolveCategoryCalendarColor(?string $categoryColor, string $fallbackColor = '#BF9456'): string
-    {
-        if (is_string($categoryColor) && preg_match('/^#(?:[0-9a-fA-F]{3}){1,2}$/', $categoryColor) === 1) {
-            return strtoupper($categoryColor);
+        if ($branchId > 0) {
+            return $branchId;
         }
 
-        return $fallbackColor;
-    }
-
-    private function resolveBookingPackageCategoryColor(BookingPackages $bookingPackage, string $fallbackColor = '#BF9456'): string
-    {
-        $firstPackageService = $bookingPackage->services->first();
-        $categoryColor = $firstPackageService?->services?->category?->calendar_color;
-
-        return $this->resolveCategoryCalendarColor($categoryColor, $fallbackColor);
+        return (int) optional($employee->branches->first())->branch_id;
     }
 
     private function availabilityContextForDate(string $date, array $branchIds, array $employeeIds): array
@@ -1291,7 +1206,6 @@ public function index_list(Request $request)
             $employees = User::with('branches')
                 ->active()
                 ->varified()
-                ->calenderResource()
                 ->employee()
                 ->where('is_manager', 0)
                 ->whereHas('branches', function ($q) use ($branchId) {
@@ -1312,7 +1226,6 @@ public function index_list(Request $request)
         $employee = User::with('branches')
             ->active()
             ->varified()
-            ->calenderResource()
             ->employee()
             ->where('is_manager', 0)
             ->find($employeeId);
