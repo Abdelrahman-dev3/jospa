@@ -14,7 +14,10 @@ class VerifyCsrfToken extends Middleware
 protected $except = [
     'api/quick-booking/*',
     'login',
-        'register',
+    'register',
+    'urpay/success',
+    'urpay/failure',
+    'urpay/cancel',
 
 ];
 }
