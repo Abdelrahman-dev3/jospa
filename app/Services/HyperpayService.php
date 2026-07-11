@@ -8,10 +8,11 @@ use Illuminate\Support\Facades\Log;
 
 class HyperpayService
 {
-    private const DEFAULT_BASE_URL = 'https://eu-test.oppwa.com';
+    private const DEFAULT_BASE_URL = 'https://eu-prod.oppwa.com';
 
     private string $baseUrl;
     private ?string $entityId;
+    private ?string $entityIdMada;
     private ?string $authorizationToken;
     private ?string $fallbackAuthorizationToken;
 
@@ -19,23 +20,40 @@ class HyperpayService
     {
         $this->baseUrl = $this->resolveBaseUrl();
         [$this->entityId, $this->authorizationToken, $this->fallbackAuthorizationToken] = $this->resolveCredentials();
+        $this->entityIdMada = $this->normalizeConfigValue(config('services.hyperpay.entity_id_mada')) ?: null;
     }
 
-    public function createCheckout(float $amount, string $merchantTransactionId, string $shopperResultUrl, array $customer = []): array
+    public function createCheckout(float $amount, string $merchantTransactionId, string $shopperResultUrl, array $customer = [], string $brand = 'VISA'): array
     {
+        // DIAGNOSTIC — remove after fix confirmed
+        Log::error('Hyperpay createCheckout CALLED', [
+            'amount'   => $amount,
+            'brand'    => $brand,
+            'base_url' => $this->baseUrl,
+            'entity_id'=> $this->entityId,
+            'customer_keys' => array_keys($customer),
+        ]);
+
         $this->guardCredentials();
 
-        // Sanitize givenName and surname (must be valid strings, min 2 chars, fallback to 'Customer')
-        $givenName = preg_replace('/[^a-zA-Z\p{Arabic}\s]/u', '', (string) ($customer['given_name'] ?? ''));
-        $givenName = trim($givenName);
+        // Select entity ID: MADA uses its own entity ID if configured
+        $isMada = strtoupper($brand) === 'MADA';
+        $entityId = ($isMada && $this->entityIdMada) ? $this->entityIdMada : $this->entityId;
+
+        // Sanitize givenName — VISA-ACP processor requires Latin characters only.
+        // Arabic / non-Latin chars cause 200.300.404 "invalid or missing parameter".
+        $givenName = preg_replace('/[^a-zA-Z\s\'\-]/', '', (string) ($customer['given_name'] ?? ''));
+        $givenName = trim(preg_replace('/\s+/', ' ', $givenName));
         if (mb_strlen($givenName) < 2) {
             $givenName = 'Customer';
         }
 
-        $surname = preg_replace('/[^a-zA-Z\p{Arabic}\s]/u', '', (string) ($customer['surname'] ?? ''));
-        $surname = trim($surname);
+        // Sanitize surname — same Latin-only rule
+        $surname = preg_replace('/[^a-zA-Z\s\'\-]/', '', (string) ($customer['surname'] ?? ''));
+        $surname = trim(preg_replace('/\s+/', ' ', $surname));
         if (mb_strlen($surname) < 2) {
-            $surname = 'Customer';
+            // Fall back to givenName if surname is missing, not just 'Customer'
+            $surname = mb_strlen($givenName) >= 2 ? $givenName : 'Customer';
         }
 
         // Validate email format
@@ -50,91 +68,111 @@ class HyperpayService
             $mobile = null;
         }
 
+        // Mandatory billing fields — Hyperpay LIVE rejects without these
+        $billingStreet  = trim((string) ($customer['billing_street'] ?? $customer['address'] ?? 'Main Street 3252'));
+        $billingCity    = trim((string) ($customer['billing_city'] ?? $customer['city'] ?? 'Riyadh'));
+        $billingState   = trim((string) ($customer['billing_state'] ?? $customer['city'] ?? 'Riyadh'));
+        $billingCountry = strtoupper(trim((string) ($customer['billing_country'] ?? $customer['country'] ?? 'SA')));
+        $billingPostcode= trim((string) ($customer['billing_postcode'] ?? '25262'));
+
+        // Ensure country is 2-letter ISO alpha-2
+        if (strlen($billingCountry) !== 2) {
+            $billingCountry = 'SA';
+        }
+
         $payload = array_filter([
-            'entityId' => $this->entityId,
-            'amount' => number_format($amount, 2, '.', ''),
-            'currency' => 'SAR',
-            'paymentType' => 'DB',
-            'merchantTransactionId' => $merchantTransactionId,
-            'shopperResultUrl' => $shopperResultUrl,
-            'customer.givenName' => $givenName,
-            'customer.surname' => $surname,
-            'customer.mobile' => $mobile,
-            'customer.email' => $email,
-            // Exclude billing.country to avoid triggering strict billing address validation rules
+            'entityId'                => $entityId,
+            'amount'                  => number_format($amount, 2, '.', ''),
+            'currency'                => 'SAR',
+            'paymentType'             => 'DB',
+            'merchantTransactionId'   => $merchantTransactionId,
+            'customer.givenName'      => $givenName,
+            'customer.surname'        => $surname,
+            'customer.mobile'         => $mobile,
+            'customer.email'          => $email,
+            // Mandatory billing fields for LIVE
+            'billing.street1'         => $billingStreet ?: 'N/A',
+            'billing.city'            => $billingCity   ?: 'Riyadh',
+            'billing.state'           => $billingState  ?: 'Riyadh',
+            'billing.country'         => $billingCountry,
+            'billing.postcode'        => $billingPostcode ?: '00000',
+            // Ensure proper payment completion behavior
+            'createRegistration'      => false,
         ], static fn ($value) => $value !== null && $value !== '');
 
         $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($payload) {
+            // DIAGNOSTIC — logs payload sent to Hyperpay
+            Log::error('Hyperpay payload being sent', $payload);
+
             return Http::asForm()
                 ->withToken($authorizationToken)
                 ->acceptJson()
                 ->post($this->baseUrl . '/v1/checkouts', $payload);
         });
 
-        $this->logGatewayResponse('create_checkout', $response, [
-            'merchant_transaction_id' => $merchantTransactionId,
+        // DIAGNOSTIC — logs raw Hyperpay response always
+        Log::error('Hyperpay raw response', [
+            'status'       => $response->status(),
+            'body'         => $response->body(),
         ]);
 
-        return $this->decodeResponse($response);
+        $this->logGatewayResponse('create_checkout', $response, [
+            'merchant_transaction_id' => $merchantTransactionId,
+            'brand'                   => $brand,
+            'entity_id_used'          => $entityId,
+        ]);
+
+        $decoded = $this->decodeResponse($response);
+
+        // DIAGNOSTIC — check if response contains payment ID
+        Log::error('Hyperpay checkout response structure', [
+            'has_id' => isset($decoded['id']),
+            'id' => $decoded['id'] ?? null,
+            'has_payment_id' => isset($decoded['paymentId']),
+            'payment_id' => $decoded['paymentId'] ?? null,
+            'all_keys' => array_keys($decoded),
+        ]);
+
+        return $decoded;
     }
 
-    public function fetchPaymentStatus(string $resourcePath, ?string $checkoutId = null): array
+    public function fetchPaymentStatus(string $resourcePath, string $brand = 'VISA'): array
     {
         $this->guardCredentials();
 
-        $normalizedPath = str_starts_with($resourcePath, 'http')
+        // Use the correct entity ID for status fetch too
+        $isMada = strtoupper($brand) === 'MADA';
+        $entityId = ($isMada && $this->entityIdMada) ? $this->entityIdMada : $this->entityId;
+
+        // Build the URL using the resourcePath directly as provided by Hyperpay
+        $url = str_starts_with($resourcePath, 'http')
             ? $resourcePath
             : $this->baseUrl . '/' . ltrim($resourcePath, '/');
 
-        $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($normalizedPath) {
+        // Send only entityId as query parameter
+        $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($url, $entityId) {
             return Http::withToken($authorizationToken)
                 ->acceptJson()
-                ->get($normalizedPath, [
-                    'entityId' => $this->entityId,
+                ->get($url, [
+                    'entityId' => $entityId,
                 ]);
         });
 
-        $responseData = $response->json();
-        $resolvedCheckoutId = $checkoutId ?: $this->extractCheckoutIdFromResourcePath($resourcePath);
-
-        $canonicalPath = $resolvedCheckoutId
-            ? $this->baseUrl . '/v1/checkouts/' . rawurlencode($resolvedCheckoutId) . '/payment'
-            : null;
-
-        if (
-            is_array($responseData)
-            && $this->isInvalidOrMissingParameterFailure($responseData)
-            && $resolvedCheckoutId
-            && $canonicalPath
-            && $canonicalPath !== $normalizedPath
-        ) {
-            Log::warning('Retrying Hyperpay payment status with canonical checkout path', [
-                'resource_path' => $resourcePath,
-                'normalized_path' => $normalizedPath,
-                'canonical_path' => $canonicalPath,
-                'checkout_id' => $resolvedCheckoutId,
-                'entity_id_prefix' => $this->entityId ? substr($this->entityId, 0, 8) : null,
-            ]);
-
-            $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($canonicalPath) {
-                return Http::withToken($authorizationToken)
-                    ->acceptJson()
-                    ->get($canonicalPath, [
-                        'entityId' => $this->entityId,
-                    ]);
-            });
-        }
-
         $this->logGatewayResponse('fetch_payment_status', $response, [
             'resource_path' => $resourcePath,
-            'normalized_path' => $normalizedPath,
-            'checkout_id_hint' => $resolvedCheckoutId,
+            'url' => $url,
+        ]);
+
+        // DIAGNOSTIC — log full raw response to see actual structure
+        Log::error('Hyperpay fetchPaymentStatus raw response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
         ]);
 
         return $this->decodeResponse($response);
     }
 
-    public function widgetScriptUrl(string $checkoutId): string
+    public function widgetScriptUrl(string $checkoutId, string $brand = 'VISA'): string
     {
         return $this->baseUrl . '/v1/paymentWidgets.js?checkoutId=' . urlencode($checkoutId);
     }
@@ -295,23 +333,25 @@ class HyperpayService
     {
         $payload = $response->json();
         $logContext = array_merge($context, [
-            'operation' => $operation,
-            'base_url' => $this->baseUrl,
-            'entity_id_prefix' => $this->entityId ? substr($this->entityId, 0, 8) : null,
-            'status' => $response->status(),
-            'result_code' => is_array($payload) ? data_get($payload, 'result.code') : null,
+            'operation'          => $operation,
+            'base_url'           => $this->baseUrl,
+            'entity_id_prefix'   => $this->entityId ? substr($this->entityId, 0, 8) : null,
+            'status'             => $response->status(),
+            'result_code'        => is_array($payload) ? data_get($payload, 'result.code') : null,
             'result_description' => is_array($payload) ? data_get($payload, 'result.description') : null,
-            'checkout_id' => is_array($payload) ? data_get($payload, 'id') : null,
-            'ndc' => is_array($payload) ? data_get($payload, 'ndc') : null,
+            'checkout_id'        => is_array($payload) ? data_get($payload, 'id') : null,
+            'ndc'                => is_array($payload) ? data_get($payload, 'ndc') : null,
         ]);
 
         if ($response->successful()) {
             Log::info('Hyperpay request succeeded', $logContext);
-
             return;
         }
 
-        Log::warning('Hyperpay request failed', $logContext);
+        // Log full raw response body on failure to expose the exact offending parameter
+        Log::warning('Hyperpay request failed', array_merge($logContext, [
+            'raw_response' => $response->body(),
+        ]));
     }
 
     private function sendAuthorizedRequest(callable $requestFactory): Response
@@ -319,9 +359,10 @@ class HyperpayService
         $response = $requestFactory($this->authorizationToken);
 
         if (
-            ($response->failed() || $this->responseRequiresFallbackRetry($response))
+            $response->failed()
             && $this->fallbackAuthorizationToken
             && $this->fallbackAuthorizationToken !== $this->authorizationToken
+            && $this->shouldRetryWithFallbackToken($response)
         ) {
             Log::warning('Retrying Hyperpay request with fallback authorization token format', [
                 'base_url' => $this->baseUrl,
@@ -344,21 +385,5 @@ class HyperpayService
 
         return $this->isInvalidAuthenticationFailure($data)
             || $this->isInvalidOrMissingParameterFailure($data);
-    }
-
-    private function responseRequiresFallbackRetry(Response $response): bool
-    {
-        return $this->shouldRetryWithFallbackToken($response);
-    }
-
-    private function extractCheckoutIdFromResourcePath(string $resourcePath): ?string
-    {
-        $path = parse_url($resourcePath, PHP_URL_PATH) ?: $resourcePath;
-
-        if (preg_match('#/v1/checkouts/([^/]+)/payment#', $path, $matches) === 1) {
-            return urldecode((string) $matches[1]);
-        }
-
-        return null;
     }
 }

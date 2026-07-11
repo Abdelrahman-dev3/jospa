@@ -37,12 +37,16 @@ class CardPaymentStrategy extends BasePaymentStrategy
         try {
             $hyperpay = app(HyperpayService::class);
             $merchantTransactionId = $this->generateMerchantTransactionId($data['user_id']);
-            $callbackUrl = $this->buildShopperResultUrl($request, $data, $merchantTransactionId);
+            $shopperResultUrl = $this->buildShopperResultUrl($request, $data, $merchantTransactionId);
+            $signedCallbackUrl = $this->buildSignedCallbackUrl($request, $data, $merchantTransactionId);
+            // Detect selected brand from request to route to correct entity ID
+            $brand = strtoupper((string) $request->get('brand', 'VISA'));
             $checkout = $hyperpay->createCheckout(
                 $remainingAmount,
                 $merchantTransactionId,
-                $callbackUrl,
-                $this->buildCustomerData()
+                $shopperResultUrl,
+                $this->buildCustomerData(),
+                $brand
             );
 
             $checkoutId = (string) ($checkout['id'] ?? '');
@@ -57,11 +61,12 @@ class CardPaymentStrategy extends BasePaymentStrategy
             Cache::put(
                 $this->paymentCacheKey($merchantTransactionId),
                 array_merge($data, [
-                    'amount' => $remainingAmount,
-                    'subResult' => $subResult,
-                    'checkout_id' => $checkoutId,
+                    'amount'                  => $remainingAmount,
+                    'subResult'               => $subResult,
+                    'checkout_id'             => $checkoutId,
                     'merchant_transaction_id' => $merchantTransactionId,
-                    'callback_url' => $callbackUrl,
+                    'callback_url'            => $signedCallbackUrl,
+                    'hyperpay_brand'          => $brand, // stored so callback uses the correct entity ID
                 ]),
                 now()->addMinutes(self::CACHE_TTL_MINUTES)
             );
@@ -111,12 +116,48 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
         $hyperpay = app(HyperpayService::class);
 
+        // Show only brands compatible with the entity ID used to create this checkout.
+        // VISA/MASTER share one entity; MADA has its own. Mixing them causes 200.300.404 on status fetch.
+        $brand = strtoupper((string) ($data['hyperpay_brand'] ?? 'VISA'));
+        $isMada = $brand === 'MADA';
+        $widgetBrands  = $isMada ? 'MADA' : 'VISA MASTER';
+        $widgetLabels  = $isMada ? ['Mada'] : ['Visa', 'Mastercard'];
+
         return view('frontend.payment-status.hyperpay', [
-            'widgetScriptUrl' => $hyperpay->widgetScriptUrl($checkoutId),
-            'brands' => implode(' ', $hyperpay->brands()),
-            'brandLabels' => ['Visa', 'Mastercard', 'Mada'],
-            'resultUrl' => $data['callback_url'],
+            'widgetScriptUrl' => $hyperpay->widgetScriptUrl($checkoutId, $brand),
+            'brands'          => $widgetBrands,
+            'brandLabels'     => $widgetLabels,
+            // Must match the shopperResultUrl sent to Hyperpay at checkout creation (plain URL).
+            // The signed callback URL is stored in cache and used server-side after Hyperpay redirects.
+            'resultUrl'       => route('hyperpay.callback.plain', ['mtid' => $merchantTransactionId]),
         ]);
+    }
+
+    /**
+     * Plain (unsigned) entry point that Hyperpay redirects to via shopperResultUrl.
+     * Hyperpay appends ?resourcePath=...&id=... to this URL.
+     * We look up the cached signed callback URL and process payment directly.
+     */
+    public function callbackPlain(Request $request)
+    {
+        // DIAGNOSTIC — log all callback parameters
+        \Log::error('Hyperpay callbackPlain parameters', $request->all());
+
+        $resourcePath = (string) $request->get('resourcePath', '');
+        $merchantTransactionId = (string) $request->get('mtid', '');
+
+        if ($resourcePath === '' || $merchantTransactionId === '') {
+            return $this->respondFailure(
+                $request,
+                app()->getLocale() === 'ar'
+                    ? 'تعذر التحقق من عملية الدفع.'
+                    : 'Unable to verify payment.',
+                400
+            );
+        }
+
+        // Delegate to the core callback logic using the same mtid + resourcePath
+        return $this->processPaymentVerification($request, $resourcePath, $merchantTransactionId);
     }
 
     public function callback(Request $request)
@@ -138,14 +179,37 @@ class CardPaymentStrategy extends BasePaymentStrategy
             );
         }
 
+        return $this->processPaymentVerification($request, $resourcePath, $merchantTransactionId);
+    }
+
+    private function processPaymentVerification(Request $request, string $resourcePath, string $merchantTransactionId): mixed
+    {
         try {
             $hyperpay = app(HyperpayService::class);
-            $payment = $hyperpay->fetchPaymentStatus($resourcePath);
-            $resultCode = (string) data_get($payment, 'result.code', '');
-            $merchantTransactionId = (string) (data_get($payment, 'merchantTransactionId') ?: $merchantTransactionId);
+
+            // Load cache first so we know which brand/entity was used at checkout creation
             $cacheKey = $this->paymentCacheKey($merchantTransactionId);
             $data = Cache::get($cacheKey);
+            $brand = strtoupper((string) ($data['hyperpay_brand'] ?? 'VISA'));
 
+            // Try to get payment result from callback parameters first
+            // Hyperpay sends result directly in the callback for synchronous payments
+            $payment = $this->extractPaymentFromCallback($request);
+
+            // If no payment data in callback, fall back to API call
+            if (! $payment) {
+                $payment = $hyperpay->fetchPaymentStatus($resourcePath, $brand);
+            }
+
+            $resultCode = (string) data_get($payment, 'result.code', '');
+
+            // Hyperpay may return the merchantTransactionId in the payment response
+            $resolvedMtid = (string) (data_get($payment, 'merchantTransactionId') ?: $merchantTransactionId);
+            if ($resolvedMtid !== $merchantTransactionId) {
+                $cacheKey = $this->paymentCacheKey($resolvedMtid);
+                $data = Cache::get($cacheKey) ?? $data;
+                $merchantTransactionId = $resolvedMtid;
+            }
             if (! $data) {
                 return $this->respondFailure(
                     $request,
@@ -232,6 +296,23 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
     private function buildShopperResultUrl(Request $request, array $paymentData, string $merchantTransactionId): string
     {
+        // NOTE: Hyperpay's shopperResultUrl must be a plain HTTPS URL.
+        // Signed routes with many params are rejected as "invalid parameter".
+        // We append only the mtid so we can look up cached data on return.
+        // The full signed callback URL is stored in cache and used server-side.
+        $configured = rtrim((string) config('services.hyperpay.shopper_result_url', ''), '/');
+
+        if ($configured !== '') {
+            // Use the configured base URL with mtid appended as a query param
+            return $configured . '?mtid=' . urlencode($merchantTransactionId);
+        }
+
+        // Fallback: auto-generate from the registered route
+        return route('hyperpay.callback.plain', ['mtid' => $merchantTransactionId]);
+    }
+
+    private function buildSignedCallbackUrl(Request $request, array $paymentData, string $merchantTransactionId): string
+    {
         $params = array_filter([
             'user_id' => $paymentData['user_id'] ?? null,
             'coupon_code' => $paymentData['couponCode'] ?? null,
@@ -253,24 +334,61 @@ class CardPaymentStrategy extends BasePaymentStrategy
         );
     }
 
+    private function extractPaymentFromCallback(Request $request): ?array
+    {
+        // Hyperpay sends payment result directly in callback for synchronous payments
+        // Check if we have the necessary payment result parameters
+        $resultCode = $request->get('result_code');
+        $resultDescription = $request->get('result_description');
+        $amount = $request->get('amount');
+        $id = $request->get('id');
+
+        if (! $resultCode || ! $resultDescription) {
+            return null;
+        }
+
+        return [
+            'result' => [
+                'code' => $resultCode,
+                'description' => $resultDescription,
+            ],
+            'amount' => $amount,
+            'id' => $id,
+            'merchantTransactionId' => $request->get('merchantTransactionId'),
+        ];
+    }
+
     private function buildCustomerData(): array
     {
         $user = auth()->user();
         $givenName = trim((string) ($user->first_name ?? ''));
         $surname = trim((string) ($user->last_name ?? ''));
 
+        // Billing address — pulled from user profile
+        // Defaults ensure Hyperpay's mandatory billing fields are never empty
+        $address = trim((string) ($user->address ?? ''));
+        $city    = trim((string) ($user->city    ?? ''));
+        $country = strtoupper(trim((string) ($user->country ?? 'SA')));
+        if (strlen($country) !== 2) {
+            $country = 'SA';
+        }
+
         return [
-            'given_name' => $givenName !== '' ? $givenName : 'Customer',
-            'surname' => $surname !== '' ? $surname : ($givenName !== '' ? $givenName : 'Customer'),
-            'mobile' => trim((string) ($user->mobile ?? '')),
-            'email' => trim((string) ($user->email ?? '')),
-            'country' => 'SA',
+            'given_name'      => $givenName !== '' ? $givenName : 'Customer',
+            'surname'         => $surname   !== '' ? $surname   : ($givenName !== '' ? $givenName : 'Customer'),
+            'mobile'          => trim((string) ($user->mobile ?? '')),
+            'email'           => trim((string) ($user->email  ?? '')),
+            // Billing fields (mandatory for Hyperpay LIVE)
+            'address'         => $address !== '' ? $address : 'N/A',
+            'city'            => $city    !== '' ? $city    : 'Riyadh',
+            'country'         => $country,
         ];
     }
 
     private function generateMerchantTransactionId(int $userId): string
     {
-        return 'JOSPA-' . $userId . '-' . Str::upper(Str::random(16));
+        // Hyperpay enforces a 16-character maximum for merchantTransactionId.
+        return Str::upper(Str::random(16));
     }
 
     private function paymentCacheKey(string $merchantTransactionId): string

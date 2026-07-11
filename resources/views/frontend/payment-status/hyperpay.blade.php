@@ -50,13 +50,6 @@
             color: #555;
         }
     </style>
-    <script>
-        var wpwlOptions = {
-            locale: "{{ app()->getLocale() === 'ar' ? 'ar' : 'en' }}",
-            paymentTarget: "_top"
-        };
-    </script>
-    <script src="{{ $widgetScriptUrl }}"></script>
 </head>
 <body>
     <div class="payment-card">
@@ -69,5 +62,32 @@
         </div>
         <form action="{{ $resultUrl }}" class="paymentWidgets" data-brands="{{ $brands }}"></form>
     </div>
+
+    {{-- wpwlOptions MUST be declared before the widget script --}}
+    <script>
+        var wpwlOptions = {
+            locale: "{{ app()->getLocale() === 'ar' ? 'ar' : 'en' }}",
+            paymentTarget: "_top",
+            onReady: function() {
+                console.log('Hyperpay widget ready');
+            },
+            onError: function(error) {
+                console.error('Hyperpay widget error:', error);
+                alert('Payment error: ' + (error.message || 'Unknown error'));
+            },
+            beforeSubmit: function() {
+                console.log('Payment before submit');
+                return true;
+            },
+            afterSubmit: function() {
+                console.log('Payment after submit');
+            },
+            onPaymentBrandChanged: function(brand) {
+                console.log('Payment brand changed:', brand);
+            }
+        };
+    </script>
+    {{-- Widget script MUST load AFTER the .paymentWidgets form is in the DOM --}}
+    <script src="{{ $widgetScriptUrl }}"></script>
 </body>
 </html>

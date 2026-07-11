@@ -22,10 +22,12 @@ return [
         'scheme' => 'https',
     ],
     'hyperpay' => [
-        'raw_key'   => env('HYPERPAY_KEY'),
-        'entity_id' => env('HYPERPAY_ENTITY_ID'),
-        'token'     => env('HYPERPAY_TOKEN'),
-        'base_url'  => env('HYPERPAY_BASE_URL', 'https://eu-test.oppwa.com'),
+        'raw_key'            => env('HYPERPAY_KEY'),
+        'entity_id'          => env('HYPERPAY_ENTITY_ID'),
+        'entity_id_mada'     => env('HYPERPAY_ENTITY_ID_MADA'),
+        'token'              => env('HYPERPAY_TOKEN'),
+        'base_url'           => env('HYPERPAY_BASE_URL', 'https://eu-prod.oppwa.com'),
+        'shopper_result_url' => env('HYPERPAY_SHOPPER_RESULT_URL'),
     ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
