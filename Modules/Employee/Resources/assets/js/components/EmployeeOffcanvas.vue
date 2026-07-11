@@ -87,98 +87,100 @@
               <p class="mb-0 text-danger">{{ errors.gender }}</p>
             </div>
 
-            <div class="form-group m-0 col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" :true-value="1" :false-value="0"
-                  v-model="show_in_calender" id="show-in-calender" :checked="show_in_calender">
-                <label class="form-check-label" for="show-in-calender">
-                  {{ $t('employee.lbl_show_in_calender') }}
-                </label>
+            <template v-if="isEmployeeScoped">
+              <div class="form-group m-0 col-md-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" :true-value="1" :false-value="0"
+                    v-model="show_in_calender" id="show-in-calender" :checked="show_in_calender">
+                  <label class="form-check-label" for="show-in-calender">
+                    {{ $t('employee.lbl_show_in_calender') }}
+                  </label>
+                </div>
               </div>
-            </div>
 
-            <div class="form-group m-0 col-md-4">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" :true-value="1" :false-value="0" v-model="is_manager"
-                  id="is-manager" :checked="is_manager">
-                <label class="form-check-label" for="is-manager">
-                  {{ $t('employee.lbl_is_manager') }}
-                </label>
+              <div class="form-group m-0 col-md-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" :true-value="1" :false-value="0" v-model="is_manager"
+                    id="is-manager" :checked="is_manager">
+                  <label class="form-check-label" for="is-manager">
+                    {{ $t('employee.lbl_is_manager') }}
+                  </label>
+                </div>
               </div>
-            </div>
-            <div class="form-group col-md-12" v-if="branch.options.length > 1">
-              <label class="form-label" for="branch">{{ $t('employee.lbl_select_branch') }}</label><span class="text-danger">*</span>
-              <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch"
-                v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group">
-              </Multiselect>
-              <span v-if="errorMessages['branch_id']">
-                <ul class="text-danger">
-                  <li v-for="err in errorMessages['branch_id']" :key="err">{{ err }}</li>
-                </ul>
-              </span>
-              <span class="text-danger">{{ errors.branch_id }}</span>
-            </div>
+              <div class="form-group col-md-12" v-if="branch.options.length > 1">
+                <label class="form-label" for="branch">{{ $t('employee.lbl_select_branch') }}</label><span class="text-danger">*</span>
+                <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch"
+                  v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group">
+                </Multiselect>
+                <span v-if="errorMessages['branch_id']">
+                  <ul class="text-danger">
+                    <li v-for="err in errorMessages['branch_id']" :key="err">{{ err }}</li>
+                  </ul>
+                </span>
+                <span class="text-danger">{{ errors.branch_id }}</span>
+              </div>
 
-            <div class="form-group col-md-12" >
-              <label class="form-label" for="shift">{{ $t('employee.lbl_select_shift') }}</label><span class="text-danger">*</span>
-              <Multiselect id="shift_id" v-model="shift_id" :value="shift_id" placeholder="Select shift"
-                v-bind="singleSelectOption" :options="shift.options" @select="shiftSelect" class="form-group">
-              </Multiselect>
-              <span v-if="errorMessages['shift_id']">
-                <ul class="text-danger">
-                  <li v-for="err in errorMessages['shift_id']" :key="err">{{ err }}</li>
-                </ul>
-              </span>
-              <span class="text-danger">{{ errors.shift_id }}</span>
-            </div>
-            <div class="form-group col-md-12">
-              <label class="form-label" for="category_id">Select Category</label>
-              <Multiselect
-                id="category_id"
-                v-model="category_id"
-                :value="category_id"
-                placeholder="Select Category"
-                v-bind="categorySelectOption"
-                :options="categories.options"
-                @select="handleCategorySelect"
-                @deselect="handleCategoryDeselect"
-                @clear="handleCategoryClear"
-                class="form-group"
-              >
-              </Multiselect>
-              <span v-if="errorMessages['category_id']">
-                <ul class="text-danger">
-                  <li v-for="err in errorMessages['category_id']" :key="err">{{ err }}</li>
-                </ul>
-              </span>
-              <span class="text-danger">{{ errors.category_id }}</span>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="service">{{ $t('employee.lbl_select_service') }}</label>
-              <Multiselect id="service_id" v-model="service_id" :multiple="true" :value="service_id"
-                placeholder="Select Service" v-bind="multiSelectOption" :options="services.options" class="form-group"
-                @change="markServicesEdited" @select="markServicesEdited" @deselect="markServicesEdited" @clear="markServicesEdited">
-              </Multiselect>
-              <span v-if="errorMessages['service_id']">
-                <ul class="text-danger">
-                  <li v-for="err in errorMessages['service_id']" :key="err">{{ err }}</li>
-                </ul>
-              </span>
-              <span class="text-danger">{{ errors.service_id }}</span>
-            </div>
+              <div class="form-group col-md-12" >
+                <label class="form-label" for="shift">{{ $t('employee.lbl_select_shift') }}</label><span class="text-danger">*</span>
+                <Multiselect id="shift_id" v-model="shift_id" :value="shift_id" placeholder="Select shift"
+                  v-bind="singleSelectOption" :options="shift.options" @select="shiftSelect" class="form-group">
+                </Multiselect>
+                <span v-if="errorMessages['shift_id']">
+                  <ul class="text-danger">
+                    <li v-for="err in errorMessages['shift_id']" :key="err">{{ err }}</li>
+                  </ul>
+                </span>
+                <span class="text-danger">{{ errors.shift_id }}</span>
+              </div>
+              <div class="form-group col-md-12">
+                <label class="form-label" for="category_id">Select Category</label>
+                <Multiselect
+                  id="category_id"
+                  v-model="category_id"
+                  :value="category_id"
+                  placeholder="Select Category"
+                  v-bind="categorySelectOption"
+                  :options="categories.options"
+                  @select="handleCategorySelect"
+                  @deselect="handleCategoryDeselect"
+                  @clear="handleCategoryClear"
+                  class="form-group"
+                >
+                </Multiselect>
+                <span v-if="errorMessages['category_id']">
+                  <ul class="text-danger">
+                    <li v-for="err in errorMessages['category_id']" :key="err">{{ err }}</li>
+                  </ul>
+                </span>
+                <span class="text-danger">{{ errors.category_id }}</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="service">{{ $t('employee.lbl_select_service') }}</label>
+                <Multiselect id="service_id" v-model="service_id" :multiple="true" :value="service_id"
+                  placeholder="Select Service" v-bind="multiSelectOption" :options="services.options" class="form-group"
+                  @change="markServicesEdited" @select="markServicesEdited" @deselect="markServicesEdited" @clear="markServicesEdited">
+                </Multiselect>
+                <span v-if="errorMessages['service_id']">
+                  <ul class="text-danger">
+                    <li v-for="err in errorMessages['service_id']" :key="err">{{ err }}</li>
+                  </ul>
+                </span>
+                <span class="text-danger">{{ errors.service_id }}</span>
+              </div>
 
-            <div class="form-group col-md-12">
-              <label class="form-label" for="commission_id"> {{ $t('employee.lbl_select_commission') }} <span class="text-danger">*</span> </label>
-              <Multiselect id="commission_id" v-model="commission_id" :value="commission_id"
-                placeholder="Select Commission" v-bind="singleSelectOption" :options="commissions.options"
-                class="form-group"></Multiselect>
-              <span v-if="errorMessages['commission_id']">
-                <ul class="text-danger">
-                  <li v-for="err in errorMessages['commission_id']" :key="err">{{ err }}</li>
-                </ul>
-              </span>
-              <span class="text-danger">{{ errors.commission_id }}</span>
-            </div>
+              <div class="form-group col-md-12">
+                <label class="form-label" for="commission_id"> {{ $t('employee.lbl_select_commission') }} <span class="text-danger">*</span> </label>
+                <Multiselect id="commission_id" v-model="commission_id" :value="commission_id"
+                  placeholder="Select Commission" v-bind="singleSelectOption" :options="commissions.options"
+                  class="form-group"></Multiselect>
+                <span v-if="errorMessages['commission_id']">
+                  <ul class="text-danger">
+                    <li v-for="err in errorMessages['commission_id']" :key="err">{{ err }}</li>
+                  </ul>
+                </span>
+                <span class="text-danger">{{ errors.commission_id }}</span>
+              </div>
+            </template>
 
             <div v-for="field in customefield" :key="field.id">
 
@@ -203,7 +205,7 @@
               :error-message="errors['dribbble_link']" :error-messages="errorMessages['dribbble_link']"></InputField>
               
 
-            <div class="form-group">
+            <div class="form-group" v-if="isEmployeeScoped">
                 <div class="d-flex justify-content-between align-items-center">
                     <label class="form-label" for="show_in_home_booking">{{ $t('employee.show_in_home_booking') }}</label>
                     <div class="form-check form-switch">
@@ -232,7 +234,7 @@
 
       <FormFooter :IS_SUBMITED="IS_SUBMITED || isFormLoading"></FormFooter>
       
-<a :href="`/app/staff-working-hours/${currentId}`"   v-if="currentId && !isFormLoading" class="btn btn-primary" style="width: 31%;right: 20px;">
+<a :href="`/app/staff-working-hours/${currentId}`"   v-if="currentId && !isFormLoading && isEmployeeScoped" class="btn btn-primary" style="width: 31%;right: 20px;">
     {{ $t('employee.btn_edit_working_hours') }}
 </a>
 
@@ -288,6 +290,7 @@ const categorySelectOption = ref({
 const { getRequest, storeRequest, updateRequest } = useRequest()
 const isFormLoading = ref(false)
 const isHydratingForm = ref(false)
+const isEmployeeScoped = ref(true)
 const servicesEdited = ref(false)
 const formRenderKey = ref(0)
 let activePrepareToken = 0
@@ -426,6 +429,11 @@ const removeServicesForCategories = (removedCategoryIds = []) => {
 }
 
 const loadServicesForCurrentFilters = async ({ resetSelected = false, prepareToken = activePrepareToken } = {}) => {
+  if (!isEmployeeScoped.value) {
+    services.value = { options: [], list: [] }
+    return
+  }
+
   if (resetSelected) {
     service_id.value = []
   }
@@ -537,6 +545,7 @@ const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile:
 const defaultData = () => {
   errorMessages.value = {}
   serviceCategoryMap.value = {}
+  isEmployeeScoped.value = true
   return {
     id: '',
     first_name: '',
@@ -564,7 +573,8 @@ const defaultData = () => {
     twitter_link: '',
     dribbble_link: '',
     custom_fields_data: {
-    }
+    },
+    is_employee_role: 1,
   }
 }
 
@@ -594,6 +604,7 @@ const normalizeCategoryIds = (value) => {
 const setFormData = (data) => {
   isHydratingForm.value = true
   serviceCategoryMap.value = {}
+  isEmployeeScoped.value = data?.is_employee_role === undefined ? true : Boolean(Number(data.is_employee_role))
   ImageViewer.value = data.profile_image || null
   resetForm({
     values: {
@@ -647,6 +658,7 @@ const reset_datatable_close_offcanvas = (res) => {
 }
 const numberRegex = /^\d+$/;
 const EMAIL_REGX = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+const isFilled = (value) => value !== null && value !== undefined && value !== '' && value !== 0
 // Validations
 
 const validationSchema = yup.object({
@@ -705,12 +717,18 @@ const validationSchema = yup.object({
       return true
     }
     ).oneOf([yup.ref('password')], 'Passwords must match'),
-    commission_id: yup.string()
-      .required('Select commission is a required field'),
-      branch_id: yup.string()
-      .required('Select Branch is a required field'),
-      shift_id: yup.string()
-     .required('Select Shift is a required field'),
+    commission_id: yup.mixed()
+      .test('commission-required-when-employee', 'Select commission is a required field', () => {
+        return !isEmployeeScoped.value || isFilled(commission_id.value)
+      }),
+      branch_id: yup.mixed()
+      .test('branch-required-when-employee', 'Select Branch is a required field', () => {
+        return !isEmployeeScoped.value || isFilled(branch_id.value)
+      }),
+      shift_id: yup.mixed()
+     .test('shift-required-when-employee', 'Select Shift is a required field', () => {
+        return !isEmployeeScoped.value || isFilled(shift_id.value)
+      }),
 });
 
 
@@ -761,8 +779,17 @@ const IS_SUBMITED = ref(false)
 const formSubmit = handleSubmit((values) => {
   if(IS_SUBMITED.value) return false
   IS_SUBMITED.value = true;
-  values.show_in_home_booking = show_in_home_booking.value ? 1 : 0;
-  values.services_edited = servicesEdited.value ? 1 : 0;
+  values.show_in_home_booking = isEmployeeScoped.value && show_in_home_booking.value ? 1 : 0;
+  values.services_edited = isEmployeeScoped.value && servicesEdited.value ? 1 : 0;
+  if (!isEmployeeScoped.value) {
+    values.branch_id = ''
+    values.shift_id = ''
+    values.category_id = []
+    values.service_id = []
+    values.commission_id = ''
+    values.show_in_calender = 0
+    values.is_manager = 0
+  }
   values.employee_login_otp = values.employee_login_otp ? values.employee_login_otp.replace(/\D/g, '').slice(0, 4) : ''
   values.custom_fields_data = JSON.stringify(values.custom_fields_data)
   console.log("submit",values);

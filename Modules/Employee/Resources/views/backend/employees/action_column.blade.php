@@ -1,7 +1,4 @@
 <div class="d-flex gap-2 align-items-center">
-    @if (! $data->hasRole('employee'))
-        <span class="badge bg-soft-secondary text-dark">{{ __('employee.lbl_view_only') }}</span>
-    @else
     {{-- @hasPermission('staff_password')
         <button type='button' data-assign-module="{{ $data->id }}" data-assign-target='#Employee_change_password'
             data-assign-event='employee_assign' class='btn btn-soft-info btn-sm rounded text-nowrap' data-bs-toggle="tooltip"
@@ -19,6 +16,5 @@
             data-confirm="{{ __('messages.are_you_sure?', ['module' => __('employee.singular_title'), 'name' => $data->full_name]) }}">
             <i class="fa-solid fa-trash"></i></a>
     @endhasPermission
-    @endif
 
 </div>

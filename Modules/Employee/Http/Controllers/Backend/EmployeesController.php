@@ -586,6 +586,19 @@ class EmployeesController extends Controller
             : $formattedDate->isoFormat('llll');
     }
 
+    private function findManageableUser($id, array $with = []): User
+    {
+        return User::query()
+            ->where('users.id', $id)
+            ->where(function ($accessQuery) {
+                $accessQuery->whereHas('roles', function ($roleQuery) {
+                    $roleQuery->where('name', '!=', 'user');
+                })->orWhereHas('permissions');
+            })
+            ->with($with)
+            ->firstOrFail();
+    }
+
     /**
      * Store a newly created resource in storage.
      *
@@ -695,7 +708,7 @@ class EmployeesController extends Controller
     {
         $module_action = 'Show';
 
-        $data = User::role('employee')->findOrFail($id);
+        $data = $this->findManageableUser($id);
 
         return view('employee::backend.employees.show', compact('module_action', "$data"));
     }
@@ -708,7 +721,7 @@ class EmployeesController extends Controller
      */
     public function edit($id)
     {
-        $data = User::role('employee')->with('branches', 'services.service:id,category_id', 'commissions', 'profile')->findOrFail($id);
+        $data = $this->findManageableUser($id, ['branches', 'services.service:id,category_id', 'commissions', 'profile']);
         if (!is_null($data)) {
             $custom_field_data = $data->withCustomFields();
             $data['custom_field_data'] = collect($custom_field_data->custom_fields_data)
@@ -736,6 +749,7 @@ class EmployeesController extends Controller
         $data['commission_id'] = $data->commissions()->first()->commission_id ?? null;
 
         $data['profile_image'] = $data->profile_image;
+        $data['is_employee_role'] = $data->hasRole('employee');
 
         $data['about_self'] = $data->profile->about_self ?? null;
 
@@ -766,7 +780,8 @@ class EmployeesController extends Controller
      */
     public function update(EmployeeRequest $request, $id)
     {
-        $data = User::role('employee')->findOrFail($id);
+        $data = $this->findManageableUser($id);
+        $isEmployee = $data->hasRole('employee');
 
         $request_data = $request->except('profile_image');
 
@@ -776,7 +791,21 @@ class EmployeesController extends Controller
             $request_data = $request->except('password');
         }
     
-        $request_data['show_in_home_booking'] = $request->input('show_in_home_booking', 0);
+        if ($isEmployee) {
+            $request_data['show_in_home_booking'] = $request->input('show_in_home_booking', 0);
+        } else {
+            unset(
+                $request_data['branch_id'],
+                $request_data['shift_id'],
+                $request_data['category_id'],
+                $request_data['service_id'],
+                $request_data['commission_id'],
+                $request_data['services_edited'],
+                $request_data['is_manager'],
+                $request_data['show_in_calender'],
+                $request_data['show_in_home_booking']
+            );
+        }
 
         $data->update($request_data);
 
@@ -800,62 +829,64 @@ class EmployeesController extends Controller
             storeMediaFile($data, $request->file('profile_image'), 'profile_image');
         }
 
-        BranchEmployee::where('employee_id', $id)->delete();
+        if ($isEmployee) {
+            BranchEmployee::where('employee_id', $id)->delete();
 
-        EmployeeCommission::where('employee_id', $id)->delete();
+            EmployeeCommission::where('employee_id', $id)->delete();
 
-        $roles = ['employee'];
+            $roles = ['employee'];
 
-        $employee_id = $data->id;
+            $employee_id = $data->id;
 
-        if ($request->is_manager) {
-            array_push($roles, 'manager');
+            if ($request->is_manager) {
+                array_push($roles, 'manager');
+                if ($request->has('branch_id')) {
+                    $branch = Branch::where('id', $request->branch_id)->first();
+                    $branch->update(['manager_id' => $employee_id]);
+                }
+            }
+
+            // $data->syncRoles($roles);
+
+            \Artisan::call('cache:clear');
+
             if ($request->has('branch_id')) {
-                $branch = Branch::where('id', $request->branch_id)->first();
-                $branch->update(['manager_id' => $employee_id]);
-            }
-        }
+                $branch_data = [
+                    'employee_id' => $id,
+                    'branch_id' => $request->branch_id,
+                    'shift_id' => $request->shift_id,
+                ];
 
-        // $data->syncRoles($roles);
-
-        \Artisan::call('cache:clear');
-
-        if ($request->has('branch_id')) {
-            $branch_data = [
-                'employee_id' => $id,
-                'branch_id' => $request->branch_id,
-                'shift_id' => $request->shift_id,
-            ];
-
-            BranchEmployee::create($branch_data);
-        }
-
-        if ($request->boolean('services_edited')) {
-            $serviceIds = $this->extractServiceIds($request->service_id);
-            $serviceQuery = ServiceEmployee::where('employee_id', $employee_id);
-
-            if (! empty($serviceIds)) {
-                $serviceQuery->whereNotIn('service_id', $serviceIds);
+                BranchEmployee::create($branch_data);
             }
 
-            $serviceQuery->delete();
+            if ($request->boolean('services_edited')) {
+                $serviceIds = $this->extractServiceIds($request->service_id);
+                $serviceQuery = ServiceEmployee::where('employee_id', $employee_id);
 
-            foreach ($serviceIds as $serviceId) {
-                ServiceEmployee::firstOrCreate([
-                    'employee_id' => $employee_id,
-                    'service_id' => $serviceId,
-                ]);
+                if (! empty($serviceIds)) {
+                    $serviceQuery->whereNotIn('service_id', $serviceIds);
+                }
+
+                $serviceQuery->delete();
+
+                foreach ($serviceIds as $serviceId) {
+                    ServiceEmployee::firstOrCreate([
+                        'employee_id' => $employee_id,
+                        'service_id' => $serviceId,
+                    ]);
+                }
             }
-        }
 
-        if ($request->commission_id) {
-            $commission_data = [
+            if ($request->commission_id) {
+                $commission_data = [
 
-                'employee_id' => $id,
-                'commission_id' => $request->commission_id,
-            ];
+                    'employee_id' => $id,
+                    'commission_id' => $request->commission_id,
+                ];
 
-            EmployeeCommission::updateOrCreate($commission_data, $commission_data);
+                EmployeeCommission::updateOrCreate($commission_data, $commission_data);
+            }
         }
 
         $message = __('messages.update_form', ['form' => __('employee.singular_title')]);
@@ -875,16 +906,18 @@ class EmployeesController extends Controller
             return response()->json(['message' => __('messages.permission_denied'), 'status' => false], 200);
         }
     
-        // Find user by ID with role 'employee'
-        $data = User::role('employee')->findOrFail($id);
-        
-        $bookingIds = BookingService::where('employee_id', $id)->pluck('booking_id');
+        $data = $this->findManageableUser($id);
 
-        $statusUpdate = Booking::whereIn('id', $bookingIds)
-            ->where('status', '!=', 'completed')
-            ->update(['status' => 'cancelled']);
+        if ($data->hasRole('employee')) {
+            $bookingIds = BookingService::where('employee_id', $id)->pluck('booking_id');
 
-        $data->services()->forceDelete();
+            Booking::whereIn('id', $bookingIds)
+                ->where('status', '!=', 'completed')
+                ->update(['status' => 'cancelled']);
+
+            $data->services()->forceDelete();
+        }
+
         $data->tokens()->delete();
 
         $data->forceDelete();
