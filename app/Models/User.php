@@ -317,6 +317,22 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         });
     }
 
+    public function scopePreferredLoginMatch($query, string $mobile)
+    {
+        $table = $query->getModel()->getTable();
+
+        return $query
+            ->whereMobileMatches($mobile)
+            ->orderByRaw("CASE WHEN {$table}.status = 1 AND {$table}.is_banned = 0 THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN {$table}.employee_login_otp REGEXP '^[0-9]{4}$' THEN 0 ELSE 1 END")
+            ->orderByDesc("{$table}.id");
+    }
+
+    public static function findPreferredLoginUser(string $mobile): ?self
+    {
+        return self::query()->preferredLoginMatch($mobile)->first();
+    }
+
     public function rating()
     {
         return $this->hasMany(EmployeeRating::class, 'employee_id', 'id')->orderBy('updated_at', 'desc');

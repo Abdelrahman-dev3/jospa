@@ -49,7 +49,7 @@ class AuthController extends Controller
             return $this->sendError(__('messagess.invalid_phone'), [], 422);
         }
 
-        $user = User::whereMobileMatches($phone)->first();
+        $user = User::findPreferredLoginUser($phone);
 
         if (! $user) {
             return $this->sendError(__('messages.register_before_login'));
