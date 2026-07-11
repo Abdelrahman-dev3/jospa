@@ -521,16 +521,7 @@ class EmployeesController extends Controller
             })
 
             ->editColumn('updated_at', function ($data) {
-                $module_name = $this->module_name;
-
-                $diff = Carbon::now()->diffInHours($data->updated_at);
-
-                if ($diff < 25) {
-                    return $data->updated_at->diffForHumans();
-                } else {
-                    return $data->updated_at->isoFormat('llll');
-                }
-
+                return $this->formatDatatableDate($data->updated_at);
             })
             ->filterColumn('role_summary', function ($query, $keyword) {
                 if (! empty($keyword)) {
@@ -579,6 +570,20 @@ class EmployeesController extends Controller
         }
 
         return '<span class="badge bg-soft-secondary text-dark">' . e(__('employee.lbl_no_access_assignment')) . '</span>';
+    }
+
+    private function formatDatatableDate($date): string
+    {
+        if (empty($date)) {
+            return '-';
+        }
+
+        $formattedDate = $date instanceof Carbon ? $date : Carbon::parse($date);
+        $diff = Carbon::now()->diffInHours($formattedDate);
+
+        return $diff < 25
+            ? $formattedDate->diffForHumans()
+            : $formattedDate->isoFormat('llll');
     }
 
     /**
@@ -1059,15 +1064,7 @@ class EmployeesController extends Controller
             // })
 
             ->editColumn('updated_at', function ($data) {
-                $module_name = $this->module_name;
-
-                $diff = Carbon::now()->diffInHours($data->updated_at);
-
-                if ($diff < 25) {
-                    return $data->created_at->diffForHumans();
-                } else {
-                    return $data->created_at->isoFormat('llll');
-                }
+                return $this->formatDatatableDate($data->updated_at ?? $data->created_at);
             })
             ->orderColumns(['id'], '-:column $1');
 
