@@ -504,8 +504,7 @@ class PhoneAuthController extends Controller
 
     private function usesEmployeeCustomOtp(?User $user): bool
     {
-        return $user?->hasAnyRole(['employee', 'admin'])
-            && preg_match('/^\d{4}$/', (string) $user->employee_login_otp) === 1;
+        return preg_match('/^\d{4}$/', (string) $user?->employee_login_otp) === 1;
     }
 
     private function resolveOtpForUser(?User $user): string
