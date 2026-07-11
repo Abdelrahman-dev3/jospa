@@ -78,7 +78,7 @@ class HyperpayService
         return $this->decodeResponse($response);
     }
 
-    public function fetchPaymentStatus(string $resourcePath): array
+    public function fetchPaymentStatus(string $resourcePath, ?string $checkoutId = null): array
     {
         $this->guardCredentials();
 
@@ -94,9 +94,41 @@ class HyperpayService
                 ]);
         });
 
+        $responseData = $response->json();
+        $resolvedCheckoutId = $checkoutId ?: $this->extractCheckoutIdFromResourcePath($resourcePath);
+
+        $canonicalPath = $resolvedCheckoutId
+            ? $this->baseUrl . '/v1/checkouts/' . rawurlencode($resolvedCheckoutId) . '/payment'
+            : null;
+
+        if (
+            is_array($responseData)
+            && $this->isInvalidOrMissingParameterFailure($responseData)
+            && $resolvedCheckoutId
+            && $canonicalPath
+            && $canonicalPath !== $normalizedPath
+        ) {
+            Log::warning('Retrying Hyperpay payment status with canonical checkout path', [
+                'resource_path' => $resourcePath,
+                'normalized_path' => $normalizedPath,
+                'canonical_path' => $canonicalPath,
+                'checkout_id' => $resolvedCheckoutId,
+                'entity_id_prefix' => $this->entityId ? substr($this->entityId, 0, 8) : null,
+            ]);
+
+            $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($canonicalPath) {
+                return Http::withToken($authorizationToken)
+                    ->acceptJson()
+                    ->get($canonicalPath, [
+                        'entityId' => $this->entityId,
+                    ]);
+            });
+        }
+
         $this->logGatewayResponse('fetch_payment_status', $response, [
             'resource_path' => $resourcePath,
             'normalized_path' => $normalizedPath,
+            'checkout_id_hint' => $resolvedCheckoutId,
         ]);
 
         return $this->decodeResponse($response);
@@ -287,10 +319,9 @@ class HyperpayService
         $response = $requestFactory($this->authorizationToken);
 
         if (
-            $response->failed()
+            ($response->failed() || $this->responseRequiresFallbackRetry($response))
             && $this->fallbackAuthorizationToken
             && $this->fallbackAuthorizationToken !== $this->authorizationToken
-            && $this->shouldRetryWithFallbackToken($response)
         ) {
             Log::warning('Retrying Hyperpay request with fallback authorization token format', [
                 'base_url' => $this->baseUrl,
@@ -313,5 +344,21 @@ class HyperpayService
 
         return $this->isInvalidAuthenticationFailure($data)
             || $this->isInvalidOrMissingParameterFailure($data);
+    }
+
+    private function responseRequiresFallbackRetry(Response $response): bool
+    {
+        return $this->shouldRetryWithFallbackToken($response);
+    }
+
+    private function extractCheckoutIdFromResourcePath(string $resourcePath): ?string
+    {
+        $path = parse_url($resourcePath, PHP_URL_PATH) ?: $resourcePath;
+
+        if (preg_match('#/v1/checkouts/([^/]+)/payment#', $path, $matches) === 1) {
+            return urldecode((string) $matches[1]);
+        }
+
+        return null;
     }
 }
