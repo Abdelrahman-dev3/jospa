@@ -369,9 +369,14 @@ class EmployeesController extends Controller
 
         $query = User::select('users.*')
             ->selectSub($branchSortSubquery, 'employee_branch_sort_id')
-            ->role(['employee', 'manager'])
-            ->branch()
-            ->with('media', 'mainBranch', 'mainShift')
+            ->where(function ($accessQuery) {
+                $accessQuery->whereHas('roles', function ($roleQuery) {
+                    $roleQuery->where('name', '!=', 'user');
+                })->orWhereHas('permissions');
+            })
+            ->with(['media', 'mainBranch', 'mainShift', 'wallet', 'roles', 'permissions'])
+            ->withCount('services')
+            ->orderByRaw('CASE WHEN employee_branch_sort_id IS NULL THEN 1 ELSE 0 END')
             ->orderBy('employee_branch_sort_id')
             ->orderBy('users.first_name')
             ->orderBy('users.last_name');
@@ -386,6 +391,10 @@ class EmployeesController extends Controller
 
         $datatable = $datatable->eloquent($query)
             ->addColumn('check', function ($row) {
+                if (! $row->hasRole('employee')) {
+                    return '';
+                }
+
                 return '<input type="checkbox" class="form-check-input select-table-row"  id="datatable-row-' . $row->id . '"  name="datatable_ids[]" value="' . $row->id . '" onclick="dataTableRowCheck(' . $row->id . ')">';
             })
             ->addColumn('action', function ($data) {
@@ -417,15 +426,25 @@ class EmployeesController extends Controller
             })
 
             ->editColumn('email_verified_at', function ($data) {
-                $checked = '';
                 if ($data->email_verified_at) {
                     return '<span class="badge bg-soft-success"><i class="fa-solid fa-envelope" style="margin-right: 2px"></i>' . __('employee.msg_verified') . ' </span>';
                 }
 
+                if (! $data->hasRole('employee')) {
+                    return '<span class="badge bg-soft-danger">' . __('employee.msg_not_verified') . '</span>';
+                }
+
+                $checked = '';
                 return '<button  type="button" data-url="' . route('backend.employees.verify-employee', $data->id) . '" data-token="' . csrf_token() . '" class="button-status-change btn btn-text-danger btn-sm  bg-soft-danger"  id="datatable-row-' . $data->id . '"  name="is_verify" value="' . $data->id . '" ' . $checked . '>Verify</button>';
             })
             ->editColumn('service', function ($data) {
-                return " <button type='button' data-custom-module='{$data->id}' data-assign-module='{$data->id}' data-assign-target='#package-service-form' data-custom-event='custom_form'  data-assign-event='package_service_form' class='btn btn-primary btn-sm rounded'>{$data->services->count()}</button>";
+                $servicesCount = (int) ($data->services_count ?? 0);
+
+                if (! $data->hasRole('employee')) {
+                    return '<span class="badge bg-soft-secondary text-dark">' . $servicesCount . '</span>';
+                }
+
+                return " <button type='button' data-custom-module='{$data->id}' data-assign-module='{$data->id}' data-assign-target='#package-service-form' data-custom-event='custom_form'  data-assign-event='package_service_form' class='btn btn-primary btn-sm rounded'>{$servicesCount}</button>";
             })
             ->orderColumn('service', function ($query, $direction) {
                 $query->select('packages.*')
@@ -434,15 +453,17 @@ class EmployeesController extends Controller
                     ->groupBy('packages.id');
                 $query->orderBy('service_count', $direction);
             })
-            ->editColumn('is_manager', function ($data) {
-                if ($data->is_manager) {
-                    return '<span class="badge bg-soft-danger">Manager</span>';
-                }
-
-                return '<span class="badge bg-soft-info">Staff</span>';
+            ->addColumn('role_summary', function ($data) {
+                return $this->formatUserAccessSummary($data);
             })
             ->addColumn('branch_id', function ($data) {
-                return optional($data->mainBranch)->pluck('name')->toArray() ?? '-';
+                $branchNames = collect(optional($data->mainBranch)->pluck('name')->all())
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return ! empty($branchNames) ? implode(', ', $branchNames) : '-';
             })
             ->orderColumn('branch_id', function ($query, $order) {
                 $query->orderBy('employee_branch_sort_id', $order)
@@ -450,12 +471,24 @@ class EmployeesController extends Controller
                     ->orderBy('users.last_name', $order);
             })
             ->addColumn('shift_id', function ($data) {
-                return optional($data->mainShift)->pluck('name')->toArray() ?? '-';
+                $shiftNames = collect(optional($data->mainShift)->pluck('name')->all())
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                return ! empty($shiftNames) ? implode(', ', $shiftNames) : '-';
             })
             ->addColumn('wallet_balance', function ($data) {
                 return '<a href="' . route('wallet.history', ['id' => $data->id]) . '">' . Currency::format(optional($data->wallet)->amount) . '</a>';
             })
             ->editColumn('is_banned', function ($data) {
+                if (! $data->hasRole('employee')) {
+                    return $data->is_banned
+                        ? '<span class="badge bg-soft-danger">' . __('employee.lbl_blocked') . '</span>'
+                        : '<span class="badge bg-soft-success">' . __('messages.active') . '</span>';
+                }
+
                 $checked = '';
                 if ($data->is_banned) {
                     $checked = 'checked="checked"';
@@ -469,6 +502,12 @@ class EmployeesController extends Controller
             })
 
             ->editColumn('status', function ($data) {
+                if (! $data->hasRole('employee')) {
+                    return $data->status
+                        ? '<span class="badge bg-soft-success">' . __('messages.active') . '</span>'
+                        : '<span class="badge bg-soft-danger">' . __('messages.inactive') . '</span>';
+                }
+
                 $checked = '';
                 if ($data->status) {
                     $checked = 'checked="checked"';
@@ -493,14 +532,53 @@ class EmployeesController extends Controller
                 }
 
             })
-            ->rawColumns(['service'])
+            ->filterColumn('role_summary', function ($query, $keyword) {
+                if (! empty($keyword)) {
+                    $query->where(function ($innerQuery) use ($keyword) {
+                        $innerQuery->whereHas('roles', function ($roleQuery) use ($keyword) {
+                            $roleQuery->where('name', 'like', '%' . $keyword . '%')
+                                ->orWhere('title', 'like', '%' . $keyword . '%');
+                        })->orWhereHas('permissions', function ($permissionQuery) use ($keyword) {
+                            $permissionQuery->where('name', 'like', '%' . $keyword . '%');
+                        });
+                    });
+                }
+            })
+            ->rawColumns(['service', 'role_summary'])
             ->orderColumns(['id'], '-:column $1');
 
         // Custom Fields For export
         $customFieldColumns = CustomField::customFieldData($datatable, User::CUSTOM_FIELD_MODEL, null);
 
-        return $datatable->rawColumns(array_merge(['employee_id', 'action', 'service', 'status', 'is_banned', 'email_verified_at', 'check', 'image', 'is_manager', 'wallet_balance'], $customFieldColumns))
+        return $datatable->rawColumns(array_merge(['employee_id', 'action', 'service', 'status', 'is_banned', 'email_verified_at', 'check', 'image', 'role_summary', 'wallet_balance'], $customFieldColumns))
             ->toJson();
+    }
+
+    private function formatUserAccessSummary(User $user): string
+    {
+        $roleBadges = $user->roles
+            ->map(function ($role) {
+                $roleTitle = $role->title ?: ucfirst(str_replace('_', ' ', $role->name));
+
+                return '<span class="badge bg-soft-primary text-primary me-1 mb-1">' . e($roleTitle) . '</span>';
+            })
+            ->values();
+
+        if ($roleBadges->isNotEmpty()) {
+            return $roleBadges->implode(' ');
+        }
+
+        $permissionBadges = $user->permissions
+            ->map(function ($permission) {
+                return '<span class="badge bg-soft-warning text-dark me-1 mb-1">' . e($permission->name) . '</span>';
+            })
+            ->values();
+
+        if ($permissionBadges->isNotEmpty()) {
+            return '<div class="small text-muted mb-1">' . e(__('users.permissions')) . '</div>' . $permissionBadges->implode(' ');
+        }
+
+        return '<span class="badge bg-soft-secondary text-dark">' . e(__('employee.lbl_no_access_assignment')) . '</span>';
     }
 
     /**

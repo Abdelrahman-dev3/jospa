@@ -297,8 +297,10 @@ let calendarRetryTimeoutId = null
 let calendarFetchRequestId = 0
 let calendarFetchErrorShown = false
 let resourceSizingFrame = null
+let calendarColorObserver = null
 const CALENDAR_FETCH_TIMEOUT = 15000
 const CALENDAR_RETRY_DELAY = 1200
+const eventColorRegistry = new WeakMap()
 
 const getHorizontalScrollTargets = () => {
   if (!calenderRef.value) return []
@@ -586,19 +588,72 @@ const getEventCategoryColor = (event) => {
   return event?.extendedProps?.category_color || event?.backgroundColor || event?.color || '#BF9456'
 }
 
+const setElementCategoryColor = (element, categoryColor) => {
+  if (!element || !categoryColor) return
+
+  element.style.setProperty('background-color', categoryColor, 'important')
+  element.style.setProperty('border-color', categoryColor, 'important')
+  element.style.setProperty('color', '#FFFFFF', 'important')
+
+  const eventBody = element.querySelector('.ec-event-body')
+  if (eventBody) {
+    eventBody.style.setProperty('background-color', categoryColor, 'important')
+    eventBody.style.setProperty('color', '#FFFFFF', 'important')
+  }
+}
+
 const applyEventCategoryColor = (element, event) => {
   const categoryColor = getEventCategoryColor(event)
   if (!element || !categoryColor) return
 
-  element.style.backgroundColor = categoryColor
-  element.style.borderColor = categoryColor
-  element.style.color = '#FFFFFF'
+  eventColorRegistry.set(element, categoryColor)
+  setElementCategoryColor(element, categoryColor)
+}
 
-  const eventBody = element.querySelector('.ec-event-body')
-  if (eventBody) {
-    eventBody.style.backgroundColor = categoryColor
-    eventBody.style.color = '#FFFFFF'
+const reapplyObservedEventColor = (element) => {
+  const categoryColor = eventColorRegistry.get(element)
+  if (!categoryColor) return
+
+  setElementCategoryColor(element, categoryColor)
+}
+
+const reapplyObservedEventColorsWithin = (node) => {
+  if (!(node instanceof HTMLElement)) return
+
+  if (node.classList.contains('ec-event')) {
+    reapplyObservedEventColor(node)
   }
+
+  node.querySelectorAll('.ec-event').forEach((eventElement) => {
+    reapplyObservedEventColor(eventElement)
+  })
+}
+
+const attachCalendarColorObserver = () => {
+  if (!calenderRef.value || typeof MutationObserver === 'undefined') return
+
+  if (calendarColorObserver) {
+    calendarColorObserver.disconnect()
+  }
+
+  calendarColorObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.target instanceof HTMLElement) {
+        reapplyObservedEventColorsWithin(mutation.target)
+      }
+
+      mutation.addedNodes.forEach((node) => {
+        reapplyObservedEventColorsWithin(node)
+      })
+    })
+  })
+
+  calendarColorObserver.observe(calenderRef.value, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+  })
 }
 
 const getEventDuration = (event) => {
@@ -1163,6 +1218,10 @@ onUnmounted(() => {
     cancelAnimationFrame(resourceSizingFrame)
     resourceSizingFrame = null
   }
+  if (calendarColorObserver) {
+    calendarColorObserver.disconnect()
+    calendarColorObserver = null
+  }
   const elem = document.getElementById('booking-form')
   if(elem !== null) {
     updateBodyClass('hide')
@@ -1297,6 +1356,7 @@ onMounted(() => {
         }
       }
     })
+    attachCalendarColorObserver()
     refreshResourceSizing()
   }
 })

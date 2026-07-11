@@ -147,8 +147,8 @@
                 searchable: false
             },
             {
-                data: 'is_manager',
-                name: 'is_manager',
+                data: 'role_summary',
+                name: 'role_summary',
                 title: "{{ __('employee.lbl_role') }}"
             },
             {
