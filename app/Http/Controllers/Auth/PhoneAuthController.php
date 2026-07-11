@@ -184,6 +184,7 @@ class PhoneAuthController extends Controller
     public function verifyLoginOtp(Request $request): RedirectResponse
     {
         $otp = $this->validatedOtp($request);
+
         $phone = Session::get(self::LOGIN_PHONE_SESSION_KEY);
 
         if ($response = $this->ensureOtpSession($phone, 'signin')) {
