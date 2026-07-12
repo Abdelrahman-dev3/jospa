@@ -51,9 +51,15 @@ class SearchController extends Controller
                 $items = $items->limit(50)->get();
                 break;
             case 'customers':
-                $items = User::role('user')->select('id', \DB::raw("CONCAT(first_name,' ',last_name) AS text"));
+                $items = User::role('user')->select(
+                    'id',
+                    \DB::raw("TRIM(CONCAT(first_name,' ',last_name, IF(mobile IS NOT NULL AND mobile != '', CONCAT(' - ', mobile), ''))) AS text")
+                );
                 if ($keyword != '') {
-                    $items->where(\DB::raw("CONCAT(first_name, ' ', last_name)"), 'LIKE', '%'.$keyword.'%');
+                    $items->where(function ($query) use ($keyword) {
+                        $query->where(\DB::raw("CONCAT(first_name, ' ', last_name)"), 'LIKE', '%'.$keyword.'%')
+                            ->orWhere('mobile', 'LIKE', '%'.$keyword.'%');
+                    });
                 }
                 $items = $items->limit(50)->get();
                 break;

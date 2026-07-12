@@ -10,7 +10,6 @@ class Kernel extends ConsoleKernel
     protected $commands = [
 
         'Modules\Subscriptions\Console\Commands\CheckSubscription',
-        \App\Console\Commands\CleanupCartCommand::class,
     ];
 
     /**
@@ -21,10 +20,6 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('queue:work --tries=3 --stop-when-empty')->withoutOverlapping();
-
-        $schedule->command('migrate:fresh --seed')->hourlyAt(2);
-
-        $schedule->command('cart:cleanup')->hourly();
     }
 
     /**

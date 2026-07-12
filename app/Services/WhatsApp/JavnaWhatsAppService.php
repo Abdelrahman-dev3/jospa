@@ -966,7 +966,28 @@ class JavnaWhatsAppService
             return null;
         }
 
-        return '966' . substr($validated, 1);
+        $digits = preg_replace('/\D+/', '', (string) $validated);
+        if (! is_string($digits) || $digits === '') {
+            return null;
+        }
+
+        if (str_starts_with($digits, '00966')) {
+            $digits = substr($digits, 2);
+        }
+
+        if (str_starts_with($digits, '966') && preg_match('/^9665\d{8}$/', $digits) === 1) {
+            return $digits;
+        }
+
+        if (preg_match('/^05\d{8}$/', $digits) === 1) {
+            return '966' . substr($digits, 1);
+        }
+
+        if (preg_match('/^5\d{8}$/', $digits) === 1) {
+            return '966' . $digits;
+        }
+
+        return null;
     }
 
     private function missingConfigKeys(): array
