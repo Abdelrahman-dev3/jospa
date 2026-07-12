@@ -173,8 +173,26 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         }
 
         $status = $charge['status'];
-
         $normalizedStatus = strtolower((string) $status);
+        
+        // --- STAGE 2 FIX: Capture the order in Tabby if it's authorized ---
+        if (in_array($normalizedStatus, ['authorized', 'approved'])) {
+            $captureAmount = $charge['amount'] ?? 0;
+            $captureResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $secretKey,
+                'Content-Type'  => 'application/json',
+            ])->post("https://api.tabby.ai/api/v2/payments/{$checkoutId}/captures", [
+                'amount' => $captureAmount
+            ]);
+            
+            if (!$captureResponse->successful()) {
+                \Log::error('Tabby Capture Failed: ' . $captureResponse->body());
+            } else {
+                $normalizedStatus = 'captured'; // Mark as captured internally
+            }
+        }
+        // ------------------------------------------------------------------
+
         switch ($normalizedStatus) {
             case "captured":
             case "authorized":
@@ -339,6 +357,16 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             'gift_code' => $request->get('gift_code'),
             'discount_amount' => $discount,
         ];
+    }
+
+    public function webhook(Request $request)
+    {
+        \Log::info('Tabby Webhook Received:', $request->all());
+        
+        // Handle webhook event logic here if needed
+        // For QA testing, acknowledging the webhook with 200 OK is required.
+        
+        return response()->json(['status' => 'success', 'message' => 'Webhook received']);
     }
 
 }

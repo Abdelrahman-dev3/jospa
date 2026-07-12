@@ -194,6 +194,10 @@ Route::get('/payments/tamara/success', [TamaraPaymentStrategy::class, 'success']
 Route::get('/payments/tamara/failure', [TamaraPaymentStrategy::class, 'failure'])->name('api.tamara.failure');
 Route::get('/payments/tamara/cancel', [TamaraPaymentStrategy::class, 'cancel'])->name('api.tamara.cancel');
 
+// Webhooks
+Route::post('/payments/tabby/webhook', [TabbyPaymentStrategy::class, 'webhook'])->name('api.tabby.webhook');
+Route::post('/payments/tamara/webhook', [TamaraPaymentStrategy::class, 'webhook'])->name('api.tamara.webhook');
+
 
 Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(BranchController::class)->group(function () {

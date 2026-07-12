@@ -723,9 +723,9 @@
 
                     @if(($paymentMethods['tabby'] ?? 1) == 1)
                         <!-- METHOD: Tabby -->
-                        <div class="method payment-method-card is-coming-soon" data-method="tabby" data-coming-soon="true" tabindex="0">
+                        <div class="method payment-method-card" data-method="tabby" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }} disabled>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.installments_4')}}
@@ -734,19 +734,19 @@
                                         {{ $tabbyDiscountLabel }}
                                     </span>
                                 @endif
+                                <div id="TabbyPromo" style="margin-top: 6px; width: 100%;"></div>
                             </div>
                             <div class="payment-brand-group">
                                 <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tabby (2).png')}}" alt="tabby">
-                                <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
                             </div>
                         </div>
                     @endif
 
                     @if(($paymentMethods['tamara'] ?? 1) == 1)
                         <!-- METHOD: Tamara -->
-                        <div class="method payment-method-card is-coming-soon" data-method="tamara" data-coming-soon="true" tabindex="0">
+                        <div class="method payment-method-card" data-method="tamara" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }} disabled>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.split_bill_4_payments')}}
@@ -755,10 +755,12 @@
                                         {{ $tamaraDiscountLabel }}
                                     </span>
                                 @endif
+                                <div style="margin-top: 6px; width: 100%;">
+                                    <tamara-widget type="tamara-summary" amount="{{ $totalPrice }}" inline-type="2"></tamara-widget>
+                                </div>
                             </div>
                             <div class="payment-brand-group">
                                 <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tmara.png')}}" alt="tamara">
-                                <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
                             </div>
                         </div>
                     @endif
@@ -868,6 +870,29 @@
         </div>
     </div>
   </form>
+  
+  <!-- Promotional Snippets for Tabby & Tamara -->
+  <script src="https://checkout.tabby.ai/tabby-promo.js"></script>
+  <script>
+    new TabbyPromo({
+      selector: '#TabbyPromo', // if you want to put a div with id TabbyPromo anywhere
+      currency: 'SAR',
+      price: '{{ $totalPrice }}',
+      installmentsCount: 4,
+      lang: '{{ app()->getLocale() === "ar" ? "ar" : "en" }}',
+      source: 'checkout',
+      publicKey: '{{ config("tabby.merchant_code") }}' // The PK
+    });
+  </script>
+  <script charset="utf-8" src="https://cdn.tamara.co/widget/v2/tamara-widget.js"></script>
+  <script>
+    window.tamaraWidgetConfig = {
+      lang: '{{ app()->getLocale() === "ar" ? "ar" : "en" }}',
+      country: 'SA',
+      publicKey: '{{ config("tamara.public_key") }}'
+    };
+  </script>
+  <!-- /Promotional Snippets -->
      <script>
         const baseTotal = {{$totalPrice + getBookingTaxamount($totalPrice, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
         const gatewayDiscounts = @json($gatewayDiscounts);
