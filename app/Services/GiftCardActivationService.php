@@ -17,10 +17,7 @@ class GiftCardActivationService
 
     public function activatePendingForUser(int $userId): Collection
     {
-        $giftCards = GiftCard::where('user_id', $userId)
-            ->where('payment_status', 0)
-            ->get();
-
+        $giftCards = GiftCard::where('user_id', $userId)->where('payment_status', 0)->get();
         return $this->activateCollection($giftCards);
     }
 

@@ -10,6 +10,8 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Expression;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Modules\Employee\Models\BranchEmployee;
 use Modules\Booking\Http\Requests\BookingRequest;
 use Modules\Booking\Models\Booking;
@@ -42,6 +44,14 @@ class BookingsController extends Controller
     use ProductTrait;
 
     protected string $exportClass = '\App\Exports\BookingsExport';
+
+    /**
+     * FIX: Toggle for the working-hours/holiday/leave enforcement added to
+     * assertNoScheduleConflicts(). Set to false if admins should be allowed to
+     * deliberately create manual/overtime bookings outside an employee's normal
+     * schedule.
+     */
+    protected bool $enforceEmployeeAvailability = true;
 
     public function __construct()
     {
@@ -317,8 +327,18 @@ public function index_list(Request $request)
     }
 
     $employeeIds = $employees->pluck('id')->all();
-    $visibleBookingEvents = array_values(array_filter($updated_data, function ($event) use ($employeeIds) {
-        return in_array((int) ($event['resourceId'] ?? 0), $employeeIds, true);
+
+    // FIX: Previously booking events were filtered down to $employeeIds, which is the
+    // visibility/selection-filtered employee list. That meant a booking's event would
+    // silently vanish from the calendar the moment its assigned employee was hidden via
+    // the per-user "calendar_employee_preferences" toggle, or whenever a specific
+    // employee filter was active and didn't include that booking's employee. Booking
+    // *data* should not depend on a display preference. We now only require the
+    // employee to belong to the current branch roster at all (regardless of their
+    // visibility toggle), so the event isn't dropped just because a column is hidden.
+    $allBranchEmployeeIds = $orderEmployees->pluck('id')->all();
+    $visibleBookingEvents = array_values(array_filter($updated_data, function ($event) use ($allBranchEmployeeIds) {
+        return in_array((int) ($event['resourceId'] ?? 0), $allBranchEmployeeIds, true);
     }));
     $employeeBranchIds = $employees->mapWithKeys(function ($employee) use ($branchId) {
         return [$employee->id => $this->effectiveEmployeeBranchId($employee, $branchId)];
@@ -996,33 +1016,55 @@ public function index_list(Request $request)
     /**
      * Store a newly created resource in storage.
      *
+     * FIX: Wrapped in DB::transaction() and now verifies the freshly created booking
+     * doesn't clash with any other employee's existing schedule before committing. If a
+     * conflict is found, a ValidationException is thrown, the transaction rolls back
+     * (nothing is persisted), and Laravel automatically returns a 422 JSON response.
+     *
      * @return Response
      */
     public function store(BookingRequest $request)
     {
-        $bookingData = $request->except(['services_id', 'employee_id', '_token']);
+        // FIX: acquire an advisory lock per candidate employee/date *before* writing
+        // anything. lockForUpdate() inside the transaction only protects rows that
+        // already exist — for a brand-new booking there may be nothing yet to lock, so
+        // two simultaneous "book the same free slot" requests could otherwise both pass
+        // the conflict check. The advisory lock closes that gap.
+        $employeeIds = $this->extractRequestEmployeeIds($request);
+        $date = $this->extractRequestDate($request);
 
-        $bookingData['status'] = 'confirmed';
+        return $this->withEmployeeScheduleLocks($employeeIds, $date, function () use ($request) {
+            return DB::transaction(function () use ($request) {
+                $bookingData = $request->except(['services_id', 'employee_id', '_token']);
 
-        $booking = Booking::create($bookingData);
+                $bookingData['status'] = 'confirmed';
 
-        $this->updateBookingService($request->services, $booking->id);
-        $this->updateBookingPackage($request->purchase_packages, $booking->id);
-        $this->storeUserPackage($booking->id);
-        $message = __('messages.create_form', ['form' => __('booking.singular_title')]);
+                $booking = Booking::create($bookingData);
 
-        try {
-            $type = 'new_booking';
-            $messageTemplate = 'New booking #[[booking_id]] has been booked.';
-            $notify_message = str_replace('[[booking_id]]', $booking->id, $messageTemplate);
-            $this->sendNotificationOnBookingUpdate($type, $notify_message, $booking);
-        } catch (\Exception $e) {
-            \Log::error($e->getMessage());
-        }
+                $this->updateBookingService($request->services, $booking->id);
+                $this->updateBookingPackage($request->purchase_packages, $booking->id);
+                $this->storeUserPackage($booking->id);
 
-        $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services', )->findOrFail($booking->id);
+                // FIX: reject the whole booking if any assigned employee is now double-booked,
+                // double-booked within this same booking, or scheduled outside their availability.
+                $this->assertNoScheduleConflicts($booking);
 
-        return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+                $message = __('messages.create_form', ['form' => __('booking.singular_title')]);
+
+                try {
+                    $type = 'new_booking';
+                    $messageTemplate = 'New booking #[[booking_id]] has been booked.';
+                    $notify_message = str_replace('[[booking_id]]', $booking->id, $messageTemplate);
+                    $this->sendNotificationOnBookingUpdate($type, $notify_message, $booking);
+                } catch (\Exception $e) {
+                    \Log::error($e->getMessage());
+                }
+
+                $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services', )->findOrFail($booking->id);
+
+                return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+            }, 3); // FIX: retry up to 3x on deadlock before giving up
+        });
     }
 
     /**
@@ -1084,45 +1126,75 @@ public function index_list(Request $request)
     /**
      * Update the specified resource in storage.
      *
+     * FIX: Wrapped in DB::transaction() (with the booking row locked via
+     * lockForUpdate()) so two concurrent reschedule/edit requests for the same booking
+     * can't race each other, and every branch now runs assertNoScheduleConflicts()
+     * before the response is built.
+     *
      * @param  int  $id
      * @return Response
      */
     public function update(BookingRequest $request, $id)
     {
-        $booking = Booking::with('transactions')->findOrFail($id);
+        // FIX: lock both the employees currently assigned to this booking AND any new
+        // employee(s) named in the request — a reschedule can move a booking onto an
+        // employee who wasn't previously involved, and that employee's schedule needs
+        // the same protection as a brand-new booking would get.
+        $existing = Booking::with('services', 'bookingPackages')->find($id);
+        $employeeIds = array_merge(
+            $this->extractRequestEmployeeIds($request),
+            $existing ? $existing->services->pluck('employee_id')->all() : [],
+            $existing ? $existing->bookingPackages->pluck('employee_id')->all() : []
+        );
+        $date = $this->extractRequestDate($request, $existing->start_date_time ?? null);
 
-        if ($booking->transactions->contains('payment_status', 1)) {
-            $this->updatePaidBookingSchedule($booking, $request);
-            $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
+        return $this->withEmployeeScheduleLocks($employeeIds, $date, function () use ($request, $id) {
+            return DB::transaction(function () use ($request, $id) {
+                $booking = Booking::with('transactions')->lockForUpdate()->findOrFail($id);
 
-            $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
+                if ($booking->transactions->contains('payment_status', 1)) {
+                    $this->updatePaidBookingSchedule($booking, $request);
 
-            return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
-        }
+                    // FIX: validate the new schedule before returning success.
+                    $this->assertNoScheduleConflicts($booking);
 
-        $booking->update($request->all());
+                    $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
 
-        $services = $request->input('services', []);
-        $purchasePackages = $request->input('purchase_packages', []);
+                    $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
 
-        if (is_array($services) && count($services) > 0) {
-            $this->updateBookingService($services, $booking->id);
-        } else {
-            $this->updateExistingBookingSchedule($booking, $request);
-        }
+                    return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+                }
 
-        if (is_array($purchasePackages) && count($purchasePackages) > 0) {
-            $this->updateBookingPackage($purchasePackages, $booking->id);
-        } elseif (! (is_array($services) && count($services) > 0)) {
-            BookingPackages::where('booking_id', $booking->id)->update([
-                'employee_id' => $request->input('employee_id'),
-            ]);
-        }
-        $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
+                $booking->update($request->all());
 
-        $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
+                $services = $request->input('services', []);
+                $purchasePackages = $request->input('purchase_packages', []);
 
-        return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+                if (is_array($services) && count($services) > 0) {
+                    $this->updateBookingService($services, $booking->id);
+                } else {
+                    $this->updateExistingBookingSchedule($booking, $request);
+                }
+
+                if (is_array($purchasePackages) && count($purchasePackages) > 0) {
+                    $this->updateBookingPackage($purchasePackages, $booking->id);
+                } elseif (! (is_array($services) && count($services) > 0)) {
+                    BookingPackages::where('booking_id', $booking->id)->update([
+                        'employee_id' => $request->input('employee_id'),
+                    ]);
+                }
+
+                // FIX: reject the update if it results in a double-booked employee,
+                // an internal overlap, or a slot outside the employee's availability.
+                $this->assertNoScheduleConflicts($booking);
+
+                $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
+
+                $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
+
+                return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
+            }, 3); // FIX: retry up to 3x on deadlock before giving up
+        });
     }
 
     private function updatePaidBookingSchedule(Booking $booking, Request $request): void
@@ -1157,6 +1229,299 @@ public function index_list(Request $request)
         BookingPackages::where('booking_id', $booking->id)->update([
             'employee_id' => $employeeId,
         ]);
+    }
+
+    /**
+     * FIX: New helper — checks every service and package attached to a booking
+     * three ways:
+     *   1. Against each other (catches two items in the SAME booking accidentally
+     *      assigned to the same employee at overlapping times).
+     *   2. Against every OTHER booking for the same employee (the original conflict
+     *      check).
+     *   3. (optional, see $enforceEmployeeAvailability) Against the employee's actual
+     *      working hours, breaks, holidays and approved leave, so a booking can't be
+     *      silently saved for a time the employee doesn't actually work.
+     * Throws a ValidationException on the first problem found, which aborts the
+     * enclosing DB::transaction() and rolls back everything written so far.
+     */
+    private function assertNoScheduleConflicts(Booking $booking): void
+    {
+        $booking->refresh();
+        $booking->load(['services', 'bookingPackages.services']);
+
+        $items = [];
+
+        foreach ($booking->services as $service) {
+            if (empty($service->employee_id) || empty($service->start_date_time)) {
+                continue;
+            }
+
+            $start = Carbon::parse($service->start_date_time);
+            $items[] = [
+                'employee_id' => (int) $service->employee_id,
+                'start' => $start,
+                'end' => $start->copy()->addMinutes((int) $service->duration_min),
+            ];
+        }
+
+        foreach ($booking->bookingPackages as $bookingPackage) {
+            if (empty($bookingPackage->employee_id) || empty($booking->start_date_time)) {
+                continue;
+            }
+
+            $duration = (int) $bookingPackage->services->sum('duration_min');
+            $start = Carbon::parse($booking->start_date_time);
+            $items[] = [
+                'employee_id' => (int) $bookingPackage->employee_id,
+                'start' => $start,
+                'end' => $start->copy()->addMinutes($duration),
+            ];
+        }
+
+        // 1. Internal overlap check (same booking, same employee).
+        $this->assertNoInternalOverlap($items);
+
+        // 2 & 3. External conflict + availability check, per item.
+        foreach ($items as $item) {
+            $durationMinutes = $item['start']->diffInMinutes($item['end']);
+
+            $this->ensureNoScheduleConflict(
+                $item['employee_id'],
+                $item['start']->format('Y-m-d H:i:s'),
+                $durationMinutes,
+                $booking->id
+            );
+
+            if ($this->enforceEmployeeAvailability) {
+                $this->assertEmployeeIsAvailable(
+                    $item['employee_id'],
+                    (int) $booking->branch_id,
+                    $item['start'],
+                    $item['end']
+                );
+            }
+        }
+    }
+
+    /**
+     * FIX: New helper — throws if any two items in the same booking share an employee
+     * and overlap in time. Without this, only conflicts against OTHER bookings were
+     * ever caught; a booking that double-books its own employee across two of its own
+     * services would previously have been saved without complaint.
+     */
+    private function assertNoInternalOverlap(array $items): void
+    {
+        $count = count($items);
+
+        for ($i = 0; $i < $count; $i++) {
+            for ($j = $i + 1; $j < $count; $j++) {
+                if ($items[$i]['employee_id'] !== $items[$j]['employee_id']) {
+                    continue;
+                }
+
+                if ($this->rangeOverlapsAny($items[$i]['start'], $items[$i]['end'], [$items[$j]])) {
+                    throw ValidationException::withMessages([
+                        'employee_id' => ['This booking assigns the same staff member to two overlapping time slots.'],
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * FIX: New helper — throws if the given employee already has a booking overlapping
+     * the given time window on any branch, excluding $ignoreBookingId (the booking
+     * currently being saved). Uses SELECT ... FOR UPDATE so two simultaneous requests
+     * for the same employee/slot can't both pass the check (must be called inside a
+     * DB::transaction()). Combined with the advisory lock acquired in
+     * withEmployeeScheduleLocks(), this is also safe when no conflicting row exists yet.
+     */
+    private function ensureNoScheduleConflict(int $employeeId, string $startDateTime, int $durationMinutes, int $ignoreBookingId = 0): void
+    {
+        if ($employeeId <= 0) {
+            return;
+        }
+
+        $duration = max($durationMinutes, 1);
+        $start = Carbon::parse($startDateTime);
+        $end = $start->copy()->addMinutes($duration);
+        $date = $start->toDateString();
+
+        // branchId = 0 => check across all branches, an employee can't be in two places at once.
+        $busyRanges = $this->employeeBusyRanges($employeeId, 0, $date, $ignoreBookingId, true);
+
+        if ($this->rangeOverlapsAny($start, $end, $busyRanges)) {
+            throw ValidationException::withMessages([
+                'employee_id' => [__('booking.slot_conflict') !== 'booking.slot_conflict'
+                    ? __('booking.slot_conflict')
+                    : 'This staff member already has a booking that overlaps this time slot.'],
+            ]);
+        }
+    }
+
+    /**
+     * FIX: New helper — validates that an employee is actually scheduled to work
+     * (not on leave, not a branch holiday, within their working hours, and not on a
+     * break) at the given time window. Reuses the same working-config resolution used
+     * to build the calendar's availability background events, so this stays in sync
+     * with what the UI already shows as "available".
+     */
+    private function assertEmployeeIsAvailable(int $employeeId, int $branchId, Carbon $start, Carbon $end): void
+    {
+        $employee = User::with('branches')->find($employeeId);
+
+        if (! $employee) {
+            return; // employee existence/permissions are validated elsewhere
+        }
+
+        $effectiveBranchId = $branchId > 0 ? $branchId : $this->effectiveEmployeeBranchId($employee, 0);
+        $date = $start->toDateString();
+        $dayName = strtolower($start->format('l'));
+
+        $context = $this->availabilityContextForDate(
+            $date,
+            $effectiveBranchId > 0 ? [$effectiveBranchId] : [],
+            [$employeeId]
+        );
+
+        if ($effectiveBranchId > 0 && isset($context['holiday_branch_ids'][$effectiveBranchId])) {
+            throw ValidationException::withMessages([
+                'employee_id' => ['The branch is closed for a holiday on this date.'],
+            ]);
+        }
+
+        if (isset($context['leave_staff_ids'][$employeeId])) {
+            throw ValidationException::withMessages([
+                'employee_id' => ['This staff member is on approved leave on this date.'],
+            ]);
+        }
+
+        $workingConfig = $this->resolveEmployeeWorkingConfig($employee, $effectiveBranchId, $dayName, $context);
+
+        if (! $workingConfig) {
+            throw ValidationException::withMessages([
+                'employee_id' => ['This staff member is not scheduled to work on this date.'],
+            ]);
+        }
+
+        $workStart = Carbon::parse("{$date} {$workingConfig['start_time']}");
+        $workEnd = Carbon::parse("{$date} {$workingConfig['end_time']}");
+
+        if ($start->lt($workStart) || $end->gt($workEnd)) {
+            throw ValidationException::withMessages([
+                'employee_id' => ["This time is outside {$employee->full_name}'s working hours."],
+            ]);
+        }
+
+        foreach ($workingConfig['breaks'] as $break) {
+            if (empty($break['start_break']) || empty($break['end_break'])) {
+                continue;
+            }
+
+            $breakStart = Carbon::parse("{$date} {$this->normalizeTime($break['start_break'])}");
+            $breakEnd = Carbon::parse("{$date} {$this->normalizeTime($break['end_break'])}");
+
+            if ($start->lt($breakEnd) && $end->gt($breakStart)) {
+                throw ValidationException::withMessages([
+                    'employee_id' => ["This time overlaps {$employee->full_name}'s break."],
+                ]);
+            }
+        }
+    }
+
+    /**
+     * FIX: New helper — extracts every employee_id mentioned anywhere in the request
+     * payload (top-level, per-service, and per-package) so callers can pre-acquire
+     * advisory locks before writing. Best-effort: assertNoScheduleConflicts() still
+     * runs afterwards as the authoritative check against whatever actually got
+     * persisted, so an employee_id this heuristic misses is still caught — it just
+     * won't have had the benefit of the advisory lock closing the phantom-row race.
+     */
+    private function extractRequestEmployeeIds(Request $request): array
+    {
+        $ids = [];
+
+        if ($request->filled('employee_id')) {
+            $ids[] = (int) $request->input('employee_id');
+        }
+
+        foreach ((array) $request->input('services', []) as $service) {
+            if (is_array($service) && ! empty($service['employee_id'])) {
+                $ids[] = (int) $service['employee_id'];
+            }
+        }
+
+        foreach ((array) $request->input('purchase_packages', []) as $package) {
+            if (is_array($package) && ! empty($package['employee_id'])) {
+                $ids[] = (int) $package['employee_id'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * FIX: New helper — resolves the date to scope advisory locks to, from the
+     * request's start_date_time, falling back to the given fallback (e.g. the
+     * existing booking's current date on an update) or today.
+     */
+    private function extractRequestDate(Request $request, ?string $fallback = null): string
+    {
+        $raw = $request->input('start_date_time', $fallback);
+
+        try {
+            return Carbon::parse($raw ?: now())->toDateString();
+        } catch (\Throwable $e) {
+            return Carbon::today()->toDateString();
+        }
+    }
+
+    /**
+     * FIX: New helper — serializes schedule writes for a set of employees on a given
+     * date using MySQL's GET_LOCK()/RELEASE_LOCK(), so two concurrent requests that
+     * both try to book the same employee's free slot can't both pass the conflict
+     * check (lockForUpdate() alone can't prevent this when no conflicting row exists
+     * yet — there is nothing to lock). Locks are acquired in a consistent, sorted
+     * order to avoid deadlocking against another request doing the same thing for an
+     * overlapping set of employees. Falls back to running the callback unlocked on
+     * non-MySQL connections (e.g. local testing on SQLite).
+     */
+    private function withEmployeeScheduleLocks(array $employeeIds, string $date, \Closure $callback)
+    {
+        $employeeIds = array_values(array_unique(array_filter(array_map('intval', $employeeIds), fn ($id) => $id > 0)));
+        sort($employeeIds);
+
+        if (empty($employeeIds) || DB::connection()->getDriverName() !== 'mysql') {
+            return $callback();
+        }
+
+        $acquired = [];
+
+        try {
+            foreach ($employeeIds as $employeeId) {
+                $lockName = $this->employeeScheduleLockName($employeeId, $date);
+                $result = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$lockName, 10]);
+
+                if (! $result || (int) $result->acquired !== 1) {
+                    throw ValidationException::withMessages([
+                        'employee_id' => ['Another booking is being saved for this staff member right now. Please try again in a moment.'],
+                    ]);
+                }
+
+                $acquired[] = $lockName;
+            }
+
+            return $callback();
+        } finally {
+            foreach (array_reverse($acquired) as $lockName) {
+                DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+            }
+        }
+    }
+
+    private function employeeScheduleLockName(int $employeeId, string $date): string
+    {
+        return 'booking_emp_' . $employeeId . '_' . $date;
     }
 
     /**
@@ -1407,6 +1772,9 @@ public function index_list(Request $request)
         }
 
         $breakRanges = $this->slotBreakRanges($date, $workingConfig['breaks']);
+        // NOTE: booking_slots() checks a single branch's busy ranges for display purposes
+        // only (it's just populating the dropdown). The authoritative, cross-branch check
+        // that actually blocks a conflicting save happens in ensureNoScheduleConflict().
         $busyRanges = $this->employeeBusyRanges($employee->id, $branchId, $date, $ignoreBookingId);
         $slots = [];
 
@@ -1456,16 +1824,26 @@ public function index_list(Request $request)
         }, $breaks)));
     }
 
-    private function employeeBusyRanges(int $employeeId, int $branchId, string $date, int $ignoreBookingId = 0): array
+    /**
+     * FIX: $branchId is now treated as optional — pass 0 to check an employee's busy
+     * ranges across *all* branches (used by ensureNoScheduleConflict(), since an
+     * employee can't legitimately be double-booked just because the two bookings are in
+     * different branches). $lockForUpdate row-locks the matching rows so this can be
+     * safely used inside a DB::transaction() to prevent race conditions between two
+     * concurrent writes.
+     */
+    private function employeeBusyRanges(int $employeeId, int $branchId, string $date, int $ignoreBookingId = 0, bool $lockForUpdate = false): array
     {
         $serviceRanges = BookingService::with('booking')
             ->where('employee_id', $employeeId)
             ->when($ignoreBookingId > 0, fn ($q) => $q->where('booking_id', '!=', $ignoreBookingId))
+            ->when($lockForUpdate, fn ($q) => $q->lockForUpdate())
             ->whereHas('booking', function ($q) use ($branchId, $date) {
-                $q->where('branch_id', $branchId)
+                $q->when($branchId > 0, fn ($qq) => $qq->where('branch_id', $branchId))
                     ->whereDate('start_date_time', $date)
                     ->where('status', '!=', 'cancelled');
             })
+            ->orderBy('id')
             ->get()
             ->map(function ($service) {
                 $start = Carbon::parse($service->start_date_time);
@@ -1479,11 +1857,13 @@ public function index_list(Request $request)
         $packageRanges = BookingPackages::with('booking', 'services')
             ->where('employee_id', $employeeId)
             ->when($ignoreBookingId > 0, fn ($q) => $q->where('booking_id', '!=', $ignoreBookingId))
+            ->when($lockForUpdate, fn ($q) => $q->lockForUpdate())
             ->whereHas('booking', function ($q) use ($branchId, $date) {
-                $q->where('branch_id', $branchId)
+                $q->when($branchId > 0, fn ($qq) => $qq->where('branch_id', $branchId))
                     ->whereDate('start_date_time', $date)
                     ->where('status', '!=', 'cancelled');
             })
+            ->orderBy('id')
             ->get()
             ->map(function ($package) {
                 $duration = (int) $package->services->sum('duration_min');
@@ -1636,20 +2016,36 @@ public function index_list(Request $request)
         return response()->json(['status' => true, 'data' => $responseData]);
     }
 
+    /**
+     * FIX: Wrapped in DB::transaction() and now validates the resulting schedule with
+     * assertNoScheduleConflicts() before returning success.
+     */
     public function checkout(Booking $booking_id, Request $request)
     {
+        $booking_id->loadMissing('services', 'bookingPackages');
+        $employeeIds = array_merge(
+            $this->extractRequestEmployeeIds($request),
+            $booking_id->services->pluck('employee_id')->all(),
+            $booking_id->bookingPackages->pluck('employee_id')->all()
+        );
+        $date = Carbon::parse($booking_id->start_date_time)->toDateString();
 
-        // $this->updateBookingPackage($request->purchase_package, $booking_id->id);
+        return $this->withEmployeeScheduleLocks($employeeIds, $date, function () use ($booking_id, $request) {
+            return DB::transaction(function () use ($booking_id, $request) {
+                // $this->updateBookingPackage($request->purchase_package, $booking_id->id);
 
+                $this->updateBookingService($request->services, $booking_id->id);
 
-        $this->updateBookingService($request->services, $booking_id->id);
+                $this->updateBookingProduct($request->products, $booking_id->id);
 
+                // FIX: reject the checkout if it results in a double-booked employee.
+                $this->assertNoScheduleConflicts($booking_id);
 
-        $this->updateBookingProduct($request->products, $booking_id->id);
+                $queryData = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking_id->id);
 
-        $queryData = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking_id->id);
-
-        return response()->json(['status' => true, 'data' => new BookingResource($queryData), 'message' => __('booking.booking_service_update')]);
+                return response()->json(['status' => true, 'data' => new BookingResource($queryData), 'message' => __('booking.booking_service_update')]);
+            }, 3); // FIX: retry up to 3x on deadlock before giving up
+        });
     }
 
     public function stripe_payment(Request $request)
