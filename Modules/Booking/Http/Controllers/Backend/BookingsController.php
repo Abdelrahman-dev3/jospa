@@ -305,18 +305,22 @@ public function index_list(Request $request)
         });
     }
 
-    $orderEmployees = $this->sortCalendarEmployees($orderEmployeesQuery->get(), $branchId);
-    $employees = $orderEmployees->values();
+    $viewer = $request->user();
+    $preferenceMap = $this->getCalendarEmployeePreferenceMap($viewer, $branchId);
+    $orderEmployees = $this->sortCalendarEmployees($orderEmployeesQuery->get(), $branchId, $viewer, $preferenceMap);
+    $employees = $orderEmployees
+        ->filter(fn ($employee) => $this->isCalendarEmployeeVisibleForUser($employee, $branchId, $viewer, $preferenceMap))
+        ->values();
 
     if (! empty($selectedEmployeeIds)) {
-        $employees = $employees->whereIn('id', $selectedEmployeeIds)->values();
+        $employees = $orderEmployees->whereIn('id', $selectedEmployeeIds)->values();
     }
 
     $employeeIds = $employees->pluck('id')->all();
     $visibleBookingEvents = array_values(array_filter($updated_data, function ($event) use ($employeeIds) {
         return in_array((int) ($event['resourceId'] ?? 0), $employeeIds, true);
     }));
-    $employeeBranchIds = $orderEmployees->mapWithKeys(function ($employee) use ($branchId) {
+    $employeeBranchIds = $employees->mapWithKeys(function ($employee) use ($branchId) {
         return [$employee->id => $this->effectiveEmployeeBranchId($employee, $branchId)];
     });
     $branchIds = $employeeBranchIds->filter()->unique()->values()->all();
@@ -332,14 +336,14 @@ public function index_list(Request $request)
         $orderResource[] = [
             'id' => $employee->id,
             'branch_id' => $employeeBranchId,
-            'is_visible' => (bool) $employee->show_in_calender,
+            'is_visible' => $this->isCalendarEmployeeVisibleForUser($employee, $branchId, $viewer, $preferenceMap),
             'title' => $employee->full_name,
         ];
     }
 
     $availabilityEvents = [];
     $availability = [];
-    foreach ($orderEmployees as $employee) {
+    foreach ($employees as $employee) {
         $employeeBranchId = (int) $employeeBranchIds->get($employee->id);
         $resource[] = [
             'id' => $employee->id,
@@ -374,7 +378,7 @@ public function index_list(Request $request)
 
     public function updateEmployeeOrder(Request $request)
     {
-        if (! $request->user()?->hasRole('admin')) {
+        if (! $request->user()?->can('view_booking')) {
             return response()->json([
                 'status' => false,
                 'message' => __('messages.permission_denied'),
@@ -406,30 +410,22 @@ public function index_list(Request $request)
         }
 
         $employees = $employeesQuery->get()->keyBy('id');
+        $preferences = [];
 
         foreach ($employeeRows as $index => $employeeRow) {
             $employeeId = (int) $employeeRow['id'];
-            $employee = $employees->get($employeeId);
-            if (! $employee) {
+            if (! $employees->has($employeeId)) {
                 continue;
             }
 
-            $employeeBranchId = $branchId > 0
-                ? $branchId
-                : (int) optional($employee->branches->first())->branch_id;
-
-            if ($employeeBranchId <= 0) {
-                continue;
-            }
-
-            BranchEmployee::where('employee_id', $employeeId)
-                ->where('branch_id', $employeeBranchId)
-                ->update(['calendar_sort_order' => $index + 1]);
-
-            $employee->forceFill([
-                'show_in_calender' => (bool) $employeeRow['is_visible'] ? 1 : 0,
-            ])->save();
+            $preferences[] = [
+                'id' => $employeeId,
+                'is_visible' => (bool) $employeeRow['is_visible'],
+                'order' => $index + 1,
+            ];
         }
+
+        $this->storeCalendarEmployeePreferences($request->user(), $branchId, $preferences);
 
         return response()->json([
             'status' => true,
@@ -437,9 +433,13 @@ public function index_list(Request $request)
         ]);
     }
 
-    private function sortCalendarEmployees($employees, int $branchId)
+    private function sortCalendarEmployees($employees, int $branchId, ?User $viewer = null, array $preferenceMap = [])
     {
-        return $employees->sort(function ($first, $second) use ($branchId) {
+        if (empty($preferenceMap)) {
+            $preferenceMap = $this->getCalendarEmployeePreferenceMap($viewer, $branchId);
+        }
+
+        return $employees->sort(function ($first, $second) use ($branchId, $preferenceMap) {
             $firstBranch = $branchId > 0
                 ? $first->branches->firstWhere('branch_id', $branchId)
                 : $first->branches->first();
@@ -447,11 +447,78 @@ public function index_list(Request $request)
                 ? $second->branches->firstWhere('branch_id', $branchId)
                 : $second->branches->first();
 
-            $firstOrder = $firstBranch?->calendar_sort_order ?? PHP_INT_MAX;
-            $secondOrder = $secondBranch?->calendar_sort_order ?? PHP_INT_MAX;
+            $firstOrder = $preferenceMap[(int) $first->id]['order'] ?? ($firstBranch?->calendar_sort_order ?? PHP_INT_MAX);
+            $secondOrder = $preferenceMap[(int) $second->id]['order'] ?? ($secondBranch?->calendar_sort_order ?? PHP_INT_MAX);
 
             return ($firstOrder <=> $secondOrder) ?: ((int) $first->id <=> (int) $second->id);
         })->values();
+    }
+
+    private function getCalendarEmployeePreferenceScope(int $branchId): string
+    {
+        return 'branch_' . ($branchId > 0 ? $branchId : 'all');
+    }
+
+    private function getCalendarEmployeePreferenceMap(?User $viewer, int $branchId): array
+    {
+        if (! $viewer) {
+            return [];
+        }
+
+        $settings = is_array($viewer->user_setting) ? $viewer->user_setting : [];
+        $scope = $this->getCalendarEmployeePreferenceScope($branchId);
+        $rows = data_get($settings, "calendar_employee_preferences.{$scope}", []);
+        $map = [];
+
+        foreach ((array) $rows as $index => $row) {
+            $employeeId = (int) data_get($row, 'id');
+            if ($employeeId <= 0) {
+                continue;
+            }
+
+            $map[$employeeId] = [
+                'order' => (int) (data_get($row, 'order') ?: ($index + 1)),
+                'is_visible' => filter_var(data_get($row, 'is_visible', true), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            ];
+        }
+
+        return $map;
+    }
+
+    private function isCalendarEmployeeVisibleForUser(User $employee, int $branchId, ?User $viewer = null, array $preferenceMap = []): bool
+    {
+        if (empty($preferenceMap)) {
+            $preferenceMap = $this->getCalendarEmployeePreferenceMap($viewer, $branchId);
+        }
+
+        $preference = $preferenceMap[(int) $employee->id] ?? null;
+
+        if (is_array($preference) && array_key_exists('is_visible', $preference) && $preference['is_visible'] !== null) {
+            return (bool) $preference['is_visible'];
+        }
+
+        return (bool) $employee->show_in_calender;
+    }
+
+    private function storeCalendarEmployeePreferences(User $viewer, int $branchId, array $preferences): void
+    {
+        $settings = is_array($viewer->user_setting) ? $viewer->user_setting : [];
+        $calendarPreferences = (array) data_get($settings, 'calendar_employee_preferences', []);
+        $scope = $this->getCalendarEmployeePreferenceScope($branchId);
+
+        $calendarPreferences[$scope] = array_values(array_map(function ($row) {
+            return [
+                'id' => (int) data_get($row, 'id'),
+                'is_visible' => (bool) data_get($row, 'is_visible', true),
+                'order' => (int) data_get($row, 'order', 0),
+            ];
+        }, $preferences));
+
+        $settings['calendar_employee_preferences'] = $calendarPreferences;
+
+        $viewer->forceFill([
+            'user_setting' => $settings,
+        ])->save();
     }
 
     private function effectiveEmployeeBranchId(User $employee, int $branchId): int
