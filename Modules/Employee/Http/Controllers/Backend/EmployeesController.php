@@ -784,8 +784,7 @@ class EmployeesController extends Controller
             ->reject(fn ($roleName) => $roleName === 'user')
             ->values()
             ->all();
-        $data['permissions'] = $data->getDirectPermissions()
-            ->pluck('name')
+        $data['permissions'] = $data->getPermissionNames()
             ->values()
             ->all();
 

@@ -149,7 +149,7 @@ use Illuminate\Support\Str;
         <div>
           <div class="cart-payment-notice__badge">
             <i class="fa-solid fa-bell"></i>
-            تنبيه مهم قبل الدفع
+            تنبيه مهم 
           </div>
           <h5 class="cart-payment-notice__title">احجزي الآن وأكملي الدفع خلال المهلة</h5>
           <p class="cart-payment-notice__text">
