@@ -68,7 +68,9 @@
             default-image="{{ default_user_avatar() }}"
             create-title="{{ __('messages.new') }} {{ __('employee.singular_title') }} "
             edit-title="{{ __('messages.edit') }} {{ __('employee.singular_title') }}"
-            :customefield="{{ json_encode($customefield) }}">
+            :customefield="{{ json_encode($customefield) }}"
+            :available-roles='@json($roles)'
+            :available-permissions='@json($permissions)'>
         </employee-offcanvas>
         <change-password create-title="{{ __('messages.change_password') }} "></change-password>
         <service-view-offcanvas></service-view-offcanvas>

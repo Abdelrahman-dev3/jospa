@@ -711,4 +711,5 @@ return [
 
     // Footer link
     'privacy_footer_link' => 'Privacy Policy',
+    'booking_timeout_warning' => 'Notice: The booking will be automatically cancelled and deleted 10 minutes after reservation if the payment is not completed successfully.',
 ];

@@ -33,11 +33,13 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             }
         }
 
+        [, $data] = $this->createPaymentAttempt($request, $data, 'urpay', $remainingAmount);
         $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
 
         try {
             $checkout = $this->createCheckoutRequest($request, $remainingAmount, $data, $merchantUrls);
         } catch (\Throwable $e) {
+            $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, $e->getMessage());
             if (! $this->wantsJson($request)) {
                 session()->forget('urpay_payment');
             }
@@ -96,22 +98,30 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     public function failure(Request $request)
     {
+        $message = $this->resolveGatewayMessage($request, __('messages.payment_failed'));
+        $this->markPaymentAttemptFailed($this->resolveAttemptId($request, session('urpay_payment')), $message, [
+            'callback_payload' => $request->all(),
+        ]);
         session()->forget('urpay_payment');
 
         return $this->respondFailure(
             $request,
-            $this->resolveGatewayMessage($request, __('messages.payment_failed')),
+            $message,
             402
         );
     }
 
     public function cancel(Request $request)
     {
+        $message = $this->resolveGatewayMessage($request, __('messages.payment_cancelled'));
+        $this->markPaymentAttemptCancelled($this->resolveAttemptId($request, session('urpay_payment')), $message, [
+            'callback_payload' => $request->all(),
+        ]);
         session()->forget('urpay_payment');
 
         return $this->respondFailure(
             $request,
-            $this->resolveGatewayMessage($request, __('messages.payment_cancelled')),
+            $message,
             400
         );
     }
@@ -126,6 +136,13 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
         $verification = $this->verifyPayment($request, $data);
         if (! $verification['ok']) {
+            $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), $verification['message'], [
+                'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                'merchant_reference' => $data['invoice_reference'] ?? null,
+                'callback_payload' => $request->all(),
+                'gateway_response' => $this->getDecryptedResponsePayload($request),
+            ]);
             session()->forget('urpay_payment');
 
             return $this->respondFailure($request, $verification['message'], 422);
@@ -138,11 +155,36 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 ? $this->resolveGatewayMessage($request, __('messages.payment_failed'))
                 : __('messages.payment_failed');
 
+            if (($verification['status'] ?? null) === 'cancel') {
+                $this->markPaymentAttemptCancelled($this->resolveAttemptId($request, $data), $failureMessage, [
+                    'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                    'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                    'merchant_reference' => $data['invoice_reference'] ?? null,
+                    'callback_payload' => $request->all(),
+                    'gateway_response' => $this->getDecryptedResponsePayload($request),
+                ]);
+            } else {
+                $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), $failureMessage, [
+                    'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                    'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                    'merchant_reference' => $data['invoice_reference'] ?? null,
+                    'callback_payload' => $request->all(),
+                    'gateway_response' => $this->getDecryptedResponsePayload($request),
+                ]);
+            }
+
             return $this->respondFailure($request, $failureMessage, 402);
         }
 
         if ($data) {
             if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                $this->markPaymentAttemptPaid($this->resolveAttemptId($request, $data), [
+                    'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                    'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                    'merchant_reference' => $data['invoice_reference'] ?? null,
+                    'callback_payload' => $request->all(),
+                    'gateway_response' => $this->getDecryptedResponsePayload($request),
+                ]);
                 session()->forget('urpay_payment');
 
                 return $this->respondSuccess($request, 'Payment already finalized.');
@@ -161,7 +203,14 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 return $this->respondFailure($request, $subResult['error'], 422);
             }
 
-            $invoiceId = $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult);
+            $invoiceId = $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult, [
+                'attempt_id' => $data['attempt_id'] ?? null,
+                'transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                'merchant_reference' => $data['invoice_reference'] ?? null,
+                'checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                'gateway_response' => $this->getDecryptedResponsePayload($request),
+                'callback_payload' => $request->all(),
+            ]);
             session()->forget('urpay_payment');
 
             return $this->respondSuccess($request, 'Payment captured successfully.', [
@@ -190,6 +239,12 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
+            $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
+                'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, null),
+                'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, null),
+                'callback_payload' => $request->all(),
+                'gateway_response' => $this->getDecryptedResponsePayload($request),
+            ]);
             return $this->respondSuccess($request, 'Payment already finalized.');
         }
 
@@ -217,7 +272,15 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'gift_ids' => $totalData['gift_ids'] ?? [],
             'payment_method' => 'urpay',
             'couponCode' => $context['couponCode'] ?? '',
-        ], $subResult);
+            'attempt_id' => $context['attempt_id'] ?? null,
+        ], $subResult, [
+            'attempt_id' => $context['attempt_id'] ?? null,
+            'transaction_id' => $this->resolveUrPayTransactionId($request, null),
+            'merchant_reference' => $request->get('udf1'),
+            'checkout_id' => $this->resolveUrPayCheckoutId($request, null),
+            'gateway_response' => $this->getDecryptedResponsePayload($request),
+            'callback_payload' => $request->all(),
+        ]);
 
         return $this->respondSuccess($request, 'Payment captured successfully.', [
             'invoice_id' => $invoiceId ?? null,
@@ -237,6 +300,10 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 'invoice_reference' => $invoiceRef,
                 'transaction_reference' => $invoiceRef,
             ]),
+        ]);
+
+        $this->markPaymentAttemptPending($data['attempt_id'] ?? null, [
+            'merchant_reference' => $invoiceRef,
         ]);
 
         $template = trim((string) config('urpay.checkout_url_template'));
@@ -329,6 +396,12 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         if ($reference) {
             session()->put('urpay_payment.transaction_reference', $reference);
         }
+
+        $this->markPaymentAttemptPending($data['attempt_id'] ?? null, [
+            'merchant_reference' => $invoiceRef,
+            'gateway_transaction_id' => $reference,
+            'gateway_response' => $responseData,
+        ]);
 
         return [
             'type' => 'redirect',
@@ -448,6 +521,13 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         session()->put('urpay_payment.transaction_reference', $paymentId);
         session()->put('urpay_payment.track_id', $trackId);
 
+        $this->markPaymentAttemptPending((int) session('urpay_payment.attempt_id'), [
+            'merchant_reference' => $invoiceRef,
+            'gateway_transaction_id' => $paymentId,
+            'gateway_checkout_id' => $trackId,
+            'gateway_response' => $responseData,
+        ]);
+
         return [
             'type' => 'redirect',
             'url' => $framedUrl,
@@ -498,6 +578,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
     {
         $params = array_filter([
+            'attempt_id' => $data['attempt_id'] ?? null,
             'user_id' => $data['user_id'],
             'page' => $typePage,
             'coupon_code' => $data['couponCode'] ?? null,
@@ -569,6 +650,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
         return [
             'user_id' => $userId,
+            'attempt_id' => (int) $request->get('attempt_id'),
             'page' => $request->get('page', 'cart'),
             'couponCode' => $request->get('coupon_code'),
             'wallet' => $request->boolean('wallet'),
@@ -948,6 +1030,52 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return $default;
+    }
+
+    private function resolveUrPayTransactionId(Request $request, ?array $data): ?string
+    {
+        $payload = $this->getDecryptedResponsePayload($request);
+        $candidates = [
+            $payload['paymentId'] ?? null,
+            $payload['transId'] ?? null,
+            $request->get('payment_id'),
+            $request->get('paymentId'),
+            $request->get('paymentid'),
+            $request->get('tranid'),
+            $request->get('transId'),
+            $data['transaction_reference'] ?? null,
+            $this->resolveCallbackReference($request, $data),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) $candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveUrPayCheckoutId(Request $request, ?array $data): ?string
+    {
+        $payload = $this->getDecryptedResponsePayload($request);
+        $candidates = [
+            $payload['trackId'] ?? null,
+            $request->get('trackId'),
+            $request->get('track_id'),
+            $request->get('trackid'),
+            $data['track_id'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = trim((string) $candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function containsAny(string $haystack, array $needles): bool

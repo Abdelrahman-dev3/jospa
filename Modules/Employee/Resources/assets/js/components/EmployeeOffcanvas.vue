@@ -87,6 +87,40 @@
               <p class="mb-0 text-danger">{{ errors.gender }}</p>
             </div>
 
+            <div class="form-group col-md-12">
+              <label class="form-label" for="roles">{{ $t('users.roles') }}</label>
+              <Multiselect
+                id="roles"
+                v-model="roles"
+                :value="roles"
+                placeholder="Select roles"
+                v-bind="accessSelectOption"
+                :options="roleOptions"
+                class="form-group"
+                @change="handleRolesChange"
+                @select="handleRolesChange"
+                @deselect="handleRolesChange"
+                @clear="handleRolesChange"
+              >
+              </Multiselect>
+              <span class="text-danger">{{ errors.roles }}</span>
+            </div>
+
+            <div class="form-group col-md-12">
+              <label class="form-label" for="permissions">{{ $t('users.permissions') }}</label>
+              <Multiselect
+                id="permissions"
+                v-model="permissions"
+                :value="permissions"
+                placeholder="Select permissions"
+                v-bind="accessSelectOption"
+                :options="permissionOptions"
+                class="form-group"
+              >
+              </Multiselect>
+              <span class="text-danger">{{ errors.permissions }}</span>
+            </div>
+
             <template v-if="isEmployeeScoped">
               <div class="form-group m-0 col-md-4">
                 <div class="form-check">
@@ -101,7 +135,7 @@
               <div class="form-group m-0 col-md-4">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" :true-value="1" :false-value="0" v-model="is_manager"
-                    id="is-manager" :checked="is_manager">
+                    id="is-manager" :checked="is_manager" @change="handleManagerToggle">
                   <label class="form-check-label" for="is-manager">
                     {{ $t('employee.lbl_is_manager') }}
                   </label>
@@ -266,6 +300,8 @@ const props = defineProps({
   editTitle: { type: String, default: '' },
   defaultImage: { type: String, default: 'https://dummyimage.com/600x300/cfcfcf/000000.png' },
   customefield: { type: Array, default: () => [] },
+  availableRoles: { type: Array, default: () => [] },
+  availablePermissions: { type: Array, default: () => [] },
   selectedSessionBranchId: {type: Number, default: null},
   selectedSessionShiftId: {type: Number, default: null}
 })
@@ -285,6 +321,12 @@ const categorySelectOption = ref({
   closeOnSelect: false,
   searchable: true,
   hideSelected: true,
+})
+const accessSelectOption = ref({
+  mode: 'tags',
+  closeOnSelect: false,
+  searchable: true,
+  hideSelected: false,
 })
 
 const { getRequest, storeRequest, updateRequest } = useRequest()
@@ -306,6 +348,14 @@ const categories = ref({ options: [], list: [] })
 const commissions = ref({ options: [], list: [] })
 const services = ref({ options: [], list: [] })
 const serviceCategoryMap = ref({})
+const roleOptions = computed(() => props.availableRoles.map((role) => ({
+  value: role.name,
+  label: formatAccessLabel(role.name)
+})))
+const permissionOptions = computed(() => props.availablePermissions.map((permission) => ({
+  value: permission.name,
+  label: formatAccessLabel(permission.name)
+})))
 
 onMounted(() => {
   setFormData(defaultData())
@@ -559,6 +609,8 @@ const defaultData = () => {
     password: '',
     profile_image: '',
     status: 1,
+    roles: ['employee'],
+    permissions: [],
     branch_id: 0,
     category_id: [],
     service_id: [],
@@ -600,12 +652,65 @@ const normalizeCategoryIds = (value) => {
   return [normalizeSingleId(value)].filter((item) => item !== null)
 }
 
+const normalizeAccessNames = (value) => {
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((item) => String(item).trim().toLowerCase()).filter(Boolean))]
+  }
+
+  if (value === null || value === undefined || value === '') {
+    return []
+  }
+
+  return [...new Set(String(value).split(',').map((item) => item.trim().toLowerCase()).filter(Boolean))]
+}
+
+const formatAccessLabel = (value) => {
+  return String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const applyRoleSelectionState = async () => {
+  const normalizedRoles = normalizeAccessNames(roles.value)
+
+  if (normalizedRoles.includes('manager') && !normalizedRoles.includes('employee')) {
+    normalizedRoles.push('employee')
+  }
+
+  roles.value = normalizedRoles
+  is_manager.value = normalizedRoles.includes('manager') ? 1 : 0
+  isEmployeeScoped.value = normalizedRoles.includes('employee')
+
+  await nextTick()
+  await loadServicesForCurrentFilters()
+}
+
+const handleRolesChange = async () => {
+  await applyRoleSelectionState()
+}
+
+const handleManagerToggle = async () => {
+  const normalizedRoles = normalizeAccessNames(roles.value).filter((roleName) => roleName !== 'manager')
+
+  if (is_manager.value) {
+    if (!normalizedRoles.includes('employee')) {
+      normalizedRoles.push('employee')
+    }
+
+    normalizedRoles.push('manager')
+  }
+
+  roles.value = [...new Set(normalizedRoles)]
+  await applyRoleSelectionState()
+}
+
 //  Reset Form
 const setFormData = (data) => {
   isHydratingForm.value = true
   serviceCategoryMap.value = {}
   isEmployeeScoped.value = data?.is_employee_role === undefined ? true : Boolean(Number(data.is_employee_role))
   ImageViewer.value = data.profile_image || null
+  const normalizedRoles = normalizeAccessNames(data.roles ?? (data.is_employee_role ? ['employee'] : []))
   resetForm({
     values: {
       id: data.id,
@@ -617,6 +722,8 @@ const setFormData = (data) => {
       password: data.password,
       confirm_password: data.confirm_password,
       gender: data.gender,
+      roles: normalizedRoles,
+      permissions: normalizeAccessNames(data.permissions),
       profile_image: data.profile_image,
       branch_id: data.branch_id,
       shift_id: data.shift_id,
@@ -636,7 +743,8 @@ const setFormData = (data) => {
       dribbble_link: data.dribbble_link,
     }
   })
-  nextTick(() => {
+  nextTick(async () => {
+    await applyRoleSelectionState()
     isHydratingForm.value = false
   })
 }
@@ -745,6 +853,8 @@ const { value: confirm_password } = useField('confirm_password')
 const { value: gender } = useField('gender')
 const { value: mobile } = useField('mobile')
 const { value: employee_login_otp } = useField('employee_login_otp')
+const { value: roles } = useField('roles')
+const { value: permissions } = useField('permissions')
 const { value: branch_id } = useField('branch_id')
 const { value: shift_id } = useField('shift_id')
 const { value: category_id } = useField('category_id')
@@ -781,6 +891,8 @@ const formSubmit = handleSubmit((values) => {
   IS_SUBMITED.value = true;
   values.show_in_home_booking = isEmployeeScoped.value && show_in_home_booking.value ? 1 : 0;
   values.services_edited = isEmployeeScoped.value && servicesEdited.value ? 1 : 0;
+  values.roles = normalizeAccessNames(values.roles)
+  values.permissions = normalizeAccessNames(values.permissions)
   if (!isEmployeeScoped.value) {
     values.branch_id = ''
     values.shift_id = ''

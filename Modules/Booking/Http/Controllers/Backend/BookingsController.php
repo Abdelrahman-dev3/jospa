@@ -154,7 +154,7 @@ public function index_list(Request $request)
     // ----------------------------
     // Booking Services
     // ----------------------------
-    $data = BookingService::with('booking.user', 'booking.branch', 'employee', 'service')
+    $data = BookingService::with('booking.user', 'booking.branch', 'employee', 'service.category')
         ->whereHas('booking', function ($q) use ($dateStart, $dateEnd, $branchId) {
             if (!empty($dateStart)) {
                 $q->whereDate('start_date_time', '>=', $dateStart)
@@ -173,7 +173,7 @@ public function index_list(Request $request)
     // ----------------------------
     // Booking Packages
     // ----------------------------
-    $package = BookingPackages::with('booking.user', 'booking.branch', 'employee', 'services', 'package')
+    $package = BookingPackages::with('booking.user', 'booking.branch', 'employee', 'services.services.category', 'package')
         ->whereHas('booking', function ($q) use ($dateStart, $dateEnd, $branchId) {
             if (!empty($dateStart)) {
                 $q->whereDate('start_date_time', '>=', $dateStart)
@@ -204,6 +204,9 @@ public function index_list(Request $request)
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
+        $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
+        $categoryColor = $this->normalizeCalendarColor(optional(optional($value->service)->category)->calendar_color);
+        $eventColor = $categoryColor ?: $statusColor;
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $service_updated[$key] = [
@@ -214,7 +217,8 @@ public function index_list(Request $request)
             'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
-            'color' => $statusList[$value->booking->status]['color_hex'],
+            'color' => $eventColor,
+            'backgroundColor' => $eventColor,
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
@@ -226,6 +230,8 @@ public function index_list(Request $request)
                 'created_by_name' => $createdByName,
                 'status' => $value->booking->status,
                 'status_title' => $statusTitle,
+                'status_color' => $statusColor,
+                'category_color' => $categoryColor,
                 'duration' => $duration,
                 'type' => 'service',
             ],
@@ -246,6 +252,9 @@ public function index_list(Request $request)
         $branchName = $branchId === 0 ? ($value->booking->branch->name ?? '') : '';
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
+        $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
+        $categoryColor = $this->resolvePackageCategoryColor($value);
+        $eventColor = $categoryColor ?: $statusColor;
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $package_updated[$key] = [
@@ -256,7 +265,8 @@ public function index_list(Request $request)
             'resourceIds' => [(string) $value->employee_id],
             'title' => $serviceName,
             'titleHTML' => view('booking::backend.bookings.calender.event', compact('serviceName', 'customerName', 'branchName', 'createdByName'))->render(),
-            'color' => $statusList[$value->booking->status]['color_hex'],
+            'color' => $eventColor,
+            'backgroundColor' => $eventColor,
             'extendedProps' => [
                 'booking_id' => $value->booking_id,
                 'branch_id' => $value->booking->branch_id,
@@ -268,6 +278,8 @@ public function index_list(Request $request)
                 'created_by_name' => $createdByName,
                 'status' => $value->booking->status,
                 'status_title' => $statusTitle,
+                'status_color' => $statusColor,
+                'category_color' => $categoryColor,
                 'duration' => $duration,
                 'type' => 'package',
             ],
@@ -449,6 +461,34 @@ public function index_list(Request $request)
         }
 
         return (int) optional($employee->branches->first())->branch_id;
+    }
+
+    private function normalizeCalendarColor(?string $color): ?string
+    {
+        $color = trim((string) $color);
+
+        if ($color === '') {
+            return null;
+        }
+
+        if ($color[0] !== '#') {
+            $color = '#' . $color;
+        }
+
+        return preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $color) ? strtoupper($color) : null;
+    }
+
+    private function resolvePackageCategoryColor(BookingPackages $bookingPackage): ?string
+    {
+        foreach ($bookingPackage->services ?? [] as $packageService) {
+            $color = $this->normalizeCalendarColor(optional(optional($packageService->services)->category)->calendar_color);
+
+            if ($color) {
+                return $color;
+            }
+        }
+
+        return null;
     }
 
     private function availabilityContextForDate(string $date, array $branchIds, array $employeeIds): array

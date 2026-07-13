@@ -1,6 +1,6 @@
 <?php
     use App\Http\Controllers\Backend\{
-        AdsController,ContactMessageController,GiftController,InvoiceController,
+        AdsController,ContactMessageController,GiftController,InvoiceController,PaymentAttemptController,
         LoyaltyController,ModuleController,offersController,ReportsController,
         RejectController,TermsAndConditionsController,TextController,
         BackendController,BackupController,BranchController,NotificationsController,
@@ -377,6 +377,10 @@
         Route::controller(InvoiceController::class)->group(function () {
             Route::get('/app/invoice', 'index')->name('app.invoice');
             Route::get('/invoices/{id}', 'destroy')->name('invoices.destroy');
+        });
+
+        Route::controller(PaymentAttemptController::class)->group(function () {
+            Route::get('/app/payment-attempts', 'index')->name('backend.payment-attempts.index');
         });
 
         Route::controller(LoyaltyController::class)->group(function () {

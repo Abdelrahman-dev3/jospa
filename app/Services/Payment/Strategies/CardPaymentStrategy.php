@@ -35,6 +35,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
         }
 
         try {
+            [, $data] = $this->createPaymentAttempt($request, $data, 'hyperpay', $remainingAmount);
             $hyperpay = app(HyperpayService::class);
             $merchantTransactionId = $this->generateMerchantTransactionId($data['user_id']);
             $shopperResultUrl = $this->buildShopperResultUrl($request, $data, $merchantTransactionId);
@@ -71,6 +72,12 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 now()->addMinutes(self::CACHE_TTL_MINUTES)
             );
 
+            $this->markPaymentAttemptPending($data['attempt_id'] ?? null, [
+                'merchant_reference' => $merchantTransactionId,
+                'gateway_checkout_id' => $checkoutId,
+                'gateway_response' => $checkout,
+            ]);
+
             $paymentUrl = $this->buildHostedCheckoutUrl($checkoutId, $merchantTransactionId);
 
             if ($this->wantsJson($request)) {
@@ -90,6 +97,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
             return redirect()->to($paymentUrl);
         } catch (\Throwable $e) {
+            $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, $e->getMessage());
             return $this->respondPayException($request, $e);
         }
     }
@@ -221,6 +229,17 @@ class CardPaymentStrategy extends BasePaymentStrategy
             }
 
             if (! $hyperpay->isSuccessfulResult($resultCode)) {
+                $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, (string) data_get(
+                    $payment,
+                    'result.description',
+                    app()->getLocale() === 'ar' ? 'فشلت عملية الدفع.' : 'Payment failed.'
+                ), [
+                    'merchant_reference' => $merchantTransactionId,
+                    'gateway_transaction_id' => data_get($payment, 'id'),
+                    'gateway_checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_response' => $payment,
+                    'callback_payload' => $request->all(),
+                ]);
                 Cache::forget($cacheKey);
 
                 return $this->respondFailure(
@@ -238,6 +257,15 @@ class CardPaymentStrategy extends BasePaymentStrategy
             $paidAmount = (float) data_get($payment, 'amount', 0);
 
             if ($expectedAmount > 0 && $paidAmount > 0 && abs($expectedAmount - $paidAmount) > 0.01) {
+                $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, app()->getLocale() === 'ar'
+                    ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                    : 'Paid amount does not match expected amount.', [
+                    'merchant_reference' => $merchantTransactionId,
+                    'gateway_transaction_id' => data_get($payment, 'id'),
+                    'gateway_checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_response' => $payment,
+                    'callback_payload' => $request->all(),
+                ]);
                 Cache::forget($cacheKey);
 
                 return $this->respondFailure(
@@ -250,6 +278,13 @@ class CardPaymentStrategy extends BasePaymentStrategy
             }
 
             if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                $this->markPaymentAttemptPaid($data['attempt_id'] ?? null, [
+                    'merchant_reference' => $merchantTransactionId,
+                    'gateway_transaction_id' => data_get($payment, 'id'),
+                    'gateway_checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_response' => $payment,
+                    'callback_payload' => $request->all(),
+                ]);
                 Cache::forget($cacheKey);
 
                 return $this->respondSuccess($request, 'Payment already finalized.', [
@@ -267,7 +302,15 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 (int) $data['user_id'],
                 $fakeRequest,
                 $data,
-                $data['subResult'] ?? []
+                $data['subResult'] ?? [],
+                [
+                    'attempt_id' => $data['attempt_id'] ?? null,
+                    'transaction_id' => (string) data_get($payment, 'id', ''),
+                    'merchant_reference' => $merchantTransactionId,
+                    'checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_response' => $payment,
+                    'callback_payload' => $request->all(),
+                ]
             );
 
             Cache::forget($cacheKey);
@@ -278,6 +321,10 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 'amount' => $paidAmount,
             ]);
         } catch (\Throwable $e) {
+            $attemptId = isset($data) && is_array($data) ? ($data['attempt_id'] ?? null) : null;
+            $this->markPaymentAttemptFailed($attemptId, $e->getMessage(), [
+                'callback_payload' => $request->all(),
+            ]);
             return $this->respondPayException($request, $e, 502);
         }
     }

@@ -3,7 +3,9 @@
 namespace App\Services\Payment\Strategies;
 
 use App\Models\GiftCard;
+use App\Models\PaymentAttempt;
 use App\Services\Payment\PaymentCalculatorService;
+use App\Services\Payment\PaymentAttemptService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Http\Request;
@@ -68,10 +70,11 @@ abstract class BasePaymentStrategy
         ];
     }
 
-    protected function commitFinalizedPayment(int $userId, Request $request, array $paymentData, array $subResult): int
+    protected function commitFinalizedPayment(int $userId, Request $request, array $paymentData, array $subResult, array $gatewayMeta = []): int
     {
         $finalizer = app(PaymentFinalizerService::class);
         $subMethodService = app(PaymentSubMethodsService::class);
+        $attemptService = app(PaymentAttemptService::class);
         $subPayments = array_merge($subResult, [
             'gift_code' => $request->get('gift_code'),
             'coupon_discount_amount' => $paymentData['couponDiscountAmount'] ?? 0,
@@ -91,10 +94,21 @@ abstract class BasePaymentStrategy
             $paymentData['payment_method'] ?? 'Sub Methods',
             $paymentData['couponCode'] ?? '',
             true,
-            $subPayments
+            $subPayments,
+            $gatewayMeta
         );
 
         $subMethodService->apply($userId, $request, $paymentData['final_before_sub'], true);
+
+        $attemptService->markPaid($this->resolveAttemptId($request, $paymentData), [
+            'invoice_id' => $invoiceId,
+            'merchant_reference' => $gatewayMeta['merchant_reference'] ?? null,
+            'gateway_transaction_id' => $gatewayMeta['transaction_id'] ?? null,
+            'gateway_checkout_id' => $gatewayMeta['checkout_id'] ?? null,
+            'gateway_order_id' => $gatewayMeta['order_id'] ?? null,
+            'gateway_response' => $gatewayMeta['gateway_response'] ?? null,
+            'callback_payload' => $gatewayMeta['callback_payload'] ?? null,
+        ]);
 
         return $invoiceId;
     }
@@ -206,5 +220,40 @@ abstract class BasePaymentStrategy
     protected function presentableErrorMessage(\Throwable $e): string
     {
         return trim($e->getMessage()) !== '' ? $e->getMessage() : __('messages.payment_failed');
+    }
+
+    protected function createPaymentAttempt(Request $request, array $paymentData, string $gateway, float $amount): array
+    {
+        $attempt = app(PaymentAttemptService::class)->create($paymentData, $amount, $gateway, $request);
+        $paymentData['attempt_id'] = $attempt->id;
+
+        return [$attempt, $paymentData];
+    }
+
+    protected function resolveAttemptId(Request $request, ?array $paymentData = null): ?int
+    {
+        $attemptId = $request->input('attempt_id', $paymentData['attempt_id'] ?? null);
+
+        return is_numeric($attemptId) ? (int) $attemptId : null;
+    }
+
+    protected function markPaymentAttemptPending(?int $attemptId, array $attributes = []): ?PaymentAttempt
+    {
+        return app(PaymentAttemptService::class)->markPending($attemptId, $attributes);
+    }
+
+    protected function markPaymentAttemptFailed(?int $attemptId, ?string $message = null, array $attributes = []): ?PaymentAttempt
+    {
+        return app(PaymentAttemptService::class)->markFailed($attemptId, $message, $attributes);
+    }
+
+    protected function markPaymentAttemptCancelled(?int $attemptId, ?string $message = null, array $attributes = []): ?PaymentAttempt
+    {
+        return app(PaymentAttemptService::class)->markCancelled($attemptId, $message, $attributes);
+    }
+
+    protected function markPaymentAttemptPaid(?int $attemptId, array $attributes = []): ?PaymentAttempt
+    {
+        return app(PaymentAttemptService::class)->markPaid($attemptId, $attributes);
     }
 }

@@ -151,7 +151,7 @@ return [
         [
             'title' => 'sidebar.finance',
             'menu_item_type' => 'static',
-            'permission' => ['view_tax', 'view_earning'],
+            'permission' => ['view_tax', 'view_earning', 'view_invoice'],
             'order' => 13,
         ],
         [
@@ -171,12 +171,20 @@ return [
             'order' => 15,
         ],
         [
+            'start_icon' => 'fa-solid fa-credit-card',
+            'title' => 'sidebar.Payment Transactions',
+            'route' => 'backend.payment-attempts.index',
+            'active' => ['app/payment-attempts'],
+            'permission' => ['view_invoice'],
+            'order' => 16,
+        ],
+        [
             'start_icon' => 'fa-solid fa-ticket',
             'title' => 'promotion.coupon_title',
             'route' => 'backend.promotions.index',
             'active' => ['app/promotions'],
             'permission' => ['view_role_permissions'],
-            'order' => 16,
+            'order' => 17,
             'menu_level' => 1,
         ],
         [
@@ -535,7 +543,7 @@ return [
             'title' => 'sidebar.finance',
             'menu_item_type' => 'parent',
             'order' => 3,
-            'permission' => ['view_tax', 'view_earning'],
+            'permission' => ['view_tax', 'view_earning', 'view_invoice'],
             'children' => [
                 [
                     'menu_type' => 'horizontal',
@@ -557,12 +565,22 @@ return [
                     'menu_level' => 1,
                 ],
                 [
+                    'menu_type' => 'horizontal',
+                    'start_icon' => 'fa-solid fa-credit-card',
+                    'title' => 'sidebar.Payment Transactions',
+                    'route' => 'backend.payment-attempts.index',
+                    'active' => ['app/payment-attempts'],
+                    'permission' => ['view_invoice'],
+                    'order' => 2,
+                    'menu_level' => 1,
+                ],
+                [
                     'start_icon' => 'fa-solid fa-ticket',
                     'title' => 'promotion.coupon_title',
                     'route' => 'backend.promotions.index',
                     'active' => ['app/promotions'],
                     'permission' => ['view_role_permissions'],
-                    'order' => 2,
+                    'order' => 3,
                     'menu_level' => 1,
                 ],
             ],

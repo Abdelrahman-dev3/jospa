@@ -361,6 +361,26 @@
         font-size:12px;
         padding:0 10px;
       }
+    .timeout-warning {
+      max-width: 1100px;
+      margin: 0 auto 18px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid #ffeeba;
+      background: #fff3cd;
+      color: #856404;
+      box-shadow: 0 6px 20px rgba(133,100,4,0.08);
+      font-size: 15px;
+      line-height: 1.7;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    @media (max-width: 767px){
+      .timeout-warning {
+        font-size: 13px;
+        padding: 12px 14px;
+      }
     }
   </style>
   @php
@@ -388,6 +408,11 @@
       {{ $paymentError }}
     </div>
   @endif
+
+  <div class="timeout-warning" role="alert">
+    <i class="fa-solid fa-clock-rotate-left" style="font-size: 18px;"></i>
+    <span>{{ __('messagess.booking_timeout_warning') }}</span>
+  </div>
             @if(request()->has('ids'))
         <style>
             /* wrapper */

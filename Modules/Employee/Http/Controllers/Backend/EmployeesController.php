@@ -5,6 +5,8 @@ namespace Modules\Employee\Http\Controllers\Backend;
 use App\Authorizable;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Carbon\Carbon;
 use Currency;
@@ -64,6 +66,27 @@ class EmployeesController extends Controller
         $module_action = 'List';
         $columns = CustomFieldGroup::columnJsonValues(new User());
         $customefield = CustomField::exportCustomFields(new User());
+        $roles = Role::query()
+            ->where('name', '!=', 'user')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(function ($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                ];
+            })
+            ->values();
+        $permissions = Permission::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(function ($permission) {
+                return [
+                    'id' => $permission->id,
+                    'name' => $permission->name,
+                ];
+            })
+            ->values();
 
         $export_import = true;
         $export_columns = [
@@ -106,7 +129,7 @@ class EmployeesController extends Controller
         ];
         $export_url = route('backend.employees.export');
 
-        return view('employee::backend.employees.index', compact('module_action', 'columns', 'customefield', 'export_import', 'export_columns', 'export_url'));
+        return view('employee::backend.employees.index', compact('module_action', 'columns', 'customefield', 'export_import', 'export_columns', 'export_url', 'roles', 'permissions'));
     }
 
     /**
@@ -652,22 +675,11 @@ class EmployeesController extends Controller
         }
 
         $employee_id = $data['id'];
-
-        $roles = ['employee'];
-
-        if ($request->is_manager) {
-            array_push($roles, 'manager');
-            if ($request->has('branch_id')) {
-                $branch = Branch::where('id', $request->branch_id)->first();
-                $branch->update(['manager_id' => $employee_id]);
-            }
-        }
-
-        $data->syncRoles($roles);
+        $access = $this->syncUserAccess($data, $request);
 
         \Artisan::call('cache:clear');
 
-        if ($request->has('branch_id')) {
+        if ($access['is_employee'] && $request->has('branch_id')) {
             $branch_data = [
                 'employee_id' => $employee_id,
                 'branch_id' => $request->branch_id,
@@ -676,7 +688,7 @@ class EmployeesController extends Controller
             BranchEmployee::create($branch_data);
         }
 
-        if ($request->has('service_id')) {
+        if ($access['is_employee'] && $request->has('service_id')) {
             foreach ($this->extractServiceIds($request->service_id) as $serviceId) {
                 ServiceEmployee::create([
                     'employee_id' => $employee_id,
@@ -684,13 +696,17 @@ class EmployeesController extends Controller
                 ]);
             }
         }
-        if (isset($request->commission_id) && $request->has('commission_id')) {
+        if ($access['is_employee'] && isset($request->commission_id) && $request->has('commission_id')) {
             $commission_data = [
                 'employee_id' => $employee_id,
                 'commission_id' => $request->commission_id,
             ];
 
             EmployeeCommission::updateOrCreate($commission_data, $commission_data);
+        }
+
+        if ($access['is_manager'] && $request->filled('branch_id')) {
+            $this->assignBranchManager($employee_id, (int) $request->branch_id);
         }
 
         $message = __('messages.create_form', ['form' => __('employee.singular_title_manager')]);
@@ -763,6 +779,15 @@ class EmployeesController extends Controller
 
         $data['dribbble_link'] = $data->profile->dribbble_link ?? null;
         $data['employee_login_otp'] = $data->employee_login_otp;
+        $data['roles'] = $data->roles
+            ->pluck('name')
+            ->reject(fn ($roleName) => $roleName === 'user')
+            ->values()
+            ->all();
+        $data['permissions'] = $data->getDirectPermissions()
+            ->pluck('name')
+            ->values()
+            ->all();
 
         return response()->json([
             'data' => array_merge($data->toArray(), [
@@ -781,7 +806,10 @@ class EmployeesController extends Controller
     public function update(EmployeeRequest $request, $id)
     {
         $data = $this->findManageableUser($id);
-        $isEmployee = $data->hasRole('employee');
+        $requestedRoles = collect($this->extractAccessNames($request->input('roles')));
+        $shouldBeEmployee = $requestedRoles->contains('employee')
+            || $requestedRoles->contains('manager')
+            || $request->boolean('is_manager');
 
         $request_data = $request->except('profile_image');
 
@@ -791,23 +819,25 @@ class EmployeesController extends Controller
             $request_data = $request->except('password');
         }
     
-        if ($isEmployee) {
+        if ($shouldBeEmployee) {
             $request_data['show_in_home_booking'] = $request->input('show_in_home_booking', 0);
         } else {
+            $request_data['show_in_calender'] = 0;
+            $request_data['show_in_home_booking'] = 0;
+            $request_data['is_manager'] = 0;
             unset(
                 $request_data['branch_id'],
                 $request_data['shift_id'],
                 $request_data['category_id'],
                 $request_data['service_id'],
                 $request_data['commission_id'],
-                $request_data['services_edited'],
-                $request_data['is_manager'],
-                $request_data['show_in_calender'],
-                $request_data['show_in_home_booking']
+                $request_data['services_edited']
             );
         }
 
         $data->update($request_data);
+        $access = $this->syncUserAccess($data, $request);
+        $isEmployee = $access['is_employee'];
 
         $profile = [
             'about_self' => $request->about_self,
@@ -829,24 +859,14 @@ class EmployeesController extends Controller
             storeMediaFile($data, $request->file('profile_image'), 'profile_image');
         }
 
+        $this->clearManagedBranches($data->id);
+
         if ($isEmployee) {
             BranchEmployee::where('employee_id', $id)->delete();
 
             EmployeeCommission::where('employee_id', $id)->delete();
 
-            $roles = ['employee'];
-
             $employee_id = $data->id;
-
-            if ($request->is_manager) {
-                array_push($roles, 'manager');
-                if ($request->has('branch_id')) {
-                    $branch = Branch::where('id', $request->branch_id)->first();
-                    $branch->update(['manager_id' => $employee_id]);
-                }
-            }
-
-            // $data->syncRoles($roles);
 
             \Artisan::call('cache:clear');
 
@@ -887,6 +907,14 @@ class EmployeesController extends Controller
 
                 EmployeeCommission::updateOrCreate($commission_data, $commission_data);
             }
+
+            if ($access['is_manager'] && $request->filled('branch_id')) {
+                $this->assignBranchManager($employee_id, (int) $request->branch_id);
+            }
+        } else {
+            BranchEmployee::where('employee_id', $id)->delete();
+            EmployeeCommission::where('employee_id', $id)->delete();
+            ServiceEmployee::where('employee_id', $id)->delete();
         }
 
         $message = __('messages.update_form', ['form' => __('employee.singular_title')]);
@@ -1204,6 +1232,103 @@ class EmployeesController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function extractAccessNames($values): array
+    {
+        if (empty($values) || $values === 'undefined') {
+            return [];
+        }
+
+        if (is_array($values)) {
+            return collect($values)
+                ->map(fn ($value) => strtolower(trim((string) $value)))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $rawValues = trim((string) $values);
+        $decodedValues = json_decode($rawValues, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decodedValues)) {
+            return collect($decodedValues)
+                ->map(fn ($value) => strtolower(trim((string) $value)))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return collect(explode(',', $rawValues))
+            ->map(fn ($value) => strtolower(trim((string) $value)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function syncUserAccess(User $user, Request $request): array
+    {
+        $availableRoles = Role::query()
+            ->where('name', '!=', 'user')
+            ->pluck('name')
+            ->map(fn ($name) => strtolower((string) $name))
+            ->all();
+        $availablePermissions = Permission::query()
+            ->pluck('name')
+            ->map(fn ($name) => strtolower((string) $name))
+            ->all();
+
+        $roles = collect($this->extractAccessNames($request->input('roles')))
+            ->intersect($availableRoles)
+            ->reject(fn ($roleName) => $roleName === 'user')
+            ->values();
+
+        if ($roles->contains('manager') && ! $roles->contains('employee')) {
+            $roles->push('employee');
+        }
+
+        if ($request->boolean('is_manager')) {
+            if (! $roles->contains('employee')) {
+                $roles->push('employee');
+            }
+
+            if (! $roles->contains('manager')) {
+                $roles->push('manager');
+            }
+        } else {
+            $roles = $roles->reject(fn ($roleName) => $roleName === 'manager')->values();
+        }
+
+        $permissions = collect($this->extractAccessNames($request->input('permissions')))
+            ->intersect($availablePermissions)
+            ->values();
+
+        $user->syncRoles($roles->all());
+        $user->syncPermissions($permissions->all());
+
+        return [
+            'roles' => $roles->all(),
+            'permissions' => $permissions->all(),
+            'is_employee' => $roles->contains('employee'),
+            'is_manager' => $roles->contains('manager'),
+        ];
+    }
+
+    private function clearManagedBranches(int $employeeId): void
+    {
+        Branch::query()
+            ->where('manager_id', $employeeId)
+            ->update(['manager_id' => null]);
+    }
+
+    private function assignBranchManager(int $employeeId, int $branchId): void
+    {
+        Branch::query()
+            ->where('id', $branchId)
+            ->update(['manager_id' => $employeeId]);
     }
 
 }

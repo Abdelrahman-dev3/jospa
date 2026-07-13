@@ -31,6 +31,8 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             }
         }
 
+        [, $data] = $this->createPaymentAttempt($request, $data, 'tamara', $remainingAmount);
+
         if ($request->expectsJson()) {
             $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
             try {
@@ -38,8 +40,10 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
                     'cart_ids' => $data['cart_ids'] ?? [],
                     'platform' => $request->get('platform'),
                     'is_mobile' => $request->boolean('is_mobile'),
+                    'attempt_id' => $data['attempt_id'] ?? null,
                 ]);
             } catch (\Exception $e) {
+                $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, $e->getMessage());
                 return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
             }
             
@@ -64,6 +68,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         try {
             $paymentUrl = $this->createTamaraCheckout($remainingAmount);
         } catch (\Exception $e) {
+            $this->markPaymentAttemptFailed(session('tamara_payment.attempt_id'), $e->getMessage());
             session()->forget('tamara_payment');
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -153,6 +158,12 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         }
     
         session()->put('tamara_payment.checkout_id', $data['checkout_id']);
+        $this->markPaymentAttemptPending((int) ($context['attempt_id'] ?? session('tamara_payment.attempt_id')), [
+            'merchant_reference' => $invoiceRef,
+            'gateway_checkout_id' => $data['checkout_id'] ?? null,
+            'gateway_order_id' => $invoiceRef,
+            'gateway_response' => $data,
+        ]);
     
         return $data['checkout_url'];
     }
@@ -168,6 +179,9 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         $checkoutId = $request->checkout_id ?? ($data['checkout_id'] ?? null);
 
         if (!$checkoutId) {
+            $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), 'Tamara checkout id missing', [
+                'callback_payload' => $request->all(),
+            ]);
             return $this->respondFailure($request, 'Tamara checkout id missing', 400);
         }
 
@@ -175,6 +189,10 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             ->get(config('tamara.base_url') . "/api/v2/checkout/{$checkoutId}");
 
         if (!$response->successful()) {
+            $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), 'Failed to verify Tamara payment', [
+                'gateway_checkout_id' => $checkoutId,
+                'callback_payload' => $request->all(),
+            ]);
             return $this->respondFailure($request, 'Failed to verify Tamara payment', 502);
         }
 
@@ -182,12 +200,31 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         $status   = $checkout['status'] ?? null;
 
         if ($status !== 'approved') {
+            if ((string) $status === 'cancelled') {
+                $this->markPaymentAttemptCancelled($this->resolveAttemptId($request, $data), __('messages.payment_cancelled'), [
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $checkout,
+                    'callback_payload' => $request->all(),
+                ]);
+            } else {
+                $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), __('messages.payment_failed'), [
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $checkout,
+                    'callback_payload' => $request->all(),
+                ]);
+            }
             session()->forget('tamara_payment');
             return $this->respondFailure($request, __('messages.payment_failed'), 402);
         }
 
         if ($data) {
             if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                $this->markPaymentAttemptPaid($this->resolveAttemptId($request, $data), [
+                    'gateway_transaction_id' => $checkoutId,
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $checkout,
+                    'callback_payload' => $request->all(),
+                ]);
                 session()->forget('tamara_payment');
                 return $this->respondSuccess($request, 'Payment already finalized.');
             }
@@ -196,10 +233,24 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             $fakeRequest = new Request($data['submethods']);
             $subResult = $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub']);
             if (isset($subResult['error'])) {
+                $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), $subResult['error'], [
+                    'gateway_transaction_id' => $checkoutId,
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $checkout,
+                    'callback_payload' => $request->all(),
+                ]);
                 session()->forget('tamara_payment');
                 return $this->respondFailure($request, $subResult['error'], 422);
             }
-            $this->commitFinalizedPayment(auth()->id(), $fakeRequest, $data, $subResult);
+            $this->commitFinalizedPayment(auth()->id(), $fakeRequest, $data, $subResult, [
+                'attempt_id' => $data['attempt_id'] ?? null,
+                'transaction_id' => $checkoutId,
+                'merchant_reference' => $checkout['order_reference_id'] ?? null,
+                'checkout_id' => $checkoutId,
+                'order_id' => $checkout['order_reference_id'] ?? null,
+                'gateway_response' => $checkout,
+                'callback_payload' => $request->all(),
+            ]);
 
             session()->forget('tamara_payment');
 
@@ -227,6 +278,12 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
+            $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
+                'gateway_transaction_id' => $checkoutId,
+                'gateway_checkout_id' => $checkoutId,
+                'gateway_response' => $checkout,
+                'callback_payload' => $request->all(),
+            ]);
             return $this->respondSuccess($request, 'Payment already finalized.');
         }
 
@@ -238,6 +295,12 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         ]);
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {
+            $this->markPaymentAttemptFailed($context['attempt_id'] ?? null, $subResult['error'], [
+                'gateway_transaction_id' => $checkoutId,
+                'gateway_checkout_id' => $checkoutId,
+                'gateway_response' => $checkout,
+                'callback_payload' => $request->all(),
+            ]);
             return $this->respondFailure($request, $subResult['error'], 422);
         }
         $this->commitFinalizedPayment($user->id, $fakeRequest, [
@@ -253,13 +316,25 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'gift_ids' => $totalData['gift_ids'] ?? [],
             'payment_method' => 'tamara',
             'couponCode' => $context['couponCode'] ?? '',
-        ], $subResult);
+            'attempt_id' => $context['attempt_id'] ?? null,
+        ], $subResult, [
+            'attempt_id' => $context['attempt_id'] ?? null,
+            'transaction_id' => $checkoutId,
+            'merchant_reference' => $checkout['order_reference_id'] ?? null,
+            'checkout_id' => $checkoutId,
+            'order_id' => $checkout['order_reference_id'] ?? null,
+            'gateway_response' => $checkout,
+            'callback_payload' => $request->all(),
+        ]);
 
         return $this->respondSuccess($request, 'Payment captured successfully.');
     }
 
     public function failure()
     {
+        $this->markPaymentAttemptFailed($this->resolveAttemptId(request(), session('tamara_payment')), __('messages.payment_failed'), [
+            'callback_payload' => request()->all(),
+        ]);
         session()->forget('tamara_payment');
 
         return $this->respondFailure(request(), __('messages.payment_failed'), 402);
@@ -267,6 +342,9 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
 
     public function cancel()
     {
+        $this->markPaymentAttemptCancelled($this->resolveAttemptId(request(), session('tamara_payment')), __('messages.payment_cancelled'), [
+            'callback_payload' => request()->all(),
+        ]);
         session()->forget('tamara_payment');
 
         return $this->respondFailure(request(), __('messages.payment_cancelled'), 400);
@@ -275,6 +353,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
     {
         $params = array_filter([
+            'attempt_id' => $data['attempt_id'] ?? null,
             'user_id' => $data['user_id'],
             'page' => $typePage,
             'coupon_code' => $data['couponCode'] ?? null,
@@ -298,8 +377,8 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
 
         return [
             'success' => $successUrl,
-            'failure' => route($failureRoute),
-            'cancel'  => route($cancelRoute),
+            'failure' => route($failureRoute, ['attempt_id' => $data['attempt_id'] ?? null]),
+            'cancel'  => route($cancelRoute, ['attempt_id' => $data['attempt_id'] ?? null]),
         ];
     }
 
@@ -321,6 +400,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         }
 
         return [
+            'attempt_id' => (int) $request->get('attempt_id'),
             'user_id' => $userId,
             'page' => $request->get('page', 'cart'),
             'couponCode' => $request->get('coupon_code'),

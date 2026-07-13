@@ -19,6 +19,7 @@ return [
     'finance' => 'Finance',
     'tax' => 'Tax',
     'staff_earnings' => 'Staff Earnings',
+    'payment_attempts' => 'Payment Attempts',
     'reports' => 'Reports',
     'daily_bookings' => 'Daily Bookings',
     'overall_bookings' => 'Overall Bookings',

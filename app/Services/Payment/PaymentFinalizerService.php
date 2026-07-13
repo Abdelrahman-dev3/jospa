@@ -54,11 +54,12 @@ class PaymentFinalizerService
         string $paymentMethod ,
         string $couponCode ,
         bool $submethodsApplied = false,
-        array $subPayments = []
+        array $subPayments = [],
+        array $gatewayMeta = []
     ): int {
         $invoiceId = 0;
 
-        DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments) {
+        DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments, $gatewayMeta) {
             $product_ids = [];
             $bookingIdsToNotify = [];
             
@@ -87,7 +88,12 @@ class PaymentFinalizerService
             $invoiceId = $this->storeInvoice($userId, $discountAmount, $tax, $paidAmount, $cartIds, $giftIds, $product_ids, $couponCode, $paymentMethod ?? 'Sub Methods', $subPayments);
 
             //  Create Booking Transactions
-            $this->createTransactions($cartIds, $invoiceId, 'INV-' . $invoiceId, $paymentMethod ?? 'Sub Methods');
+            $transactionId = $gatewayMeta['transaction_id']
+                ?? $gatewayMeta['merchant_reference']
+                ?? $gatewayMeta['checkout_id']
+                ?? ('INV-' . $invoiceId);
+
+            $this->createTransactions($cartIds, $invoiceId, $transactionId, $paymentMethod ?? 'Sub Methods');
             $this->markBookingsAsConfirmed($cartIds);
 
             $this->createBookingCommissions($cartIds);
