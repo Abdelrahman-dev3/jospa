@@ -590,7 +590,7 @@ return [
             [
                 'type' => 'textarea', // input fields type
                 'data' => 'taqnyat_sms', // data type, string, int, boolean
-                'name' => 'taqnyat_sender', // unique name for field
+                'name' => 'taqnyat_gift_sender_message', // unique name for field
                 'label' => 'integration', // you know what label it is
                 'rules' => 'required|max:500', // validation rule of laravel
                 'class' => '', // any class for input
@@ -600,7 +600,7 @@ return [
             [
                 'type'  => 'textarea', // input field type
                 'data'  => 'taqnyat_sms', // data type, string, int, boolean
-                'name'  => 'taqnyat_recipient', // unique name for field
+                'name'  => 'taqnyat_gift_recipient_message', // unique name for field
                 'label' => 'integration', // label
                 'rules' => 'required|max:500', // validation rule of laravel
                 'class' => '', // any class for input

@@ -73,16 +73,17 @@ class GiftCardActivationService
 
     private function sendNotificationsForGiftCard(GiftCard $giftCard): void
     {
-        if (filled($giftCard->sender_phone)) {
-            $this->smsService->sendGift($giftCard->sender_phone, $giftCard->sender_name, 'sender');
-        }
-
         if (filled($giftCard->recipient_phone)) {
             $this->smsService->sendGift(
                 $giftCard->recipient_phone,
-                $giftCard->recipient_name,
-                'recipient',
-                $giftCard->ref
+                [
+                    'sender_name' => $giftCard->sender_name,
+                    'sender_phone' => $giftCard->sender_phone,
+                    'recipient_name' => $giftCard->recipient_name,
+                    'recipient_phone' => $giftCard->recipient_phone,
+                    'ref' => $giftCard->ref,
+                ],
+                'recipient'
             );
 
             $this->giftCardRecipientWhatsAppService->send($giftCard);

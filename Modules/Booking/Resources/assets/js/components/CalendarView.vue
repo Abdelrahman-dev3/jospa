@@ -1,108 +1,63 @@
 <template>
-            <div class="pagination-controls">
-              <div class="calendar-date-picker">
-                <label class="calendar-date-picker__label" for="calendarDatePicker">تاريخ التقويم</label>
-                <div class="calendar-date-picker__control">
-                  <i class="fa-regular fa-calendar-days"></i>
-                  <FlatPickr
-                    id="calendarDatePicker"
-                    v-model="selectedCalendarDate"
-                    class="form-control calendar-date-picker__input"
-                    :config="calendarDatePickerConfig"
-                    @on-change="handleCalendarDateChange"
-                  />
-                </div>
-              </div>
-              <div class="calendar-view-switcher" role="group" aria-label="خيارات عرض التقويم">
-                <button
-                  v-for="viewOption in calendarViewOptions"
-                  :key="viewOption.key"
-                  type="button"
-                  class="calendar-view-switcher__button"
-                  :class="{ active: selectedCalendarView === viewOption.key }"
-                  @click="changeCalendarView(viewOption.key)"
-                >
-                  <i :class="viewOption.icon"></i>
-                  <span>{{ viewOption.label }}</span>
-                </button>
-              </div>
-                <nav aria-label="Pagination">
-                <ul class="pagination justify-content-end">
-                <div v-if="!canReorder" class="dropdown ms-2"> <!-- إضافة مسافة بسيطة من زر الريفرش -->
-                  <button
-                    class="btn btn-secondary dropdown-toggle"
-                    type="button"
-                    id="employeeDropdown"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    {{ selectedEmployeeName || 'All Employees' }}
-                  </button>
-                  <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
-                    <li @click="filterByEmployee(null)">
-                      <a class="dropdown-item" href="#">All Employees</a>
-                    </li>
-                    <li v-for="employee in calendarEmployeeOptions" :key="employee.id" @click="filterByEmployee(employee)">
-                      <a class="dropdown-item" href="#">{{ employee.title }}</a>
-                    </li>
-                  </ul>
-                </div>
+  <div class="pagination-controls">
+    <div class="calendar-date-picker">
+      <label class="calendar-date-picker__label" for="calendarDatePicker">تاريخ التقويم</label>
+      <div class="calendar-date-picker__control">
+        <i class="fa-regular fa-calendar-days"></i>
+        <FlatPickr id="calendarDatePicker" v-model="selectedCalendarDate" class="form-control calendar-date-picker__input" :config="calendarDatePickerConfig" @on-change="handleCalendarDateChange" />
+      </div>
+    </div>
+    <div class="calendar-view-switcher" role="group" aria-label="خيارات عرض التقويم">
+      <button v-for="viewOption in calendarViewOptions" :key="viewOption.key" type="button" class="calendar-view-switcher__button" :class="{ active: selectedCalendarView === viewOption.key }" @click="changeCalendarView(viewOption.key)">
+        <i :class="viewOption.icon"></i>
+        <span>{{ viewOption.label }}</span>
+      </button>
+    </div>
+    <nav aria-label="Pagination">
+      <ul class="pagination justify-content-end">
+        <div v-if="!canReorder" class="dropdown ms-2">
+          <!-- إضافة مسافة بسيطة من زر الريفرش -->
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="employeeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            {{ selectedEmployeeName || 'All Employees' }}
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
+            <li @click="filterByEmployee(null)">
+              <a class="dropdown-item" href="#">All Employees</a>
+            </li>
+            <li v-for="employee in calendarEmployeeOptions" :key="employee.id" @click="filterByEmployee(employee)">
+              <a class="dropdown-item" href="#">{{ employee.title }}</a>
+            </li>
+          </ul>
+        </div>
 
-                  <li class="px-2">
-                    <button
-                  id="refresh"
-                  class="btn bg-primary rounded"
-                  data-bs-toggle="tooltip"
-                  title="refresh"
-                  @click="refreshPage"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21.4799 12.2424C21.7557 12.2326 21.9886 12.4482 21.9852 12.7241C21.9595 14.8075 21.2975 16.8392 20.0799 18.5506C18.7652 20.3986 16.8748 21.7718 14.6964 22.4612C12.518 23.1505 10.1711 23.1183 8.01299 22.3694C5.85488 21.6205 4.00382 20.196 2.74167 18.3126C1.47952 16.4293 0.875433 14.1905 1.02139 11.937C1.16734 9.68346 2.05534 7.53876 3.55018 5.82945C5.04501 4.12014 7.06478 2.93987 9.30193 2.46835C11.5391 1.99683 13.8711 2.2599 15.9428 3.2175L16.7558 1.91838C16.9822 1.55679 17.5282 1.62643 17.6565 2.03324L18.8635 5.85986C18.945 6.11851 18.8055 6.39505 18.549 6.48314L14.6564 7.82007C14.2314 7.96603 13.8445 7.52091 14.0483 7.12042L14.6828 5.87345C13.1977 5.18699 11.526 4.9984 9.92231 5.33642C8.31859 5.67443 6.8707 6.52052 5.79911 7.74586C4.72753 8.97119 4.09095 10.5086 3.98633 12.1241C3.8817 13.7395 4.31474 15.3445 5.21953 16.6945C6.12431 18.0446 7.45126 19.0658 8.99832 19.6027C10.5454 20.1395 12.2278 20.1626 13.7894 19.6684C15.351 19.1743 16.7062 18.1899 17.6486 16.8652C18.4937 15.6773 18.9654 14.2742 19.0113 12.8307C19.0201 12.5545 19.2341 12.3223 19.5103 12.3125L21.4799 12.2424Z" fill="#ffffff"></path>
-                    <path d="M20.0941 18.5594C21.3117 16.848 21.9736 14.8163 21.9993 12.7329C22.0027 12.4569 21.7699 12.2413 21.4941 12.2512L19.5244 12.3213C19.2482 12.3311 19.0342 12.5633 19.0254 12.8395C18.9796 14.283 18.5078 15.6861 17.6628 16.8739C16.7203 18.1986 15.3651 19.183 13.8035 19.6772C12.2419 20.1714 10.5595 20.1483 9.01246 19.6114C7.4654 19.0746 6.13845 18.0534 5.23367 16.7033C4.66562 15.8557 4.28352 14.9076 4.10367 13.9196C4.00935 18.0934 6.49194 21.37 10.008 22.6416C10.697 22.8908 11.4336 22.9852 12.1652 22.9465C13.075 22.8983 13.8508 22.742 14.7105 22.4699C16.8889 21.7805 18.7794 20.4073 20.0941 18.5594Z" fill="#ffffff"></path>
-                  </svg>
-                </button>
-              </li>
-                  <li v-if="canReorder" class="px-2">
-                    <button
-                      type="button"
-                      class="btn btn-outline-primary rounded"
-                      :disabled="!!selectedEmployeeId"
-                      :title="selectedEmployeeId ? 'اختر كل الموظفين لترتيب التقويم' : 'ترتيب الموظفين'"
-                      @click="toggleOrderPanel"
-                    >
-                      <i class="fa-solid fa-arrow-up-wide-short"></i>
-                      <span class="ms-1">ترتيب الموظفين</span>
-                    </button>
-                  </li>
-                  <!-- Page Number Before Current -->
-                  <li v-if="currentPage > 1" class="page-item">
-                    <button @click="goToPage(currentPage - 1)" class="page-link">{{ currentPage - 1 }}</button>
-                  </li>
-                  <!-- Page Number After Current -->
-                  <li v-if="currentPage < totalPages" class="page-item">
-                    <button @click="goToPage(currentPage + 1)" class="page-link">{{ currentPage + 1 }}</button>
-                  </li>
-                </ul>
-              </nav>
-
-            </div>
+        <li class="px-2">
+          <button id="refresh" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="refresh" @click="refreshPage">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.4799 12.2424C21.7557 12.2326 21.9886 12.4482 21.9852 12.7241C21.9595 14.8075 21.2975 16.8392 20.0799 18.5506C18.7652 20.3986 16.8748 21.7718 14.6964 22.4612C12.518 23.1505 10.1711 23.1183 8.01299 22.3694C5.85488 21.6205 4.00382 20.196 2.74167 18.3126C1.47952 16.4293 0.875433 14.1905 1.02139 11.937C1.16734 9.68346 2.05534 7.53876 3.55018 5.82945C5.04501 4.12014 7.06478 2.93987 9.30193 2.46835C11.5391 1.99683 13.8711 2.2599 15.9428 3.2175L16.7558 1.91838C16.9822 1.55679 17.5282 1.62643 17.6565 2.03324L18.8635 5.85986C18.945 6.11851 18.8055 6.39505 18.549 6.48314L14.6564 7.82007C14.2314 7.96603 13.8445 7.52091 14.0483 7.12042L14.6828 5.87345C13.1977 5.18699 11.526 4.9984 9.92231 5.33642C8.31859 5.67443 6.8707 6.52052 5.79911 7.74586C4.72753 8.97119 4.09095 10.5086 3.98633 12.1241C3.8817 13.7395 4.31474 15.3445 5.21953 16.6945C6.12431 18.0446 7.45126 19.0658 8.99832 19.6027C10.5454 20.1395 12.2278 20.1626 13.7894 19.6684C15.351 19.1743 16.7062 18.1899 17.6486 16.8652C18.4937 15.6773 18.9654 14.2742 19.0113 12.8307C19.0201 12.5545 19.2341 12.3223 19.5103 12.3125L21.4799 12.2424Z" fill="#ffffff"></path>
+              <path d="M20.0941 18.5594C21.3117 16.848 21.9736 14.8163 21.9993 12.7329C22.0027 12.4569 21.7699 12.2413 21.4941 12.2512L19.5244 12.3213C19.2482 12.3311 19.0342 12.5633 19.0254 12.8395C18.9796 14.283 18.5078 15.6861 17.6628 16.8739C16.7203 18.1986 15.3651 19.183 13.8035 19.6772C12.2419 20.1714 10.5595 20.1483 9.01246 19.6114C7.4654 19.0746 6.13845 18.0534 5.23367 16.7033C4.66562 15.8557 4.28352 14.9076 4.10367 13.9196C4.00935 18.0934 6.49194 21.37 10.008 22.6416C10.697 22.8908 11.4336 22.9852 12.1652 22.9465C13.075 22.8983 13.8508 22.742 14.7105 22.4699C16.8889 21.7805 18.7794 20.4073 20.0941 18.5594Z" fill="#ffffff"></path>
+            </svg>
+          </button>
+        </li>
+        <li v-if="canReorder" class="px-2">
+          <button type="button" class="btn btn-outline-primary rounded" :disabled="!!selectedEmployeeId" :title="selectedEmployeeId ? 'اختر كل الموظفين لترتيب التقويم' : 'ترتيب الموظفين'" @click="toggleOrderPanel">
+            <i class="fa-solid fa-arrow-up-wide-short"></i>
+            <span class="ms-1">ترتيب الموظفين</span>
+          </button>
+        </li>
+        <!-- Page Number Before Current -->
+        <li v-if="currentPage > 1" class="page-item">
+          <button @click="goToPage(currentPage - 1)" class="page-link">{{ currentPage - 1 }}</button>
+        </li>
+        <!-- Page Number After Current -->
+        <li v-if="currentPage < totalPages" class="page-item">
+          <button @click="goToPage(currentPage + 1)" class="page-link">{{ currentPage + 1 }}</button>
+        </li>
+      </ul>
+    </nav>
+  </div>
   <div v-if="canReorder" class="calendar-employee-filter">
-    <button
-      type="button"
-      class="calendar-employee-filter__chip"
-      :class="{ active: isAllCalendarEmployeesSelected }"
-      @click="showAllCalendarEmployees"
-    >
-      الكل
-    </button>
-    <button
-      v-for="employee in calendarEmployeeOptions"
-      :key="employee.id"
-      type="button"
-      class="calendar-employee-filter__chip"
-      :class="{ active: isCalendarEmployeeSelected(employee.id) }"
-      @click="toggleCalendarEmployee(employee.id)"
-    >
+    <button type="button" class="calendar-employee-filter__chip" :class="{ active: isAllCalendarEmployeesSelected }" @click="showAllCalendarEmployees">الكل</button>
+    <button v-for="employee in calendarEmployeeOptions" :key="employee.id" type="button" class="calendar-employee-filter__chip" :class="{ active: isCalendarEmployeeSelected(employee.id) }" @click="toggleCalendarEmployee(employee.id)">
       {{ employee.title }}
     </button>
   </div>
@@ -117,15 +72,7 @@
       </button>
     </div>
     <ul class="staff-order-list">
-      <li
-        v-for="(employee, index) in employeeOrderList"
-        :key="employee.id"
-        class="staff-order-item"
-        draggable="true"
-        @dragstart="handleOrderDragStart(index)"
-        @dragover.prevent
-        @drop="handleOrderDrop(index)"
-      >
+      <li v-for="(employee, index) in employeeOrderList" :key="employee.id" class="staff-order-item" draggable="true" @dragstart="handleOrderDragStart(index)" @dragover.prevent @drop="handleOrderDrop(index)">
         <span class="staff-order-item__handle" title="اسحب لترتيب الموظف">
           <i class="fa-solid fa-grip-vertical"></i>
         </span>
@@ -136,12 +83,7 @@
           </div>
           <div class="staff-order-item__controls">
             <label class="staff-order-item__visibility form-check form-switch" :title="employee.is_visible ? 'إخفاء من التقويم' : 'إظهار في التقويم'">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                :checked="employee.is_visible"
-                @change="toggleEmployeeVisibility(index)"
-              >
+              <input class="form-check-input" type="checkbox" :checked="employee.is_visible" @change="toggleEmployeeVisibility(index)" />
               <span class="staff-order-item__visibility-text">{{ employee.is_visible ? 'ظاهر في التقويم' : 'مخفي من التقويم' }}</span>
             </label>
             <div class="staff-order-item__actions">
@@ -166,13 +108,7 @@
     </div>
   </div>
   <div v-if="selectedCalendarView === 'list'" class="booking-list-view">
-    <div
-      v-for="bookingEvent in bookingListEvents"
-      :key="`${bookingEvent.id}-${bookingEvent.start}-${bookingEvent.resourceId}`"
-      class="booking-list-card"
-      :style="{ borderInlineStartColor: getEventCategoryColor(bookingEvent) }"
-      @click="openBookingListEvent(bookingEvent)"
-    >
+    <div v-for="bookingEvent in bookingListEvents" :key="`${bookingEvent.id}-${bookingEvent.start}-${bookingEvent.resourceId}`" class="booking-list-card" :style="{ borderInlineStartColor: getEventCategoryColor(bookingEvent) }" @click="openBookingListEvent(bookingEvent)">
       <div class="booking-list-card__time">
         <span>{{ formatEventTime(bookingEvent.start) }}</span>
         <small>{{ formatEventDate(bookingEvent.start) }}</small>
@@ -191,15 +127,10 @@
         </div>
       </div>
     </div>
-    <div v-if="bookingListEvents.length === 0" class="booking-list-empty">
-      لا توجد حجوزات في اليوم المحدد
-    </div>
+    <div v-if="bookingListEvents.length === 0" class="booking-list-empty">لا توجد حجوزات في اليوم المحدد</div>
   </div>
   <div v-show="selectedCalendarView !== 'list'" ref="calenderRef" class="calendar-root"></div>
-  <booking-form :booking-type="bookingType"
-                :status-list="bookingStatus"
-                @onSubmit="onSubmitEvent"
-                :booking-data="bookingData"></booking-form>
+  <booking-form :booking-type="bookingType" :status-list="bookingStatus" @onSubmit="onSubmitEvent" :booking-data="bookingData"></booking-form>
 </template>
 <script setup>
 import { computed, reactive, ref, onMounted, onUnmounted, nextTick } from 'vue'
@@ -221,13 +152,13 @@ const totalEmployees = ref(0)
 const props = defineProps({
   status: { type: String, required: true },
   slotDuration: { type: String },
-  branchId: {type: [String , Number]},
+  branchId: { type: [String, Number] },
   canReorder: { type: Boolean, default: false },
   date: new Date()
 })
 const canReorder = props.canReorder
 let slotsDurations = '00:15'
-if(props.slotDuration !== '') {
+if (props.slotDuration !== '') {
   slotsDurations = props.slotDuration
 }
 const bookingStatus = ref(JSON.parse(props.status))
@@ -254,7 +185,7 @@ const calendarViewMap = {
   month: 'dayGridMonth',
   list: 'resourceTimeGridDay'
 }
-const EMPLOYEE_LIST = ref([])   // دي هتتملي من API (employees)
+const EMPLOYEE_LIST = ref([]) // دي هتتملي من API (employees)
 const selectedEmployeeId = ref(null) // ID الموظف المختار
 const selectedEmployeeName = ref(null) // اسم الموظف المختار
 
@@ -309,9 +240,7 @@ const getHorizontalScrollTargets = () => {
 
 const getFixedTimeColumns = () => {
   if (!calenderRef.value) return []
-  return Array.from(calenderRef.value.querySelectorAll(
-    '.ec-header > .ec-sidebar, .ec-all-day > .ec-sidebar, .ec-body > .ec-content > .ec-sidebar'
-  ))
+  return Array.from(calenderRef.value.querySelectorAll('.ec-header > .ec-sidebar, .ec-all-day > .ec-sidebar, .ec-body > .ec-content > .ec-sidebar'))
 }
 
 const updateFixedTimeColumns = () => {
@@ -398,9 +327,7 @@ const applyCalendarResponse = (response = {}) => {
   totalEmployees.value = response.total_count || employees.length || 0
   EMPLOYEE_LIST.value = employees
   ORDER_EMPLOYEE_LIST.value = (response.order_employees || employees).map((employee) => normalizeOrderEmployee(employee))
-  selectedCalendarEmployeeIds.value = selectedCalendarEmployeeIds.value.filter((id) =>
-    ORDER_EMPLOYEE_LIST.value.some((employee) => Number(employee.id) === Number(id) && employee.is_visible !== false)
-  )
+  selectedCalendarEmployeeIds.value = selectedCalendarEmployeeIds.value.filter((id) => ORDER_EMPLOYEE_LIST.value.some((employee) => Number(employee.id) === Number(id) && employee.is_visible !== false))
 
   if (!orderPanelOpen.value) {
     syncEmployeeOrderList()
@@ -449,10 +376,15 @@ const fetchCalendarEvents = async (fetchInfo) => {
   }, CALENDAR_FETCH_TIMEOUT)
 
   try {
-    const response = await createRequest(INDEX_URL(params), {}, {}, {
-      signal: controller.signal,
-      cache: 'no-store'
-    })
+    const response = await createRequest(
+      INDEX_URL(params),
+      {},
+      {},
+      {
+        signal: controller.signal,
+        cache: 'no-store'
+      }
+    )
 
     if (requestId !== calendarFetchRequestId) {
       return calendarEventList.value
@@ -560,8 +492,7 @@ const normalizeOrderEmployee = (employee) => ({
 })
 
 const calendarEmployeeOptions = computed(() => {
-  return (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value)
-    .map((employee) => normalizeOrderEmployee(employee))
+  return (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value).map((employee) => normalizeOrderEmployee(employee))
 })
 
 const visibleCalendarEmployees = computed(() => {
@@ -569,8 +500,7 @@ const visibleCalendarEmployees = computed(() => {
 })
 
 const findEmployeeById = (employeeId) => {
-  return EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
-    || ORDER_EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
+  return EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId)) || ORDER_EMPLOYEE_LIST.value.find((item) => String(item.id) === String(employeeId))
 }
 
 const bookingListEvents = computed(() => {
@@ -697,9 +627,7 @@ const toggleCalendarEmployee = (employeeId) => {
   const normalizedId = Number(employeeId)
   const selected = selectedCalendarEmployeeIds.value
 
-  selectedCalendarEmployeeIds.value = selected.includes(normalizedId)
-    ? selected.filter((id) => id !== normalizedId)
-    : [...selected, normalizedId]
+  selectedCalendarEmployeeIds.value = selected.includes(normalizedId) ? selected.filter((id) => id !== normalizedId) : [...selected, normalizedId]
 
   resourceWidths.value = []
   calenderInit.value?.refetchEvents()
@@ -707,8 +635,7 @@ const toggleCalendarEmployee = (employeeId) => {
 }
 
 const syncEmployeeOrderList = () => {
-  employeeOrderList.value = (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value)
-    .map((employee) => normalizeOrderEmployee(employee))
+  employeeOrderList.value = (ORDER_EMPLOYEE_LIST.value.length ? ORDER_EMPLOYEE_LIST.value : EMPLOYEE_LIST.value).map((employee) => normalizeOrderEmployee(employee))
 }
 
 const toggleOrderPanel = () => {
@@ -761,13 +688,17 @@ const saveEmployeeOrder = async () => {
 
   orderSaveState.value = 'saving'
   try {
-    const response = await createRequest(EMPLOYEE_ORDER_URL(), {}, {
-      branch_id: props.branchId,
-      employees: employeeOrderList.value.map((employee) => ({
-        id: employee.id,
-        is_visible: employee.is_visible !== false
-      }))
-    })
+    const response = await createRequest(
+      EMPLOYEE_ORDER_URL(),
+      {},
+      {
+        branch_id: props.branchId,
+        employees: employeeOrderList.value.map((employee) => ({
+          id: employee.id,
+          is_visible: employee.is_visible !== false
+        }))
+      }
+    )
 
     if (response?.status === false) {
       throw new Error(response.message || 'Unable to save employee order')
@@ -803,13 +734,7 @@ const getInfoStartDate = (info) => {
 }
 
 const getInfoEmployeeId = (info) => {
-  return info?.resource?.id
-    || info?.resourceIds?.[0]
-    || info?.event?.resourceIds?.[0]
-    || info?.event?.extendedProps?.employee_id
-    || (selectedCalendarEmployeeIds.value.length === 1 ? selectedCalendarEmployeeIds.value[0] : null)
-    || (EMPLOYEE_LIST.value.length === 1 ? EMPLOYEE_LIST.value[0].id : null)
-    || null
+  return info?.resource?.id || info?.resourceIds?.[0] || info?.event?.resourceIds?.[0] || info?.event?.extendedProps?.employee_id || (selectedCalendarEmployeeIds.value.length === 1 ? selectedCalendarEmployeeIds.value[0] : null) || (EMPLOYEE_LIST.value.length === 1 ? EMPLOYEE_LIST.value[0].id : null) || null
 }
 
 const resolveBranchId = (info) => {
@@ -914,7 +839,7 @@ const hideBookingForm = () => {
 }
 
 const updateBodyClass = (value = 'hide') => {
-  if(value == 'show') {
+  if (value == 'show') {
     document.body.classList.add('calender-view')
   } else {
     document.body.classList.remove('calender-view')
@@ -1073,15 +998,8 @@ const applyResourceWidths = () => {
   const headerResources = Array.from(root.querySelectorAll('.ec-header .ec-resource'))
   const bodyResources = Array.from(root.querySelectorAll('.ec-body .ec-resource'))
   const allDayResources = Array.from(root.querySelectorAll('.ec-all-day .ec-resource'))
-  const allDayDays = allDayResources.length
-    ? []
-    : Array.from(root.querySelectorAll('.ec-all-day .ec-days'))
-  const count = Math.max(
-    headerResources.length,
-    bodyResources.length,
-    allDayResources.length,
-    allDayDays.length
-  )
+  const allDayDays = allDayResources.length ? [] : Array.from(root.querySelectorAll('.ec-all-day .ec-days'))
+  const count = Math.max(headerResources.length, bodyResources.length, allDayResources.length, allDayDays.length)
 
   if (count === 0) return
   const rootWidth = root.clientWidth || 0
@@ -1205,7 +1123,6 @@ const attachResizeHandlers = () => {
   }
 }
 
-
 onUnmounted(() => {
   window.removeEventListener('booking:create', createBooking)
   if (calendarFetchController) {
@@ -1223,7 +1140,7 @@ onUnmounted(() => {
     calendarColorObserver = null
   }
   const elem = document.getElementById('booking-form')
-  if(elem !== null) {
+  if (elem !== null) {
     updateBodyClass('hide')
     elem.removeEventListener('hide.bs.offcanvas', handleBookingFormHide)
   }
@@ -1241,12 +1158,12 @@ onUnmounted(() => {
 onMounted(() => {
   window.addEventListener('booking:create', createBooking)
   const elem = document.getElementById('booking-form')
-  if(elem !== null) {
+  if (elem !== null) {
     elem.addEventListener('hide.bs.offcanvas', handleBookingFormHide)
     const bkid = new URL(location.href).searchParams.get('booking_id')
-    if(bkid !== null && bkid !== undefined) {
+    if (bkid !== null && bkid !== undefined) {
       bookingType.value = 'CALENDER_BOOKING'
-      showBookingForm({id: bkid})
+      showBookingForm({ id: bkid })
     }
   }
   if (calenderRef !== null) {
@@ -1274,9 +1191,9 @@ onMounted(() => {
             return texts
           },
           eventContent: function (data) {
-          //   // console.log(data, data.event.titleHTML)
-            if(data.event.titleHTML !== undefined) {
-              return {html: data.event.titleHTML + data.timeText}
+            //   // console.log(data, data.event.titleHTML)
+            if (data.event.titleHTML !== undefined) {
+              return { html: data.event.titleHTML + data.timeText }
             }
             return data.timeText
           },
@@ -1289,16 +1206,16 @@ onMounted(() => {
           },
           slotLabelFormat: function (data) {
             // Convert the input string to a Date object
-            const date = new Date(data);
+            const date = new Date(data)
 
             // Get the hour and minute from the Date object
-            const minute = data.getMinutes();
+            const minute = data.getMinutes()
 
             // Check if the hour and minute are both "00"
             if (minute === 0) {
-              return moment(data).format('hh:mm A');
+              return moment(data).format('hh:mm A')
             } else {
-              return '';
+              return ''
             }
           },
           resources: [],
@@ -1369,11 +1286,7 @@ const onSubmitEvent = (booking = {}) => {
   }
 
   // ✅ الإصلاح: أضف الموظف الجديد للفلتر بغض النظر عن canReorder
-  if (
-    nextEmployeeId > 0 &&
-    selectedCalendarEmployeeIds.value.length > 0 &&
-    !selectedCalendarEmployeeIds.value.includes(nextEmployeeId)
-  ) {
+  if (nextEmployeeId > 0 && selectedCalendarEmployeeIds.value.length > 0 && !selectedCalendarEmployeeIds.value.includes(nextEmployeeId)) {
     selectedCalendarEmployeeIds.value = [...selectedCalendarEmployeeIds.value, nextEmployeeId]
   }
 
@@ -1382,11 +1295,8 @@ const onSubmitEvent = (booking = {}) => {
   calenderInit.value.refetchEvents()
   refreshResourceSizing()
 }
-
-
-
 </script>
-<style >
+<style>
 @import '@event-calendar/core/index.css';
 body {
   transition: width 400ms ease;
@@ -1411,7 +1321,7 @@ body {
 .dark .ec-day.ec-today {
   background-color: #181818;
 }
-.ec-event{
+.ec-event {
   border-radius: 0;
   border-bottom: 2px solid var(--bs-border-color);
   cursor: pointer;
@@ -1424,18 +1334,12 @@ body {
   position: relative;
 }
 .calendar-root .ec-body .ec-day::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 23px,
-    rgba(17, 24, 39, 0.32) 23px,
-    rgba(17, 24, 39, 0.32) 24px
-  );
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 23px, rgba(17, 24, 39, 0.32) 23px, rgba(17, 24, 39, 0.32) 24px);
 }
 .calendar-root .ec-bg-events {
   position: relative;
@@ -1445,13 +1349,17 @@ body {
   position: relative;
   z-index: 2;
 }
-.ec-body:not(.ec-compact) .ec-line:nth-child(even):after{
+.ec-body:not(.ec-compact) .ec-line:nth-child(even):after {
   border-bottom-style: solid;
 }
 .ec-line:not(:first-child):after {
   border-color: rgba(17, 24, 39, 0.28);
 }
-.ec-header,.ec-all-day,.ec-body,.ec-days,.ec-day{
+.ec-header,
+.ec-all-day,
+.ec-body,
+.ec-days,
+.ec-day {
   border-color: rgba(17, 24, 39, 0.32);
 }
 .calendar-root .ec-resource,
@@ -1466,16 +1374,19 @@ body {
 .calendar-root .ec-body:not(.ec-compact) .ec-line:after {
   border-bottom-color: rgba(17, 24, 39, 0.28) !important;
 }
-.ec-button, .ec-button:not(:disabled) {
+.ec-button,
+.ec-button:not(:disabled) {
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
   border-color: var(--bs-border-color);
 }
-.dark .ec-button:not(:disabled):hover, .dark .ec-button.ec-active {
+.dark .ec-button:not(:disabled):hover,
+.dark .ec-button.ec-active {
   border-color: var(--bs-border-color);
   background-color: var(--bs-body-bg);
 }
-.ec-icon.ec-prev:after, .ec-icon.ec-next:after {
+.ec-icon.ec-prev:after,
+.ec-icon.ec-next:after {
   border-color: var(--bs-body-color);
 }
 .calendar-root {
@@ -1485,22 +1396,25 @@ body {
 .calendar-root .ec-header,
 .calendar-root .ec-all-day,
 .calendar-root .ec-body {
-    overflow-x: hidden !important;
-    scrollbar-width: none;
+  overflow-x: auto !important;
+  scrollbar-width: none;
 }
 .calendar-root .ec-header::-webkit-scrollbar,
 .calendar-root .ec-all-day::-webkit-scrollbar,
 .calendar-root .ec-body::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 .calendar-root .ec-hidden-scroll,
 .calendar-root .ec-body > .ec-scroll {
-    overflow-x: hidden !important;
-    scrollbar-width: none;
+  overflow-x: auto !important;
+  scrollbar-width: none;
 }
 .calendar-root .ec-hidden-scroll::-webkit-scrollbar,
 .calendar-root .ec-body > .ec-scroll::-webkit-scrollbar {
-    display: none;
+  display: none;
+}
+.calendar-root .ec-hidden-scroll {
+  display: none !important;
 }
 body.ec-resizing {
   user-select: none;
@@ -1608,10 +1522,25 @@ body.ec-resizing {
   margin: 0 0 12px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 4px 2px 10px;
+  padding: 4px 4px 12px;
   scrollbar-width: thin;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+}
+.calendar-employee-filter::-webkit-scrollbar {
+  height: 6px;
+}
+.calendar-employee-filter::-webkit-scrollbar-track {
+  background: transparent;
+}
+.calendar-employee-filter::-webkit-scrollbar-thumb {
+  background-color: var(--bs-border-color, #dee2e6);
+  border-radius: 4px;
+}
+.calendar-employee-filter::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bs-primary, #0d6efd);
 }
 .calendar-employee-filter__chip {
   background: var(--bs-body-bg);
@@ -1732,8 +1661,22 @@ body.ec-resizing {
 .booking-calendar-scrollbar {
   overflow-x: auto;
   overflow-y: hidden;
-  height: 16px;
-  margin-bottom: 8px;
+  height: 8px;
+  margin-bottom: 12px;
+}
+.booking-calendar-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+.booking-calendar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(var(--bs-primary-rgb), 0.05);
+  border-radius: 4px;
+}
+.booking-calendar-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--bs-primary, #0d6efd);
+  border-radius: 4px;
+}
+.booking-calendar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bs-primary-shade-10, #0a58ca);
 }
 .booking-calendar-scrollbar-spacer {
   height: 1px;

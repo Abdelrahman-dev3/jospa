@@ -101,26 +101,67 @@ class TaqnyatSmsService
     /**
      * إرسال هدية
      */
-    public function sendGift($phone, $name , $to , $ref = null)
+    public function sendGift($phone, $payload, $to, $ref = null)
     {
-        if ($to == 'sender') {
-            $message = setting('taqnyat_sender');
-            $message = $this->replaceVariables($message, [
-                'sender_name' => $name,
-                'sender_phone' => $phone,
-            ]);
-            return $this->sendSms($phone, $message);
+        $message = $this->resolveGiftTemplate($to);
+
+        if (blank($message)) {
+            return false;
         }
-        if ($to == 'recipient') {
-            $message = setting('taqnyat_recipient');
-            $message = $this->replaceVariables($message, [
-                'recipient_name' => $name,
-                'recipient_phone' => $phone,
-                'ref' => $ref,
-            ]);
-            return $this->sendSms($phone, $message);
+
+        $variables = [
+            'sender_name' => '',
+            'sender_phone' => '',
+            'recipient_name' => '',
+            'recipient_phone' => '',
+            'ref' => $ref,
+        ];
+
+        if (is_array($payload)) {
+            $variables = array_merge($variables, $payload);
+        } elseif ($to === 'sender') {
+            $variables['sender_name'] = $payload;
+            $variables['sender_phone'] = $phone;
+        } elseif ($to === 'recipient') {
+            $variables['recipient_name'] = $payload;
+            $variables['recipient_phone'] = $phone;
         }
-        return false;
+
+        $message = $this->replaceVariables($message, $variables);
+
+        return $this->sendSms($phone, $message);
+    }
+
+    protected function resolveGiftTemplate(string $to): ?string
+    {
+        if ($to === 'sender') {
+            return setting(
+                'taqnyat_gift_sender_message',
+                'تم إرسال هديتك إلى [[recipient_name]] على الرقم [[recipient_phone]].'
+            );
+        }
+
+        if ($to !== 'recipient') {
+            return null;
+        }
+
+        $template = trim((string) setting('taqnyat_gift_recipient_message', ''));
+        if ($template !== '') {
+            return $template;
+        }
+
+        $legacyTemplate = trim((string) setting('taqnyat_recipient', ''));
+        if (
+            $legacyTemplate !== ''
+            && (
+                str_contains($legacyTemplate, '[[sender_name]]')
+                || str_contains($legacyTemplate, '[[sender_phone]]')
+            )
+        ) {
+            return $legacyTemplate;
+        }
+
+        return 'لقد تلقيت هدية من [[sender_name]]. الرقم المرجعي للحصول على الهدية من الموقع: [[ref]]';
     }
 
     /**
