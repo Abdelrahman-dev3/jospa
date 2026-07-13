@@ -32,11 +32,133 @@ use Illuminate\Support\Str;
             align-items: center;
         }
     }
+
+    .cart-payment-notice{
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(191, 148, 86, 0.18);
+        border-radius: 26px;
+        padding: 22px 24px;
+        margin-bottom: 22px;
+        background:
+            radial-gradient(circle at top right, rgba(191, 148, 86, 0.22), transparent 42%),
+            linear-gradient(135deg, #fffaf2 0%, #ffffff 54%, #f7efe2 100%);
+        box-shadow: 0 18px 42px rgba(191, 148, 86, 0.12);
+    }
+
+    .cart-payment-notice::before{
+        content: "";
+        position: absolute;
+        inset-inline-start: 0;
+        top: 0;
+        bottom: 0;
+        width: 7px;
+        background: linear-gradient(180deg, #bf9456 0%, #8d6938 100%);
+    }
+
+    .cart-payment-notice__wrap{
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+    }
+
+    .cart-payment-notice__icon{
+        flex: 0 0 58px;
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 24px;
+        background: linear-gradient(135deg, #bf9456 0%, #8d6938 100%);
+        box-shadow: 0 14px 28px rgba(141, 105, 56, 0.22);
+    }
+
+    .cart-payment-notice__badge{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        border-radius: 999px;
+        margin-bottom: 10px;
+        background: rgba(191, 148, 86, 0.12);
+        color: #8d6938;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+    }
+
+    .cart-payment-notice__title{
+        margin: 0 0 8px;
+        color: #2c2418;
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .cart-payment-notice__text{
+        margin: 0;
+        color: #5f5345;
+        line-height: 1.9;
+        font-size: 15px;
+    }
+
+    .cart-payment-notice__text strong{
+        color: #8d6938;
+        font-weight: 800;
+    }
+
+    @media (max-width: 767px) {
+        .cart-payment-notice{
+            border-radius: 22px;
+            padding: 18px 16px;
+        }
+
+        .cart-payment-notice__wrap{
+            gap: 14px;
+        }
+
+        .cart-payment-notice__icon{
+            width: 48px;
+            height: 48px;
+            flex-basis: 48px;
+            border-radius: 15px;
+            font-size: 20px;
+        }
+
+        .cart-payment-notice__title{
+            font-size: 17px;
+        }
+
+        .cart-payment-notice__text{
+            font-size: 14px;
+        }
+    }
   </style>
 @endsection
 
 @section('content')
 <div class="container py-5">
+  @if($services->count())
+    <div class="cart-payment-notice">
+      <div class="cart-payment-notice__wrap">
+        <div class="cart-payment-notice__icon">
+          <i class="fa-solid fa-hourglass-half"></i>
+        </div>
+        <div>
+          <div class="cart-payment-notice__badge">
+            <i class="fa-solid fa-bell"></i>
+            تنبيه مهم قبل الدفع
+          </div>
+          <h5 class="cart-payment-notice__title">احجزي الآن وأكملي الدفع خلال المهلة</h5>
+          <p class="cart-payment-notice__text">
+            تنبيه: سيتم إلغاء وحذف الحجز تلقائياً بعد مرور <strong>10 دقائق</strong> من حجزه إذا لم يتم إكمال عملية الدفع بنجاح.
+          </p>
+        </div>
+      </div>
+    </div>
+  @endif
   <div class="row g-4">
     @if($services->count() || $products->count() || $gifts->count() ) 
     <div class="col-lg-8">
