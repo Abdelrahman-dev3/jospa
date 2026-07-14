@@ -208,7 +208,7 @@ class JavnaWhatsAppService
         $channelId = trim((string) config('services.javna.whatsapp_channel_id', ''));
         $namespace = trim((string) config('services.javna.whatsapp_template_namespace', ''));
         $preferredStyle = trim((string) config('services.javna.whatsapp_payload_style', 'auto'));
-        $parameterValues = array_values(array_map(fn ($value) => (string) $value, $variables));
+        $parameterValues = $this->normalizeTemplateVariables($variables);
         $textParameters = array_map(fn ($value) => [
             'type' => 'text',
             'text' => $value,
@@ -805,6 +805,15 @@ class JavnaWhatsAppService
         }
 
         return $candidates;
+    }
+
+    private function normalizeTemplateVariables(array $variables): array
+    {
+        return array_values(array_map(function ($value) {
+            $normalizedValue = trim((string) $value);
+
+            return $normalizedValue !== '' ? $normalizedValue : '-';
+        }, $variables));
     }
 
     private function deliverPayloadCandidates(

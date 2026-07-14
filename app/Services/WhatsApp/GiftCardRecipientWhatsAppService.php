@@ -76,12 +76,21 @@ class GiftCardRecipientWhatsAppService
 
     private function buildTemplateVariables(GiftCard $giftCard): array
     {
+        $personalMessage = trim((string) $giftCard->message);
+
         return [
-            trim((string) $giftCard->sender_name),
-            trim((string) $giftCard->sender_phone),
-            trim((string) $giftCard->ref),
-            trim((string) $giftCard->message),
+            $this->fallbackTemplateValue($giftCard->sender_name, 'مرسل الهدية'),
+            $this->fallbackTemplateValue($giftCard->sender_phone, '-'),
+            $this->fallbackTemplateValue($giftCard->ref, '-'),
+            $personalMessage !== '' ? $personalMessage : 'نتمنى لك تجربة جميلة.',
         ];
+    }
+
+    private function fallbackTemplateValue(mixed $value, string $fallback): string
+    {
+        $normalizedValue = trim((string) $value);
+
+        return $normalizedValue !== '' ? $normalizedValue : $fallback;
     }
 
     private function buildMessage(GiftCard $giftCard): string

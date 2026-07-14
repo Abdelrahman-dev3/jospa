@@ -253,7 +253,22 @@ class PaidInvoiceWhatsAppService
 
     private function resolveCustomerName(Invoice $invoice): string
     {
-        return trim((string) ($invoice->user->full_name ?? $invoice->user->first_name ?? 'عميلنا العزيز'));
+        $candidates = [
+            trim((string) ($invoice->user->full_name ?? '')),
+            trim(implode(' ', array_filter([
+                trim((string) ($invoice->user->first_name ?? '')),
+                trim((string) ($invoice->user->last_name ?? '')),
+            ]))),
+            trim((string) ($invoice->user->first_name ?? '')),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return 'عميلنا العزيز';
     }
 
     private function resolveOrderTypeLabel(Invoice $invoice, Collection $bookings, Collection $giftCards): string
