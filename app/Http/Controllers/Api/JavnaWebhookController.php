@@ -133,6 +133,21 @@ class JavnaWebhookController extends Controller
                     'meta_details' => $failureReason,
                 ]);
             }
+
+            if ((string) $failureCode === '131026') {
+                Log::warning('WhatsApp message was accepted but could not be delivered to the recipient.', [
+                    'message_id' => $messageId,
+                    'to' => $toNumber,
+                    'delivery_hint' => 'This usually points to the recipient WhatsApp state, not the template payload itself.',
+                    'possible_causes' => [
+                        'The destination number is not registered on WhatsApp.',
+                        'The recipient phone is temporarily unavailable or not reachable by WhatsApp.',
+                        'The recipient is using an old or inactive WhatsApp client.',
+                        'The conversation cannot be completed due to a recipient-side WhatsApp restriction.',
+                    ],
+                    'meta_details' => $failureReason,
+                ]);
+            }
         }
 
         if (config('services.javna.enabled')) {
