@@ -183,7 +183,7 @@ class TaqnyatSmsService
             return $message;
         }
 
-        return rtrim($message) . "\nالعبارات المطلوب كتابتها: {$giftMessage}";
+        return rtrim($message) . "\n{$giftMessage}";
     }
 
     public function validatePhoneNumber($phone)
