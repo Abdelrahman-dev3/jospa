@@ -117,7 +117,7 @@ class TaqnyatSmsService
 
         $variables['gift_message'] = $this->sanitizeGiftMessage($variables['gift_message'] ?? '');
         $variables['gift_message_line'] = $variables['gift_message'] !== ''
-            ? "\nالعبارات المطلوب كتابتها: {$variables['gift_message']}"
+            ? "\n {$variables['gift_message']}"
             : '';
 
         $message = $this->replaceVariables($message, $variables);
