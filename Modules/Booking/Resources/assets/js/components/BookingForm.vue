@@ -136,7 +136,7 @@
               <div class="d-flex flex-column gap-2">
                 <div class="d-flex align-items-center justify-content-between">
                   <h6>{{ service.service_name }} ({{ formatCurrencyVue(service.service_price) }})</h6>
-                  <button type="button" v-if="canEditFullBooking" @click="removeService(service.service_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                  <button type="button" v-if="canDeleteService" @click="removeService(service.service_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
                 </div>
                 <p class="m-0">
                   <label
@@ -721,13 +721,17 @@ const filterStatus = (value) => {
 }
 
 const BACKEND_EDIT_OVERRIDE_ROLES = ['admin', 'manager']
+const SERVICE_DELETE_OVERRIDE_ROLES = ['admin', 'manager', 'receptionist']
 const authUserRoles = ref(JSON.parse(document.querySelector('meta[name="auth_user_roles"]')?.getAttribute('content')) || [])
 const canOverrideConfirmedEditLock = computed(() => BACKEND_EDIT_OVERRIDE_ROLES.some((role) => authUserRoles.value.includes(role)))
+const canOverrideConfirmedServiceDeleteLock = computed(() => SERVICE_DELETE_OVERRIDE_ROLES.some((role) => authUserRoles.value.includes(role)))
 const isPaidBooking = computed(() => Number(is_paid.value) === 1)
 const scheduleLockedStatuses = ['check_in', 'checkout']
 const fullEditLockedStatuses = computed(() => (canOverrideConfirmedEditLock.value ? ['check_in', 'checkout'] : ['check_in', 'checkout', 'confirmed']))
+const serviceDeleteLockedStatuses = computed(() => (canOverrideConfirmedServiceDeleteLock.value ? ['check_in', 'checkout'] : ['check_in', 'checkout', 'confirmed']))
 const canShowScheduleControls = computed(() => !scheduleLockedStatuses.includes(status.value))
 const canEditFullBooking = computed(() => !isPaidBooking.value && !fullEditLockedStatuses.value.includes(status.value) && !filterStatus(status.value).is_disabled)
+const canDeleteService = computed(() => !isPaidBooking.value && !serviceDeleteLockedStatuses.value.includes(status.value) && !filterStatus(status.value).is_disabled)
 const isScheduleDisabled = computed(() => !isPaidBooking.value && filterStatus(status.value).is_disabled)
 const canSaveBooking = computed(() => status.value !== 'check_in' && (isPaidBooking.value || !filterStatus(status.value).is_disabled))
 const paymentStatusLabel = computed(() => (isPaidBooking.value ? t('booking.status_paid') : t('booking.status_unpaid')))

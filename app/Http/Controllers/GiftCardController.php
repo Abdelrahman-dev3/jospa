@@ -96,6 +96,7 @@ class GiftCardController extends Controller
         $request->session()->regenerate();
 
         $data = $validated;
+        $data['optional_services'] = $this->normalizeGiftMessage($data['optional_services'] ?? null);
 
         $deliveryMethod = match ($data['delivery_method']) {
             'email' => 'electronic_card',
@@ -169,5 +170,12 @@ class GiftCardController extends Controller
         }
         
         return redirect()->route('cart.page')->with('success', __('messages.gift_added_success'));
+    }
+
+    private function normalizeGiftMessage(?string $message): ?string
+    {
+        $message = trim((string) preg_replace('/\s+/u', ' ', trim((string) $message)));
+
+        return $message !== '' ? $message : null;
     }
 }

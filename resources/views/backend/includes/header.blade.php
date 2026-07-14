@@ -69,8 +69,9 @@ $notifications_count = optional(auth()->user())->unreadNotifications->count();
               </li>
 
               @if(isset($is_single_branch) && !$is_single_branch)
-                <li class="nav-item dropdown me-0 me-xl-1 pe-3 border-end iq-dropdown">
-                  <a href="javascript:void(0)" class="nav-link p-0" data-bs-toggle="dropdown">
+                @php($canOpenBranchDropdown = auth()->check() && (auth()->user()->hasRole('admin') || auth()->user()->hasRole('receptionist')))
+                <li class="nav-item {{ $canOpenBranchDropdown ? 'dropdown iq-dropdown' : '' }} me-0 me-xl-1 pe-3 border-end">
+                  <a href="javascript:void(0)" class="nav-link p-0" @if($canOpenBranchDropdown) data-bs-toggle="dropdown" aria-expanded="false" @endif>
                     @if(isset($selected_branch))
                       <div class="iq-sub-card">
                         <div class="d-flex align-items-center">
@@ -95,7 +96,7 @@ $notifications_count = optional(auth()->user())->unreadNotifications->count();
                       </div>
                     @endif
                   </a>
-                  @role('admin')
+                  @if($canOpenBranchDropdown)
                   <ul class="p-0 sub-drop dropdown-menu dropdown-menu-end iq-sub-drop">
                     <div class="m-0 shadow-none card">
                       <div class="py-3 card-header d-flex justify-content-between border-bottom">
@@ -147,7 +148,7 @@ $notifications_count = optional(auth()->user())->unreadNotifications->count();
                       </div>
                     </div>
                   </ul>
-                  @endrole
+                  @endif
                 </li>
                 @endif
                   <li class="nav-item theme-scheme-dropdown dropdown iq-dropdown">

@@ -159,6 +159,8 @@ class MobileCartController extends Controller
             'optional_services' => ['nullable', 'string', 'max:100'],
         ]);
 
+        $validated['optional_services'] = $this->normalizeGiftMessage($validated['optional_services'] ?? null);
+
         $deliveryMethod = match ($validated['delivery_method']) {
             'بطاقة الكترونية', 'email' => 'electronic_card',
             'استلام من المركز', 'traditional' => 'center_pickup',
@@ -237,5 +239,12 @@ class MobileCartController extends Controller
                 'subtotal' => (float) $giftCard->subtotal,
             ],
         ], 201);
+    }
+
+    private function normalizeGiftMessage(?string $message): ?string
+    {
+        $message = trim((string) preg_replace('/\s+/u', ' ', trim((string) $message)));
+
+        return $message !== '' ? $message : null;
     }
 }

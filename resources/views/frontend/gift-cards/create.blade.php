@@ -80,7 +80,7 @@
 
                         <div class="input-group full-width">
                             <label class="input-label">{{ __('messagess.optional_msg') }}</label>
-                            <textarea class="form-textarea" name="optional_services" maxlength="100">{{ old('optional_services') }}</textarea>
+                            <textarea class="form-textarea" name="optional_services" id="optional_services" maxlength="100">{{ old('optional_services') }}</textarea>
                         </div>
                     </div>
 
@@ -214,9 +214,17 @@
 
         const userId = document.getElementById('userId').value || null;
         const Form = document.getElementById('Form');
+        const optionalServicesField = document.getElementById('optional_services');
+
+        optionalServicesField?.addEventListener('input', function() {
+            if (this.value.length > 100) {
+                this.value = this.value.slice(0, 100);
+            }
+        });
         
         Form.addEventListener('submit', function(e) {
             e.preventDefault(); 
+            const optionalServicesValue = optionalServicesField ? optionalServicesField.value.trim() : "";
             let errors = [];
             let allData = {
                 delivery_method: document.querySelector('input[name="delivery_method"]:checked')?.value || "",
@@ -237,7 +245,7 @@
                     document.querySelectorAll('input[name="coupons[]"]:checked')
                 ).map(cb => JSON.parse(cb.value)),
         
-                optional_services: document.querySelector('textarea[name="optional_services"]').value,
+                optional_services: optionalServicesValue,
                 subtotal: document.getElementById('tlt').value,
                 user_id: userId
             };
@@ -262,6 +270,10 @@
             
             if (allData.requested_services.length < 1) {
                 errors.push("{{ __('messages.gift_card_service_required') }}");
+            }
+
+            if (allData.optional_services.length > 100) {
+                errors.push("{{ __('messages.gift_card_message_too_long') }}");
             }
             
             if (errors.length > 0) {

@@ -88,6 +88,7 @@ return [
     'packages'    => 'الباقات',
     'invalid_sender_phone'    => 'رقم هاتف المرسل غير صحيح.',
     'invalid_recipient_phone' => 'رقم هاتف المستلم غير صحيح.',
+    'gift_card_message_too_long' => 'العبارات المطلوب كتابتها يجب ألا تتجاوز 100 حرف.',
     'gift_message' => 'رسالة الهدية',
     'gift_message_hint'   => 'هذه الرسالة سترسل إلى مرسل الهدية. استخدم [[recipient_name]] و[[recipient_phone]] لاستبدال اسم المستلم ورقمه تلقائيًا.',
     'gift_message_hint_2' => 'هذه الرسالة سترسل إلى مستقبل الهدية. استخدم [[sender_name]] و[[sender_phone]] لاستبدال اسم المرسل ورقمه تلقائيًا.',

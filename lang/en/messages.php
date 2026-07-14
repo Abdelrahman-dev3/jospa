@@ -83,6 +83,7 @@ return [
     'packages'    => 'Packages',
     'invalid_sender_phone'    => 'Sender phone number is invalid.',
     'invalid_recipient_phone' => 'Recipient phone number is invalid.',
+    'gift_card_message_too_long' => 'The gift card message must not exceed 100 characters.',
     'gift_message' => 'Gift Message',
     'gift_message_hint'   => 'This message will be sent to the gift sender. Use [[recipient_name]] and [[recipient_phone]] to automatically replace the recipient\'s name and phone number.',
     'gift_message_hint_2' => 'This message will be sent to the gift recipient. Use [[sender_name]] and [[sender_phone]] to automatically replace the sender\'s name and phone number.',
