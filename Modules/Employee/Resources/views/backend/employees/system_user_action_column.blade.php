@@ -7,7 +7,7 @@
     @endif
 
     @if (auth()->user()->can('delete_staff') || auth()->user()->can('view_role_permissions'))
-        <a href="{{ route('backend.employees.destroy', $data->id) }}" id="delete-system-user-{{ $data->id }}"
+        <a href="{{ route('backend.employees.system_users.destroy', $data->id) }}" id="delete-system-user-{{ $data->id }}"
             class="btn btn-soft-danger btn-sm" data-type="ajax" data-method="DELETE" data-token="{{ csrf_token() }}"
             data-bs-toggle="tooltip" title="{{ __('messages.delete') }}"
             data-confirm="{{ __('messages.are_you_sure?', ['module' => __('users.title'), 'name' => $data->full_name]) }}">

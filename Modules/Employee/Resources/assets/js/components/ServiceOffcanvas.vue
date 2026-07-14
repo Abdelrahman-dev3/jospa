@@ -56,9 +56,7 @@ const services = ref([])
 const branchId = useModuleId(() => {
   getRequest({ url: SERVICE_URL, id: branchId.value }).then((res) => {
     if (res.status) {
-      console.log(branchId.value)
       services.value = res.data
-      console.log(packages.value)
     } else {
       services.value = res.data
     }

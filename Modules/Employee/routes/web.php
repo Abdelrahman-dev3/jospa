@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Employee\Http\Controllers\Backend\EmployeesController;
+use Modules\Employee\Http\Controllers\Backend\SystemUsersController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,12 +44,24 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
     Route::group(['prefix' => 'employees', 'as' => 'employees.'], function () {
         Route::get('index_list', [EmployeesController::class, 'index_list'])->name('index_list');
         Route::get('commision_list', [EmployeesController::class, 'commision_list'])->name('commision_list');
-        Route::get('system-users', [EmployeesController::class, 'systemUsersIndex'])
+        Route::get('system-users', [SystemUsersController::class, 'index'])
             ->name('system_users.index')
             ->middleware('permission:view_role_permissions');
-        Route::get('system-users/index_data', [EmployeesController::class, 'systemUsersData'])
+        Route::get('system-users/index_data', [SystemUsersController::class, 'indexData'])
             ->name('system_users.index_data')
             ->middleware('permission:view_role_permissions');
+        Route::post('system-users', [SystemUsersController::class, 'store'])
+            ->name('system_users.store')
+            ->middleware('permission:view_role_permissions');
+        Route::get('system-users/{id}/edit', [SystemUsersController::class, 'edit'])
+            ->name('system_users.edit')
+            ->middleware('permission:view_role_permissions');
+        Route::put('system-users/{id}', [SystemUsersController::class, 'update'])
+            ->name('system_users.update')
+            ->middleware('permission:view_role_permissions');
+        Route::delete('system-users/{id}', [SystemUsersController::class, 'destroy'])
+            ->name('system_users.destroy')
+            ->middleware('permission:delete_staff|view_role_permissions');
 
 Route::post('change-password', [EmployeesController::class, 'change_password'])->name('change_password');
 

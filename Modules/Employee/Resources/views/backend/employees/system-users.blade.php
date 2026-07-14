@@ -53,9 +53,9 @@
                                 aria-describedby="addon-wrapping">
                         </div>
                         @if (auth()->user()->can('view_role_permissions'))
-                            <a href="{{ route('backend.users.create') }}" class="btn btn-primary text-nowrap">
+                            <x-buttons.offcanvas target="#form-offcanvas" title="{{ __('users.create') }} {{ __('users.title') }}" class="text-nowrap">
                                 {{ __('users.create') }} {{ __('users.title') }}
-                            </a>
+                            </x-buttons.offcanvas>
                         @endif
                     </div>
                 </x-slot>
@@ -65,17 +65,12 @@
     </div>
 
     <div data-render="app" class="{{ $selected_branch_id }}">
-        <employee-offcanvas :selected-session-branch-id="{{ $selected_branch_id !== '' ? $selected_branch_id : null }}"
-            default-image="{{ default_user_avatar() }}"
+        <system-user-offcanvas
             create-title="{{ __('messages.new') }} {{ __('users.title') }}"
             edit-title="{{ __('messages.edit') }} {{ __('users.title') }}"
-            :customefield="{{ json_encode($customefield) }}"
-            :show-profile-fields="false"
-            :show-employee-fields="false"
-            :default-roles='@json([])'
             :available-roles='@json($roles)'
             :available-permissions='@json($permissions)'>
-        </employee-offcanvas>
+        </system-user-offcanvas>
         <change-password create-title="{{ __('messages.change_password') }} "></change-password>
     </div>
 @endsection

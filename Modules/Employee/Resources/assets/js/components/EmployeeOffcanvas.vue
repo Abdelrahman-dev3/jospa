@@ -818,7 +818,6 @@ const validationSchema = yup.object({
         return true;
       }
       const userId  = id.value;
-      console.log(userId)
           const isUnique = await storeRequest({ url: EMAIL_UNIQUE_CHECK, body: { email: value, user_id: userId }, type: 'file' });
           if (!isUnique.isUnique) {
               return this.createError({ path: 'email', message: 'email must be unique' });
@@ -933,7 +932,6 @@ const formSubmit = handleSubmit((values) => {
   }
   values.employee_login_otp = values.employee_login_otp ? values.employee_login_otp.replace(/\D/g, '').slice(0, 4) : ''
   values.custom_fields_data = JSON.stringify(values.custom_fields_data)
-  console.log("submit",values);
   if (currentId.value > 0) {
     updateRequest({ url: UPDATE_URL, id: currentId.value, body: values, type: 'file' }).then((res) => reset_datatable_close_offcanvas(res))
   } else {
