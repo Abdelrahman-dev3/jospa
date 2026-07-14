@@ -126,8 +126,8 @@ class EmployeesController extends Controller
     {
         $module_title = 'sidebar.system_users';
         $module_action = 'List';
-        $columns = CustomFieldGroup::columnJsonValues(new User());
-        $customefield = CustomField::exportCustomFields(new User());
+        $columns = json_encode([]);
+        $customefield = collect();
         $roles = $this->formatAccessOptions(
             Role::query()
                 ->whereNotIn('name', ['user', 'employee', 'manager'])
@@ -628,10 +628,7 @@ class EmployeesController extends Controller
             ->rawColumns(['check', 'employee_id', 'action', 'role_summary', 'status'])
             ->orderColumns(['id'], '-:column $1');
 
-        $customFieldColumns = CustomField::customFieldData($datatable, User::CUSTOM_FIELD_MODEL, null);
-
-        return $datatable->rawColumns(array_merge(['check', 'employee_id', 'action', 'role_summary', 'status'], $customFieldColumns))
-            ->toJson();
+        return $datatable->toJson();
     }
 
     private function formatUserAccessSummary(User $user): string
@@ -734,7 +731,11 @@ class EmployeesController extends Controller
             ->whereDoesntHave('roles', function ($roleQuery) {
                 $roleQuery->where('name', 'employee');
             })
-            ->with(['media', 'roles', 'permissions'])
+            ->with([
+                'media',
+                'roles:id,name,title',
+                'permissions:id,name',
+            ])
             ->orderBy('users.first_name')
             ->orderBy('users.last_name');
     }

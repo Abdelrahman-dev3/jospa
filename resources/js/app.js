@@ -4,8 +4,12 @@
     window.renderedDataTable.ajax.reload(null, false)
   })
 
+  let dtSearchTimer = null
   $(document).on('input', '.dt-search', function () {
-    window.renderedDataTable.ajax.reload(null, false)
+    clearTimeout(dtSearchTimer)
+    dtSearchTimer = setTimeout(() => {
+      window.renderedDataTable.ajax.reload(null, false)
+    }, 350)
   })
 
   const confirmSwal = async (message) => {

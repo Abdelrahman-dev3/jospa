@@ -139,11 +139,8 @@
             title: "{{ __('employee.lbl_action') }}"
         }]
 
-        const customFieldColumns = JSON.parse(@json($columns))
-
         let finalColumns = [
             ...columns,
-            ...customFieldColumns,
             ...actionColumn
         ]
 
