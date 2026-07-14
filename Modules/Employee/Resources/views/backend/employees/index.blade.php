@@ -69,6 +69,7 @@
             create-title="{{ __('messages.new') }} {{ __('employee.singular_title') }} "
             edit-title="{{ __('messages.edit') }} {{ __('employee.singular_title') }}"
             :customefield="{{ json_encode($customefield) }}"
+            :show-access-controls="false"
             :available-roles='@json($roles)'
             :available-permissions='@json($permissions)'>
         </employee-offcanvas>

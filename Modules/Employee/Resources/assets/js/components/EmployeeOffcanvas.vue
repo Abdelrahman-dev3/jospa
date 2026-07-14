@@ -87,7 +87,7 @@
               <p class="mb-0 text-danger">{{ errors.gender }}</p>
             </div>
 
-            <div class="form-group col-md-12">
+            <div v-if="showAccessControls" class="form-group col-md-12">
               <label class="form-label" for="roles">{{ $t('users.roles') }}</label>
               <Multiselect
                 id="roles"
@@ -106,7 +106,7 @@
               <span class="text-danger">{{ errors.roles }}</span>
             </div>
 
-            <div class="form-group col-md-12">
+            <div v-if="showAccessControls" class="form-group col-md-12">
               <label class="form-label" for="permissions">{{ $t('users.permissions') }}</label>
               <Multiselect
                 id="permissions"
@@ -300,6 +300,7 @@ const props = defineProps({
   editTitle: { type: String, default: '' },
   defaultImage: { type: String, default: 'https://dummyimage.com/600x300/cfcfcf/000000.png' },
   customefield: { type: Array, default: () => [] },
+  showAccessControls: { type: Boolean, default: true },
   availableRoles: { type: Array, default: () => [] },
   availablePermissions: { type: Array, default: () => [] },
   selectedSessionBranchId: {type: Number, default: null},
@@ -670,8 +671,14 @@ const formatAccessLabel = (value) => {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+const employeeOnlyRoles = () => {
+  return is_manager.value ? ['employee', 'manager'] : ['employee']
+}
+
 const applyRoleSelectionState = async () => {
-  const normalizedRoles = normalizeAccessNames(roles.value)
+  const normalizedRoles = props.showAccessControls
+    ? normalizeAccessNames(roles.value)
+    : employeeOnlyRoles()
 
   if (normalizedRoles.includes('manager') && !normalizedRoles.includes('employee')) {
     normalizedRoles.push('employee')
@@ -680,6 +687,10 @@ const applyRoleSelectionState = async () => {
   roles.value = normalizedRoles
   is_manager.value = normalizedRoles.includes('manager') ? 1 : 0
   isEmployeeScoped.value = normalizedRoles.includes('employee')
+
+  if (!props.showAccessControls) {
+    permissions.value = []
+  }
 
   await nextTick()
   await loadServicesForCurrentFilters()
@@ -710,7 +721,9 @@ const setFormData = (data) => {
   serviceCategoryMap.value = {}
   isEmployeeScoped.value = data?.is_employee_role === undefined ? true : Boolean(Number(data.is_employee_role))
   ImageViewer.value = data.profile_image || null
-  const normalizedRoles = normalizeAccessNames(data.roles ?? (data.is_employee_role ? ['employee'] : []))
+  const normalizedRoles = props.showAccessControls
+    ? normalizeAccessNames(data.roles ?? (data.is_employee_role ? ['employee'] : []))
+    : (Number(data.is_manager) ? ['employee', 'manager'] : ['employee'])
   resetForm({
     values: {
       id: data.id,
@@ -723,7 +736,7 @@ const setFormData = (data) => {
       confirm_password: data.confirm_password,
       gender: data.gender,
       roles: normalizedRoles,
-      permissions: normalizeAccessNames(data.permissions),
+      permissions: props.showAccessControls ? normalizeAccessNames(data.permissions) : [],
       profile_image: data.profile_image,
       branch_id: data.branch_id,
       shift_id: data.shift_id,
@@ -891,8 +904,10 @@ const formSubmit = handleSubmit((values) => {
   IS_SUBMITED.value = true;
   values.show_in_home_booking = isEmployeeScoped.value && show_in_home_booking.value ? 1 : 0;
   values.services_edited = isEmployeeScoped.value && servicesEdited.value ? 1 : 0;
-  values.roles = normalizeAccessNames(values.roles)
-  values.permissions = normalizeAccessNames(values.permissions)
+  values.roles = props.showAccessControls
+    ? normalizeAccessNames(values.roles)
+    : (values.is_manager ? ['employee', 'manager'] : ['employee'])
+  values.permissions = props.showAccessControls ? normalizeAccessNames(values.permissions) : []
   if (!isEmployeeScoped.value) {
     values.branch_id = ''
     values.shift_id = ''

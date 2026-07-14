@@ -10,20 +10,26 @@
 @endpush
 
 @section('content')
+    @php
+        $canManageQuickActions = auth()->user()->can('edit_staff') || auth()->user()->can('delete_staff') || auth()->user()->can('view_role_permissions');
+        $canChangeStatus = auth()->user()->can('edit_staff') || auth()->user()->can('view_role_permissions');
+        $canDeleteSystemUsers = auth()->user()->can('delete_staff') || auth()->user()->can('view_role_permissions');
+    @endphp
+
     <div class="card">
         <div class="card-body">
             <x-backend.section-header>
                 <div class="d-flex flex-wrap gap-3">
-                    @if (auth()->user()->can('edit_staff') || auth()->user()->can('delete_staff') || auth()->user()->can('view_role_permissions'))
+                    @if ($canManageQuickActions)
                         <x-backend.quick-action url='{{ route('backend.employees.bulk_action') }}'>
                             <div class="">
                                 <select name="action_type" class="form-control select2 col-12" id="quick-action-type"
                                     style="width:100%">
                                     <option value="">{{ __('messages.no_action') }}</option>
-                                    @if (auth()->user()->can('edit_staff') || auth()->user()->can('view_role_permissions'))
+                                    @if ($canChangeStatus)
                                         <option value="change-status">{{ __('messages.status') }}</option>
                                     @endif
-                                    @if (auth()->user()->can('delete_staff') || auth()->user()->can('view_role_permissions'))
+                                    @if ($canDeleteSystemUsers)
                                         <option value="delete">{{ __('messages.delete') }}</option>
                                     @endif
                                 </select>
@@ -46,11 +52,11 @@
                                 placeholder="{{ __('messages.search') }}..." aria-label="Search"
                                 aria-describedby="addon-wrapping">
                         </div>
-                        @can('view_role_permissions')
+                        @if (auth()->user()->can('view_role_permissions'))
                             <a href="{{ route('backend.users.create') }}" class="btn btn-primary text-nowrap">
                                 {{ __('users.create') }} {{ __('users.title') }}
                             </a>
-                        @endcan
+                        @endif
                     </div>
                 </x-slot>
             </x-backend.section-header>

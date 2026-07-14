@@ -864,9 +864,9 @@ class EmployeesController extends Controller
                 ->toArray();
         }
 
-        $data['branch_id'] = $data->branch->branch_id ?? null;
+        $data['branch_id'] = $data->branch?->branch_id;
 
-        $data['shift_id'] = $data->branch->shift_id ?? null;
+        $data['shift_id'] = $data->branch?->shift_id;
         
         $data['show_in_home_booking'] = $data->show_in_home_booking;
 
@@ -879,22 +879,22 @@ class EmployeesController extends Controller
             ->values()
             ->all();
 
-        $data['commission_id'] = $data->commissions()->first()->commission_id ?? null;
+        $data['commission_id'] = $data->commissions->first()?->commission_id;
 
         $data['profile_image'] = $data->profile_image;
         $data['is_employee_role'] = $data->hasRole('employee');
 
-        $data['about_self'] = $data->profile->about_self ?? null;
+        $data['about_self'] = $data->profile?->about_self;
 
-        $data['expert'] = $data->profile->expert ?? null;
+        $data['expert'] = $data->profile?->expert;
 
-        $data['facebook_link'] = $data->profile->facebook_link ?? null;
+        $data['facebook_link'] = $data->profile?->facebook_link;
 
-        $data['instagram_link'] = $data->profile->instagram_link ?? null;
+        $data['instagram_link'] = $data->profile?->instagram_link;
 
-        $data['twitter_link'] = $data->profile->twitter_link ?? null;
+        $data['twitter_link'] = $data->profile?->twitter_link;
 
-        $data['dribbble_link'] = $data->profile->dribbble_link ?? null;
+        $data['dribbble_link'] = $data->profile?->dribbble_link;
         $data['employee_login_otp'] = $data->employee_login_otp;
         $data['roles'] = $data->roles
             ->pluck('name')
