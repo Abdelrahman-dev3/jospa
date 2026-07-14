@@ -398,12 +398,20 @@ const prepareForm = async (formId) => {
   refreshFormDom()
 
   try {
-    const [branchData, shiftData, categoryData, commissionData] = await Promise.all([
-      useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }),
-      useSelect({ url: SHIFT_LIST }, { value: 'id', label: 'name' }),
-      useSelect({ url: CATEGORY_LIST }, { value: 'id', label: 'name' }),
-      useSelect({ url: COMMISSION_LIST }, { value: 'id', label: 'name' }),
-    ])
+    const shouldLoadEmployeeDependencies = props.showEmployeeFields
+    const [branchData, shiftData, categoryData, commissionData] = shouldLoadEmployeeDependencies
+      ? await Promise.all([
+          useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }),
+          useSelect({ url: SHIFT_LIST }, { value: 'id', label: 'name' }),
+          useSelect({ url: CATEGORY_LIST }, { value: 'id', label: 'name' }),
+          useSelect({ url: COMMISSION_LIST }, { value: 'id', label: 'name' }),
+        ])
+      : [
+          { options: [], list: [] },
+          { options: [], list: [] },
+          { options: [], list: [] },
+          { options: [], list: [] },
+        ]
 
     if (!isPrepareTokenActive(prepareToken)) {
       return

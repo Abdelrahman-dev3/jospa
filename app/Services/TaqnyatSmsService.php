@@ -123,12 +123,7 @@ class TaqnyatSmsService
         $message = $this->replaceVariables($message, $variables);
 
         if ($to === 'recipient') {
-            $message = $this->appendGiftMessageToRecipientMessage($message, $variables['gift_message']);
-            $message = $this->ensureRecipientSenderDetails(
-                $message,
-                $variables['sender_name'] ?? '',
-                $variables['sender_phone'] ?? ''
-            );
+            $message = $this->buildRecipientGiftMessage($variables, $message);
         }
 
         return $this->sendSms($phone, $message);
@@ -210,6 +205,43 @@ class TaqnyatSmsService
         }
 
         return implode("\n", $prefixLines) . "\n" . ltrim($message);
+    }
+
+    protected function buildRecipientGiftMessage(array $variables, string $fallbackMessage = ''): string
+    {
+        $senderName = trim((string) ($variables['sender_name'] ?? ''));
+        $senderPhone = trim((string) ($variables['sender_phone'] ?? ''));
+        $recipientName = trim((string) ($variables['recipient_name'] ?? ''));
+        $recipientPhone = trim((string) ($variables['recipient_phone'] ?? ''));
+        $reference = trim((string) ($variables['ref'] ?? ''));
+        $giftMessage = $this->sanitizeGiftMessage($variables['gift_message'] ?? '');
+
+        $lines = [];
+
+        /*
+         * عدل شكل رسالة المستلم من هنا فقط.
+         */
+        if ($senderName !== '') {
+            $lines[] = "لقد تلقيت هدية من {$senderName}.";
+        }
+
+        if ($senderPhone !== '') {
+            $lines[] = "رقم المرسل: {$senderPhone}";
+        }
+
+        if ($reference !== '') {
+            $lines[] = "الرقم المرجعي للحصول على الهدية من الموقع: {$reference}";
+        }
+
+        if ($giftMessage !== '') {
+            $lines[] = $giftMessage;
+        }
+
+        if (empty($lines)) {
+            return $fallbackMessage;
+        }
+
+        return implode("\n", array_filter($lines, fn ($line) => trim((string) $line) !== ''));
     }
 
     public function validatePhoneNumber($phone)
