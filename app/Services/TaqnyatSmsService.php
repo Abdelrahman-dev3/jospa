@@ -124,6 +124,11 @@ class TaqnyatSmsService
 
         if ($to === 'recipient') {
             $message = $this->appendGiftMessageToRecipientMessage($message, $variables['gift_message']);
+            $message = $this->ensureRecipientSenderDetails(
+                $message,
+                $variables['sender_name'] ?? '',
+                $variables['sender_phone'] ?? ''
+            );
         }
 
         return $this->sendSms($phone, $message);
@@ -184,6 +189,27 @@ class TaqnyatSmsService
         }
 
         return rtrim($message) . "\n{$giftMessage}";
+    }
+
+    protected function ensureRecipientSenderDetails(string $message, ?string $senderName, ?string $senderPhone): string
+    {
+        $senderName = trim((string) $senderName);
+        $senderPhone = trim((string) $senderPhone);
+        $prefixLines = [];
+
+        if ($senderName !== '' && !str_contains($message, $senderName)) {
+            $prefixLines[] = "لقد تلقيت هدية من {$senderName}.";
+        }
+
+        if ($senderPhone !== '' && !str_contains($message, $senderPhone)) {
+            $prefixLines[] = "رقم المرسل: {$senderPhone}";
+        }
+
+        if (empty($prefixLines)) {
+            return $message;
+        }
+
+        return implode("\n", $prefixLines) . "\n" . ltrim($message);
     }
 
     public function validatePhoneNumber($phone)

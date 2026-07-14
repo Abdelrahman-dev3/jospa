@@ -61,6 +61,7 @@ class GiftCardRecipientWhatsAppService
     private function buildMessage(GiftCard $giftCard): string
     {
         $senderName = trim((string) $giftCard->sender_name);
+        $senderPhone = trim((string) $giftCard->sender_phone);
         $personalMessage = trim((string) $giftCard->message);
         $reference = trim((string) $giftCard->ref);
         $amount = $this->formatAmount((float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0));
@@ -74,6 +75,10 @@ class GiftCardRecipientWhatsAppService
                     : "لقد تلقيت بطاقة إهداء من {$appName} بقيمة {$amount} ر.س.",
             ];
 
+            if ($senderPhone !== '') {
+                $lines[] = "رقم المرسل: {$senderPhone}";
+            }
+
             if ($reference !== '') {
                 $lines[] = "الرقم المرجعي لبطاقتك هو: {$reference}";
                 $lines[] = "يمكنك استخدام هذا الرقم المرجعي عند الحجز من خلال الموقع الإلكتروني الخاص بـ {$appName}:";
@@ -86,6 +91,10 @@ class GiftCardRecipientWhatsAppService
                     ? "لقد أرسل لك {$senderName} هدية من {$appName}."
                     : "لقد أرسلنا لك هدية من {$appName}.",
             ];
+
+            if ($senderPhone !== '') {
+                $lines[] = "رقم المرسل: {$senderPhone}";
+            }
 
             if (! empty($details)) {
                 $lines[] = 'تفاصيل الهدية:';
