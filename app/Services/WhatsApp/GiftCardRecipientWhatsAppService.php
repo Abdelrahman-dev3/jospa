@@ -39,7 +39,23 @@ class GiftCardRecipientWhatsAppService
             return false;
         }
 
-        $sent = $this->whatsAppService->sendText((string) $giftCard->recipient_phone, $message);
+        $templateVariables = $this->buildTemplateVariables($giftCard);
+
+        Log::info('Prepared gift card recipient WhatsApp template payload.', [
+            'gift_card_id' => $giftCard->id,
+            'template_name' => 'giftCard_temp',
+            'template_variables' => $templateVariables,
+        ]);
+
+        $sent = $this->whatsAppService->sendTemplate(
+            phone: (string) $giftCard->recipient_phone,
+            variables: $templateVariables,
+            templateName: 'giftCard_temp'
+        );
+
+        if (! $sent) {
+            $sent = $this->whatsAppService->sendText((string) $giftCard->recipient_phone, $message);
+        }
 
         if (! $sent) {
             Log::error('Gift card recipient WhatsApp send failed.', [
@@ -56,6 +72,16 @@ class GiftCardRecipientWhatsAppService
         ]);
 
         return true;
+    }
+
+    private function buildTemplateVariables(GiftCard $giftCard): array
+    {
+        return [
+            trim((string) $giftCard->sender_name),
+            trim((string) $giftCard->sender_phone),
+            trim((string) $giftCard->ref),
+            trim((string) $giftCard->message),
+        ];
     }
 
     private function buildMessage(GiftCard $giftCard): string
