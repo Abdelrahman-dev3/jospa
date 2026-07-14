@@ -14,6 +14,7 @@ return [
     'sub_categories' => 'Sub Services',
     'users' => 'Users',
     'staffs' => 'Staffs',
+    'system_users' => 'System Users',
     'customers' => 'Customers',
     'reviews' => 'Reviews',
     'finance' => 'Finance',

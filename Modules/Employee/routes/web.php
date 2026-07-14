@@ -43,6 +43,12 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
     Route::group(['prefix' => 'employees', 'as' => 'employees.'], function () {
         Route::get('index_list', [EmployeesController::class, 'index_list'])->name('index_list');
         Route::get('commision_list', [EmployeesController::class, 'commision_list'])->name('commision_list');
+        Route::get('system-users', [EmployeesController::class, 'systemUsersIndex'])
+            ->name('system_users.index')
+            ->middleware('permission:view_role_permissions');
+        Route::get('system-users/index_data', [EmployeesController::class, 'systemUsersData'])
+            ->name('system_users.index_data')
+            ->middleware('permission:view_role_permissions');
 
 Route::post('change-password', [EmployeesController::class, 'change_password'])->name('change_password');
 

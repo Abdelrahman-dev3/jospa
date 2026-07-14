@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير تنفيذي: لماذا الموقع الجديد أفضل من الموقع القديم؟</title>
+    <style>
+        :root {
+            --bg: #f6f1e8;
+            --surface: #fffdf9;
+            --surface-strong: #ffffff;
+            --primary: #b88a44;
+            --primary-dark: #7f5b23;
+            --text: #2f2416;
+            --muted: #766754;
+            --line: rgba(184, 138, 68, 0.18);
+            --shadow: 0 18px 50px rgba(97, 71, 33, 0.08);
+            --radius-xl: 28px;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Tahoma", "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top right, rgba(184, 138, 68, 0.16), transparent 28%),
+                linear-gradient(180deg, #fbf7f0 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.9;
+        }
+
+        .page-shell {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 32px 20px 48px;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 42px 34px;
+            border-radius: 34px;
+            background: linear-gradient(135deg, rgba(184, 138, 68, 0.95), rgba(127, 91, 35, 0.92));
+            color: #fffdf8;
+            box-shadow: 0 28px 60px rgba(112, 80, 31, 0.2);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset-inline-start: -90px;
+            top: -110px;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset-inline-end: -60px;
+            bottom: -80px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.09);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .hero h1 {
+            margin: 0 0 10px;
+            font-size: clamp(28px, 4vw, 42px);
+            line-height: 1.35;
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 780px;
+            font-size: 17px;
+            color: rgba(255, 250, 242, 0.92);
+        }
+
+        .hero-meta {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 26px;
+        }
+
+        .hero-meta-card {
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+        }
+
+        .hero-meta-card strong,
+        .hero-meta-card span {
+            display: block;
+        }
+
+        .hero-meta-card strong {
+            font-size: 12px;
+            color: rgba(255, 248, 237, 0.76);
+            margin-bottom: 6px;
+        }
+
+        .hero-meta-card span {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .summary-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .summary-card {
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            padding: 22px 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .summary-card .number {
+            display: block;
+            font-size: 30px;
+            line-height: 1;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin-bottom: 12px;
+        }
+
+        .summary-card h3 {
+            margin: 0 0 8px;
+            font-size: 17px;
+        }
+
+        .summary-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 22px;
+            margin-top: 28px;
+            align-items: start;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 22px;
+            background: rgba(255, 255, 255, 0.74);
+            border: 1px solid rgba(184, 138, 68, 0.14);
+            border-radius: var(--radius-xl);
+            padding: 24px 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar h2 {
+            margin: 0 0 16px;
+            font-size: 18px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 10px;
+        }
+
+        .sidebar li {
+            padding: 11px 14px;
+            border-radius: 12px;
+            background: rgba(184, 138, 68, 0.06);
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .content {
+            display: grid;
+            gap: 22px;
+        }
+
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .section h2 {
+            margin: 0 0 14px;
+            font-size: 25px;
+            color: var(--primary-dark);
+        }
+
+        .section p {
+            margin: 0;
+            color: var(--text);
+            font-size: 16px;
+        }
+
+        .highlight {
+            margin-top: 18px;
+            padding: 18px 20px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(184, 138, 68, 0.11), rgba(184, 138, 68, 0.03));
+            border: 1px solid rgba(184, 138, 68, 0.16);
+            color: var(--primary-dark);
+            font-weight: 700;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .feature-card {
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(184, 138, 68, 0.16);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 242, 233, 0.9));
+        }
+
+        .feature-card h3 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+
+        .feature-card p {
+            margin: 0 0 12px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .feature-card ul,
+        .section ul {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .feature-card li,
+        .section li {
+            position: relative;
+            padding-inline-start: 18px;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .feature-card li::before,
+        .section li::before {
+            content: "";
+            position: absolute;
+            inset-inline-start: 0;
+            top: 12px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .compare-box {
+            border-radius: 20px;
+            padding: 22px;
+            border: 1px solid rgba(184, 138, 68, 0.16);
+            background: #fff;
+        }
+
+        .compare-box.old {
+            background: linear-gradient(180deg, #fcfbf9, #f4efe8);
+        }
+
+        .compare-box.new {
+            background: linear-gradient(180deg, #fffaf4, #f8efe2);
+        }
+
+        .compare-box h3 {
+            margin: 0 0 12px;
+            font-size: 20px;
+            color: var(--primary-dark);
+        }
+
+        .footer-quote {
+            background: linear-gradient(135deg, #fffaf4 0%, #f5ecde 100%);
+            border: 1px solid rgba(184, 138, 68, 0.18);
+            border-radius: var(--radius-xl);
+            padding: 28px;
+        }
+
+        .footer-quote h2 {
+            margin: 0 0 12px;
+            color: var(--primary-dark);
+        }
+
+        .footer-quote p {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 1024px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { position: static; }
+            .summary-strip, .hero-meta, .compare-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell { padding: 18px 14px 30px; }
+            .hero { padding: 30px 20px; border-radius: 24px; }
+            .summary-strip, .hero-meta, .feature-grid, .compare-grid { grid-template-columns: 1fr; }
+            .section, .sidebar { padding: 22px 18px; border-radius: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-badge">مقارنة تنفيذية | القديم مقابل الجديد</div>
+                <h1>لماذا الموقع الجديد أفضل من الموقع القديم؟</h1>
+                <p>
+                    النسخة الجديدة من منصة جوسبا لم تكن مجرد تغيير في الواجهة، بل تمثل تطويرًا فعليًا
+                    في تجربة الحجز، وسائل الدفع، جودة الاستخدام، ومرونة الإدارة والتشغيل.
+                </p>
+
+                <div class="hero-meta">
+                    <div class="hero-meta-card">
+                        <strong>اسم المشروع</strong>
+                        <span>منصة جوسبا</span>
+                    </div>
+                    <div class="hero-meta-card">
+                        <strong>نوع التقرير</strong>
+                        <span>مقارنة تنفيذية</span>
+                    </div>
+                    <div class="hero-meta-card">
+                        <strong>تاريخ التقرير</strong>
+                        <span>14 يوليو 2026</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="summary-strip">
+            <div class="summary-card">
+                <span class="number">01</span>
+                <h3>حجز أسهل</h3>
+                <p>رحلة الحجز أصبحت أوضح وأكثر سلاسة للعميل.</p>
+            </div>
+            <div class="summary-card">
+                <span class="number">02</span>
+                <h3>دفع أقوى</h3>
+                <p>إضافة بوابات حديثة مثل Tabby وTamara وURPAY.</p>
+            </div>
+            <div class="summary-card">
+                <span class="number">03</span>
+                <h3>تشغيل أفضل</h3>
+                <p>تنظيم أقوى للحجوزات والموظفات والمتابعة اليومية.</p>
+            </div>
+            <div class="summary-card">
+                <span class="number">04</span>
+                <h3>قابلية للنمو</h3>
+                <p>النسخة الجديدة أكثر جاهزية للتوسع التجاري والإداري.</p>
+            </div>
+        </section>
+
+        <div class="layout">
+            <aside class="sidebar">
+                <h2>محاور المقارنة</h2>
+                <ul>
+                    <li>الفرق العام بين النسختين</li>
+                    <li>تحسينات الحجز</li>
+                    <li>وسائل الدفع</li>
+                    <li>تجربة المستخدم</li>
+                    <li>إدارة التشغيل</li>
+                    <li>الخدمات والجيفت كارد</li>
+                    <li>الولاء والعروض</li>
+                    <li>التقارير والمتابعة</li>
+                    <li>القيمة الإدارية والتجارية</li>
+                </ul>
+            </aside>
+
+            <main class="content">
+                <section class="section">
+                    <h2>الخلاصة التنفيذية السريعة</h2>
+                    <p>
+                        الموقع الجديد أصبح أسهل في الاستخدام، أوضح في خطوات الحجز، أقوى في وسائل الدفع،
+                        وأكثر احترافية بصريًا وتشغيليًا. وهذا جعله ليس فقط أفضل للعميل، بل أيضًا أكثر فاعلية للإدارة.
+                    </p>
+                    <div class="highlight">
+                        النسخة الجديدة تمثل انتقالًا من موقع يؤدي الوظيفة الأساسية إلى منصة أكثر نضجًا وربحية وجاهزية للنمو.
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>أبرز جوانب التطور في الموقع الجديد</h2>
+                    <div class="feature-grid">
+                        <article class="feature-card">
+                            <h3>1. خطوات الحجز أصبحت أفضل</h3>
+                            <p>التحسينات ركزت على جعل الرحلة أكثر وضوحًا وراحة للعميل.</p>
+                            <ul>
+                                <li>تنظيم أفضل لخطوات الحجز</li>
+                                <li>تقليل التشتيت أثناء الاختيار</li>
+                                <li>وضوح أعلى في تفاصيل الطلب والفاتورة</li>
+                                <li>تحسين تجربة السلة قبل الدفع</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>2. وسائل دفع أحدث وأوسع</h3>
+                            <p>إضافة بوابات جديدة رفعت من فرص إتمام الطلبات.</p>
+                            <ul>
+                                <li>إضافة Tabby</li>
+                                <li>إضافة Tamara</li>
+                                <li>دعم URPAY</li>
+                                <li>تحسين التعامل مع نتائج عمليات الدفع</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>3. تجربة المستخدم أصبحت أرقى</h3>
+                            <p>النسخة الجديدة أكثر ترتيبًا وراحة بصريًا.</p>
+                            <ul>
+                                <li>واجهة أوضح وأكثر تنظيمًا</li>
+                                <li>تحسين صفحات الحجز والدفع</li>
+                                <li>تجربة أفضل على الجوال</li>
+                                <li>سلاسة أكبر في التنقل</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>4. إدارة الحجوزات أقوى</h3>
+                            <p>التحسينات لم تكن للواجهة فقط، بل للتشغيل اليومي أيضًا.</p>
+                            <ul>
+                                <li>تحسين عرض الحجوزات</li>
+                                <li>تنظيم أفضل لمتابعة الموظفات</li>
+                                <li>وضوح أكبر للمواعيد اليومية</li>
+                                <li>تقليل احتمالات التضارب</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>5. الخدمات أصبحت أكثر مرونة</h3>
+                            <p>تنظيم الخدمة بات أدق وأكثر ارتباطًا بالتجربة المعروضة.</p>
+                            <ul>
+                                <li>تحكم أكبر في ظهور الخدمات</li>
+                                <li>تنظيم أقوى للحجز الإلكتروني</li>
+                                <li>تنظيم أوضح لخدمات الجيفت كارد</li>
+                                <li>عرض أفضل للأقسام والخدمات</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>6. الجيفت كارد أصبحت أقوى تجاريًا</h3>
+                            <p>الميزة أصبحت أوضح وأكثر ارتباطًا بتجربة البيع.</p>
+                            <ul>
+                                <li>تحسين حضور الجيفت كارد داخل الموقع</li>
+                                <li>ربط أفضل مع الدفع</li>
+                                <li>تنظيم أوضح لتجربة المرسل والمستلم</li>
+                                <li>دعم أفضل للتواصل والإشعارات</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>7. أدوات التحفيز والمبيعات تطورت</h3>
+                            <p>النسخة الجديدة تدعم البيع والتكرار بشكل أفضل.</p>
+                            <ul>
+                                <li>نقاط الولاء</li>
+                                <li>المحفظة</li>
+                                <li>الكوبونات والعروض</li>
+                                <li>مزايا مرتبطة بوسائل الدفع</li>
+                            </ul>
+                        </article>
+
+                        <article class="feature-card">
+                            <h3>8. المتابعة الإدارية أقوى</h3>
+                            <p>تحسينات واضحة في الرؤية الإدارية والرقابة التشغيلية.</p>
+                            <ul>
+                                <li>تقارير أوضح</li>
+                                <li>متابعة أقوى للحجوزات</li>
+                                <li>تتبع أفضل لمحاولات الدفع</li>
+                                <li>مرونة أعلى في الصلاحيات والإدارة</li>
+                            </ul>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>مقارنة مختصرة بين الموقعين</h2>
+                    <div class="compare-grid">
+                        <div class="compare-box old">
+                            <h3>الموقع القديم</h3>
+                            <ul>
+                                <li>يخدم الهدف الأساسي.</li>
+                                <li>مناسب كمرحلة أولى.</li>
+                                <li>أبسط من ناحية الإمكانيات.</li>
+                                <li>أقل نضجًا في الدفع والتشغيل.</li>
+                            </ul>
+                        </div>
+                        <div class="compare-box new">
+                            <h3>الموقع الجديد</h3>
+                            <ul>
+                                <li>أكثر احترافية في تجربة العميل.</li>
+                                <li>أفضل في خطوات الحجز.</li>
+                                <li>أقوى في وسائل الدفع.</li>
+                                <li>أفضل على الجوال.</li>
+                                <li>أكثر تنظيمًا للإدارة والتشغيل.</li>
+                                <li>أكثر جاهزية للنمو والتوسع.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="section">
+                    <h2>الرسالة الإدارية الأهم</h2>
+                    <p>
+                        الموقع الجديد أفضل من القديم لأنه لم يكتفِ بتحسين الشكل، بل حسّن النتيجة النهائية
+                        التي تهم المشروع فعلًا: تجربة عميل أفضل، فرص بيع أعلى، تشغيل أوضح، وقدرة أقوى على المتابعة والتوسع.
+                    </p>
+                </section>
+
+                <section class="footer-quote">
+                    <h2>الخاتمة</h2>
+                    <p>
+                        الموقع القديم كان يؤدي الوظيفة الأساسية، أما الموقع الجديد فأصبح يؤدي الوظيفة
+                        بشكل أكثر احترافية وربحية وقابلية للإدارة والتوسع.
+                    </p>
+                </section>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

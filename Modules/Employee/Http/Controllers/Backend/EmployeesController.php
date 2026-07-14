@@ -51,9 +51,9 @@ class EmployeesController extends Controller
             'module_path' => $this->module_path,
         ]);
         $this->middleware(['permission:view_staff'])->only('index');
-        $this->middleware(['permission:edit_staff'])->only('edit', 'update');
+        $this->middleware(['permission:edit_staff|view_role_permissions'])->only('edit', 'update');
         $this->middleware(['permission:add_staff'])->only('store');
-        $this->middleware(['permission:delete_staff'])->only('destroy');
+        $this->middleware(['permission:delete_staff|view_role_permissions'])->only('destroy');
     }
 
     /**
@@ -66,27 +66,17 @@ class EmployeesController extends Controller
         $module_action = 'List';
         $columns = CustomFieldGroup::columnJsonValues(new User());
         $customefield = CustomField::exportCustomFields(new User());
-        $roles = Role::query()
-            ->where('name', '!=', 'user')
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(function ($role) {
-                return [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                ];
-            })
-            ->values();
-        $permissions = Permission::query()
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(function ($permission) {
-                return [
-                    'id' => $permission->id,
-                    'name' => $permission->name,
-                ];
-            })
-            ->values();
+        $roles = $this->formatAccessOptions(
+            Role::query()
+                ->where('name', '!=', 'user')
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
+        $permissions = $this->formatAccessOptions(
+            Permission::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
 
         $export_import = true;
         $export_columns = [
@@ -130,6 +120,27 @@ class EmployeesController extends Controller
         $export_url = route('backend.employees.export');
 
         return view('employee::backend.employees.index', compact('module_action', 'columns', 'customefield', 'export_import', 'export_columns', 'export_url', 'roles', 'permissions'));
+    }
+
+    public function systemUsersIndex()
+    {
+        $module_title = 'sidebar.system_users';
+        $module_action = 'List';
+        $columns = CustomFieldGroup::columnJsonValues(new User());
+        $customefield = CustomField::exportCustomFields(new User());
+        $roles = $this->formatAccessOptions(
+            Role::query()
+                ->where('name', '!=', 'user')
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
+        $permissions = $this->formatAccessOptions(
+            Permission::query()
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
+
+        return view('employee::backend.employees.system-users', compact('module_title', 'module_action', 'columns', 'customefield', 'roles', 'permissions'));
     }
 
     /**
@@ -378,31 +389,7 @@ class EmployeesController extends Controller
     public function index_data(Datatables $datatable, Request $request)
     {
         $module_name = $this->module_name;
-        $selectedSessionBranchId = request()->selected_session_branch_id;
-
-        $branchSortSubquery = BranchEmployee::query()
-            ->select('branch_employee.branch_id')
-            ->whereColumn('branch_employee.employee_id', 'users.id')
-            ->when($selectedSessionBranchId, function ($query) use ($selectedSessionBranchId) {
-                $query->orderByRaw('CASE WHEN branch_employee.branch_id = ? THEN 0 ELSE 1 END', [(int) $selectedSessionBranchId]);
-            })
-            ->orderByDesc('branch_employee.is_primary')
-            ->orderBy('branch_employee.branch_id')
-            ->limit(1);
-
-        $query = User::select('users.*')
-            ->selectSub($branchSortSubquery, 'employee_branch_sort_id')
-            ->where(function ($accessQuery) {
-                $accessQuery->whereHas('roles', function ($roleQuery) {
-                    $roleQuery->where('name', '!=', 'user');
-                })->orWhereHas('permissions');
-            })
-            ->with(['media', 'mainBranch', 'mainShift', 'wallet', 'roles', 'permissions'])
-            ->withCount('services')
-            ->orderByRaw('CASE WHEN employee_branch_sort_id IS NULL THEN 1 ELSE 0 END')
-            ->orderBy('employee_branch_sort_id')
-            ->orderBy('users.first_name')
-            ->orderBy('users.last_name');
+        $query = $this->employeeListingQuery((int) request()->selected_session_branch_id);
 
         $filter = $request->filter;
 
@@ -568,6 +555,85 @@ class EmployeesController extends Controller
             ->toJson();
     }
 
+    public function systemUsersData(Datatables $datatable, Request $request)
+    {
+        $query = $this->systemUserListingQuery();
+        $filter = $request->filter;
+
+        if (isset($filter) && isset($filter['column_status'])) {
+            $query->where('status', $filter['column_status']);
+        }
+
+        $datatable = $datatable->eloquent($query)
+            ->addColumn('check', function ($row) {
+                return '<input type="checkbox" class="form-check-input select-table-row" id="datatable-row-' . $row->id . '" name="datatable_ids[]" value="' . $row->id . '" onclick="dataTableRowCheck(' . $row->id . ')">';
+            })
+            ->addColumn('action', function ($data) {
+                return view('employee::backend.employees.system_user_action_column', compact('data'));
+            })
+            ->addColumn('employee_id', function ($data) {
+                $Profile_image = $data->profile_image ?? default_user_avatar();
+                $name = $data->full_name ?? default_user_name();
+                $mobile = $data->mobile ?? '--';
+
+                return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
+            })
+            ->orderColumn('employee_id', function ($query, $order) {
+                $query->orderBy('users.first_name', $order)
+                    ->orderBy('users.last_name', $order);
+            }, 1)
+            ->filterColumn('employee_id', function ($query, $keyword) {
+                if (! empty($keyword)) {
+                    $query->where(function ($innerQuery) use ($keyword) {
+                        $innerQuery->where('users.first_name', 'like', '%' . $keyword . '%')
+                            ->orWhere('users.last_name', 'like', '%' . $keyword . '%')
+                            ->orWhere('users.mobile', 'like', '%' . $keyword . '%');
+                    });
+                }
+            })
+            ->editColumn('email', function ($data) {
+                return $data->email ?: '-';
+            })
+            ->filterColumn('email', function ($query, $keyword) {
+                if (! empty($keyword)) {
+                    $query->where('users.email', 'like', '%' . $keyword . '%');
+                }
+            })
+            ->addColumn('role_summary', function ($data) {
+                return $this->formatUserAccessSummary($data);
+            })
+            ->filterColumn('role_summary', function ($query, $keyword) {
+                if (! empty($keyword)) {
+                    $query->where(function ($innerQuery) use ($keyword) {
+                        $innerQuery->whereHas('roles', function ($roleQuery) use ($keyword) {
+                            $roleQuery->where('name', 'like', '%' . $keyword . '%')
+                                ->orWhere('title', 'like', '%' . $keyword . '%');
+                        })->orWhereHas('permissions', function ($permissionQuery) use ($keyword) {
+                            $permissionQuery->where('name', 'like', '%' . $keyword . '%');
+                        });
+                    });
+                }
+            })
+            ->editColumn('status', function ($data) {
+                return $data->status
+                    ? '<span class="badge bg-soft-success">' . __('messages.active') . '</span>'
+                    : '<span class="badge bg-soft-danger">' . __('messages.inactive') . '</span>';
+            })
+            ->editColumn('created_at', function ($data) {
+                return $this->formatDatatableDate($data->created_at);
+            })
+            ->editColumn('updated_at', function ($data) {
+                return $this->formatDatatableDate($data->updated_at);
+            })
+            ->rawColumns(['check', 'employee_id', 'action', 'role_summary', 'status'])
+            ->orderColumns(['id'], '-:column $1');
+
+        $customFieldColumns = CustomField::customFieldData($datatable, User::CUSTOM_FIELD_MODEL, null);
+
+        return $datatable->rawColumns(array_merge(['check', 'employee_id', 'action', 'role_summary', 'status'], $customFieldColumns))
+            ->toJson();
+    }
+
     private function formatUserAccessSummary(User $user): string
     {
         $roleBadges = $user->roles
@@ -620,6 +686,57 @@ class EmployeesController extends Controller
             })
             ->with($with)
             ->firstOrFail();
+    }
+
+    private function formatAccessOptions($items)
+    {
+        return $items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+            ];
+        })->values();
+    }
+
+    private function employeeListingQuery(int $selectedSessionBranchId = 0)
+    {
+        $branchSortSubquery = BranchEmployee::query()
+            ->select('branch_employee.branch_id')
+            ->whereColumn('branch_employee.employee_id', 'users.id')
+            ->when($selectedSessionBranchId > 0, function ($query) use ($selectedSessionBranchId) {
+                $query->orderByRaw('CASE WHEN branch_employee.branch_id = ? THEN 0 ELSE 1 END', [$selectedSessionBranchId]);
+            })
+            ->orderByDesc('branch_employee.is_primary')
+            ->orderBy('branch_employee.branch_id')
+            ->limit(1);
+
+        return User::select('users.*')
+            ->selectSub($branchSortSubquery, 'employee_branch_sort_id')
+            ->whereHas('roles', function ($roleQuery) {
+                $roleQuery->where('name', 'employee');
+            })
+            ->with(['media', 'mainBranch', 'mainShift', 'wallet', 'roles', 'permissions'])
+            ->withCount('services')
+            ->orderByRaw('CASE WHEN employee_branch_sort_id IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('employee_branch_sort_id')
+            ->orderBy('users.first_name')
+            ->orderBy('users.last_name');
+    }
+
+    private function systemUserListingQuery()
+    {
+        return User::select('users.*')
+            ->where(function ($accessQuery) {
+                $accessQuery->whereHas('roles', function ($roleQuery) {
+                    $roleQuery->where('name', '!=', 'user');
+                })->orWhereHas('permissions');
+            })
+            ->whereDoesntHave('roles', function ($roleQuery) {
+                $roleQuery->where('name', 'employee');
+            })
+            ->with(['media', 'roles', 'permissions'])
+            ->orderBy('users.first_name')
+            ->orderBy('users.last_name');
     }
 
     /**

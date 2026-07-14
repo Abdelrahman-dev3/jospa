@@ -14,6 +14,7 @@ return [
     'sub_categories' => 'الخدمات الفرعية',
     'users' => 'المستخدمين',
     'staffs' => 'الموظفين',
+    'system_users' => 'مستخدمو النظام',
     'customers' => 'العملاء',
     'reviews' => 'التقييمات',
     'finance' => 'المالية',

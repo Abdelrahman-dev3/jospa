@@ -121,7 +121,7 @@ return [
         [
             'title' => 'sidebar.users',
             'menu_item_type' => 'static',
-            'permission' => ['view_customer', 'view_staff', 'view_customer_reviews'],
+            'permission' => ['view_customer', 'view_staff', 'view_customer_reviews', 'view_role_permissions'],
             'order' => 9,
         ],
         [
@@ -133,12 +133,20 @@ return [
             'order' => 10,
         ],
         [
+            'start_icon' => 'fa-solid fa-user-shield',
+            'title' => 'sidebar.system_users',
+            'route' => 'backend.employees.system_users.index',
+            'active' => ['app/employees/system-users'],
+            'permission' => ['view_role_permissions'],
+            'order' => 11,
+        ],
+        [
             'start_icon' => 'fa-solid fa-users',
             'title' => 'sidebar.customers',
             'route' => 'backend.customers.index',
             'active' => ['app/customers'],
             'permission' => ['view_customer'],
-            'order' => 11,
+            'order' => 12,
         ],
         [
             'start_icon' => 'fa-solid fa-star',
@@ -146,7 +154,7 @@ return [
             'route' => 'backend.employees.review',
             'active' => ['app/employees-review'],
             'permission' => ['view_customer_reviews', 'view_earning'],
-            'order' => 12,
+            'order' => 13,
         ],
         [
             'title' => 'sidebar.finance',
@@ -503,7 +511,7 @@ return [
             'menu_type' => 'horizontal',
             'title' => 'sidebar.users',
             'menu_item_type' => 'parent',
-            'permission' => ['view_customer', 'view_staff', 'view_customer_reviews'],
+            'permission' => ['view_customer', 'view_staff', 'view_customer_reviews', 'view_role_permissions'],
             'order' => 2,
             'children' => [
                 [
@@ -518,12 +526,22 @@ return [
                 ],
                 [
                     'menu_type' => 'horizontal',
+                    'start_icon' => 'fa-solid fa-user-shield',
+                    'title' => 'sidebar.system_users',
+                    'route' => 'backend.employees.system_users.index',
+                    'active' => ['app/employees/system-users'],
+                    'permission' => ['view_role_permissions'],
+                    'order' => 1,
+                    'menu_level' => 1,
+                ],
+                [
+                    'menu_type' => 'horizontal',
                     'start_icon' => 'fa-solid fa-users',
                     'title' => 'sidebar.customers',
                     'route' => 'backend.customers.index',
                     'active' => ['app/customers'],
                     'permission' => ['view_customer'],
-                    'order' => 1,
+                    'order' => 2,
                     'menu_level' => 1,
                 ],
                 [
@@ -533,7 +551,7 @@ return [
                     'route' => 'backend.employees.review',
                     'active' => ['app/employees-review'],
                     'permission' => ['view_customer_reviews'],
-                    'order' => 2,
+                    'order' => 3,
                     'menu_level' => 1,
                 ],
             ],
@@ -747,6 +765,10 @@ return [
         [
             'route' => 'backend.employees.index',
             'title' => 'Staffs',
+        ],
+        [
+            'route' => 'backend.employees.system_users.index',
+            'title' => 'System Users',
         ],
         [
             'route' => 'backend.customers.index',
