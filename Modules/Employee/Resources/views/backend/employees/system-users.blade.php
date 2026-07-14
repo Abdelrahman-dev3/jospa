@@ -21,7 +21,7 @@
             <x-backend.section-header>
                 <div class="d-flex flex-wrap gap-3">
                     @if ($canManageQuickActions)
-                        <x-backend.quick-action url='{{ route('backend.employees.bulk_action') }}'>
+                        <x-backend.quick-action :url="route('backend.employees.bulk_action')">
                             <div class="">
                                 <select name="action_type" class="form-control select2 col-12" id="quick-action-type"
                                     style="width:100%">
@@ -70,6 +70,9 @@
             create-title="{{ __('messages.new') }} {{ __('users.title') }}"
             edit-title="{{ __('messages.edit') }} {{ __('users.title') }}"
             :customefield="{{ json_encode($customefield) }}"
+            :show-profile-fields="false"
+            :show-employee-fields="false"
+            :default-roles='@json([])'
             :available-roles='@json($roles)'
             :available-permissions='@json($permissions)'>
         </employee-offcanvas>

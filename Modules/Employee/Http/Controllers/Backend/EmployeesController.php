@@ -68,7 +68,7 @@ class EmployeesController extends Controller
         $customefield = CustomField::exportCustomFields(new User());
         $roles = $this->formatAccessOptions(
             Role::query()
-                ->where('name', '!=', 'user')
+                ->whereNotIn('name', ['user', 'employee', 'manager'])
                 ->orderBy('name')
                 ->get(['id', 'name'])
         );
@@ -130,7 +130,7 @@ class EmployeesController extends Controller
         $customefield = CustomField::exportCustomFields(new User());
         $roles = $this->formatAccessOptions(
             Role::query()
-                ->where('name', '!=', 'user')
+                ->whereNotIn('name', ['user', 'employee', 'manager'])
                 ->orderBy('name')
                 ->get(['id', 'name'])
         );

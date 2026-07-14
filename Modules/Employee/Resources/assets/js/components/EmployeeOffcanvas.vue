@@ -28,7 +28,7 @@
                     v-bind="{ mode: 'international', maxLen: 20 }" autocomplete="new-password"></vue-tel-input>
                   <span class="text-danger">{{ errors['mobile'] }}</span>
                 </div>
-                <div class="col-md-6">
+                <div v-if="showProfileFields" class="col-md-6">
                   <InputField
                     :label="$t('employee.lbl_login_otp')"
                     :placeholder="$t('employee.login_otp_placeholder')"
@@ -66,7 +66,7 @@
                 :error-messages="errorMessages['confirm_password']"></InputField>
             </div>
 
-            <div class="form-group col-md-4">
+            <div v-if="showProfileFields" class="form-group col-md-4">
               <label for="" class="w-100">{{ $t('employee.lbl_gender') }}</label>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="gender" v-model="gender" id="male" value="male"
@@ -121,7 +121,7 @@
               <span class="text-danger">{{ errors.permissions }}</span>
             </div>
 
-            <template v-if="isEmployeeScoped">
+            <template v-if="showEmployeeFields && isEmployeeScoped">
               <div class="form-group m-0 col-md-4">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" :true-value="1" :false-value="0"
@@ -224,22 +224,22 @@
             </div>
 
 
-            <InputField class="col-md-6" :label="$t('employee.lbl_about_self')" :placeholder="$t('employee.about_self')" v-model="about_self"
+            <InputField v-if="showProfileFields" class="col-md-6" :label="$t('employee.lbl_about_self')" :placeholder="$t('employee.about_self')" v-model="about_self"
               :error-message="errors['about_self']" :error-messages="errorMessages['about_self']"></InputField>
-            <InputField class="col-md-6" :label="$t('employee.lbl_expert')" :placeholder="$t('employee.expert')" v-model="expert"
+            <InputField v-if="showProfileFields" class="col-md-6" :label="$t('employee.lbl_expert')" :placeholder="$t('employee.expert')" v-model="expert"
               :error-message="errors['expert']" :error-messages="errorMessages['expert']"></InputField>
-            <InputField class="col-md-6" :label="$t('employee.lbl_facebook_link')" :placeholder="$t('employee.facebook_link')" v-model="facebook_link"
+            <InputField v-if="showProfileFields" class="col-md-6" :label="$t('employee.lbl_facebook_link')" :placeholder="$t('employee.facebook_link')" v-model="facebook_link"
               :error-message="errors['facebook_link']" :error-messages="errorMessages['facebook_link']"></InputField>
-            <InputField class="col-md-6" :label="$t('employee.lbl_instagram_link')" :placeholder="$t('employee.instagram_link')"
+            <InputField v-if="showProfileFields" class="col-md-6" :label="$t('employee.lbl_instagram_link')" :placeholder="$t('employee.instagram_link')"
               v-model="instagram_link" :error-message="errors['instagram_link']"
               :error-messages="errorMessages['instagram_link']"></InputField>
-            <InputField class="col-md-6" :label="$t('employee.lbl_twitter_link')" :placeholder="$t('employee.Twitter_link')" v-model="twitter_link"
+            <InputField v-if="showProfileFields" class="col-md-6" :label="$t('employee.lbl_twitter_link')" :placeholder="$t('employee.Twitter_link')" v-model="twitter_link"
               :error-message="errors['twitter_link']" :error-messages="errorMessages['twitter_link']"></InputField>
-            <InputField class="col-md-6" :label="$t('employee.lbl_dribbble_link')" :placeholder="$t('employee.dribble_link')" v-model="dribbble_link"
+            <InputField v-if="showProfileFields" class="col-md-6" :label="$t('employee.lbl_dribbble_link')" :placeholder="$t('employee.dribble_link')" v-model="dribbble_link"
               :error-message="errors['dribbble_link']" :error-messages="errorMessages['dribbble_link']"></InputField>
               
 
-            <div class="form-group" v-if="isEmployeeScoped">
+            <div class="form-group" v-if="showEmployeeFields && isEmployeeScoped">
                 <div class="d-flex justify-content-between align-items-center">
                     <label class="form-label" for="show_in_home_booking">{{ $t('employee.show_in_home_booking') }}</label>
                     <div class="form-check form-switch">
@@ -268,7 +268,7 @@
 
       <FormFooter :IS_SUBMITED="IS_SUBMITED || isFormLoading"></FormFooter>
       
-<a :href="`/app/staff-working-hours/${currentId}`"   v-if="currentId && !isFormLoading && isEmployeeScoped" class="btn btn-primary" style="width: 31%;right: 20px;">
+<a :href="`/app/staff-working-hours/${currentId}`"   v-if="currentId && !isFormLoading && showEmployeeFields && isEmployeeScoped" class="btn btn-primary" style="width: 31%;right: 20px;">
     {{ $t('employee.btn_edit_working_hours') }}
 </a>
 
@@ -301,6 +301,9 @@ const props = defineProps({
   defaultImage: { type: String, default: 'https://dummyimage.com/600x300/cfcfcf/000000.png' },
   customefield: { type: Array, default: () => [] },
   showAccessControls: { type: Boolean, default: true },
+  showProfileFields: { type: Boolean, default: true },
+  showEmployeeFields: { type: Boolean, default: true },
+  defaultRoles: { type: Array, default: () => ['employee'] },
   availableRoles: { type: Array, default: () => [] },
   availablePermissions: { type: Array, default: () => [] },
   selectedSessionBranchId: {type: Number, default: null},
@@ -596,7 +599,9 @@ const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile:
 const defaultData = () => {
   errorMessages.value = {}
   serviceCategoryMap.value = {}
-  isEmployeeScoped.value = true
+  const normalizedDefaultRoles = normalizeAccessNames(props.defaultRoles)
+  const hasEmployeeRole = props.showEmployeeFields && normalizedDefaultRoles.includes('employee')
+  isEmployeeScoped.value = hasEmployeeRole
   return {
     id: '',
     first_name: '',
@@ -610,13 +615,13 @@ const defaultData = () => {
     password: '',
     profile_image: '',
     status: 1,
-    roles: ['employee'],
+    roles: normalizedDefaultRoles,
     permissions: [],
     branch_id: 0,
     category_id: [],
     service_id: [],
     commission_id: '',
-    show_in_calender: 1,
+    show_in_calender: hasEmployeeRole ? 1 : 0,
     is_manager: 0,
     show_in_home_booking: 0,
     about_self: '',
@@ -627,7 +632,7 @@ const defaultData = () => {
     dribbble_link: '',
     custom_fields_data: {
     },
-    is_employee_role: 1,
+    is_employee_role: hasEmployeeRole ? 1 : 0,
   }
 }
 
@@ -686,7 +691,7 @@ const applyRoleSelectionState = async () => {
 
   roles.value = normalizedRoles
   is_manager.value = normalizedRoles.includes('manager') ? 1 : 0
-  isEmployeeScoped.value = normalizedRoles.includes('employee')
+  isEmployeeScoped.value = props.showEmployeeFields && normalizedRoles.includes('employee')
 
   if (!props.showAccessControls) {
     permissions.value = []
@@ -719,11 +724,11 @@ const handleManagerToggle = async () => {
 const setFormData = (data) => {
   isHydratingForm.value = true
   serviceCategoryMap.value = {}
-  isEmployeeScoped.value = data?.is_employee_role === undefined ? true : Boolean(Number(data.is_employee_role))
+  isEmployeeScoped.value = props.showEmployeeFields && (data?.is_employee_role === undefined ? true : Boolean(Number(data.is_employee_role)))
   ImageViewer.value = data.profile_image || null
   const normalizedRoles = props.showAccessControls
     ? normalizeAccessNames(data.roles ?? (data.is_employee_role ? ['employee'] : []))
-    : (Number(data.is_manager) ? ['employee', 'manager'] : ['employee'])
+    : (Number(data.is_manager) ? ['employee', 'manager'] : normalizeAccessNames(props.defaultRoles))
   resetForm({
     values: {
       id: data.id,
@@ -902,13 +907,13 @@ const IS_SUBMITED = ref(false)
 const formSubmit = handleSubmit((values) => {
   if(IS_SUBMITED.value) return false
   IS_SUBMITED.value = true;
-  values.show_in_home_booking = isEmployeeScoped.value && show_in_home_booking.value ? 1 : 0;
-  values.services_edited = isEmployeeScoped.value && servicesEdited.value ? 1 : 0;
+  values.show_in_home_booking = props.showEmployeeFields && isEmployeeScoped.value && show_in_home_booking.value ? 1 : 0;
+  values.services_edited = props.showEmployeeFields && isEmployeeScoped.value && servicesEdited.value ? 1 : 0;
   values.roles = props.showAccessControls
     ? normalizeAccessNames(values.roles)
     : (values.is_manager ? ['employee', 'manager'] : ['employee'])
   values.permissions = props.showAccessControls ? normalizeAccessNames(values.permissions) : []
-  if (!isEmployeeScoped.value) {
+  if (!props.showEmployeeFields || !isEmployeeScoped.value) {
     values.branch_id = ''
     values.shift_id = ''
     values.category_id = []
@@ -916,6 +921,7 @@ const formSubmit = handleSubmit((values) => {
     values.commission_id = ''
     values.show_in_calender = 0
     values.is_manager = 0
+    values.show_in_home_booking = 0
   }
   values.employee_login_otp = values.employee_login_otp ? values.employee_login_otp.replace(/\D/g, '').slice(0, 4) : ''
   values.custom_fields_data = JSON.stringify(values.custom_fields_data)
