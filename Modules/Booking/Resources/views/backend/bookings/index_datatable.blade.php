@@ -4,6 +4,11 @@
     {{ __($module_action) }} {{ __($module_title) }}
 @endsection
 @section('banner-button')
+    @hasPermission('add_booking')
+        <a href="{{ route('home.create') }}" class="btn btn-soft-primary" target="_blank" rel="noopener">
+            <i class="fa-solid fa-house me-2"></i>{{ __('messagess.home_services') }}
+        </a>
+    @endhasPermission
     <a href="{{ route("backend.$module_name.index") }}" class="btn btn-soft-dark"><i
             class="fa-solid fa-calendar-days me-2"></i>{{ __('messages.calender_view') }}</a>
 @endsection

@@ -9,6 +9,9 @@
 @section('banner-button')
 @hasPermission('add_booking')
 <button type="button" class="btn btn-primary" data-booking-create><i class="fa-solid fa-plus"></i> {{ __('booking.lbl_new_appointment') }}</button>
+<a href="{{ route('home.create') }}" class="btn btn-soft-primary" target="_blank" rel="noopener">
+    <i class="fa-solid fa-house me-2"></i>{{ __('messagess.home_services') }}
+</a>
 @endhasPermission
 @hasPermission('booking_booking_tableview')
 <a href="{{route("backend.$module_name.datatable_view")}}" class="btn btn-dark"><i class="fa-solid fa-table"></i> {{ __('messages.datatable_view') }}</a>
