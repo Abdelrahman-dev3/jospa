@@ -3,14 +3,19 @@
 namespace Modules\Booking\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
-use App\Models\BookingHome;
-use App\Models\ServiceGroupHome;
-use App\Models\ServiceHome;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Modules\Booking\Models\Booking;
+use Modules\Booking\Models\BookingService;
+use Modules\Service\Models\Service;
+use Modules\Service\Models\ServiceEmployee;
 
 class HomeBookingsController extends Controller
 {
@@ -22,9 +27,18 @@ class HomeBookingsController extends Controller
 
     public function serviceGroups(): JsonResponse
     {
-        $groups = ServiceGroupHome::query()
-            ->orderBy('name')
-            ->get(['id', 'name', 'gender']);
+        $groups = DB::table('categories')
+            ->where('status', 1)
+            ->where('is_visible', 1)
+            ->whereNull('deleted_at')
+            ->orderBy('id')
+            ->get(['id', 'name'])
+            ->map(fn ($group) => [
+                'id' => $group->id,
+                'name' => $group->name,
+                'display_name' => $this->localizedName($group->name),
+            ])
+            ->values();
 
         return response()->json([
             'status' => true,
@@ -35,39 +49,51 @@ class HomeBookingsController extends Controller
     public function services(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'service_group_home_id' => ['required', 'integer', 'exists:service_group_homes,id'],
+            'service_group_home_id' => ['required', 'integer', 'exists:categories,id'],
         ]);
 
-        $services = ServiceHome::query()
-            ->where('service_group_homes_id', $validated['service_group_home_id'])
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get(['id', 'name', 'price', 'duration']);
+        $query = Service::query()
+            ->where('category_id', $validated['service_group_home_id'])
+            ->where('status', 1)
+            ->whereNull('deleted_at');
+
+        $homeVisibleServices = (clone $query)
+            ->where('is_visible', 1)
+            ->orderBy('id')
+            ->get();
+
+        $services = $homeVisibleServices->isNotEmpty()
+            ? $homeVisibleServices
+            : $query->orderBy('id')->get();
 
         return response()->json([
             'status' => true,
-            'data' => $services,
+            'data' => $services->map(fn ($service) => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'display_name' => $this->localizedName($service->name),
+                'price' => $service->default_price,
+                'duration' => $service->duration_min,
+                'is_visible' => (int) $service->is_visible,
+            ])->values(),
         ]);
     }
 
     public function staff(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'service_home_id' => ['required', 'integer', 'exists:service_homes,id'],
+            'service_home_id' => ['required', 'integer', 'exists:services,id'],
         ]);
 
-        $staff = DB::table('staff_homes')
-            ->join('staff_service_homes', 'staff_service_homes.staff_home_id', '=', 'staff_homes.id')
-            ->where('staff_service_homes.service_home_id', $validated['service_home_id'])
-            ->where('staff_homes.status', 'active')
-            ->select('staff_homes.id', 'staff_homes.name', 'staff_homes.phone', 'staff_homes.gender')
-            ->distinct()
-            ->orderBy('staff_homes.name')
-            ->get();
+        $staff = $this->resolveAvailableEmployees((int) $validated['service_home_id']);
 
         return response()->json([
             'status' => true,
-            'data' => $staff,
+            'data' => $staff->map(fn (User $employee) => [
+                'id' => $employee->id,
+                'name' => trim((string) $employee->full_name),
+                'mobile' => $employee->mobile,
+            ])->values(),
         ]);
     }
 
@@ -79,89 +105,210 @@ class HomeBookingsController extends Controller
             'address' => ['required', 'string', 'max:1000'],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
-            'service_group_home_id' => ['required', 'integer', 'exists:service_group_homes,id'],
-            'service_home_id' => ['required', 'integer', 'exists:service_homes,id'],
-            'staff_home_id' => ['required', 'integer', 'exists:staff_homes,id'],
+            'service_group_home_id' => ['required', 'integer', 'exists:categories,id'],
+            'service_home_id' => ['required', 'integer', 'exists:services,id'],
+            'staff_home_id' => ['required', 'integer'],
             'notes' => ['nullable', 'string'],
         ]);
 
-        $service = ServiceHome::query()
+        $service = Service::query()
             ->whereKey($validated['service_home_id'])
-            ->where('service_group_homes_id', $validated['service_group_home_id'])
-            ->where('status', 'active')
+            ->where('category_id', $validated['service_group_home_id'])
+            ->where('status', 1)
+            ->whereNull('deleted_at')
             ->first();
 
         if (! $service) {
             throw ValidationException::withMessages([
-                'service_home_id' => ['الخدمة المختارة لا تنتمي إلى القسم المحدد أو غير مفعلة.'],
+                'service_home_id' => ['الخدمة المختارة غير متاحة ضمن هذا القسم.'],
             ]);
         }
 
-        $staffAssignedToService = DB::table('staff_service_homes')
-            ->where('staff_home_id', $validated['staff_home_id'])
-            ->where('service_home_id', $validated['service_home_id'])
-            ->exists();
+        $availableEmployees = $this->resolveAvailableEmployees((int) $service->id);
+        $employee = $availableEmployees->firstWhere('id', (int) $validated['staff_home_id']);
 
-        if (! $staffAssignedToService) {
+        if (! $employee) {
             throw ValidationException::withMessages([
-                'staff_home_id' => ['الموظف المختار غير مسند لهذه الخدمة المنزلية.'],
+                'staff_home_id' => ['الموظف المختار غير متاح لهذه الخدمة المنزلية.'],
             ]);
         }
 
-        $this->ensureTimeSlotIsAvailable(
-            staffHomeId: (int) $validated['staff_home_id'],
-            service: $service,
-            date: (string) $validated['date'],
-            time: (string) $validated['time']
+        $branchId = (int) (optional($employee->branch)->branch_id ?? 0);
+        if ($branchId <= 0) {
+            throw ValidationException::withMessages([
+                'staff_home_id' => ['الموظف المختار غير مربوط بأي فرع، لذلك لا يمكن إنشاء الحجز.'],
+            ]);
+        }
+
+        $startDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['time']);
+        $duration = max(1, (int) ($service->duration_min ?? 30));
+
+        $this->ensureTimeSlotIsAvailable((int) $employee->id, $startDateTime, $duration);
+
+        $customer = $this->findOrCreateCustomer(
+            customerName: (string) $validated['customer_name'],
+            mobile: (string) $validated['mobile_no']
         );
 
-        $booking = BookingHome::create([
-            'staff_home_id' => $validated['staff_home_id'],
-            'service_home_id' => $validated['service_home_id'],
-            'name' => $validated['customer_name'],
-            'phone' => $validated['mobile_no'],
-            'address' => $validated['address'],
-            'date' => $validated['date'],
-            'time' => $validated['time'],
-            'notes' => $validated['notes'] ?? null,
+        $booking = Booking::create([
+            'note' => $this->buildBookingNote(
+                customerName: (string) $validated['customer_name'],
+                mobile: (string) $validated['mobile_no'],
+                address: (string) $validated['address'],
+                notes: $validated['notes'] ?? null,
+                serviceName: $this->localizedName((string) $service->name)
+            ),
             'status' => 'pending',
+            'payment_status' => 0,
+            'start_date_time' => $startDateTime,
+            'user_id' => $customer->id,
+            'branch_id' => $branchId,
+            'location' => $validated['address'],
+            'created_by' => auth()->id(),
+            'payment_type' => 'cart',
+        ]);
+
+        BookingService::create([
+            'booking_id' => $booking->id,
+            'service_id' => $service->id,
+            'employee_id' => $employee->id,
+            'service_price' => $service->default_price ?? 0,
+            'duration_min' => $duration,
+            'status' => 'pending',
+            'start_date_time' => $startDateTime,
+            'sequance' => 1,
+            'created_by' => auth()->id(),
         ]);
 
         return response()->json([
             'status' => true,
             'message' => 'تم إنشاء الحجز المنزلي بنجاح.',
-            'data' => $booking->load(['staffHome', 'serviceHome']),
+            'data' => [
+                'booking_id' => $booking->id,
+                'customer_id' => $customer->id,
+            ],
         ]);
     }
 
-    private function ensureTimeSlotIsAvailable(int $staffHomeId, ServiceHome $service, string $date, string $time): void
+    private function resolveAvailableEmployees(int $serviceId): Collection
     {
-        $requestedStart = Carbon::createFromFormat('Y-m-d H:i', "{$date} {$time}");
-        $requestedEnd = (clone $requestedStart)->addMinutes($this->serviceDurationInMinutes($service));
+        $baseQuery = User::query()
+            ->active()
+            ->employee()
+            ->where('show_in_home_booking', 1)
+            ->with('branch')
+            ->orderBy('first_name');
 
-        $existingBookings = BookingHome::query()
-            ->with('serviceHome:id,duration')
-            ->where('staff_home_id', $staffHomeId)
-            ->whereDate('date', $date)
-            ->whereNotIn('status', ['cancelled'])
-            ->get();
+        $assignedEmployeeIds = ServiceEmployee::query()
+            ->where('service_id', $serviceId)
+            ->pluck('employee_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
 
-        foreach ($existingBookings as $existingBooking) {
-            $existingStart = Carbon::createFromFormat('Y-m-d H:i:s', $existingBooking->date . ' ' . substr((string) $existingBooking->time, 0, 8));
-            $existingEnd = (clone $existingStart)->addMinutes(
-                $this->serviceDurationInMinutes($existingBooking->serviceHome)
-            );
+        if ($assignedEmployeeIds->isNotEmpty()) {
+            $assignedEmployees = (clone $baseQuery)
+                ->whereIn('id', $assignedEmployeeIds->all())
+                ->get();
 
-            if ($requestedStart < $existingEnd && $requestedEnd > $existingStart) {
+            if ($assignedEmployees->isNotEmpty()) {
+                return $assignedEmployees;
+            }
+        }
+
+        return $baseQuery->get();
+    }
+
+    private function ensureTimeSlotIsAvailable(int $employeeId, Carbon $startDateTime, int $duration): void
+    {
+        $requestedEnd = $startDateTime->copy()->addMinutes(max(1, $duration));
+
+        $existingSlots = BookingService::query()
+            ->where('employee_id', $employeeId)
+            ->whereDate('start_date_time', $startDateTime->toDateString())
+            ->whereHas('booking', function ($query) {
+                $query->whereIn('status', ['pending', 'confirmed', 'check_in']);
+            })
+            ->get(['start_date_time', 'duration_min']);
+
+        foreach ($existingSlots as $slot) {
+            $existingStart = Carbon::parse($slot->start_date_time);
+            $existingEnd = $existingStart->copy()->addMinutes(max(1, (int) ($slot->duration_min ?? 0)));
+
+            if ($startDateTime < $existingEnd && $requestedEnd > $existingStart) {
                 throw ValidationException::withMessages([
-                    'time' => ['الموعد المختار متعارض مع حجز منزلي آخر لنفس الموظف.'],
+                    'time' => ['الموعد المختار متعارض مع حجز آخر لنفس الموظف.'],
                 ]);
             }
         }
     }
 
-    private function serviceDurationInMinutes(?ServiceHome $service): int
+    private function findOrCreateCustomer(string $customerName, string $mobile): User
     {
-        return max(1, (int) ($service?->duration ?? 60));
+        $existingCustomer = User::query()->whereMobileMatches($mobile)->first();
+        if ($existingCustomer) {
+            return $existingCustomer;
+        }
+
+        [$firstName, $lastName] = $this->splitCustomerName($customerName);
+
+        $customer = User::create([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'mobile' => $mobile,
+            'gender' => 'female',
+            'password' => Hash::make(Str::random(16)),
+            'email_verified_at' => now(),
+            'status' => 1,
+        ]);
+
+        $customer->syncRoles(['user']);
+
+        return $customer;
+    }
+
+    private function splitCustomerName(string $customerName): array
+    {
+        $normalizedName = preg_replace('/\s+/', ' ', trim($customerName));
+        $parts = array_values(array_filter(explode(' ', $normalizedName)));
+
+        $firstName = $parts[0] ?? 'عميل';
+        $lastName = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : '.';
+
+        return [$firstName, $lastName];
+    }
+
+    private function buildBookingNote(string $customerName, string $mobile, string $address, ?string $notes, string $serviceName): string
+    {
+        $segments = [
+            "اسم العميل: {$customerName}",
+            "رقم العميل: {$mobile}",
+            "نوع الحجز: منزلي",
+            "الخدمة: {$serviceName}",
+            "العنوان: {$address}",
+        ];
+
+        if (filled($notes)) {
+            $segments[] = "ملاحظات: {$notes}";
+        }
+
+        return implode(' | ', $segments);
+    }
+
+    private function localizedName(?string $value): string
+    {
+        $stringValue = trim((string) $value);
+        if ($stringValue === '') {
+            return '-';
+        }
+
+        $decoded = json_decode($stringValue, true);
+        if (! is_array($decoded)) {
+            return $stringValue;
+        }
+
+        $locale = app()->getLocale();
+
+        return trim((string) ($decoded[$locale] ?? $decoded['ar'] ?? $decoded['en'] ?? $stringValue));
     }
 }

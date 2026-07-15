@@ -33,7 +33,7 @@
             <select v-model="form.service_group_home_id" class="form-select">
               <option value="">اختر القسم</option>
               <option v-for="group in serviceGroups" :key="group.id" :value="stringValue(group.id)">
-                {{ group.name }}
+                {{ group.display_name || group.name }}
               </option>
             </select>
             <small v-if="errors.service_group_home_id" class="text-danger">{{ errors.service_group_home_id }}</small>
@@ -44,7 +44,7 @@
             <select v-model="form.service_home_id" class="form-select" :disabled="servicesLoading || !form.service_group_home_id">
               <option value="">اختر الخدمة</option>
               <option v-for="service in services" :key="service.id" :value="stringValue(service.id)">
-                {{ service.name }}
+                {{ service.display_name || service.name }}
               </option>
             </select>
             <small v-if="servicesLoading" class="text-muted">جار تحميل الخدمات...</small>
@@ -65,6 +65,7 @@
               </option>
             </select>
             <small v-if="staffLoading" class="text-muted">جار تحميل الموظفين...</small>
+            <small v-else-if="!staff.length && form.service_home_id" class="text-muted">لا يوجد موظفون متاحون لهذه الخدمة حاليًا.</small>
             <small v-if="errors.staff_home_id" class="text-danger d-block">{{ errors.staff_home_id }}</small>
           </div>
 
