@@ -120,6 +120,7 @@ import { SERVICE_GROUPS_URL, SERVICES_URL, STAFF_URL, STORE_URL } from '../const
 const { listingRequest, storeRequest } = useRequest()
 
 const today = new Date().toISOString().slice(0, 10)
+const currentLocale = document.documentElement.lang?.startsWith('ar') ? 'ar' : 'en'
 const isBootstrapping = ref(false)
 const isSubmitted = ref(false)
 const servicesLoading = ref(false)
@@ -188,10 +189,47 @@ const extractItems = (response) => {
   return []
 }
 
+const parseLocalizedValue = (value) => {
+  if (value && typeof value === 'object') {
+    return value[currentLocale] || value.ar || value.en || Object.values(value)[0] || ''
+  }
+
+  const stringValue = String(value ?? '').trim()
+  if (!stringValue) {
+    return ''
+  }
+
+  try {
+    const parsedValue = JSON.parse(stringValue)
+    if (parsedValue && typeof parsedValue === 'object') {
+      return parsedValue[currentLocale] || parsedValue.ar || parsedValue.en || Object.values(parsedValue)[0] || stringValue
+    }
+  } catch (error) {
+    // Keep the original string when it is not JSON.
+  }
+
+  return stringValue
+}
+
+const buildStaffName = (staffMember) => {
+  const fullName = String(staffMember?.full_name || '').trim()
+  if (fullName) {
+    return fullName
+  }
+
+  return [staffMember?.first_name, staffMember?.last_name]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join(' ')
+}
+
 const loadServiceGroups = async () => {
   isBootstrapping.value = true
   const response = await listingRequest({ url: SERVICE_GROUPS_URL })
-  serviceGroups.value = extractItems(response)
+  serviceGroups.value = extractItems(response).map((group) => ({
+    ...group,
+    display_name: parseLocalizedValue(group.name)
+  }))
   isBootstrapping.value = false
 }
 
@@ -203,7 +241,12 @@ const loadServices = async (serviceGroupId) => {
 
   servicesLoading.value = true
   const response = await listingRequest({ url: SERVICES_URL, data: { service_group_home_id: serviceGroupId } })
-  services.value = extractItems(response)
+  services.value = extractItems(response).map((service) => ({
+    ...service,
+    display_name: parseLocalizedValue(service.name),
+    price: service.price ?? service.default_price ?? null,
+    duration: service.duration ?? service.duration_min ?? null
+  }))
   servicesLoading.value = false
 }
 
@@ -215,7 +258,10 @@ const loadStaff = async (serviceHomeId) => {
 
   staffLoading.value = true
   const response = await listingRequest({ url: STAFF_URL, data: { service_home_id: serviceHomeId } })
-  staff.value = extractItems(response)
+  staff.value = extractItems(response).map((staffMember) => ({
+    ...staffMember,
+    name: buildStaffName(staffMember)
+  }))
   staffLoading.value = false
 }
 
