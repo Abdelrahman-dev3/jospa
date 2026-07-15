@@ -1,0 +1,338 @@
+<template>
+  <div class="offcanvas offcanvas-end home-booking-offcanvas" tabindex="-1" id="home-booking-form" aria-labelledby="homeBookingFormLabel">
+    <div class="offcanvas-header">
+      <div>
+        <h4 class="offcanvas-title" id="homeBookingFormLabel">الحجز المنزلي</h4>
+        <p class="mb-0 text-muted small">إنشاء حجز منزلي مباشرة من لوحة التحكم</p>
+      </div>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body border-top">
+      <div v-if="isBootstrapping" class="d-flex align-items-center gap-2 text-muted py-4">
+        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+        <span>جار تحميل بيانات الحجز المنزلي...</span>
+      </div>
+
+      <template v-else>
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">اسم العميل</label>
+            <input v-model="form.customer_name" type="text" class="form-control" placeholder="اسم العميل" />
+            <small v-if="errors.customer_name" class="text-danger">{{ errors.customer_name }}</small>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">رقم الجوال</label>
+            <input v-model="form.mobile_no" type="text" class="form-control" placeholder="05xxxxxxxx" />
+            <small v-if="errors.mobile_no" class="text-danger">{{ errors.mobile_no }}</small>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">القسم</label>
+            <select v-model="form.service_group_home_id" class="form-select">
+              <option value="">اختر القسم</option>
+              <option v-for="group in serviceGroups" :key="group.id" :value="stringValue(group.id)">
+                {{ group.name }}
+              </option>
+            </select>
+            <small v-if="errors.service_group_home_id" class="text-danger">{{ errors.service_group_home_id }}</small>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">الخدمة المنزلية</label>
+            <select v-model="form.service_home_id" class="form-select" :disabled="servicesLoading || !form.service_group_home_id">
+              <option value="">اختر الخدمة</option>
+              <option v-for="service in services" :key="service.id" :value="stringValue(service.id)">
+                {{ service.name }}
+              </option>
+            </select>
+            <small v-if="servicesLoading" class="text-muted">جار تحميل الخدمات...</small>
+            <small v-else-if="selectedService" class="text-muted">
+              المدة: {{ selectedService.duration || '-' }} دقيقة
+              <span class="mx-1">|</span>
+              السعر: {{ selectedService.price || '-' }}
+            </small>
+            <small v-if="errors.service_home_id" class="text-danger d-block">{{ errors.service_home_id }}</small>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">الموظف</label>
+            <select v-model="form.staff_home_id" class="form-select" :disabled="staffLoading || !form.service_home_id">
+              <option value="">اختر الموظف</option>
+              <option v-for="staffMember in staff" :key="staffMember.id" :value="stringValue(staffMember.id)">
+                {{ staffMember.name }}
+              </option>
+            </select>
+            <small v-if="staffLoading" class="text-muted">جار تحميل الموظفين...</small>
+            <small v-if="errors.staff_home_id" class="text-danger d-block">{{ errors.staff_home_id }}</small>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">التاريخ</label>
+            <input v-model="form.date" type="date" class="form-control" :min="today" />
+            <small v-if="errors.date" class="text-danger">{{ errors.date }}</small>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">الوقت</label>
+            <input v-model="form.time" type="time" class="form-control" />
+            <small v-if="errors.time" class="text-danger">{{ errors.time }}</small>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">العنوان</label>
+            <textarea v-model="form.address" rows="3" class="form-control" placeholder="اكتب عنوان الزيارة المنزلية"></textarea>
+            <small v-if="errors.address" class="text-danger">{{ errors.address }}</small>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">ملاحظات</label>
+            <textarea v-model="form.notes" rows="3" class="form-control" placeholder="أي ملاحظات إضافية للحجز"></textarea>
+            <small v-if="errors.notes" class="text-danger">{{ errors.notes }}</small>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div class="offcanvas-footer border-top p-3">
+      <div class="d-grid">
+        <button type="button" class="btn btn-primary btn-lg" :disabled="isSubmitted || !canSubmit" @click="submitForm">
+          <template v-if="isSubmitted">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            جار حفظ الحجز...
+          </template>
+          <template v-else>
+            <i class="fa-solid fa-floppy-disk me-2"></i>حفظ الحجز المنزلي
+          </template>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useOnOffcanvasHide, useOnOffcanvasShow, useRequest } from '@/helpers/hooks/useCrudOpration'
+import { SERVICE_GROUPS_URL, SERVICES_URL, STAFF_URL, STORE_URL } from '../constant/home-booking'
+
+const { listingRequest, storeRequest } = useRequest()
+
+const today = new Date().toISOString().slice(0, 10)
+const isBootstrapping = ref(false)
+const isSubmitted = ref(false)
+const servicesLoading = ref(false)
+const staffLoading = ref(false)
+const serviceGroups = ref([])
+const services = ref([])
+const staff = ref([])
+const errors = reactive({})
+
+const defaultForm = () => ({
+  customer_name: '',
+  mobile_no: '',
+  address: '',
+  notes: '',
+  service_group_home_id: '',
+  service_home_id: '',
+  staff_home_id: '',
+  date: today,
+  time: ''
+})
+
+const form = reactive(defaultForm())
+
+const stringValue = (value) => (value === null || value === undefined ? '' : String(value))
+
+const clearErrors = () => {
+  Object.keys(errors).forEach((key) => {
+    delete errors[key]
+  })
+}
+
+const resetForm = () => {
+  Object.assign(form, defaultForm())
+  services.value = []
+  staff.value = []
+  clearErrors()
+  isSubmitted.value = false
+  servicesLoading.value = false
+  staffLoading.value = false
+}
+
+const selectedService = computed(() => services.value.find((item) => stringValue(item.id) === form.service_home_id) || null)
+
+const canSubmit = computed(() => {
+  return Boolean(
+    form.customer_name &&
+      form.mobile_no &&
+      form.address &&
+      form.service_group_home_id &&
+      form.service_home_id &&
+      form.staff_home_id &&
+      form.date &&
+      form.time
+  )
+})
+
+const extractItems = (response) => {
+  if (Array.isArray(response)) {
+    return response
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data
+  }
+
+  return []
+}
+
+const loadServiceGroups = async () => {
+  isBootstrapping.value = true
+  const response = await listingRequest({ url: SERVICE_GROUPS_URL })
+  serviceGroups.value = extractItems(response)
+  isBootstrapping.value = false
+}
+
+const loadServices = async (serviceGroupId) => {
+  if (!serviceGroupId) {
+    services.value = []
+    return
+  }
+
+  servicesLoading.value = true
+  const response = await listingRequest({ url: SERVICES_URL, data: { service_group_home_id: serviceGroupId } })
+  services.value = extractItems(response)
+  servicesLoading.value = false
+}
+
+const loadStaff = async (serviceHomeId) => {
+  if (!serviceHomeId) {
+    staff.value = []
+    return
+  }
+
+  staffLoading.value = true
+  const response = await listingRequest({ url: STAFF_URL, data: { service_home_id: serviceHomeId } })
+  staff.value = extractItems(response)
+  staffLoading.value = false
+}
+
+watch(
+  () => form.service_group_home_id,
+  async (value) => {
+    form.service_home_id = ''
+    form.staff_home_id = ''
+    services.value = []
+    staff.value = []
+
+    if (value) {
+      await loadServices(value)
+    }
+  }
+)
+
+watch(
+  () => form.service_home_id,
+  async (value) => {
+    form.staff_home_id = ''
+    staff.value = []
+
+    if (value) {
+      await loadStaff(value)
+    }
+  }
+)
+
+const normalizeErrors = (response) => {
+  clearErrors()
+
+  if (response?.errors && typeof response.errors === 'object') {
+    Object.entries(response.errors).forEach(([key, value]) => {
+      errors[key] = Array.isArray(value) ? value[0] : value
+    })
+  }
+}
+
+const hideForm = () => {
+  const elem = document.getElementById('home-booking-form')
+  if (!elem) return
+
+  bootstrap.Offcanvas.getOrCreateInstance(elem).hide()
+}
+
+const openForm = async () => {
+  if (!serviceGroups.value.length) {
+    await loadServiceGroups()
+  }
+
+  const elem = document.getElementById('home-booking-form')
+  if (!elem) return
+
+  bootstrap.Offcanvas.getOrCreateInstance(elem).show()
+}
+
+const submitForm = async () => {
+  clearErrors()
+  isSubmitted.value = true
+
+  const response = await storeRequest({
+    url: STORE_URL,
+    body: {
+      ...form,
+      service_group_home_id: Number(form.service_group_home_id),
+      service_home_id: Number(form.service_home_id),
+      staff_home_id: Number(form.staff_home_id)
+    }
+  })
+
+  if (response?.status) {
+    window.successSnackbar?.(response.message || 'تم حفظ الحجز المنزلي بنجاح.')
+    hideForm()
+    return
+  }
+
+  normalizeErrors(response)
+  window.errorSnackbar?.(response?.message || 'تعذر حفظ الحجز المنزلي.')
+  isSubmitted.value = false
+}
+
+const onCreateRequest = () => {
+  openForm()
+}
+
+useOnOffcanvasHide('home-booking-form', () => {
+  resetForm()
+})
+
+useOnOffcanvasShow('home-booking-form', () => {
+  if (!serviceGroups.value.length) {
+    loadServiceGroups()
+  }
+})
+
+onMounted(() => {
+  window.addEventListener('home-booking:create', onCreateRequest)
+
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('home_booking') === '1') {
+    window.setTimeout(() => {
+      openForm()
+      params.delete('home_booking')
+      const nextQuery = params.toString()
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`
+      window.history.replaceState({}, '', nextUrl)
+    }, 150)
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('home-booking:create', onCreateRequest)
+})
+</script>
+
+<style scoped>
+.home-booking-offcanvas {
+  width: min(560px, 100%);
+}
+</style>

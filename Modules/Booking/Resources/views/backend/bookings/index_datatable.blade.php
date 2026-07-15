@@ -5,7 +5,7 @@
 @endsection
 @section('banner-button')
     @hasPermission('add_booking')
-        <a href="{{ route('home.create') }}" class="btn btn-soft-primary" target="_blank" rel="noopener">
+        <a href="{{ route("backend.$module_name.index", ['home_booking' => 1]) }}" class="btn btn-soft-primary">
             <i class="fa-solid fa-house me-2"></i>{{ __('messagess.home_services') }}
         </a>
     @endhasPermission

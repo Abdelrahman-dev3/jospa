@@ -13,7 +13,7 @@ class StaffHome extends Model
 
     public function services()
     {
-        return $this->belongsToMany(ServiceHome::class, 'staff_service_home', 'staff_home_id', 'service_home_id');
+        return $this->belongsToMany(ServiceHome::class, 'staff_service_homes', 'staff_home_id', 'service_home_id');
     }
 
     public function bookings()

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Modules\Booking\Http\Controllers\Backend\BookingsController;
+use Modules\Booking\Http\Controllers\Backend\HomeBookingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,13 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::post('stripe-payment', [BookingsController::class, 'stripe_payment'])->name('stripe_payment');
         Route::get('payment_success/{booking_transaction_id}', [BookingsController::class, 'payment_success'])->name('payment_success');
         Route::get('export', [BookingsController::class, 'export'])->name('export');
+
+        Route::group(['prefix' => 'home-bookings', 'as' => 'home_bookings.'], function () {
+            Route::get('service-groups', [HomeBookingsController::class, 'serviceGroups'])->name('service_groups');
+            Route::get('services', [HomeBookingsController::class, 'services'])->name('services');
+            Route::get('staff', [HomeBookingsController::class, 'staff'])->name('staff');
+            Route::post('/', [HomeBookingsController::class, 'store'])->name('store');
+        });
     });
     Route::get('booking-invoice', [BookingsController::class, 'viewInvoice'])->name('bookings.invoice');
     Route::get('booking-invoice-download', [BookingsController::class, 'downloadInvoice'])->name('bookings.downloadinvoice');

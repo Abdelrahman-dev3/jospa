@@ -12,9 +12,14 @@ class ServiceHome extends Model
 
     protected $guarded = [];
 
+    public function group()
+    {
+        return $this->belongsTo(ServiceGroupHome::class, 'service_group_homes_id');
+    }
+
     public function staff()
     {
-        return $this->belongsToMany(StaffHome::class, 'staff_service_home', 'service_home_id', 'staff_home_id');
+        return $this->belongsToMany(StaffHome::class, 'staff_service_homes', 'service_home_id', 'staff_home_id');
     }
 
     public function bookings()
