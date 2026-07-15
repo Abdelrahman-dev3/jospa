@@ -48,7 +48,6 @@ const routes = [
       {
         path: 'misc-setting',
         name: 'Settings.misc',
-        meta: { permission: 'setting_misc' },
         component: MiscSettingPage
       },
       {

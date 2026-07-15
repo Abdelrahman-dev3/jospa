@@ -8,8 +8,8 @@
               v-if="hasPermissions('setting_general')" @click="toggle()"><router-link :to="{ name: 'Settings.home' }"
                 class="btn btn-border"><i class="fas fa-cube"></i>{{ $t('setting_sidebar.lbl_General') }}</router-link>
             </div>
-            <div class="mb-3" :class="hasPermissions('setting_misc') ? 'active-menu' : ''" id="Settings.misc"
-              v-if="hasPermissions('setting_misc')" @click="toggle()"><router-link :to="{ name: 'Settings.misc' }"
+            <div class="mb-3" id="Settings.misc"
+              @click="toggle()"><router-link :to="{ name: 'Settings.misc' }"
                 class="btn btn-border"><i class="fa-solid fa-screwdriver-wrench "></i>{{
                   $t('setting_sidebar.lbl_misc_setting') }}</router-link></div>
             <div class="mb-3" :class="hasPermissions('setting_quick_booking') ? 'active-menu' : ''"
