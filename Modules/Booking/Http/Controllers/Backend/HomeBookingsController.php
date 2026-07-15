@@ -158,7 +158,7 @@ class HomeBookingsController extends Controller
                 notes: $validated['notes'] ?? null,
                 serviceName: $this->localizedName((string) $service->name)
             ),
-            'status' => 'pending',
+            'status' => 'confirmed',
             'payment_status' => 0,
             'start_date_time' => $startDateTime,
             'user_id' => $customer->id,
@@ -174,7 +174,6 @@ class HomeBookingsController extends Controller
             'employee_id' => $employee->id,
             'service_price' => $service->default_price ?? 0,
             'duration_min' => $duration,
-            'status' => 'pending',
             'start_date_time' => $startDateTime,
             'sequance' => 1,
             'created_by' => auth()->id(),
