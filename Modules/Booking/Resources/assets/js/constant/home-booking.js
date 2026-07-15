@@ -12,6 +12,10 @@ export const STAFF_URL = ({ service_home_id }) => {
   return { path: `/api/staff?branch_id=0&service_id=${service_home_id}`, method: 'GET' }
 }
 
+export const AVAILABLE_TIMES_URL = ({ date, staff_home_id, duration }) => {
+  return { path: `/api/available/${date}/${staff_home_id}?Increasing=${duration}`, method: 'GET' }
+}
+
 export const STORE_URL = () => {
   return { path: `${MODULE}`, method: 'POST' }
 }

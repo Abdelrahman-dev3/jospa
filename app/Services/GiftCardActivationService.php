@@ -73,7 +73,7 @@ class GiftCardActivationService
 
     private function sendNotificationsForGiftCard(GiftCard $giftCard): void
     {
-        if (filled($giftCard->recipient_phone)) {
+        if ($this->shouldNotifyRecipient($giftCard) && filled($giftCard->recipient_phone)) {
             $this->smsService->sendGift(
                 $giftCard->recipient_phone,
                 [
@@ -89,6 +89,11 @@ class GiftCardActivationService
 
             $this->giftCardRecipientWhatsAppService->send($giftCard);
         }
+    }
+
+    private function shouldNotifyRecipient(GiftCard $giftCard): bool
+    {
+        return in_array($giftCard->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true);
     }
 
     private function requiresReference(GiftCard $giftCard): bool

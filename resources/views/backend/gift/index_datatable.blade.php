@@ -26,6 +26,7 @@
                 <th>{{ __('messages.selected_services') }}</th>
                 <th>{{ __('messages.packages') }}</th>
                 <th>{{ __('messagess.Coupons') }}</th>
+                <th>الرسالة المرفقة</th>
                 <th>{{ __('messages.subtotal') }}</th>
                 <th>{{ __('booking.lbl_payment_status') }}</th>
                 <th>{{ __('messages.created_at') }}</th>
@@ -60,6 +61,32 @@
                         <span class="badge bg-primary">{{  $coupon['name'] ?? "---" }}</span> <br>
                     @endforeach
                 </td>
+                <td>
+                    @if(filled($gift->message))
+                        <button type="button" class="btn btn-soft-info btn-sm" data-bs-toggle="modal" data-bs-target="#gift-message-{{ $gift->id }}">
+                            <i class="fa-regular fa-envelope me-1"></i>عرض الرسالة
+                        </button>
+
+                        <div class="modal fade" id="gift-message-{{ $gift->id }}" tabindex="-1" aria-labelledby="gift-message-label-{{ $gift->id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="gift-message-label-{{ $gift->id }}">رسالة الجيفت كارد</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="small text-muted mb-2">
+                                            من: {{ $gift->sender_name ?? '-' }} | إلى: {{ $gift->recipient_name ?? '-' }}
+                                        </div>
+                                        <div class="p-3 rounded bg-light text-break" style="white-space: pre-wrap;">{{ $gift->message }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        -
+                    @endif
+                </td>
                 <td>{{ $gift->subtotal ?? '-' }}</td> 
                 <td style="text-align: center;font-size: 16px;">
                     @if($gift->payment_status == 1)
@@ -80,7 +107,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11" class="text-center">{{ __('messages.no_gift_cards') }}</td>
+                    <td colspan="18" class="text-center">{{ __('messages.no_gift_cards') }}</td>
                 </tr>
             @endforelse
        

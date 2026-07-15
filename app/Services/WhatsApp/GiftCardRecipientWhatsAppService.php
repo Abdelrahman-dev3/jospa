@@ -14,6 +14,15 @@ class GiftCardRecipientWhatsAppService
 
     public function send(GiftCard $giftCard): bool
     {
+        if (! $this->isElectronicCard($giftCard)) {
+            Log::info('Skipping gift card recipient WhatsApp because the delivery method is center pickup.', [
+                'gift_card_id' => $giftCard->id,
+                'delivery_method' => $giftCard->delivery_method,
+            ]);
+
+            return false;
+        }
+
         if (! $this->whatsAppService->isEnabled()) {
             Log::warning('Skipping gift card recipient WhatsApp because the service is disabled.', [
                 'gift_card_id' => $giftCard->id,

@@ -77,8 +77,31 @@
 
           <div class="col-md-6">
             <label class="form-label">الوقت</label>
-            <input v-model="form.time" type="time" class="form-control" />
+            <select v-model="form.time" class="form-select" :disabled="availableTimesLoading || !canLoadAvailableTimes">
+              <option value="">اختر وقت البداية</option>
+              <option v-for="timeSlot in availableTimes" :key="timeSlot" :value="timeSlot">
+                {{ timeSlot }}
+              </option>
+            </select>
+            <small v-if="availableTimesLoading" class="text-muted">جار تحميل الأوقات المتاحة...</small>
+            <small v-else-if="canLoadAvailableTimes && !availableTimes.length" class="text-muted">لا توجد أوقات متاحة في التاريخ المحدد.</small>
             <small v-if="errors.time" class="text-danger">{{ errors.time }}</small>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">وقت النهاية</label>
+            <input v-model="form.end_time" type="time" class="form-control" :disabled="!selectedService || !form.time" @input="onEndTimeInput" />
+            <small v-if="errors.end_time" class="text-danger d-block">{{ errors.end_time }}</small>
+            <small v-if="endTimeError" class="text-danger d-block">{{ endTimeError }}</small>
+            <small v-else-if="form.time && selectedService" class="text-muted d-block">
+              {{ isManualEndTime ? 'تم تحديد وقت النهاية يدويًا.' : 'تم تحديد وقت النهاية تلقائيًا حسب مدة الخدمة.' }}
+            </small>
+          </div>
+
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="w-100 small text-muted">
+              مدة الحجز: <strong>{{ effectiveDuration }}</strong> دقيقة
+            </div>
           </div>
 
           <div class="col-12">
@@ -115,7 +138,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useOnOffcanvasHide, useOnOffcanvasShow, useRequest } from '@/helpers/hooks/useCrudOpration'
-import { SERVICE_GROUPS_URL, SERVICES_URL, STAFF_URL, STORE_URL } from '../constant/home-booking'
+import { AVAILABLE_TIMES_URL, SERVICE_GROUPS_URL, SERVICES_URL, STAFF_URL, STORE_URL } from '../constant/home-booking'
 
 const { listingRequest, storeRequest } = useRequest()
 
@@ -125,9 +148,13 @@ const isBootstrapping = ref(false)
 const isSubmitted = ref(false)
 const servicesLoading = ref(false)
 const staffLoading = ref(false)
+const availableTimesLoading = ref(false)
 const serviceGroups = ref([])
 const services = ref([])
 const staff = ref([])
+const availableTimes = ref([])
+const endTimeError = ref('')
+const isManualEndTime = ref(false)
 const errors = reactive({})
 
 const defaultForm = () => ({
@@ -139,7 +166,8 @@ const defaultForm = () => ({
   service_home_id: '',
   staff_home_id: '',
   date: today,
-  time: ''
+  time: '',
+  end_time: ''
 })
 
 const form = reactive(defaultForm())
@@ -156,13 +184,34 @@ const resetForm = () => {
   Object.assign(form, defaultForm())
   services.value = []
   staff.value = []
+  availableTimes.value = []
   clearErrors()
   isSubmitted.value = false
   servicesLoading.value = false
   staffLoading.value = false
+  availableTimesLoading.value = false
+  endTimeError.value = ''
+  isManualEndTime.value = false
 }
 
 const selectedService = computed(() => services.value.find((item) => stringValue(item.id) === form.service_home_id) || null)
+const canLoadAvailableTimes = computed(() => Boolean(form.date && form.staff_home_id && selectedService.value))
+const defaultDuration = computed(() => Math.max(1, Number(selectedService.value?.duration || 30)))
+const effectiveDuration = computed(() => {
+  if (!form.time || !form.end_time) {
+    return defaultDuration.value
+  }
+
+  const startMoment = parseTimeForDate(form.time)
+  const endMoment = parseTimeForDate(form.end_time)
+
+  if (!startMoment || !endMoment) {
+    return defaultDuration.value
+  }
+
+  const diff = Math.round((endMoment.getTime() - startMoment.getTime()) / 60000)
+  return diff > 0 ? diff : defaultDuration.value
+})
 
 const canSubmit = computed(() => {
   return Boolean(
@@ -173,7 +222,8 @@ const canSubmit = computed(() => {
       form.service_home_id &&
       form.staff_home_id &&
       form.date &&
-      form.time
+      form.time &&
+      !endTimeError.value
   )
 })
 
@@ -187,6 +237,89 @@ const extractItems = (response) => {
   }
 
   return []
+}
+
+const parseTimeForDate = (timeValue) => {
+  const value = String(timeValue || '').trim()
+  if (!form.date || !value) {
+    return null
+  }
+
+  const isoDate = `${form.date}T${value}:00`
+  const parsed = new Date(isoDate)
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed
+  }
+
+  return null
+}
+
+const syncEndTimeWithServiceDuration = () => {
+  if (!form.time || !selectedService.value) {
+    form.end_time = ''
+    endTimeError.value = ''
+    isManualEndTime.value = false
+    return
+  }
+
+  if (isManualEndTime.value && form.end_time) {
+    validateEndTime()
+    return
+  }
+
+  const startMoment = parseTimeForDate(form.time)
+  if (!startMoment) {
+    form.end_time = ''
+    endTimeError.value = ''
+    return
+  }
+
+  const computedEndTime = new Date(startMoment.getTime() + defaultDuration.value * 60000)
+  form.end_time = `${String(computedEndTime.getHours()).padStart(2, '0')}:${String(computedEndTime.getMinutes()).padStart(2, '0')}`
+  endTimeError.value = ''
+  isManualEndTime.value = false
+}
+
+const validateEndTime = () => {
+  if (!form.end_time) {
+    endTimeError.value = ''
+    isManualEndTime.value = false
+    syncEndTimeWithServiceDuration()
+    return true
+  }
+
+  const startMoment = parseTimeForDate(form.time)
+  const endMoment = parseTimeForDate(form.end_time)
+
+  if (!startMoment || !endMoment) {
+    endTimeError.value = ''
+    return true
+  }
+
+  if (Math.round((endMoment.getTime() - startMoment.getTime()) / 60000) <= 0) {
+    endTimeError.value = 'وقت النهاية يجب أن يكون بعد وقت البداية.'
+    return false
+  }
+
+  endTimeError.value = ''
+  return true
+}
+
+const onEndTimeInput = async () => {
+  isManualEndTime.value = Boolean(form.end_time)
+
+  if (!validateEndTime()) {
+    return
+  }
+
+  if (canLoadAvailableTimes.value) {
+    const currentSelectedTime = form.time
+    await loadAvailableTimes()
+    if (currentSelectedTime && !availableTimes.value.includes(currentSelectedTime)) {
+      form.time = ''
+      syncEndTimeWithServiceDuration()
+    }
+  }
 }
 
 const parseLocalizedValue = (value) => {
@@ -265,13 +398,41 @@ const loadStaff = async (serviceHomeId) => {
   staffLoading.value = false
 }
 
+const loadAvailableTimes = async () => {
+  if (!canLoadAvailableTimes.value) {
+    availableTimes.value = []
+    return
+  }
+
+  const duration = effectiveDuration.value
+  availableTimesLoading.value = true
+  const response = await listingRequest({
+    url: AVAILABLE_TIMES_URL,
+    data: {
+      date: form.date,
+      staff_home_id: form.staff_home_id,
+      duration
+    }
+  })
+
+  availableTimes.value = extractItems(response)
+    .map((timeSlot) => String(timeSlot || '').trim())
+    .filter(Boolean)
+  availableTimesLoading.value = false
+}
+
 watch(
   () => form.service_group_home_id,
   async (value) => {
     form.service_home_id = ''
     form.staff_home_id = ''
+    form.time = ''
+    form.end_time = ''
     services.value = []
     staff.value = []
+    availableTimes.value = []
+    endTimeError.value = ''
+    isManualEndTime.value = false
 
     if (value) {
       await loadServices(value)
@@ -283,10 +444,51 @@ watch(
   () => form.service_home_id,
   async (value) => {
     form.staff_home_id = ''
+    form.time = ''
+    form.end_time = ''
     staff.value = []
+    availableTimes.value = []
+    endTimeError.value = ''
+    isManualEndTime.value = false
 
     if (value) {
       await loadStaff(value)
+    }
+  }
+)
+
+watch(
+  () => [form.staff_home_id, form.date],
+  async () => {
+    form.time = ''
+    form.end_time = ''
+    availableTimes.value = []
+    endTimeError.value = ''
+    isManualEndTime.value = false
+
+    if (canLoadAvailableTimes.value) {
+      await loadAvailableTimes()
+    }
+  }
+)
+
+watch(
+  () => form.time,
+  () => {
+    syncEndTimeWithServiceDuration()
+  }
+)
+
+watch(
+  () => selectedService.value?.id,
+  async () => {
+    syncEndTimeWithServiceDuration()
+    if (canLoadAvailableTimes.value) {
+      await loadAvailableTimes()
+      if (form.time && !availableTimes.value.includes(form.time)) {
+        form.time = ''
+        syncEndTimeWithServiceDuration()
+      }
     }
   }
 )
@@ -329,7 +531,8 @@ const submitForm = async () => {
       ...form,
       service_group_home_id: Number(form.service_group_home_id),
       service_home_id: Number(form.service_home_id),
-      staff_home_id: Number(form.staff_home_id)
+      staff_home_id: Number(form.staff_home_id),
+      end_time: form.end_time || null
     }
   })
 

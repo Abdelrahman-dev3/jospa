@@ -310,6 +310,15 @@ return [
                 'class' => '', // any class for input
                 'value' => '1', // default value if you want
             ],
+            [
+                'type' => 'text', // input fields type
+                'data' => 'misc', // data type, string, int, boolean
+                'name' => 'home_booking_calendar_color', // unique name for field
+                'label' => 'Home Booking Calendar Color', // you know what label it is
+                'rules' => ['nullable', 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'], // validation rule of laravel
+                'class' => '', // any class for input
+                'value' => '#0EA5E9', // default value if you want
+            ],
         ],
     ],
     'analytics' => [

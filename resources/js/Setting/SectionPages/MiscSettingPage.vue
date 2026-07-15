@@ -32,6 +32,16 @@
         <Multiselect id="data_table_limit" v-model="data_table_limit" :value="data_table_limit" v-bind="data_table_limit_data" class="form-group"></Multiselect>
         <span class="text-danger">{{ errors.data_table_limit }}</span>
       </div>
+      <div class="col-md-4">
+        <div class="form-group">
+          <label class="form-label" for="home_booking_calendar_color">لون الحجز المنزلي في الكالندر</label>
+          <div class="d-flex align-items-center gap-3">
+            <input id="home_booking_calendar_color" v-model="home_booking_calendar_color" type="color" class="form-control form-control-color" />
+            <span class="form-control">{{ home_booking_calendar_color || '#0EA5E9' }}</span>
+          </div>
+          <span class="text-danger">{{ errors.home_booking_calendar_color }}</span>
+        </div>
+      </div>
       <!-- <div class="col-md-4">
         <label class="form-label">{{ $t('setting_language_page.lbl_currency') }}</label>
         <Multiselect id="currency" v-model="default_currency" :value="default_currency" v-bind="currencyOption"   :options="currency.options" class="form-group"></Multiselect>
@@ -132,6 +142,7 @@ const setFormData = (data) => {
     values: {
       google_analytics: data.google_analytics,
       slot_duration: data.slot_duration,
+      home_booking_calendar_color: data.home_booking_calendar_color || '#0EA5E9',
       default_language: data.default_language,
       default_time_zone: data.default_time_zone,
       data_table_limit: data.data_table_limit,
@@ -143,12 +154,14 @@ const { handleSubmit, errors, resetForm } = useForm()
 const errorMessage = ref(null)
 const { value: slot_duration } = useField('slot_duration')
 const { value: google_analytics } = useField('google_analytics')
+const { value: home_booking_calendar_color } = useField('home_booking_calendar_color')
 const { value: default_language } = useField('default_language')
 const { value: default_time_zone } = useField('default_time_zone')
 const { value: data_table_limit } = useField('data_table_limit')
 const { value: default_currency } = useField('default_currency')
 slot_duration.value = '00:30'
-const data = 'slot_duration,google_analytics,default_language,default_time_zone,data_table_limit,default_currency'
+home_booking_calendar_color.value = '#0EA5E9'
+const data = 'slot_duration,google_analytics,home_booking_calendar_color,default_language,default_time_zone,data_table_limit,default_currency'
 onMounted(() => {
   createRequest(GET_URL(data)).then((response) => {
     setFormData(response)

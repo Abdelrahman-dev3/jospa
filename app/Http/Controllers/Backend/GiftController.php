@@ -19,7 +19,7 @@ class GiftController extends Controller
     {
         $module_action = 'List';
         $module_title = 'Gift Cards';
-        $gifts = GiftCard::all();
+        $gifts = GiftCard::with('user')->latest('id')->get();
         return view('backend.gift.index_datatable', compact('module_action', 'gifts' , 'module_title'));
     }
 

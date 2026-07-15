@@ -215,7 +215,7 @@ public function index_list(Request $request)
         $employeeName = $value->employee->full_name ?? '';
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
         $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
-        $categoryColor = $this->normalizeCalendarColor(optional(optional($value->service)->category)->calendar_color);
+        $categoryColor = $this->resolveBookingCalendarColor($value->booking, optional(optional($value->service)->category)->calendar_color);
         $eventColor = $categoryColor ?: $statusColor;
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
@@ -242,6 +242,7 @@ public function index_list(Request $request)
                 'status_title' => $statusTitle,
                 'status_color' => $statusColor,
                 'category_color' => $categoryColor,
+                'is_home_booking' => $this->isHomeBooking($value->booking),
                 'duration' => $duration,
                 'type' => 'service',
             ],
@@ -563,6 +564,28 @@ public function index_list(Request $request)
         }
 
         return preg_match('/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/', $color) ? strtoupper($color) : null;
+    }
+
+    private function isHomeBooking(?Booking $booking): bool
+    {
+        if (! $booking) {
+            return false;
+        }
+
+        return str_contains((string) $booking->note, 'نوع الحجز: منزلي');
+    }
+
+    private function resolveBookingCalendarColor(?Booking $booking, ?string $fallbackCategoryColor = null): ?string
+    {
+        if ($this->isHomeBooking($booking)) {
+            $homeBookingColor = $this->normalizeCalendarColor((string) setting('home_booking_calendar_color', '#0EA5E9'));
+
+            if ($homeBookingColor) {
+                return $homeBookingColor;
+            }
+        }
+
+        return $this->normalizeCalendarColor($fallbackCategoryColor);
     }
 
     private function resolvePackageCategoryColor(BookingPackages $bookingPackage): ?string

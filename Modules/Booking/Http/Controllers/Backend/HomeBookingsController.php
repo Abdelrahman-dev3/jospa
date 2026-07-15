@@ -105,6 +105,7 @@ class HomeBookingsController extends Controller
             'address' => ['required', 'string', 'max:1000'],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
+            'end_time' => ['nullable', 'date_format:H:i'],
             'service_group_home_id' => ['required', 'integer', 'exists:categories,id'],
             'service_home_id' => ['required', 'integer', 'exists:services,id'],
             'staff_home_id' => ['required', 'integer'],
@@ -141,7 +142,19 @@ class HomeBookingsController extends Controller
         }
 
         $startDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['time']);
-        $duration = max(1, (int) ($service->duration_min ?? 30));
+        $defaultDuration = max(1, (int) ($service->duration_min ?? 30));
+        $duration = $defaultDuration;
+
+        if (! empty($validated['end_time'])) {
+            $endDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['end_time']);
+            $duration = (int) $startDateTime->diffInMinutes($endDateTime, false);
+
+            if ($duration <= 0) {
+                throw ValidationException::withMessages([
+                    'end_time' => ['وقت النهاية يجب أن يكون بعد وقت البداية.'],
+                ]);
+            }
+        }
 
         $this->ensureTimeSlotIsAvailable((int) $employee->id, $startDateTime, $duration);
 

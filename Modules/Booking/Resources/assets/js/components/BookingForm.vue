@@ -65,6 +65,31 @@
               </span>
             </div>
           </div>
+          <div class="row" v-if="canShowScheduleControls && employee_id && start_date_time">
+            <div class="form-group col-6">
+              <label class="form-label" for="booking_end_time">وقت النهاية</label>
+              <input
+                id="booking_end_time"
+                v-model="end_time_input"
+                type="time"
+                class="form-control"
+                :disabled="isScheduleDisabled || !selectedService.length"
+                @input="onEndTimeInput"
+              />
+            </div>
+            <div class="form-group col-6 d-flex align-items-end">
+              <div class="w-100">
+                <div class="small text-muted">
+                  مدة الخدمة: <strong>{{ effectiveBookingDuration }}</strong> دقيقة
+                </div>
+                <div v-if="end_time_error" class="small text-danger mt-1">{{ end_time_error }}</div>
+                <div v-else-if="!selectedService.length" class="small text-muted mt-1">اختر خدمة أولاً لتحديد وقت النهاية.</div>
+                <div v-else class="small text-muted mt-1">
+                  {{ is_end_time_manual ? 'تم تحديد وقت النهاية يدويًا.' : 'تم تحديد وقت النهاية تلقائيًا حسب مدة الخدمة.' }}
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="form-group border-bottom">
             <div v-if="selectedCustomer">
               <div class="d-flex align-items-start gap-3 mb-2">
@@ -712,6 +737,9 @@ const props = defineProps({
 const IS_SUBMITED = ref(false)
 const IS_EMPLOYEES_LOADING = ref(false)
 const IS_SLOTS_LOADING = ref(false)
+const end_time_input = ref('')
+const is_end_time_manual = ref(false)
+const end_time_error = ref('')
 
 const filterStatus = (value) => {
   if (props.statusList) {
@@ -841,6 +869,7 @@ const selectedPackageService = ref([])
 const tempSelectedPackageService = ref([])
 const errorMessages = ref({})
 const couponRedeem = ref([])
+const isSyncingEndTime = ref(false)
 
 const defaultData = () => {
   errorMessages.value = {}
@@ -872,7 +901,7 @@ const setFormData = (data) => {
     store.updateStep('CHECK_OUT')
   }
   if (data.services !== undefined && data.services.length > 0) {
-    selectedService.value = data.services
+    selectedService.value = data.services.map((serviceItem) => hydrateBookingService(serviceItem))
     getUserPackages(data.user_id)
   } else {
     resetServices()
@@ -934,6 +963,8 @@ const setFormData = (data) => {
       package_id: data.package_id
     }
   })
+
+  syncEndTimeState({ preserveManual: false })
 }
 
 const externalFormCreation = (e) => {
@@ -1072,6 +1103,9 @@ const dateChange = () => {
   }
 
   start_date_time.value = null
+  end_time_input.value = ''
+  end_time_error.value = ''
+  is_end_time_manual.value = false
   slots.value = []
   service.value = { options: [], list: [] }
   if (!isPaidBooking.value) {
@@ -1099,7 +1133,7 @@ const getSlots = () => {
       date: current_date.value,
       employee_id: employee_id.value,
       booking_id: id.value || null,
-      service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0
+      service_duration: effectiveBookingDuration.value
     }
   }).then((res) => {
     if (res.status) {
@@ -1135,7 +1169,7 @@ const loadAvailableEmployees = () => {
     data: {
       branch_id: branch_id.value,
       date: current_date.value,
-      service_duration: selectedService.value.length > 0 ? selectedService.value[0].duration_min : 0,
+      service_duration: effectiveBookingDuration.value,
       per_page: 1000
     }
   }).then((res) => {
@@ -1165,6 +1199,9 @@ const branchSelect = (value, preserveSelection = false) => {
   } else {
     employee_id.value = null
     start_date_time.value = null
+    end_time_input.value = ''
+    end_time_error.value = ''
+    is_end_time_manual.value = false
     slots.value = []
     service.value = { options: [], list: [] }
     resetServices()
@@ -1193,6 +1230,9 @@ function fetchHolidays(value) {
 const removeBranch = (value) => {
   employee_id.value = null
   start_date_time.value = null
+  end_time_input.value = ''
+  end_time_error.value = ''
+  is_end_time_manual.value = false
   slots.value = []
   service.value = { options: [], list: [] }
   setEmployeeOptions([])
@@ -1224,6 +1264,9 @@ const employeeSelect = (value, preserveSelection = false) => {
   if (!preserveSelection) {
     // امسح الوقت والـ slots دائماً عند تغيير الموظف (صحيح)
     start_date_time.value = null
+    end_time_input.value = ''
+    end_time_error.value = ''
+    is_end_time_manual.value = false
     slots.value = []
   }
   if (isPaidBooking.value || id.value) {
@@ -1250,6 +1293,9 @@ const employeeSelect = (value, preserveSelection = false) => {
 const removeEmployee = () => {
   employee_id.value = null
   start_date_time.value = null
+  end_time_input.value = ''
+  end_time_error.value = ''
+  is_end_time_manual.value = false
   slots.value = []
   service.value = { options: [], list: [] }
   resetServices()
@@ -1301,10 +1347,14 @@ const openCustomerEditModal = () => {
 
 const slotSelect = () => {
   resetServiceTime()
+  syncEndTimeState()
 }
 
 const removeSlot = () => {
   start_date_time.value = null
+  end_time_input.value = ''
+  end_time_error.value = ''
+  is_end_time_manual.value = false
   resetServiceTime()
 }
 
@@ -1321,8 +1371,7 @@ const selectedEmployee = computed(() => employee.value.list.find((employee) => e
 const removeCustomer = () => {
   user_id.value = null
   selectedBookingCustomer.value = null
-  services_id.value = []
-  selectedService.value = []
+  resetServices()
   userPackage.value = null
 }
 
@@ -1331,10 +1380,140 @@ const removeCustomer = () => {
 const selectedService = ref([])
 const newSelectedServices = ref([])
 
+const baseBookingDuration = computed(() =>
+  selectedService.value.reduce((total, serviceItem) => total + Number(serviceItem.default_duration_min ?? serviceItem.duration_min ?? 0), 0)
+)
+
+const effectiveBookingDuration = computed(() =>
+  selectedService.value.reduce((total, serviceItem) => total + Number(serviceItem.duration_min ?? 0), 0)
+)
+
+const hydrateBookingService = (serviceItem) => ({
+  ...serviceItem,
+  default_duration_min: Number(serviceItem?.default_duration_min ?? serviceItem?.duration_min ?? 0)
+})
+
+const calculateAutoEndMoment = () => {
+  if (!start_date_time.value || !moment(start_date_time.value).isValid() || baseBookingDuration.value <= 0) {
+    return null
+  }
+
+  return moment(start_date_time.value).add(baseBookingDuration.value, 'minutes')
+}
+
+const buildEndMomentFromInput = () => {
+  if (!current_date.value || !end_time_input.value) {
+    return null
+  }
+
+  const parsedEndTime = moment(`${current_date.value} ${end_time_input.value}`, 'YYYY-MM-DD HH:mm', true)
+  return parsedEndTime.isValid() ? parsedEndTime : null
+}
+
+const restoreDefaultServiceDurations = () => {
+  selectedService.value = selectedService.value.map((serviceItem) => ({
+    ...serviceItem,
+    duration_min: Number(serviceItem.default_duration_min ?? serviceItem.duration_min ?? 0)
+  }))
+}
+
+const syncEndTimeState = ({ preserveManual = true } = {}) => {
+  if (isSyncingEndTime.value) {
+    return
+  }
+
+  isSyncingEndTime.value = true
+
+  if (!start_date_time.value || !moment(start_date_time.value).isValid() || selectedService.value.length === 0) {
+    end_time_error.value = ''
+    end_time_input.value = ''
+    is_end_time_manual.value = false
+    isSyncingEndTime.value = false
+    return
+  }
+
+  if (preserveManual && is_end_time_manual.value && end_time_input.value) {
+    applyManualEndTimeToServices()
+    isSyncingEndTime.value = false
+    return
+  }
+
+  restoreDefaultServiceDurations()
+  resetServiceTime()
+  const autoEndMoment = calculateAutoEndMoment()
+  end_time_error.value = ''
+  end_time_input.value = autoEndMoment ? autoEndMoment.format('HH:mm') : ''
+  is_end_time_manual.value = false
+  isSyncingEndTime.value = false
+}
+
+const applyManualEndTimeToServices = () => {
+  if (!start_date_time.value || !moment(start_date_time.value).isValid() || selectedService.value.length === 0) {
+    end_time_error.value = ''
+    return
+  }
+
+  const startMoment = moment(start_date_time.value)
+  const endMoment = buildEndMomentFromInput()
+
+  if (!endMoment) {
+    syncEndTimeState({ preserveManual: false })
+    return
+  }
+
+  const totalDuration = endMoment.diff(startMoment, 'minutes')
+  const fixedDurationBeforeLast = selectedService.value.slice(0, -1).reduce((total, serviceItem) => total + Number(serviceItem.default_duration_min ?? serviceItem.duration_min ?? 0), 0)
+
+  if (totalDuration <= 0) {
+    end_time_error.value = 'وقت النهاية يجب أن يكون بعد وقت البداية.'
+    return
+  }
+
+  if (selectedService.value.length > 1 && totalDuration <= fixedDurationBeforeLast) {
+    end_time_error.value = 'وقت النهاية لا يكفي لتنفيذ الخدمات المحددة.'
+    return
+  }
+
+  end_time_error.value = ''
+  selectedService.value = selectedService.value.map((serviceItem, index) => {
+    const baseDuration = Number(serviceItem.default_duration_min ?? serviceItem.duration_min ?? 0)
+    if (index < selectedService.value.length - 1) {
+      return {
+        ...serviceItem,
+        duration_min: baseDuration
+      }
+    }
+
+    return {
+      ...serviceItem,
+      duration_min: selectedService.value.length === 1 ? totalDuration : totalDuration - fixedDurationBeforeLast
+    }
+  })
+  resetServiceTime()
+}
+
+const onEndTimeInput = () => {
+  if (!end_time_input.value) {
+    is_end_time_manual.value = false
+    syncEndTimeState({ preserveManual: false })
+    getSlots()
+    return
+  }
+
+  is_end_time_manual.value = true
+  applyManualEndTimeToServices()
+  if (!end_time_error.value) {
+    getSlots()
+  }
+}
+
 const resetServices = () => {
   selectedService.value = []
   services_id.value = []
   newSelectedServices.value = []
+  end_time_input.value = ''
+  end_time_error.value = ''
+  is_end_time_manual.value = false
 }
 
 const removeService = (id) => {
@@ -1343,6 +1522,7 @@ const removeService = (id) => {
   selectedService.value = selectedService.value.filter((BKservice) => BKservice.service_id !== id)
   newSelectedServices.value = newSelectedServices.value.filter((BKservice) => BKservice.service_id !== id)
   resetServiceTime()
+  syncEndTimeState()
   getSlots()
 }
 
@@ -1358,7 +1538,7 @@ const addNewService = (value) => {
 
 const serviceSelect = (value) => {
   const filteredService = service.value.list.find((ser) => ser.service_id == value)
-  const bookingService = {
+  const bookingService = hydrateBookingService({
     id: null,
     start_date_time: null,
     service_name: filteredService.service_name,
@@ -1368,10 +1548,11 @@ const serviceSelect = (value) => {
     branch_id: branch_id.value,
     service_price: filteredService.service_price,
     duration_min: filteredService.duration_min
-  }
+  })
   selectedService.value.push(bookingService)
   newSelectedServices.value.push(bookingService)
   resetServiceTime()
+  syncEndTimeState()
   getSlots().then(() => {
     if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value))) {
       start_date_time.value = null
@@ -1521,6 +1702,7 @@ const canSubmitBooking = computed(() => {
 
   return (
     canSaveBooking.value &&
+    !end_time_error.value &&
     hasSchedule &&
     (isExistingPaidBooking || isExistingBookingWithSchedule || hasSelectedServices || hasSelectedPackages)
   )
