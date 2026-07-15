@@ -46,6 +46,16 @@ document.addEventListener('click', function (event) {
             return;
         }
 
+        if (typeof window.openHomeBookingForm === 'function') {
+            window.openHomeBookingForm();
+            return;
+        }
+
+        const homeBookingElement = document.getElementById('home-booking-form');
+        if (homeBookingElement && typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+            bootstrap.Offcanvas.getOrCreateInstance(homeBookingElement).show();
+        }
+
         window.dispatchEvent(new CustomEvent('home-booking:create'));
         return;
     }

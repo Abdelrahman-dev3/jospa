@@ -314,6 +314,7 @@ useOnOffcanvasShow('home-booking-form', () => {
 
 onMounted(() => {
   window.addEventListener('home-booking:create', onCreateRequest)
+  window.openHomeBookingForm = openForm
 
   const params = new URLSearchParams(window.location.search)
   if (params.get('home_booking') === '1') {
@@ -329,6 +330,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('home-booking:create', onCreateRequest)
+  delete window.openHomeBookingForm
 })
 </script>
 
