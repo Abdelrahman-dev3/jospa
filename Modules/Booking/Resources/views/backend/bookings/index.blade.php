@@ -9,7 +9,7 @@
 @section('banner-button')
 @hasPermission('add_booking')
 <button type="button" class="btn btn-primary" data-booking-create><i class="fa-solid fa-plus"></i> {{ __('booking.lbl_new_appointment') }}</button>
-<button type="button" class="btn btn-soft-primary" data-home-booking-create>
+<button type="button" class="btn btn-soft-primary" data-home-booking-create data-bs-toggle="offcanvas" data-bs-target="#home-booking-form" aria-controls="home-booking-form">
     <i class="fa-solid fa-house me-2"></i>{{ __('messagess.home_services') }}
 </button>
 @endhasPermission
