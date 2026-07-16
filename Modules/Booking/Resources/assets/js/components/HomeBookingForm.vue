@@ -69,37 +69,30 @@
             <small v-if="errors.staff_home_id" class="text-danger d-block">{{ errors.staff_home_id }}</small>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">التاريخ</label>
             <input v-model="form.date" type="date" class="form-control" :min="today" />
             <small v-if="errors.date" class="text-danger">{{ errors.date }}</small>
           </div>
 
-          <div class="col-md-6">
-            <label class="form-label">الوقت</label>
-            <select v-model="form.time" class="form-select" :disabled="availableTimesLoading || !canLoadAvailableTimes">
-              <option value="">اختر وقت البداية</option>
-              <option v-for="timeSlot in availableTimes" :key="timeSlot" :value="timeSlot">
-                {{ timeSlot }}
-              </option>
-            </select>
-            <small v-if="availableTimesLoading" class="text-muted">جار تحميل الأوقات المتاحة...</small>
-            <small v-else-if="canLoadAvailableTimes && !availableTimes.length" class="text-muted">لا توجد أوقات متاحة في التاريخ المحدد.</small>
+          <div class="col-md-4">
+            <label class="form-label">وقت البداية</label>
+            <input v-model="form.time" type="time" class="form-control" :disabled="!selectedService" />
             <small v-if="errors.time" class="text-danger">{{ errors.time }}</small>
           </div>
 
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label">وقت النهاية</label>
-            <input v-model="form.end_time" type="time" class="form-control" :disabled="!selectedService || !form.time" @input="onEndTimeInput" />
+            <input v-model="form.end_time" type="time" class="form-control" :disabled="!selectedService" @input="onEndTimeInput" />
             <small v-if="errors.end_time" class="text-danger d-block">{{ errors.end_time }}</small>
             <small v-if="endTimeError" class="text-danger d-block">{{ endTimeError }}</small>
             <small v-else-if="form.time && selectedService" class="text-muted d-block">
-              {{ isManualEndTime ? 'تم تحديد وقت النهاية يدويًا.' : 'تم تحديد وقت النهاية تلقائيًا حسب مدة الخدمة.' }}
+              {{ isManualEndTime ? 'تم تحديد وقت النهاية يدويًا.' : 'إذا تركت وقت النهاية فارغًا فسيُحسب تلقائيًا حسب مدة الخدمة.' }}
             </small>
           </div>
 
-          <div class="col-md-6 d-flex align-items-end">
-            <div class="w-100 small text-muted">
+          <div class="col-12">
+            <div class="small text-muted">
               مدة الحجز: <strong>{{ effectiveDuration }}</strong> دقيقة
             </div>
           </div>
@@ -138,7 +131,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useOnOffcanvasHide, useOnOffcanvasShow, useRequest } from '@/helpers/hooks/useCrudOpration'
-import { AVAILABLE_TIMES_URL, SERVICE_GROUPS_URL, SERVICES_URL, STAFF_URL, STORE_URL } from '../constant/home-booking'
+import { SERVICE_GROUPS_URL, SERVICES_URL, STAFF_URL, STORE_URL } from '../constant/home-booking'
 
 const { listingRequest, storeRequest } = useRequest()
 
@@ -148,11 +141,9 @@ const isBootstrapping = ref(false)
 const isSubmitted = ref(false)
 const servicesLoading = ref(false)
 const staffLoading = ref(false)
-const availableTimesLoading = ref(false)
 const serviceGroups = ref([])
 const services = ref([])
 const staff = ref([])
-const availableTimes = ref([])
 const endTimeError = ref('')
 const isManualEndTime = ref(false)
 const errors = reactive({})
@@ -184,18 +175,15 @@ const resetForm = () => {
   Object.assign(form, defaultForm())
   services.value = []
   staff.value = []
-  availableTimes.value = []
   clearErrors()
   isSubmitted.value = false
   servicesLoading.value = false
   staffLoading.value = false
-  availableTimesLoading.value = false
   endTimeError.value = ''
   isManualEndTime.value = false
 }
 
 const selectedService = computed(() => services.value.find((item) => stringValue(item.id) === form.service_home_id) || null)
-const canLoadAvailableTimes = computed(() => Boolean(form.date && form.staff_home_id && selectedService.value))
 const defaultDuration = computed(() => Math.max(1, Number(selectedService.value?.duration || 30)))
 const effectiveDuration = computed(() => {
   if (!form.time || !form.end_time) {
@@ -213,8 +201,8 @@ const effectiveDuration = computed(() => {
   return diff > 0 ? diff : defaultDuration.value
 })
 
-const canSubmit = computed(() => {
-  return Boolean(
+const canSubmit = computed(() =>
+  Boolean(
     form.customer_name &&
       form.mobile_no &&
       form.address &&
@@ -225,7 +213,7 @@ const canSubmit = computed(() => {
       form.time &&
       !endTimeError.value
   )
-})
+)
 
 const extractItems = (response) => {
   if (Array.isArray(response)) {
@@ -247,11 +235,7 @@ const parseTimeForDate = (timeValue) => {
 
   const isoDate = `${form.date}T${value}:00`
   const parsed = new Date(isoDate)
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed
-  }
-
-  return null
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 const syncEndTimeWithServiceDuration = () => {
@@ -305,21 +289,9 @@ const validateEndTime = () => {
   return true
 }
 
-const onEndTimeInput = async () => {
+const onEndTimeInput = () => {
   isManualEndTime.value = Boolean(form.end_time)
-
-  if (!validateEndTime()) {
-    return
-  }
-
-  if (canLoadAvailableTimes.value) {
-    const currentSelectedTime = form.time
-    await loadAvailableTimes()
-    if (currentSelectedTime && !availableTimes.value.includes(currentSelectedTime)) {
-      form.time = ''
-      syncEndTimeWithServiceDuration()
-    }
-  }
+  validateEndTime()
 }
 
 const parseLocalizedValue = (value) => {
@@ -398,29 +370,6 @@ const loadStaff = async (serviceHomeId) => {
   staffLoading.value = false
 }
 
-const loadAvailableTimes = async () => {
-  if (!canLoadAvailableTimes.value) {
-    availableTimes.value = []
-    return
-  }
-
-  const duration = effectiveDuration.value
-  availableTimesLoading.value = true
-  const response = await listingRequest({
-    url: AVAILABLE_TIMES_URL,
-    data: {
-      date: form.date,
-      staff_home_id: form.staff_home_id,
-      duration
-    }
-  })
-
-  availableTimes.value = extractItems(response)
-    .map((timeSlot) => String(timeSlot || '').trim())
-    .filter(Boolean)
-  availableTimesLoading.value = false
-}
-
 watch(
   () => form.service_group_home_id,
   async (value) => {
@@ -430,7 +379,6 @@ watch(
     form.end_time = ''
     services.value = []
     staff.value = []
-    availableTimes.value = []
     endTimeError.value = ''
     isManualEndTime.value = false
 
@@ -447,7 +395,6 @@ watch(
     form.time = ''
     form.end_time = ''
     staff.value = []
-    availableTimes.value = []
     endTimeError.value = ''
     isManualEndTime.value = false
 
@@ -459,16 +406,11 @@ watch(
 
 watch(
   () => [form.staff_home_id, form.date],
-  async () => {
+  () => {
     form.time = ''
     form.end_time = ''
-    availableTimes.value = []
     endTimeError.value = ''
     isManualEndTime.value = false
-
-    if (canLoadAvailableTimes.value) {
-      await loadAvailableTimes()
-    }
   }
 )
 
@@ -481,15 +423,8 @@ watch(
 
 watch(
   () => selectedService.value?.id,
-  async () => {
+  () => {
     syncEndTimeWithServiceDuration()
-    if (canLoadAvailableTimes.value) {
-      await loadAvailableTimes()
-      if (form.time && !availableTimes.value.includes(form.time)) {
-        form.time = ''
-        syncEndTimeWithServiceDuration()
-      }
-    }
   }
 )
 

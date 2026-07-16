@@ -956,7 +956,7 @@
             alert(message);
         };
 
-        const firstAvailablePaymentMethod = document.querySelector('.method[data-coming-soon!="true"] input[name="paymentMethod"]:not(:disabled)');
+        const firstAvailablePaymentMethod = document.querySelector('.method:not([data-coming-soon="true"]) input[name="paymentMethod"]:not(:disabled)');
         const checkedComingSoonMethod = document.querySelector('.method[data-coming-soon="true"] input[name="paymentMethod"]:checked');
 
         if (checkedComingSoonMethod) {
