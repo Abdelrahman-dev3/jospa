@@ -190,6 +190,9 @@ const selectedEmployeeId = ref(null) // ID الموظف المختار
 const selectedEmployeeName = ref(null) // اسم الموظف المختار
 
 const ORDER_EMPLOYEE_LIST = ref([])
+const authPermissions = Array.isArray(window.auth_permissions) ? window.auth_permissions : []
+const OVERRIDE_UNAVAILABLE_SLOT_PERMISSION = 'booking_override_unavailable_slots'
+const canOverrideUnavailableSlotBooking = computed(() => authPermissions.includes(OVERRIDE_UNAVAILABLE_SLOT_PERMISSION))
 const selectedCalendarEmployeeIds = ref([])
 const employeeOrderList = ref([])
 const orderPanelOpen = ref(false)
@@ -811,7 +814,7 @@ const handleCalendarSlotClick = (info) => {
     return
   }
 
-  if (!isAvailableSlot(info)) {
+  if (!isAvailableSlot(info) && !canOverrideUnavailableSlotBooking.value) {
     slotUnavailableMessage()
     return
   }

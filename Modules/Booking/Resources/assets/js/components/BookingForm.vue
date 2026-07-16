@@ -766,11 +766,14 @@ const filterStatus = (value) => {
   return { is_disabled: false }
 }
 
+const OVERRIDE_UNAVAILABLE_SLOT_PERMISSION = 'booking_override_unavailable_slots'
+const authPermissions = ref(Array.isArray(window.auth_permissions) ? window.auth_permissions : [])
 const BACKEND_EDIT_OVERRIDE_ROLES = ['admin', 'manager']
 const SERVICE_DELETE_OVERRIDE_ROLES = ['admin', 'manager', 'receptionist']
 const authUserRoles = ref(JSON.parse(document.querySelector('meta[name="auth_user_roles"]')?.getAttribute('content')) || [])
 const canOverrideConfirmedEditLock = computed(() => BACKEND_EDIT_OVERRIDE_ROLES.some((role) => authUserRoles.value.includes(role)))
 const canOverrideConfirmedServiceDeleteLock = computed(() => SERVICE_DELETE_OVERRIDE_ROLES.some((role) => authUserRoles.value.includes(role)))
+const canOverrideUnavailableSlots = computed(() => authPermissions.value.includes(OVERRIDE_UNAVAILABLE_SLOT_PERMISSION))
 const isPaidBooking = computed(() => Number(is_paid.value) === 1)
 const scheduleLockedStatuses = ['check_in', 'checkout']
 const fullEditLockedStatuses = computed(() => (canOverrideConfirmedEditLock.value ? ['check_in', 'checkout'] : ['check_in', 'checkout', 'confirmed']))
@@ -1080,7 +1083,17 @@ const ensureCalendarPresetOptions = () => {
     label: selectedEmployee?.name || selectedEmployee?.full_name || props.bookingData.employee_name || `Employee #${employee_id.value}`
   })
 
-  if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value))) {
+  ensureSelectedSlotOption()
+}
+
+const canKeepSelectedUnavailableSlot = () => canOverrideUnavailableSlots.value && Boolean(start_date_time.value)
+
+const ensureSelectedSlotOption = () => {
+  if (!start_date_time.value || !moment(start_date_time.value).isValid()) {
+    return
+  }
+
+  if (!slots.value.some((slot) => String(slot.value) === String(start_date_time.value))) {
     slots.value.unshift({
       value: start_date_time.value,
       label: moment(start_date_time.value).format('hh:mm A'),
@@ -1439,9 +1452,11 @@ const refreshSlotAvailabilityForServices = async () => {
   const currentSelectedSlot = start_date_time.value
   await getSlots()
 
-  if (currentSelectedSlot && !slots.value.some((slot) => String(slot.value) === String(currentSelectedSlot))) {
+  if (currentSelectedSlot && !slots.value.some((slot) => String(slot.value) === String(currentSelectedSlot)) && !canKeepSelectedUnavailableSlot()) {
     start_date_time.value = null
     resetServiceTime()
+  } else if (currentSelectedSlot) {
+    ensureSelectedSlotOption()
   }
 }
 
@@ -1567,9 +1582,11 @@ const serviceSelect = (value) => {
   resetServiceTime()
   syncEndTimeState()
   getSlots().then(() => {
-    if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value))) {
+    if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value)) && !canKeepSelectedUnavailableSlot()) {
       start_date_time.value = null
       resetServiceTime()
+    } else if (start_date_time.value) {
+      ensureSelectedSlotOption()
     }
   })
   newService.value = false

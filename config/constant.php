@@ -18,7 +18,7 @@ return [
         ],
         [
             'module_name' => 'Booking',
-            'more_permission' => ['booking_tableview'],
+            'more_permission' => ['booking_tableview', 'override_unavailable_slots'],
             'is_custom_permission' => 0,
         ],
         [

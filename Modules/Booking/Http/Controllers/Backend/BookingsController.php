@@ -44,6 +44,7 @@ class BookingsController extends Controller
     use ProductTrait;
 
     protected string $exportClass = '\App\Exports\BookingsExport';
+    protected string $overrideUnavailableSlotPermission = 'booking_override_unavailable_slots';
 
     /**
      * FIX: Toggle for the working-hours/holiday/leave enforcement added to
@@ -1315,7 +1316,7 @@ public function index_list(Request $request)
                 $booking->id
             );
 
-            if ($this->enforceEmployeeAvailability) {
+            if ($this->shouldEnforceEmployeeAvailability()) {
                 $this->assertEmployeeIsAvailable(
                     $item['employee_id'],
                     (int) $booking->branch_id,
@@ -1450,6 +1451,15 @@ public function index_list(Request $request)
                 ]);
             }
         }
+    }
+
+    private function shouldEnforceEmployeeAvailability(): bool
+    {
+        if (! $this->enforceEmployeeAvailability) {
+            return false;
+        }
+
+        return ! request()->user()?->can($this->overrideUnavailableSlotPermission);
     }
 
     /**
