@@ -1141,7 +1141,7 @@
 
       <script>
         const DURATION_MS = 3000;
-        const wrap = document.querySelector('.notify-wrap');
+        const paymentNotifyWrap = document.querySelector('.notify-wrap');
 
         function createNotify({ title = '', desc = '', autoplay = true } = {}) {
 
@@ -1166,7 +1166,7 @@
             <div class="progress"><i></i></div>
           `;
 
-          wrap.appendChild(el);
+          paymentNotifyWrap.appendChild(el);
 
           const closeBtn = el.querySelector('.close');
           let closed = false;
@@ -1187,7 +1187,7 @@
             closed = true;
             target.classList.add('closing');
             setTimeout(() => {
-              if (wrap.contains(target)) wrap.removeChild(target);
+              if (paymentNotifyWrap.contains(target)) paymentNotifyWrap.removeChild(target);
             }, 480);
             if (timer) clearTimeout(timer);
           }
