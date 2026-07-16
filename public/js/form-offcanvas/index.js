@@ -22,26 +22,29 @@
         createCustomEvent('crud_change_id', resetData)
     }
 
-    const formOffcanvas = document.getElementById('form-offcanvas')
+    const resetData = {
+        form_id: 0
+    }
 
-    if(formOffcanvas) {
-        const instance = checkOffcanvasInstance(formOffcanvas)
-        const resetData = {
-            form_id: 0
+    $(document).on('click', '[data-crud-id]', function() {
+        const formOffcanvas = document.getElementById('form-offcanvas')
+        if (!formOffcanvas) {
+            return
         }
 
-        $(document).on('click', '[data-crud-id]', function() {
+        const instance = checkOffcanvasInstance(formOffcanvas)
+        const data = {
+            form_id: $(this).attr('data-crud-id')
+        }
 
-            const data = {
+        setEditID({data: data, resetData: resetData}, () => instance.show())
+    })
 
-                form_id: $(this).attr('data-crud-id')
-            }
-            setEditID({data: data, resetData: resetData}, () => instance.show())
-        })
-        formOffcanvas?.addEventListener('hidden.bs.offcanvas', event => {
+    document.addEventListener('hidden.bs.offcanvas', function(event) {
+        if (event?.target?.id === 'form-offcanvas') {
             removeEditID(resetData)
-        })
-    }
+        }
+    })
 
     $(document).on('click', '[data-assign-module]', function() {
         const offcanvas = document.querySelector($(this).data('assign-target'))
