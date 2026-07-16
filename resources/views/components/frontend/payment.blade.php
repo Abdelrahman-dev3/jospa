@@ -411,7 +411,6 @@
 
   <div class="timeout-warning" role="alert">
     <i class="fa-solid fa-clock-rotate-left" style="font-size: 18px;"></i>
-    <span>{{ __('messagess.booking_timeout_warning') }}</span>
   </div>
             @if(request()->has('ids'))
         <style>
