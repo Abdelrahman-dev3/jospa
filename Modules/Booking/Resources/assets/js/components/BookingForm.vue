@@ -65,7 +65,7 @@
               </span>
             </div>
           </div>
-          <div class="row" v-if="canShowScheduleControls && employee_id && start_date_time">
+          <div class="row d-none" v-if="canShowScheduleControls && employee_id && start_date_time">
             <div class="form-group col-6">
               <label class="form-label" for="booking_end_time">وقت النهاية</label>
               <input
@@ -176,9 +176,28 @@
                   <strong v-if="service.start_date_time !== 'Invalid date'">{{ moment(service.start_date_time).format('LT') }}</strong
                   ><strong v-else>--:--</strong> <span class="px-2">|</span> <label class="me-2"><i>{{ $t('booking.lbl_for') }} </i></label><strong>{{ service.duration_min }} {{ $t('booking.lbl_minutes') }}</strong>
                 </div>
+                <div v-if="canEditFullBooking" class="row g-2 align-items-end">
+                  <div class="col-sm-6">
+                    <label class="form-label mb-1">مدة الخدمة</label>
+                    <input
+                      v-model="service.manual_duration_min"
+                      type="number"
+                      min="1"
+                      class="form-control form-control-sm"
+                      :placeholder="serviceDurationPlaceholder(service)"
+                      @input="applyServiceDuration(service)"
+                    />
+                  </div>
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">اتركها فارغة لاستخدام المدة الافتراضية: {{ serviceDurationHint(service) }}</small>
+                  </div>
+                </div>
               </div>
             </li>
           </ul>
+          <div v-if="selectedService.length > 0" class="small text-muted text-end mt-2">
+            إجمالي مدة الخدمات: <strong>{{ effectiveBookingDuration }}</strong> دقيقة
+          </div>
           <div v-if="canEditFullBooking && selectPurchasePackages.length === 0 && services_id.length < service.options.length && selectedCustomer && employee_id" class="text-center">
             <Multiselect v-if="newService" :canClear="false" :placeholder="$t('booking.select_service')" ref="serviceInput" class="" v-model="services_id" :value="services_id" v-bind="multipleSelectOption" :options="service.options" @select="serviceSelect" id="service_ids">
               <template v-slot:multiplelabel="{ values }">
@@ -740,7 +759,6 @@ const IS_SLOTS_LOADING = ref(false)
 const end_time_input = ref('')
 const is_end_time_manual = ref(false)
 const end_time_error = ref('')
-
 const filterStatus = (value) => {
   if (props.statusList) {
     return props.statusList[value]
@@ -869,7 +887,6 @@ const selectedPackageService = ref([])
 const tempSelectedPackageService = ref([])
 const errorMessages = ref({})
 const couponRedeem = ref([])
-const isSyncingEndTime = ref(false)
 
 const defaultData = () => {
   errorMessages.value = {}
@@ -1380,71 +1397,67 @@ const removeCustomer = () => {
 const selectedService = ref([])
 const newSelectedServices = ref([])
 
-const baseBookingDuration = computed(() =>
-  selectedService.value.reduce((total, serviceItem) => total + Number(serviceItem.default_duration_min ?? serviceItem.duration_min ?? 0), 0)
-)
-
 const effectiveBookingDuration = computed(() =>
   selectedService.value.reduce((total, serviceItem) => total + Number(serviceItem.duration_min ?? 0), 0)
 )
 
-const hydrateBookingService = (serviceItem) => ({
-  ...serviceItem,
-  default_duration_min: Number(serviceItem?.default_duration_min ?? serviceItem?.duration_min ?? 0)
-})
-
-const calculateAutoEndMoment = () => {
-  if (!start_date_time.value || !moment(start_date_time.value).isValid() || baseBookingDuration.value <= 0) {
-    return null
-  }
-
-  return moment(start_date_time.value).add(baseBookingDuration.value, 'minutes')
+const getDefaultServiceDuration = (serviceItem) => {
+  const defaultDuration = Number(serviceItem?.default_duration_min ?? serviceItem?.duration_min ?? 0)
+  return defaultDuration > 0 ? defaultDuration : 30
 }
 
-const buildEndMomentFromInput = () => {
-  if (!current_date.value || !end_time_input.value) {
-    return null
-  }
+const hydrateBookingService = (serviceItem) => {
+  const defaultDuration = getDefaultServiceDuration(serviceItem)
+  const currentDuration = Number(serviceItem?.duration_min ?? defaultDuration)
 
-  const parsedEndTime = moment(`${current_date.value} ${end_time_input.value}`, 'YYYY-MM-DD HH:mm', true)
-  return parsedEndTime.isValid() ? parsedEndTime : null
-}
-
-const restoreDefaultServiceDurations = () => {
-  selectedService.value = selectedService.value.map((serviceItem) => ({
+  return {
     ...serviceItem,
-    duration_min: Number(serviceItem.default_duration_min ?? serviceItem.duration_min ?? 0)
-  }))
+    duration_min: currentDuration > 0 ? currentDuration : defaultDuration,
+    default_duration_min: defaultDuration,
+    manual_duration_min: currentDuration > 0 && currentDuration !== defaultDuration ? String(currentDuration) : ''
+  }
 }
 
-const syncEndTimeState = ({ preserveManual = true } = {}) => {
-  if (isSyncingEndTime.value) {
+const parseCustomDuration = (value) => {
+  const normalizedValue = String(value ?? '').trim()
+  if (!normalizedValue) {
+    return null
+  }
+
+  const parsedValue = Number.parseInt(normalizedValue, 10)
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : null
+}
+
+const serviceDurationPlaceholder = (serviceItem) => String(getDefaultServiceDuration(serviceItem))
+const serviceDurationHint = (serviceItem) => `${getDefaultServiceDuration(serviceItem)} ${t('booking.lbl_minutes')}`
+
+const refreshSlotAvailabilityForServices = async () => {
+  if (!branch_id.value || !current_date.value || !employee_id.value) {
     return
   }
 
-  isSyncingEndTime.value = true
+  const currentSelectedSlot = start_date_time.value
+  await getSlots()
 
-  if (!start_date_time.value || !moment(start_date_time.value).isValid() || selectedService.value.length === 0) {
-    end_time_error.value = ''
-    end_time_input.value = ''
-    is_end_time_manual.value = false
-    isSyncingEndTime.value = false
-    return
+  if (currentSelectedSlot && !slots.value.some((slot) => String(slot.value) === String(currentSelectedSlot))) {
+    start_date_time.value = null
+    resetServiceTime()
   }
+}
 
-  if (preserveManual && is_end_time_manual.value && end_time_input.value) {
-    applyManualEndTimeToServices()
-    isSyncingEndTime.value = false
-    return
-  }
+const applyServiceDuration = async (serviceItem) => {
+  const parsedDuration = parseCustomDuration(serviceItem.manual_duration_min)
+  serviceItem.manual_duration_min = parsedDuration === null ? '' : String(parsedDuration)
+  serviceItem.duration_min = parsedDuration === null ? getDefaultServiceDuration(serviceItem) : parsedDuration
 
-  restoreDefaultServiceDurations()
   resetServiceTime()
-  const autoEndMoment = calculateAutoEndMoment()
+  await refreshSlotAvailabilityForServices()
+}
+
+const buildEndMomentFromInput = () => null
+
+const syncEndTimeState = () => {
   end_time_error.value = ''
-  end_time_input.value = autoEndMoment ? autoEndMoment.format('HH:mm') : ''
-  is_end_time_manual.value = false
-  isSyncingEndTime.value = false
 }
 
 const applyManualEndTimeToServices = () => {
@@ -1564,6 +1577,10 @@ const serviceSelect = (value) => {
 
 const resetServiceTime = () => {
   if (!start_date_time.value || !moment(start_date_time.value).isValid()) {
+    selectedService.value = selectedService.value.map((bookingService) => ({
+      ...bookingService,
+      start_date_time: null
+    }))
     return
   }
   let startTime = moment(start_date_time.value)

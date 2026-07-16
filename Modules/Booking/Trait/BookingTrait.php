@@ -13,6 +13,7 @@ use Modules\Package\Models\BookingPackages;
 use Modules\Package\Models\UserPackageRedeem;
 use Modules\Package\Models\UserPackageServices;
 use Modules\Package\Models\PackageService;
+use Modules\Service\Models\Service;
 
 trait BookingTrait
 {
@@ -20,12 +21,21 @@ trait BookingTrait
     {
         $serviceData = collect($data);
         $serviceId = $serviceData->pluck('service_id')->toArray();
+        $defaultDurations = Service::query()
+            ->whereIn('id', $serviceId)
+            ->pluck('duration_min', 'id');
         $bookingService = BookingService::where('booking_id', $booking_id);
         if (count($serviceId) > 0) {
             $bookingService = $bookingService->whereNotIn('service_id', $serviceId);
         }
         $bookingService->delete();
         foreach ($serviceData as $key => $value) {
+            $defaultDuration = max(1, (int) ($defaultDurations[(int) $value['service_id']] ?? 30));
+            $resolvedDuration = max(1, (int) ($value['duration_min'] ?? 0));
+            if ($resolvedDuration <= 0) {
+                $resolvedDuration = $defaultDuration;
+            }
+
             BookingService::updateOrCreate(['booking_id' => $booking_id, 'service_id' => $value['service_id']], [
                 'sequance' => $key,
                 'start_date_time' => $value['start_date_time'],
@@ -33,7 +43,7 @@ trait BookingTrait
                 'service_id' => $value['service_id'],
                 'employee_id' => $value['employee_id'],
                 'service_price' => $value['service_price'] ?? 0,
-                'duration_min' => $value['duration_min'] ?? 30,
+                'duration_min' => $resolvedDuration,
             ]);
         }
     }
