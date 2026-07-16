@@ -71,19 +71,35 @@ class GiftCardController extends Controller
             }
         }
 
+        $isElectronicDelivery = $this->isElectronicGiftDelivery($data['delivery_method'] ?? null);
+
         $validated = validator($data, [
             'delivery_method' => 'required|in:center_pickup,electronic_card,traditional,email',
             'sender_name' => 'required|string|max:255',
             'recipient_name' => 'required|string|max:255',
             'sender_phone' => 'required|string|max:20',
             'recipient_phone' => 'required|string|max:20',
-            'requested_services' => 'required|array|min:1',
+            'requested_services' => 'nullable|array',
             'requested_services.*' => 'integer|exists:services,id',
             'package_ids' => 'nullable|array',
             'package_ids.*' => 'integer|exists:packages,id',
             'coupons' => 'nullable|array',
             'optional_services' => 'nullable|string|max:100',
-        ])->validate();
+        ])->after(function ($validator) use ($data, $isElectronicDelivery) {
+            $selectedServices = $this->sanitizeIntegerSelections($data['requested_services'] ?? []);
+
+            if ($isElectronicDelivery) {
+                if (! $this->hasGiftSelections($data)) {
+                    $validator->errors()->add('requested_services', __('messages.gift_card_selection_required'));
+                }
+
+                return;
+            }
+
+            if (count($selectedServices) < 1) {
+                $validator->errors()->add('requested_services', __('messages.gift_card_service_required'));
+            }
+        })->validate();
         
         if (!$user) {
             session()->put('temp_gift_booking', [
@@ -97,29 +113,31 @@ class GiftCardController extends Controller
 
         $data = $validated;
         $data['optional_services'] = $this->normalizeGiftMessage($data['optional_services'] ?? null);
+        $deliveryMethod = $this->normalizeGiftDeliveryMethod($data['delivery_method']);
 
-        $deliveryMethod = match ($data['delivery_method']) {
-            'email' => 'electronic_card',
-            'traditional' => 'center_pickup',
-            default => $data['delivery_method'],
-        };
-        
-        $selectedServices = array_map('intval', $data['requested_services']);
-        $services = ServiceModel::whereIn('id', $selectedServices)
-            ->where('status', 1)
-            ->where('show_in_gift_card', 1)
-            ->get();
+        $selectedServices = $this->sanitizeIntegerSelections($data['requested_services'] ?? []);
+        $services = collect();
+        $services_total = 0;
 
-        if ($services->count() !== count($selectedServices)) {
-            return back()->with('error', __('messages.gift_card_validation_error'));
+        if (! empty($selectedServices)) {
+            $services = ServiceModel::whereIn('id', $selectedServices)
+                ->where('status', 1)
+                ->where('show_in_gift_card', 1)
+                ->get();
+
+            if ($services->count() !== count($selectedServices)) {
+                return back()->with('error', __('messages.gift_card_validation_error'));
+            }
+
+            $services_total = $services->sum('default_price');
         }
-        $services_total = $services->sum('default_price');
 
 
         $total_packages = 0;
+        $selectedPackageIds = [];
         if (!empty($data['package_ids']) && is_array($data['package_ids'])) {
-        $selectedPackage = array_map('intval', $data['package_ids']);
-        $packages = Package::whereIn('id', $selectedPackage)->get();
+        $selectedPackageIds = $this->sanitizeIntegerSelections($data['package_ids']);
+        $packages = Package::whereIn('id', $selectedPackageIds)->get();
         $total_packages = $packages->sum('package_price') ?? 0;
         }
 
@@ -159,8 +177,8 @@ class GiftCardController extends Controller
             'sender_phone'      => $data['sender_phone'],
             'recipient_phone'   => $data['recipient_phone'],
             'message'           => $data['optional_services'] ?? null,
-            'requested_services'=> json_encode($data['requested_services']),
-            'package_ids'       => json_encode($data['package_ids'] ?? null),
+            'requested_services'=> json_encode($selectedServices),
+            'package_ids'       => json_encode($selectedPackageIds),
             'coupons'           => $coupons_data,
             'subtotal'          => $total,
         ]);
@@ -177,5 +195,50 @@ class GiftCardController extends Controller
         $message = trim((string) preg_replace('/\s+/u', ' ', trim((string) $message)));
 
         return $message !== '' ? $message : null;
+    }
+
+    private function normalizeGiftDeliveryMethod(?string $deliveryMethod): ?string
+    {
+        return match ($deliveryMethod) {
+            'email' => 'electronic_card',
+            'traditional' => 'center_pickup',
+            default => $deliveryMethod,
+        };
+    }
+
+    private function isElectronicGiftDelivery(?string $deliveryMethod): bool
+    {
+        return $this->normalizeGiftDeliveryMethod($deliveryMethod) === 'electronic_card';
+    }
+
+    private function hasGiftSelections(array $data): bool
+    {
+        return ! empty($this->sanitizeFilledSelections($data['requested_services'] ?? []))
+            || ! empty($this->sanitizeFilledSelections($data['package_ids'] ?? []))
+            || ! empty($this->sanitizeFilledSelections($data['coupons'] ?? []));
+    }
+
+    private function sanitizeIntegerSelections(array $values): array
+    {
+        return collect($values)
+            ->filter(fn ($value) => filled($value))
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn (int $value) => $value > 0)
+            ->values()
+            ->all();
+    }
+
+    private function sanitizeFilledSelections(array $values): array
+    {
+        return collect($values)
+            ->filter(function ($value) {
+                if (is_string($value)) {
+                    return trim($value) !== '';
+                }
+
+                return ! is_null($value);
+            })
+            ->values()
+            ->all();
     }
 }

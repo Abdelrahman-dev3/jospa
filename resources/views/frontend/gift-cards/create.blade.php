@@ -149,9 +149,15 @@
                         </div>
                         <div class="checkbox-list row">
                         @foreach ($coupons as $index => $coupon)
+                            @php
+                                $couponValue = json_encode(['name' => $coupon['name'], 'price' => $coupon['price']], JSON_UNESCAPED_UNICODE);
+                                $oldCoupons = collect(old('coupons', []))
+                                    ->map(fn ($selectedCoupon) => is_string($selectedCoupon) ? $selectedCoupon : json_encode($selectedCoupon, JSON_UNESCAPED_UNICODE))
+                                    ->all();
+                            @endphp
                             <div class="col-md-6">
                                 <div class="checkbox-item">
-                                  <input type="checkbox" id="coupons_{{ $index }}" name="coupons[]" value='@json(["name" => $coupon["name"], "price" => $coupon["price"]])' data-price="{{ $coupon['price'] }}" {{ in_array($index, old('coupons', [])) ? 'checked' : '' }}>
+                                  <input type="checkbox" id="coupons_{{ $index }}" name="coupons[]" value='{{ $couponValue }}' data-price="{{ $coupon['price'] }}" {{ in_array($couponValue, $oldCoupons, true) ? 'checked' : '' }}>
                                   <label for="coupons_{{ $index }}" style="display:flex;justify-content: space-between;margin: 0 6px;">
                                         <div>
                                         <span>{{ $coupon['name'] }}</span> 
@@ -268,7 +274,12 @@
                 errors.push("{{ __('messages.invalid_recipient_phone') }}");
             }
             
-            if (allData.requested_services.length < 1) {
+            const totalSelections = allData.requested_services.length + allData.package_ids.length + allData.coupons.length;
+            const isElectronicCard = allData.delivery_method === 'electronic_card';
+
+            if (isElectronicCard && totalSelections < 1) {
+                errors.push("{{ __('messages.gift_card_selection_required') }}");
+            } else if (!isElectronicCard && allData.requested_services.length < 1) {
                 errors.push("{{ __('messages.gift_card_service_required') }}");
             }
 
@@ -309,7 +320,6 @@
         const checkboxes = document.querySelectorAll('input[name="requested_services[]"]');
         const checkboxesPackages = document.querySelectorAll('input[name="package_ids[]"]');
         const checkboxesCoubons = document.querySelectorAll('input[name="coupons[]"]');
-        console.log(checkboxesCoubons)
         const displayAmount = document.getElementById('displayAmount');
 
         function calculateTotal() {

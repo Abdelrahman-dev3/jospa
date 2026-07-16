@@ -469,6 +469,7 @@ return [
     'gift_card_error' => 'An error occurred while creating the gift card',
     'gift_card_validation_error' => 'Please check the entered data',
     'gift_card_service_required' => 'Please select at least one service',
+    'gift_card_selection_required' => 'Please select at least one service, package, or coupon',
     'gift_card_sender_required' => 'Sender name is required',
     'gift_card_recipient_required' => 'Recipient name is required',
     'gift_card_phone_required' => 'Phone number is required',

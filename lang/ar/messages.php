@@ -444,6 +444,7 @@ return [
     'gift_card_error' => 'حدث خطأ أثناء إنشاء بطاقة الهدية',
     'gift_card_validation_error' => 'يرجى التأكد من صحة البيانات المدخلة',
     'gift_card_service_required' => 'يرجى اختيار خدمة واحدة على الأقل',
+    'gift_card_selection_required' => 'يرجى اختيار خدمة أو باقة أو كوبون واحد على الأقل',
     'gift_card_sender_required' => 'اسم المرسل مطلوب',
     'gift_card_recipient_required' => 'اسم المستلم مطلوب',
     'gift_card_phone_required' => 'رقم الهاتف مطلوب',

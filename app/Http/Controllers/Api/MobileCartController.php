@@ -145,34 +145,63 @@ class MobileCartController extends Controller
 
     public function storeGiftCard(Request $request)
     {
-        $validated = $request->validate([
+        $payload = $request->all();
+        $isElectronicDelivery = $this->isElectronicGiftDelivery($payload['delivery_method'] ?? null);
+
+        $validated = validator($payload, [
             'delivery_method' => ['required', 'in:center_pickup,electronic_card,استلام من المركز,بطاقة الكترونية,traditional,email'],
             'sender_name' => ['required', 'string', 'max:255'],
             'recipient_name' => ['required', 'string', 'max:255'],
             'sender_phone' => ['required', 'string', 'max:20'],
             'recipient_phone' => ['required', 'string', 'max:20'],
-            'requested_services' => ['required', 'array', 'min:1'],
+            'requested_services' => ['nullable', 'array'],
             'requested_services.*' => ['integer', 'exists:services,id'],
             'package_ids' => ['nullable', 'array'],
             'package_ids.*' => ['integer', 'exists:packages,id'],
             'coupons' => ['nullable', 'array'],
             'optional_services' => ['nullable', 'string', 'max:100'],
-        ]);
+        ])->after(function ($validator) use ($payload, $isElectronicDelivery) {
+            $selectedServices = $this->sanitizeIntegerSelections($payload['requested_services'] ?? []);
+
+            if ($isElectronicDelivery) {
+                if (! $this->hasGiftSelections($payload)) {
+                    $validator->errors()->add('requested_services', __('messages.gift_card_selection_required'));
+                }
+
+                return;
+            }
+
+            if (count($selectedServices) < 1) {
+                $validator->errors()->add('requested_services', __('messages.gift_card_service_required'));
+            }
+        })->validate();
 
         $validated['optional_services'] = $this->normalizeGiftMessage($validated['optional_services'] ?? null);
+        $deliveryMethod = $this->normalizeGiftDeliveryMethod($validated['delivery_method']);
 
-        $deliveryMethod = match ($validated['delivery_method']) {
-            'بطاقة الكترونية', 'email' => 'electronic_card',
-            'استلام من المركز', 'traditional' => 'center_pickup',
-            default => $validated['delivery_method'],
-        };
+        $serviceIds = $this->sanitizeIntegerSelections($validated['requested_services'] ?? []);
+        $servicesTotal = 0.0;
 
-        $serviceIds = array_map('intval', $validated['requested_services']);
-        $servicesTotal = (float) Service::whereIn('id', $serviceIds)->sum('default_price');
+        if (! empty($serviceIds)) {
+            $services = Service::whereIn('id', $serviceIds)
+                ->where('status', 1)
+                ->where('show_in_gift_card', 1)
+                ->get();
+
+            if ($services->count() !== count($serviceIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('messages.gift_card_validation_error'),
+                ], 422);
+            }
+
+            $servicesTotal = (float) $services->sum('default_price');
+        }
 
         $packagesTotal = 0.0;
+        $packageIds = [];
         if (! empty($validated['package_ids']) && is_array($validated['package_ids'])) {
-            $packageIds = array_map('intval', $validated['package_ids']);
+            $packageIds = $this->sanitizeIntegerSelections($validated['package_ids']);
             $packagesTotal = (float) Package::whereIn('id', $packageIds)->sum('package_price');
         }
 
@@ -224,8 +253,8 @@ class MobileCartController extends Controller
             'sender_phone' => $validated['sender_phone'],
             'recipient_phone' => $validated['recipient_phone'],
             'message' => $validated['optional_services'] ?? null,
-            'requested_services' => json_encode($validated['requested_services']),
-            'package_ids' => json_encode($validated['package_ids'] ?? null),
+            'requested_services' => json_encode($serviceIds),
+            'package_ids' => json_encode($packageIds),
             'coupons' => ! empty($normalizedCoupons) ? json_encode($normalizedCoupons) : null,
             'subtotal' => $subtotal,
             'payment_status' => 0,
@@ -246,5 +275,50 @@ class MobileCartController extends Controller
         $message = trim((string) preg_replace('/\s+/u', ' ', trim((string) $message)));
 
         return $message !== '' ? $message : null;
+    }
+
+    private function normalizeGiftDeliveryMethod(?string $deliveryMethod): ?string
+    {
+        return match ($deliveryMethod) {
+            'بطاقة الكترونية', 'email' => 'electronic_card',
+            'استلام من المركز', 'traditional' => 'center_pickup',
+            default => $deliveryMethod,
+        };
+    }
+
+    private function isElectronicGiftDelivery(?string $deliveryMethod): bool
+    {
+        return $this->normalizeGiftDeliveryMethod($deliveryMethod) === 'electronic_card';
+    }
+
+    private function hasGiftSelections(array $data): bool
+    {
+        return ! empty($this->sanitizeFilledSelections($data['requested_services'] ?? []))
+            || ! empty($this->sanitizeFilledSelections($data['package_ids'] ?? []))
+            || ! empty($this->sanitizeFilledSelections($data['coupons'] ?? []));
+    }
+
+    private function sanitizeIntegerSelections(array $values): array
+    {
+        return collect($values)
+            ->filter(fn ($value) => filled($value))
+            ->map(fn ($value) => (int) $value)
+            ->filter(fn (int $value) => $value > 0)
+            ->values()
+            ->all();
+    }
+
+    private function sanitizeFilledSelections(array $values): array
+    {
+        return collect($values)
+            ->filter(function ($value) {
+                if (is_string($value)) {
+                    return trim($value) !== '';
+                }
+
+                return ! is_null($value);
+            })
+            ->values()
+            ->all();
     }
 }
