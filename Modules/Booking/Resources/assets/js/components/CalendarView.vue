@@ -518,6 +518,10 @@ const formatEventDate = (dateValue) => moment(dateValue).locale('ar').format('dd
 const formatEventTime = (dateValue) => moment(dateValue).format('hh:mm A')
 
 const getEventCategoryColor = (event) => {
+  if (event?.extendedProps?.status === 'check_in') {
+    return event?.extendedProps?.status_color || event?.backgroundColor || event?.color || '#6B7280'
+  }
+
   return event?.extendedProps?.category_color || event?.backgroundColor || event?.color || '#BF9456'
 }
 

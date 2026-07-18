@@ -151,6 +151,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
         $resourcePath = (string) $request->get('resourcePath', '');
         $merchantTransactionId = (string) $request->get('mtid', '');
+        $fallbackBrand = (string) $request->get('brand', '');
 
         if ($resourcePath === '' || $merchantTransactionId === '') {
             return $this->respondFailure(
@@ -163,7 +164,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
         }
 
         // Delegate to the core callback logic using the same mtid + resourcePath
-        return $this->processPaymentVerification($request, $resourcePath, $merchantTransactionId);
+        return $this->processPaymentVerification($request, $resourcePath, $merchantTransactionId, $fallbackBrand);
     }
 
     public function callback(Request $request)
@@ -174,6 +175,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
         $resourcePath = (string) $request->get('resourcePath');
         $merchantTransactionId = (string) $request->get('mtid');
+        $fallbackBrand = (string) $request->get('brand', '');
 
         if ($resourcePath === '') {
             return $this->respondFailure(
@@ -185,10 +187,10 @@ class CardPaymentStrategy extends BasePaymentStrategy
             );
         }
 
-        return $this->processPaymentVerification($request, $resourcePath, $merchantTransactionId);
+        return $this->processPaymentVerification($request, $resourcePath, $merchantTransactionId, $fallbackBrand);
     }
 
-    private function processPaymentVerification(Request $request, string $resourcePath, string $merchantTransactionId): mixed
+    private function processPaymentVerification(Request $request, string $resourcePath, string $merchantTransactionId, string $fallbackBrand = ''): mixed
     {
         try {
             $hyperpay = app(HyperpayService::class);
@@ -196,7 +198,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
             // Load cache first so we know which brand/entity was used at checkout creation
             $cacheKey = $this->paymentCacheKey($merchantTransactionId);
             $data = Cache::get($cacheKey);
-            $brand = strtoupper((string) ($data['hyperpay_brand'] ?? 'VISA'));
+            $brand = $this->normalizeHyperpayBrand($data['hyperpay_brand'] ?? $fallbackBrand ?? 'VISA');
 
             // Try to get payment result from callback parameters first
             // Hyperpay sends result directly in the callback for synchronous payments
@@ -204,7 +206,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
             // If no payment data in callback, fall back to API call
             if (! $payment) {
-                $payment = $hyperpay->fetchPaymentStatus($resourcePath, $brand);
+                $payment = $this->fetchPaymentStatusWithFallback($hyperpay, $resourcePath, $brand, $merchantTransactionId, $request->all());
             }
 
             $resultCode = (string) data_get($payment, 'result.code', '');
@@ -369,15 +371,21 @@ class CardPaymentStrategy extends BasePaymentStrategy
         // Signed routes with many params are rejected as "invalid parameter".
         // We append only the mtid so we can look up cached data on return.
         // The full signed callback URL is stored in cache and used server-side.
+        $brand = $this->normalizeHyperpayBrand($request->get('brand', $paymentData['hyperpay_brand'] ?? 'VISA'));
         $configured = rtrim((string) config('services.hyperpay.shopper_result_url', ''), '/');
 
         if ($configured !== '') {
-            // Use the configured base URL with mtid appended as a query param
-            return $configured . '?mtid=' . urlencode($merchantTransactionId);
+            return $this->appendQueryParams($configured, [
+                'mtid' => $merchantTransactionId,
+                'brand' => $brand,
+            ]);
         }
 
         // Fallback: auto-generate from the registered route
-        return route('hyperpay.callback.plain', ['mtid' => $merchantTransactionId]);
+        return route('hyperpay.callback.plain', [
+            'mtid' => $merchantTransactionId,
+            'brand' => $brand,
+        ]);
     }
 
     private function buildSignedCallbackUrl(Request $request, array $paymentData, string $merchantTransactionId): string
@@ -392,6 +400,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount', $paymentData['discountAmount'] ?? null)),
             'page' => $paymentData['page'] ?? null,
             'mtid' => $merchantTransactionId,
+            'brand' => $this->normalizeHyperpayBrand($request->get('brand', $paymentData['hyperpay_brand'] ?? 'VISA')),
         ], static function ($value) {
             return $value !== null && $value !== '';
         });
@@ -482,5 +491,57 @@ class CardPaymentStrategy extends BasePaymentStrategy
             'MADA' => ['MADA', ['Mada']],
             default => ['VISA MASTER', ['Visa', 'Mastercard']],
         };
+    }
+
+    private function fetchPaymentStatusWithFallback(
+        HyperpayService $hyperpay,
+        string $resourcePath,
+        string $brand,
+        string $merchantTransactionId,
+        array $callbackPayload = []
+    ): array {
+        try {
+            return $hyperpay->fetchPaymentStatus($resourcePath, $brand);
+        } catch (\RuntimeException $exception) {
+            if (! $this->shouldRetryStatusFetchWithAlternateBrand($exception->getMessage())) {
+                throw $exception;
+            }
+
+            $alternateBrand = $brand === 'MADA' ? 'VISA' : 'MADA';
+
+            \Log::warning('Retrying Hyperpay status fetch with alternate brand entity.', [
+                'merchant_reference' => $merchantTransactionId,
+                'resource_path' => $resourcePath,
+                'primary_brand' => $brand,
+                'alternate_brand' => $alternateBrand,
+                'message' => $exception->getMessage(),
+                'callback_payload' => $callbackPayload,
+            ]);
+
+            return $hyperpay->fetchPaymentStatus($resourcePath, $alternateBrand);
+        }
+    }
+
+    private function shouldRetryStatusFetchWithAlternateBrand(string $message): bool
+    {
+        $message = strtolower($message);
+
+        return str_contains($message, 'invalid or missing parameter')
+            || str_contains($message, 'verification request');
+    }
+
+    private function appendQueryParams(string $url, array $params): string
+    {
+        $filtered = array_filter($params, static function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        if ($filtered === []) {
+            return $url;
+        }
+
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url . $separator . http_build_query($filtered);
     }
 }

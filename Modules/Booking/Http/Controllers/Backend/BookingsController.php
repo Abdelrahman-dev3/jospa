@@ -217,7 +217,7 @@ public function index_list(Request $request)
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
         $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
         $categoryColor = $this->resolveBookingCalendarColor($value->booking, optional(optional($value->service)->category)->calendar_color);
-        $eventColor = $categoryColor ?: $statusColor;
+        $eventColor = $this->resolveCalendarEventColor($value->booking->status, $categoryColor, $statusColor);
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $service_updated[$key] = [
@@ -266,7 +266,7 @@ public function index_list(Request $request)
         $statusTitle = $statusList[$value->booking->status]['title'] ?? $value->booking->status;
         $statusColor = $statusList[$value->booking->status]['color_hex'] ?? '#BF9456';
         $categoryColor = $this->resolvePackageCategoryColor($value);
-        $eventColor = $categoryColor ?: $statusColor;
+        $eventColor = $this->resolveCalendarEventColor($value->booking->status, $categoryColor, $statusColor);
         $createdByName = optional($value->booking->createdUser)->full_name ?? default_user_name();
 
         $package_updated[$key] = [
@@ -600,6 +600,15 @@ public function index_list(Request $request)
         }
 
         return null;
+    }
+
+    private function resolveCalendarEventColor(?string $status, ?string $categoryColor, ?string $statusColor): string
+    {
+        if ($status === 'check_in') {
+            return '#6B7280';
+        }
+
+        return $categoryColor ?: ($statusColor ?: '#BF9456');
     }
 
     private function availabilityContextForDate(string $date, array $branchIds, array $employeeIds): array
