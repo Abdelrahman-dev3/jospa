@@ -12,6 +12,10 @@ class AuthRedirect
     {
         $user ??= auth()->user();
 
+        if ($user && $user->hasAnyRole(['admin', 'manager', 'receptionist'])) {
+            return Route::has('frontend.home') ? route('frontend.home') : '/';
+        }
+
         if ($user && ! $user->hasRole('user')) {
             return RouteServiceProvider::HOME;
         }
