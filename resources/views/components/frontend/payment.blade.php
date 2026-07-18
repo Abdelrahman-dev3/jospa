@@ -209,6 +209,73 @@
       white-space:nowrap;
     }
 
+    .hyperpay-brand-selector{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+      gap:12px;
+      margin-top:16px;
+    }
+
+    .hyperpay-brand-option{
+      display:block;
+      cursor:pointer;
+      margin:0;
+    }
+
+    .hyperpay-brand-option input{
+      display:none;
+    }
+
+    .hyperpay-brand-box{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      height:100%;
+      padding:14px 16px;
+      border:1px solid #ded6c8;
+      border-radius:12px;
+      background:#fffdf8;
+      transition:all .18s ease;
+    }
+
+    .hyperpay-brand-option input:checked + .hyperpay-brand-box{
+      border-color:var(--gold);
+      background:#fff6e8;
+      box-shadow:0 8px 20px rgba(191, 148, 86, 0.14);
+    }
+
+    .hyperpay-brand-title{
+      color:#2b2b2b;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .hyperpay-brand-subtitle{
+      color:#8a826f;
+      font-size:12px;
+      line-height:1.5;
+    }
+
+    .hyperpay-brand-icons{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .hyperpay-brand-chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:28px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:#f1eadb;
+      color:#7a5a28;
+      font-size:12px;
+      font-weight:700;
+    }
+
     /* animation */
     @keyframes fadeUp {
       from{ opacity:0; transform: translateY(10px) }
@@ -633,10 +700,11 @@
   <form action="{{route('payment-chanal')}}" method="POST">
     @csrf
     
-        <input type="hidden" name="items_count" id="form_items_count" value="0">
+    <input type="hidden" name="items_count" id="form_items_count" value="0">
     <input type="hidden" name="total_price" id="form_total_price" value="0">
     <input type="hidden" name="total_amount" id="form_total_amount" value="0">
     <input type="hidden" name="discount_amount" id="form_discount_amount" value="0">
+    <input type="hidden" name="brand" id="paymentBrand" value="VISA">
 
     <div class="page-wrap">
         <div class="row gx-4 gy-4">
@@ -674,7 +742,7 @@
 
                     @if(($paymentMethods['card'] ?? 1) == 1)
                         <!-- METHOD: CARD -->
-                        <div class="method payment-method-card" data-method="card" tabindex="0">
+                        <div class="method payment-method-card" data-method="card" data-default-brand="VISA" tabindex="0">
                             <div class="con-card">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }}>
@@ -694,38 +762,39 @@
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
-                        <style>
-                            .payment-option {
-                                display: block;
-                                cursor: pointer;
-                            }
-
-                            .payment-option input {
-                                display: none;
-                            }
-                            
-                            .payment-box {
-                                display: flex;
-                                align-items: center;
-                                gap: 12px;
-                                padding: 12px 15px;
-                                border: 1px solid #ddd;
-                                border-radius: 10px;
-                                transition: .2s;
-                                background: #fff;
-                            }
-                            
-                            .payment-option input:checked + .payment-box {
-                                border-color: #0d6efd;
-                                background: #f0f6ff;
-                            }
-                            
-                            .payment-box img {
-                                height: 24px;
-                                width: auto;
-                                object-fit: contain;
-                            }
-                        </style>
+                            <div class="hyperpay-brand-selector">
+                                <label class="hyperpay-brand-option">
+                                    <input type="radio" name="cardBrandChoice" value="VISA" checked>
+                                    <span class="hyperpay-brand-box">
+                                        <span class="hyperpay-brand-title">{{ app()->getLocale() === 'ar' ? 'بطاقات فيزا وماستركارد' : 'Visa & Mastercard' }}</span>
+                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع بالبطاقات البنكية المعتادة' : 'Pay using standard bank cards' }}</span>
+                                        <span class="hyperpay-brand-icons">
+                                            <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
+                                            <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
+                                        </span>
+                                    </span>
+                                </label>
+                                <label class="hyperpay-brand-option">
+                                    <input type="radio" name="cardBrandChoice" value="MADA">
+                                    <span class="hyperpay-brand-box">
+                                        <span class="hyperpay-brand-title">Mada</span>
+                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع عبر مدى باستخدام الربط المخصص لها' : 'Pay using the dedicated Mada flow' }}</span>
+                                        <span class="hyperpay-brand-icons">
+                                            <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
+                                        </span>
+                                    </span>
+                                </label>
+                                <label class="hyperpay-brand-option">
+                                    <input type="radio" name="cardBrandChoice" value="STCPAY">
+                                    <span class="hyperpay-brand-box">
+                                        <span class="hyperpay-brand-title">STC Pay</span>
+                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع باستخدام STC Pay من خلال Hyperpay' : 'Pay with STC Pay through Hyperpay' }}</span>
+                                        <span class="hyperpay-brand-icons">
+                                            <span class="hyperpay-brand-chip">STC Pay</span>
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
                         </div>
                     @endif
 
@@ -990,6 +1059,34 @@
         document.querySelectorAll('input[name="paymentMethod"]').forEach(input => {
             input.addEventListener('change', updateTotal);
         });
+
+        const paymentBrandInput = document.getElementById('paymentBrand');
+        const cardMethodInput = document.querySelector('input[name="paymentMethod"][value="card"]');
+
+        function syncPaymentBrand() {
+            if (!paymentBrandInput) {
+                return;
+            }
+
+            const selectedBrand = document.querySelector('input[name="cardBrandChoice"]:checked')?.value
+                || document.querySelector('.method[data-method="card"]')?.dataset.defaultBrand
+                || 'VISA';
+
+            paymentBrandInput.value = selectedBrand;
+        }
+
+        document.querySelectorAll('input[name="cardBrandChoice"]').forEach(input => {
+            input.addEventListener('change', function () {
+                if (cardMethodInput) {
+                    cardMethodInput.checked = true;
+                }
+
+                syncPaymentBrand();
+                updateTotal();
+            });
+        });
+
+        syncPaymentBrand();
 
         function getSelectedPaymentMethod() {
             return document.querySelector('input[name="paymentMethod"]:checked')?.value || '';

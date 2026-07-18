@@ -40,8 +40,8 @@ class CardPaymentStrategy extends BasePaymentStrategy
             $merchantTransactionId = $this->generateMerchantTransactionId($data['user_id']);
             $shopperResultUrl = $this->buildShopperResultUrl($request, $data, $merchantTransactionId);
             $signedCallbackUrl = $this->buildSignedCallbackUrl($request, $data, $merchantTransactionId);
-            // Detect selected brand from request to route to correct entity ID
-            $brand = strtoupper((string) $request->get('brand', 'VISA'));
+            // Detect selected brand from request to route to correct entity ID.
+            $brand = $this->normalizeHyperpayBrand($request->get('brand', 'VISA'));
             $checkout = $hyperpay->createCheckout(
                 $remainingAmount,
                 $merchantTransactionId,
@@ -126,10 +126,8 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
         // Show only brands compatible with the entity ID used to create this checkout.
         // VISA/MASTER share one entity; MADA has its own. Mixing them causes 200.300.404 on status fetch.
-        $brand = strtoupper((string) ($data['hyperpay_brand'] ?? 'VISA'));
-        $isMada = $brand === 'MADA';
-        $widgetBrands  = $isMada ? 'MADA' : 'VISA MASTER';
-        $widgetLabels  = $isMada ? ['Mada'] : ['Visa', 'Mastercard'];
+        $brand = $this->normalizeHyperpayBrand($data['hyperpay_brand'] ?? 'VISA');
+        [$widgetBrands, $widgetLabels] = $this->widgetConfigurationForBrand($brand);
 
         return view('frontend.payment-status.hyperpay', [
             'widgetScriptUrl' => $hyperpay->widgetScriptUrl($checkoutId, $brand),
@@ -441,5 +439,26 @@ class CardPaymentStrategy extends BasePaymentStrategy
     private function paymentCacheKey(string $merchantTransactionId): string
     {
         return 'hyperpay_payment_' . $merchantTransactionId;
+    }
+
+    private function normalizeHyperpayBrand(mixed $brand): string
+    {
+        $brand = strtoupper(trim((string) $brand));
+
+        return match ($brand) {
+            'MADA' => 'MADA',
+            'STCPAY' => 'STCPAY',
+            'MASTER', 'MASTERCARD', 'VISA', '' => 'VISA',
+            default => 'VISA',
+        };
+    }
+
+    private function widgetConfigurationForBrand(string $brand): array
+    {
+        return match ($brand) {
+            'MADA' => ['MADA', ['Mada']],
+            'STCPAY' => ['STCPAY', ['STC Pay']],
+            default => ['VISA MASTER', ['Visa', 'Mastercard']],
+        };
     }
 }
