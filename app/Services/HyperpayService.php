@@ -26,7 +26,7 @@ class HyperpayService
     public function createCheckout(float $amount, string $merchantTransactionId, string $shopperResultUrl, array $customer = [], string $brand = 'VISA'): array
     {
         // DIAGNOSTIC — remove after fix confirmed
-        Log::error('Hyperpay createCheckout CALLED', [
+        Log::info('Hyperpay createCheckout CALLED', [
             'amount'   => $amount,
             'brand'    => $brand,
             'base_url' => $this->baseUrl,
@@ -102,7 +102,7 @@ class HyperpayService
 
         $response = $this->sendAuthorizedRequest(function (string $authorizationToken) use ($payload) {
             // DIAGNOSTIC — logs payload sent to Hyperpay
-            Log::error('Hyperpay payload being sent', $payload);
+            Log::info('Hyperpay payload being sent', $payload);
 
             return Http::asForm()
                 ->withToken($authorizationToken)
@@ -111,7 +111,7 @@ class HyperpayService
         });
 
         // DIAGNOSTIC — logs raw Hyperpay response always
-        Log::error('Hyperpay raw response', [
+        Log::info('Hyperpay raw response', [
             'status'       => $response->status(),
             'body'         => $response->body(),
         ]);
@@ -125,7 +125,7 @@ class HyperpayService
         $decoded = $this->decodeResponse($response);
 
         // DIAGNOSTIC — check if response contains payment ID
-        Log::error('Hyperpay checkout response structure', [
+        Log::info('Hyperpay checkout response structure', [
             'has_id' => isset($decoded['id']),
             'id' => $decoded['id'] ?? null,
             'has_payment_id' => isset($decoded['paymentId']),
@@ -164,7 +164,7 @@ class HyperpayService
         ]);
 
         // DIAGNOSTIC — log full raw response to see actual structure
-        Log::error('Hyperpay fetchPaymentStatus raw response', [
+        Log::info('Hyperpay fetchPaymentStatus raw response', [
             'status' => $response->status(),
             'body' => $response->body(),
         ]);
@@ -189,6 +189,26 @@ class HyperpayService
         }
 
         return preg_match('/^(000\.000\.|000\.100\.1|000\.[36]|000\.400\.[1][12]0)/', $resultCode) === 1;
+    }
+
+    public function isTestModeResult(?string $resultCode): bool
+    {
+        if (! $resultCode) {
+            return false;
+        }
+
+        return in_array($resultCode, [
+            '000.100.110',
+            '000.100.111',
+            '000.100.112',
+        ], true);
+    }
+
+    public function testModeResultMessage(?string $resultCode): string
+    {
+        $suffix = $resultCode ? ' (' . $resultCode . ')' : '';
+
+        return 'Payment gateway returned a TEST MODE success result' . $suffix . '. No amount was captured from the card. Please switch Hyperpay credentials/entity to LIVE mode.';
     }
 
     private function resolveCredentials(): array

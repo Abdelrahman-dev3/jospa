@@ -147,7 +147,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
     public function callbackPlain(Request $request)
     {
         // DIAGNOSTIC — log all callback parameters
-        \Log::error('Hyperpay callbackPlain parameters', $request->all());
+        \Log::info('Hyperpay callbackPlain parameters', $request->all());
 
         $resourcePath = (string) $request->get('resourcePath', '');
         $merchantTransactionId = (string) $request->get('mtid', '');
@@ -249,6 +249,30 @@ class CardPaymentStrategy extends BasePaymentStrategy
                     ),
                     402
                 );
+            }
+
+            if ($hyperpay->isTestModeResult($resultCode)) {
+                $message = $hyperpay->testModeResultMessage($resultCode);
+
+                \Log::warning('Hyperpay returned a test-mode payment result.', [
+                    'merchant_reference' => $merchantTransactionId,
+                    'attempt_id' => $data['attempt_id'] ?? null,
+                    'checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_transaction_id' => data_get($payment, 'id'),
+                    'result_code' => $resultCode,
+                    'result_description' => data_get($payment, 'result.description'),
+                ]);
+
+                $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, $message, [
+                    'merchant_reference' => $merchantTransactionId,
+                    'gateway_transaction_id' => data_get($payment, 'id'),
+                    'gateway_checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_response' => $payment,
+                    'callback_payload' => $request->all(),
+                ]);
+                Cache::forget($cacheKey);
+
+                return $this->respondFailure($request, $message, 409);
             }
 
             $expectedAmount = (float) ($data['amount'] ?? 0);
