@@ -757,7 +757,6 @@
                                 </div>
                                 <div class="payment-brand-group">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
-                                    <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
@@ -1052,6 +1051,16 @@
 
         const paymentBrandInput = document.getElementById('paymentBrand');
         const cardMethodInput = document.querySelector('input[name="paymentMethod"][value="card"]');
+        const madaBrandInput = document.querySelector('input[name="cardBrandChoice"][value="MADA"]');
+
+        if (madaBrandInput) {
+            madaBrandInput.checked = false;
+
+            const madaBrandOption = madaBrandInput.closest('.hyperpay-brand-option');
+            if (madaBrandOption) {
+                madaBrandOption.style.display = 'none';
+            }
+        }
 
         function syncPaymentBrand() {
             if (!paymentBrandInput) {
