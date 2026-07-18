@@ -179,7 +179,7 @@ class HyperpayService
 
     public function brands(): array
     {
-        return ['VISA', 'MASTER', 'STCPAY', 'MADA'];
+        return ['VISA', 'MASTER', 'MADA'];
     }
 
     public function isSuccessfulResult(?string $resultCode): bool

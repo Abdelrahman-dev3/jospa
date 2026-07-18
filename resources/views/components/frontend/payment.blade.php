@@ -784,16 +784,6 @@
                                         </span>
                                     </span>
                                 </label>
-                                <label class="hyperpay-brand-option">
-                                    <input type="radio" name="cardBrandChoice" value="STCPAY">
-                                    <span class="hyperpay-brand-box">
-                                        <span class="hyperpay-brand-title">STC Pay</span>
-                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع باستخدام STC Pay من خلال Hyperpay' : 'Pay with STC Pay through Hyperpay' }}</span>
-                                        <span class="hyperpay-brand-icons">
-                                            <span class="hyperpay-brand-chip">STC Pay</span>
-                                        </span>
-                                    </span>
-                                </label>
                             </div>
                         </div>
                     @endif
