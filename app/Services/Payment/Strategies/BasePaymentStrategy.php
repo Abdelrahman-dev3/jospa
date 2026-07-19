@@ -33,6 +33,7 @@ abstract class BasePaymentStrategy
             'paymentGatewayDiscountLabel' => null,
             'cart_ids' => [],
             'gift_ids' => [],
+            'product_ids' => [],
         ];
 
         $calculator = app(PaymentCalculatorService::class);
@@ -52,6 +53,7 @@ abstract class BasePaymentStrategy
         $data['tax'] = $totalData['tax'];
         $data['cart_ids'] = $totalData['cart_ids'];
         $data['gift_ids'] = $totalData['gift_ids'];
+        $data['product_ids'] = $totalData['product_ids'] ?? [];
 
         $subMethodService = app(PaymentSubMethodsService::class);
         $subResult = $subMethodService->apply($data['user_id'], $request, $data['final_before_sub']);
