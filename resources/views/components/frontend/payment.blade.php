@@ -1,4 +1,4 @@
-    @props([
+@props([
         'itemsCount' => 0,
         'totalPrice' => 0,
         'pageName' => "",
@@ -210,10 +210,14 @@
     }
 
     .hyperpay-brand-selector{
-      display:grid;
+      display:none;
       grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
       gap:12px;
       margin-top:16px;
+    }
+
+    .method.payment-method-card:has(input[name="paymentMethod"]:checked) .hyperpay-brand-selector{
+      display:grid;
     }
 
     .hyperpay-brand-option{
@@ -304,6 +308,10 @@
         background:#fff;
         cursor:pointer;
         transition:border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+    .method.payment-method-card[data-method="card"]{
+        flex-direction:column;
+        align-items:stretch;
     }
     .method.payment-method-card:hover{
         border-color:rgba(191,148,86,.65);
@@ -1051,16 +1059,6 @@
 
         const paymentBrandInput = document.getElementById('paymentBrand');
         const cardMethodInput = document.querySelector('input[name="paymentMethod"][value="card"]');
-        const madaBrandInput = document.querySelector('input[name="cardBrandChoice"][value="MADA"]');
-
-        if (madaBrandInput) {
-            madaBrandInput.checked = false;
-
-            const madaBrandOption = madaBrandInput.closest('.hyperpay-brand-option');
-            if (madaBrandOption) {
-                madaBrandOption.style.display = 'none';
-            }
-        }
 
         function syncPaymentBrand() {
             if (!paymentBrandInput) {
