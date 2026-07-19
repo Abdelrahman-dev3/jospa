@@ -36,7 +36,8 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         if ($request->expectsJson()) {
             $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
             try {
-                $chargeData = $this->createTabbyCharge($request, $typePage , $remainingAmount, $merchantUrls);
+                $invoiceRef = 'INV-' . implode('-', $data['cart_ids'] ?? []);
+                $chargeData = $this->createTabbyCharge($request, $typePage, $remainingAmount, $merchantUrls, $data['cart_ids'] ?? [], $invoiceRef);
             } catch (\Exception $e) {
                 $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, $e->getMessage());
                 return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
@@ -72,7 +73,8 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         session(['tabby_payment' => array_merge($data, ['amount' => $remainingAmount])]);
 
         try {
-            $data = $this->createTabbyCharge($request, $typePage , $remainingAmount);
+            $invoiceRef = 'INV-' . implode('-', session('tabby_payment.cart_ids', []));
+            $data = $this->createTabbyCharge($request, $typePage, $remainingAmount, null, session('tabby_payment.cart_ids', []), $invoiceRef);
         } catch (\Exception $e) {
             $this->markPaymentAttemptFailed(session('tabby_payment.attempt_id'), $e->getMessage());
             session()->forget('tabby_payment');
@@ -96,68 +98,79 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
 
     }
 
-    private function createTabbyCharge(Request $request, string $typePage , float $remainingAmount, ?array $merchantUrls = null)
+    private function createTabbyCharge(Request $request, string $typePage, float $remainingAmount, ?array $merchantUrls = null, array $cartIds = [], ?string $invoiceRef = null)
     {
         $secretKey    = config('tabby.secret_key');
         $merchantCode = config('tabby.merchant_code');
-        $baseUrl      = 'https://api.tabby.ai/api/v2/checkout';
-    
+        $baseUrl      = rtrim(config('tabby.base_url', 'https://api.tabby.ai'), '/') . '/api/v2/checkout';
+
         if (!$secretKey || !$merchantCode) {
             throw new \Exception('Tabby configuration error');
         }
-    
-        $user = auth()->user();
-    
-        $calculator = app(PaymentCalculatorService::class);
-        $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon, 'tabby');
-    
-        if (isset($totalData['error'])) {
-            throw new \Exception($totalData['error']);
-        }
-    
-        $finalAmount = $remainingAmount;
-    
-        $cartIds = $totalData['cart_ids'] ?? [];
 
-        $invoiceRef = 'INV-' . implode('-', $cartIds);
-    
+        $user = auth()->user();
+
+        // Use pre-computed cart data when available to avoid redundant DB queries.
+        // Fall back to recalculating only if the caller didn't supply them.
+        if (empty($cartIds)) {
+            $calculator = app(PaymentCalculatorService::class);
+            $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon, 'tabby');
+
+            if (isset($totalData['error'])) {
+                throw new \Exception($totalData['error']);
+            }
+
+            $cartIds    = $totalData['cart_ids'] ?? [];
+        }
+
+        if (!$invoiceRef) {
+            $invoiceRef = 'INV-' . implode('-', $cartIds);
+        }
+
         $buyerName = $user->full_name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
         $payload = [
-            "merchant_code" => $merchantCode,
-            "payment" => [
-                "amount"      => $finalAmount,
-                "currency"    => "SAR",
-                "description" => "Invoice #{$invoiceRef}",
-                "buyer" => [
-                    "phone" => $user->mobile,
-                    "name"  => $buyerName,
+            'merchant_code' => $merchantCode,
+            'payment'       => [
+                'amount'      => $remainingAmount,
+                'currency'    => 'SAR',
+                'description' => "Invoice #{$invoiceRef}",
+                'buyer'       => [
+                    'phone' => $user->mobile,
+                    'name'  => $buyerName,
                 ],
             ],
-            "order" => [
-                "reference_id" => $invoiceRef,
+            'order'         => [
+                'reference_id' => $invoiceRef,
             ],
-            "lang" => app()->getLocale() ?? 'en',
-            "merchant_urls" => $merchantUrls ?? [
-                "success" => route('tabby.success', $invoiceRef),
-                "fail" => route('tabby.fail', $invoiceRef),
-                "cancel"  => route('tabby.cancel',  $invoiceRef),
+            'lang'          => app()->getLocale() ?? 'en',
+            'merchant_urls' => $merchantUrls ?? [
+                'success' => route('tabby.success', $invoiceRef),
+                'fail'    => route('tabby.fail', $invoiceRef),
+                'cancel'  => route('tabby.cancel', $invoiceRef),
             ],
         ];
-    
+
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Authorization' => 'Bearer ' . $secretKey,
             'Content-Type'  => 'application/json',
             'Accept'        => 'application/json',
         ])->post($baseUrl, $payload);
-    
+
         if (!$response->successful()) {
-            throw new \Exception('Tabby payment failed');
+            throw new \Exception('Tabby payment failed: ' . $response->body());
         }
-    
+
         $responseData = $response->json();
-        $checkoutId = $responseData['id'] ?? $responseData['checkout_id'] ?? null;
+        $checkoutId   = $responseData['id'] ?? $responseData['checkout_id'] ?? null;
         if ($checkoutId) {
             session()->put('tabby_payment.checkout_id', $checkoutId);
+        }
+
+        // Also persist the payment_id returned inside the payment object if present.
+        // This is the correct ID for the /api/v2/payments/{payment_id} verification endpoint.
+        $paymentId = data_get($responseData, 'payment.id') ?? data_get($responseData, 'payment_id') ?? null;
+        if ($paymentId) {
+            session()->put('tabby_payment.payment_id', $paymentId);
         }
 
         return $responseData;
@@ -173,15 +186,28 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             abort(403);
         }
 
-        $checkoutId = $request->get('checkout_id') ?? $request->get('payment_id') ?? ($data['checkout_id'] ?? null);
-        if (!$checkoutId) {
-            return redirect()->back()->with('error', 'Tabby ID not found');
+        // Tabby redirects the success URL with a `payment_id` query parameter.
+        // Use it to call the correct payments verification endpoint: GET /api/v2/payments/{payment_id}.
+        $paymentId = $request->get('payment_id')
+            ?? $request->get('checkout_id')
+            ?? session('tabby_payment.payment_id')
+            ?? session('tabby_payment.checkout_id')
+            ?? ($data['payment_id'] ?? $data['checkout_id'] ?? null);
+
+        if (!$paymentId) {
+            return redirect()->back()->with('error', 'Tabby payment ID not found');
         }
 
         $secretKey = config('tabby.secret_key');
-        $baseUrl = "https://api.tabby.ai/api/v2/checkout/{$checkoutId}";
+        $baseUrl   = rtrim(config('tabby.base_url', 'https://api.tabby.ai'), '/')
+                   . '/api/v2/payments/' . $paymentId;
+
+        // Alias so all audit/logging references below continue to work.
+        $checkoutId = $paymentId;
+
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $secretKey,
+            'Accept'        => 'application/json',
         ])->get($baseUrl);
 
         $charge = $response->json();

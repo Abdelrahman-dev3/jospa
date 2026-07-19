@@ -118,18 +118,14 @@ class PaymentController extends Controller
         return app(TabbyPaymentStrategy::class)->callback($request);
     }
 
-    public function tabbyFail($invoice = null)
+    public function tabbyFail(Request $request, $invoice = null)
     {
-        session()->forget('tabby_payment');
-
-        return view('frontend.payment-status.failed', ['message' => __('messages.payment_failed')]);
+        return app(TabbyPaymentStrategy::class)->fail($request, $invoice);
     }
 
-    public function tabbyCancel($invoice = null)
+    public function tabbyCancel(Request $request, $invoice = null)
     {
-        session()->forget('tabby_payment');
-
-        return view('frontend.payment-status.failed', ['message' => __('messages.payment_cancelled')]);
+        return app(TabbyPaymentStrategy::class)->cancel($request, $invoice);
     }
 
     public function urpaySuccess(Request $request)

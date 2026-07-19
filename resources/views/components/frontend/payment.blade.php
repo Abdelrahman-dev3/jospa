@@ -813,9 +813,9 @@
 
                     @if(($paymentMethods['tabby'] ?? 1) == 1)
                         <!-- METHOD: Tabby -->
-                        <div class="method payment-method-card is-coming-soon" data-method="tabby" data-coming-soon="true" tabindex="0">
+                        <div class="method payment-method-card" data-method="tabby" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }} disabled>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.installments_4')}}
@@ -827,16 +827,15 @@
                             </div>
                             <div class="payment-brand-group">
                                 <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tabby (2).png')}}" alt="tabby">
-                                <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
                             </div>
                         </div>
                     @endif
 
                     @if(($paymentMethods['tamara'] ?? 1) == 1)
                         <!-- METHOD: Tamara -->
-                        <div class="method payment-method-card is-coming-soon" data-method="tamara" data-coming-soon="true" tabindex="0">
+                        <div class="method payment-method-card" data-method="tamara" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }} disabled>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.split_bill_4_payments')}}
@@ -848,7 +847,6 @@
                             </div>
                             <div class="payment-brand-group">
                                 <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tmara.png')}}" alt="tamara">
-                                <span class="coming-soon-badge">&#1602;&#1585;&#1610;&#1576;&#1575;&#1611;</span>
                             </div>
                         </div>
                     @endif

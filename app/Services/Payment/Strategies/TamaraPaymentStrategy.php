@@ -157,14 +157,21 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             throw new \Exception('Tamara checkout URL not found');
         }
     
-        session()->put('tamara_payment.checkout_id', $data['checkout_id']);
+        session()->put('tamara_payment.checkout_id', $data['checkout_id'] ?? null);
+
+        // Persist Tamara's order_id — required for the GET /orders/{order_id} verification call.
+        $tamaraOrderId = $data['order_id'] ?? null;
+        if ($tamaraOrderId) {
+            session()->put('tamara_payment.tamara_order_id', $tamaraOrderId);
+        }
+
         $this->markPaymentAttemptPending((int) ($context['attempt_id'] ?? session('tamara_payment.attempt_id')), [
-            'merchant_reference' => $invoiceRef,
+            'merchant_reference'  => $invoiceRef,
             'gateway_checkout_id' => $data['checkout_id'] ?? null,
-            'gateway_order_id' => $invoiceRef,
-            'gateway_response' => $data,
+            'gateway_order_id'    => $tamaraOrderId ?? $invoiceRef,
+            'gateway_response'    => $data,
         ]);
-    
+
         return $data['checkout_url'];
     }
 
@@ -176,21 +183,29 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             abort(403);
         }
 
-        $checkoutId = $request->checkout_id ?? ($data['checkout_id'] ?? null);
+        // Prefer Tamara's order_id for the GET /orders/{order_id} verification endpoint.
+        // Falls back to checkout_id for backwards compatibility.
+        $tamaraOrderId = $request->order_id
+            ?? ($data['tamara_order_id'] ?? null)
+            ?? session('tamara_payment.tamara_order_id')
+            ?? $request->checkout_id
+            ?? ($data['checkout_id'] ?? null);
 
-        if (!$checkoutId) {
-            $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), 'Tamara checkout id missing', [
+        if (!$tamaraOrderId) {
+            $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), 'Tamara order id missing', [
                 'callback_payload' => $request->all(),
             ]);
-            return $this->respondFailure($request, 'Tamara checkout id missing', 400);
+            return $this->respondFailure($request, 'Tamara order id missing', 400);
         }
 
+        // Correct verification endpoint: GET /orders/{order_id}
         $response = Http::withToken(config('tamara.secret_key'))
-            ->get(config('tamara.base_url') . "/api/v2/checkout/{$checkoutId}");
+            ->acceptJson()
+            ->get(rtrim(config('tamara.base_url', 'https://api.tamara.co'), '/') . '/orders/' . $tamaraOrderId);
 
         if (!$response->successful()) {
             $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), 'Failed to verify Tamara payment', [
-                'gateway_checkout_id' => $checkoutId,
+                'gateway_order_id' => $tamaraOrderId,
                 'callback_payload' => $request->all(),
             ]);
             return $this->respondFailure($request, 'Failed to verify Tamara payment', 502);

@@ -1112,6 +1112,7 @@ const buildSlotCandidateForCurrentDate = (slotValue) => {
 
 const restoreSlotIfAvailable = (previousSlotValue) => {
   const candidateSlot = buildSlotCandidateForCurrentDate(previousSlotValue)
+  const previousTimeKey = moment(previousSlotValue).isValid() ? moment(previousSlotValue).format('HH:mm') : null
 
   if (!candidateSlot) {
     start_date_time.value = null
@@ -1119,7 +1120,17 @@ const restoreSlotIfAvailable = (previousSlotValue) => {
     return
   }
 
-  const matchedSlot = slots.value.find((slot) => String(slot.value) === String(candidateSlot))
+  const matchedSlot = slots.value.find((slot) => {
+    if (String(slot.value) === String(candidateSlot)) {
+      return true
+    }
+
+    if (!moment(slot.value).isValid()) {
+      return false
+    }
+
+    return previousTimeKey && moment(slot.value).format('HH:mm') === previousTimeKey
+  })
 
   if (matchedSlot) {
     start_date_time.value = matchedSlot.value
