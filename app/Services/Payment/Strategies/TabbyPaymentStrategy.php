@@ -3,6 +3,7 @@
 namespace App\Services\Payment\Strategies;
 
 use Illuminate\Http\Request;
+use App\Models\PaymentAttempt;
 use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
@@ -36,26 +37,33 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         if ($request->expectsJson()) {
             $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
             try {
-                $invoiceRef = 'INV-' . implode('-', $data['cart_ids'] ?? []);
-                $chargeData = $this->createTabbyCharge($request, $typePage, $remainingAmount, $merchantUrls, $data['cart_ids'] ?? [], $invoiceRef);
+                $invoiceRef = $this->buildTabbyInvoiceReference($data);
+                $chargeData = $this->createTabbyCharge($request, $typePage, $remainingAmount, $merchantUrls, [
+                    'cart_ids' => $data['cart_ids'] ?? [],
+                    'gift_ids' => $data['gift_ids'] ?? [],
+                    'product_ids' => $data['product_ids'] ?? [],
+                    'invoice_ref' => $invoiceRef,
+                    'user_id' => $data['user_id'] ?? auth()->id(),
+                ]);
             } catch (\Exception $e) {
                 $this->markPaymentAttemptFailed($data['attempt_id'] ?? null, $e->getMessage());
                 return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
             }
 
             $this->markPaymentAttemptPending($data['attempt_id'] ?? null, [
-                'merchant_reference' => 'INV-' . implode('-', $data['cart_ids'] ?? []),
+                'merchant_reference' => $invoiceRef,
                 'gateway_checkout_id' => $chargeData['id'] ?? $chargeData['checkout_id'] ?? null,
                 'gateway_order_id' => data_get($chargeData, 'order.reference_id'),
                 'gateway_response' => $chargeData,
             ]);
 
-            $paymentUrl = $chargeData['configuration']['available_products']['installments'][0]['web_url']
-                ?? $chargeData['configuration']['available_products']['pay_later'][0]['web_url']
-                ?? null;
+            $paymentUrl = $this->extractTabbyPaymentUrl($chargeData);
             
             if (!$paymentUrl) {
-                return response()->json(['status' => false, 'message' => 'Tabby payment not available'], 422);
+                return response()->json([
+                    'status' => false,
+                    'message' => $this->resolveTabbyUnavailableMessage($chargeData),
+                ], 422);
             }
 
             return response()->json([
@@ -73,8 +81,14 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         session(['tabby_payment' => array_merge($data, ['amount' => $remainingAmount])]);
 
         try {
-            $invoiceRef = 'INV-' . implode('-', session('tabby_payment.cart_ids', []));
-            $data = $this->createTabbyCharge($request, $typePage, $remainingAmount, null, session('tabby_payment.cart_ids', []), $invoiceRef);
+            $invoiceRef = $this->buildTabbyInvoiceReference(session('tabby_payment', []));
+            $data = $this->createTabbyCharge($request, $typePage, $remainingAmount, null, [
+                'cart_ids' => session('tabby_payment.cart_ids', []),
+                'gift_ids' => session('tabby_payment.gift_ids', []),
+                'product_ids' => session('tabby_payment.product_ids', []),
+                'invoice_ref' => $invoiceRef,
+                'user_id' => session('tabby_payment.user_id', auth()->id()),
+            ]);
         } catch (\Exception $e) {
             $this->markPaymentAttemptFailed(session('tabby_payment.attempt_id'), $e->getMessage());
             session()->forget('tabby_payment');
@@ -82,23 +96,31 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         }
 
         $this->markPaymentAttemptPending(session('tabby_payment.attempt_id'), [
-            'merchant_reference' => 'INV-' . implode('-', session('tabby_payment.cart_ids', [])),
+            'merchant_reference' => $invoiceRef,
             'gateway_checkout_id' => $data['id'] ?? $data['checkout_id'] ?? null,
             'gateway_order_id' => data_get($data, 'order.reference_id'),
             'gateway_response' => $data,
         ]);
 
-        $paymentUrl = $data['configuration']['available_products']['installments'][0]['web_url'] ?? $data['configuration']['available_products']['pay_later'][0]['web_url'] ?? null;
+        $paymentUrl = $this->extractTabbyPaymentUrl($data);
         
         if (!$paymentUrl) {
-            throw new \Exception('Tabby payment not available');
+            $message = $this->resolveTabbyUnavailableMessage($data);
+            $this->markPaymentAttemptFailed(session('tabby_payment.attempt_id'), $message, [
+                'merchant_reference' => $invoiceRef,
+                'gateway_checkout_id' => $data['id'] ?? $data['checkout_id'] ?? null,
+                'gateway_order_id' => data_get($data, 'order.reference_id'),
+                'gateway_response' => $data,
+            ]);
+            session()->forget('tabby_payment');
+            return redirect()->back()->with('error', $message);
         }
         
         return redirect()->away($paymentUrl);
 
     }
 
-    private function createTabbyCharge(Request $request, string $typePage, float $remainingAmount, ?array $merchantUrls = null, array $cartIds = [], ?string $invoiceRef = null)
+    private function createTabbyCharge(Request $request, string $typePage, float $remainingAmount, ?array $merchantUrls = null, array $context = [])
     {
         $secretKey    = config('tabby.secret_key');
         $merchantCode = config('tabby.merchant_code');
@@ -109,10 +131,21 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         }
 
         $user = auth()->user();
+        if (!$user && !empty($context['user_id'])) {
+            $user = User::find((int) $context['user_id']);
+        }
+
+        if (!$user) {
+            throw new \Exception('Tabby user missing');
+        }
+
+        $cartIds = array_values(array_filter($context['cart_ids'] ?? []));
+        $giftIds = array_values(array_filter($context['gift_ids'] ?? []));
+        $productIds = array_values(array_filter($context['product_ids'] ?? []));
 
         // Use pre-computed cart data when available to avoid redundant DB queries.
         // Fall back to recalculating only if the caller didn't supply them.
-        if (empty($cartIds)) {
+        if (empty($cartIds) && empty($giftIds) && empty($productIds)) {
             $calculator = app(PaymentCalculatorService::class);
             $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon, 'tabby');
 
@@ -121,11 +154,15 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             }
 
             $cartIds    = $totalData['cart_ids'] ?? [];
+            $giftIds    = $totalData['gift_ids'] ?? [];
+            $productIds = $totalData['product_ids'] ?? [];
         }
 
-        if (!$invoiceRef) {
-            $invoiceRef = 'INV-' . implode('-', $cartIds);
-        }
+        $invoiceRef = $context['invoice_ref'] ?? $this->buildTabbyInvoiceReference([
+            'cart_ids' => $cartIds,
+            'gift_ids' => $giftIds,
+            'product_ids' => $productIds,
+        ]);
 
         $buyerName = $user->full_name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
         $payload = [
@@ -137,6 +174,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                 'buyer'       => [
                     'phone' => $user->mobile,
                     'name'  => $buyerName,
+                    'email' => $user->email,
                 ],
             ],
             'order'         => [
@@ -145,7 +183,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             'lang'          => app()->getLocale() ?? 'en',
             'merchant_urls' => $merchantUrls ?? [
                 'success' => route('tabby.success', $invoiceRef),
-                'fail'    => route('tabby.fail', $invoiceRef),
+                'failure' => route('tabby.fail', $invoiceRef),
                 'cancel'  => route('tabby.cancel', $invoiceRef),
             ],
         ];
@@ -161,6 +199,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         }
 
         $responseData = $response->json();
+        $responseData = is_array($responseData) ? $responseData : [];
         $checkoutId   = $responseData['id'] ?? $responseData['checkout_id'] ?? null;
         if ($checkoutId) {
             session()->put('tabby_payment.checkout_id', $checkoutId);
@@ -176,13 +215,150 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         return $responseData;
     }
 
+    private function buildTabbyInvoiceReference(array $context): string
+    {
+        $attemptId = (int) ($context['attempt_id'] ?? 0);
+        if ($attemptId > 0) {
+            return 'INV-' . $attemptId;
+        }
+
+        $cartIds = array_values(array_filter($context['cart_ids'] ?? []));
+        $giftIds = array_values(array_filter($context['gift_ids'] ?? []));
+        $productIds = array_values(array_filter($context['product_ids'] ?? []));
+
+        $referenceParts = [];
+
+        if (!empty($cartIds)) {
+            $referenceParts[] = 'B' . implode('-', $cartIds);
+        }
+
+        if (!empty($giftIds)) {
+            $referenceParts[] = 'G' . implode('-', $giftIds);
+        }
+
+        if (!empty($productIds)) {
+            $referenceParts[] = 'P' . implode('-', $productIds);
+        }
+
+        if (empty($referenceParts)) {
+            throw new \Exception('Tabby checkout context missing');
+        }
+
+        return 'INV-' . implode('_', $referenceParts);
+    }
+
+    private function extractTabbyPaymentUrl(array $chargeData): ?string
+    {
+        $candidatePaths = [
+            'configuration.available_products.installments.0.web_url',
+            'configuration.available_products.pay_later.0.web_url',
+            'configuration.products.installments.web_url',
+            'configuration.products.pay_later.web_url',
+            'available_products.installments.0.web_url',
+            'available_products.pay_later.0.web_url',
+            'web_url',
+            'url',
+        ];
+
+        foreach ($candidatePaths as $path) {
+            $value = data_get($chargeData, $path);
+            if (is_string($value) && trim($value) !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveTabbyUnavailableMessage(array $chargeData): string
+    {
+        $status = $this->normalizeTabbyStatus(data_get($chargeData, 'status'));
+        $reason = data_get($chargeData, 'rejection_reason')
+            ?? data_get($chargeData, 'payment.rejection_reason')
+            ?? data_get($chargeData, 'payment.status')
+            ?? data_get($chargeData, 'message')
+            ?? data_get($chargeData, 'error')
+            ?? data_get($chargeData, 'errors.0.message');
+
+        if (is_string($reason) && trim($reason) !== '') {
+            return 'Tabby payment unavailable: ' . $reason;
+        }
+
+        if ($status !== '') {
+            return 'Tabby payment unavailable: ' . $status;
+        }
+
+        return 'Tabby payment not available';
+    }
+
+    private function normalizeTabbyStatus($status): string
+    {
+        return strtolower(trim((string) $status));
+    }
+
+    private function isTabbySuccessfulStatus(string $status): bool
+    {
+        return in_array($status, ['authorized', 'closed', 'captured', 'approved'], true);
+    }
+
+    private function isTabbyFailureStatus(string $status): bool
+    {
+        return in_array($status, ['rejected', 'expired', 'failed', 'cancelled', 'canceled'], true);
+    }
+
+    private function captureTabbyPayment(string $paymentId, array $charge): array
+    {
+        $secretKey = config('tabby.secret_key');
+        $baseUrl = rtrim(config('tabby.base_url', 'https://api.tabby.ai'), '/');
+        $orderReference = (string) (data_get($charge, 'order.reference_id') ?? $paymentId);
+        $amount = (float) (data_get($charge, 'amount') ?? data_get($charge, 'payment.amount') ?? 0);
+
+        $payload = [
+            'amount' => $amount,
+            'reference_id' => $orderReference,
+            'tax_amount' => (float) (data_get($charge, 'order.tax_amount') ?? 0),
+            'shipping_amount' => (float) (data_get($charge, 'order.shipping_amount') ?? 0),
+            'discount_amount' => (float) (data_get($charge, 'order.discount_amount') ?? 0),
+            'items' => data_get($charge, 'order.items') ?: [[
+                'title' => "Invoice #{$orderReference}",
+                'description' => 'Service booking payment',
+                'quantity' => 1,
+                'unit_price' => $amount,
+                'reference_id' => $orderReference,
+            ]],
+        ];
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $secretKey,
+            'Content-Type'  => 'application/json',
+            'Accept'        => 'application/json',
+        ])->post($baseUrl . '/api/v2/payments/' . $paymentId . '/captures', $payload);
+
+        if (! $response->successful()) {
+            throw new \Exception('Tabby capture failed: ' . $response->body());
+        }
+
+        $captureData = $response->json();
+
+        return is_array($captureData) ? $captureData : [];
+    }
+
 
     public function callback(Request $request)
     {
         $data = session('tabby_payment');
         $subMethodService = app(PaymentSubMethodsService::class);
+        $attemptId = $this->resolveAttemptId($request, $data);
+        $attempt = $attemptId ? PaymentAttempt::find($attemptId) : null;
 
-        if ($data && $data['user_id'] !== auth()->id()) {
+        if ($attempt && $attempt->status === PaymentAttempt::STATUS_PAID) {
+            session()->forget('tabby_payment');
+            return $this->respondSuccess($request, 'Payment already finalized.', [
+                'invoice_id' => $attempt->invoice_id,
+            ]);
+        }
+
+        if ($data && auth()->check() && $data['user_id'] !== auth()->id()) {
             abort(403);
         }
 
@@ -190,6 +366,8 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         // Use it to call the correct payments verification endpoint: GET /api/v2/payments/{payment_id}.
         $paymentId = $request->get('payment_id')
             ?? $request->get('checkout_id')
+            ?? $request->get('checkoutId')
+            ?? $request->get('id')
             ?? session('tabby_payment.payment_id')
             ?? session('tabby_payment.checkout_id')
             ?? ($data['payment_id'] ?? $data['checkout_id'] ?? null);
@@ -211,20 +389,60 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         ])->get($baseUrl);
 
         $charge = $response->json();
+        $charge = is_array($charge) ? $charge : [];
 
-        if (!isset($charge['status'])) {
-            return redirect()->back()->with('error', 'Unexpected Tabby response: ' . json_encode($charge));
+        if (!$response->successful() || !isset($charge['status'])) {
+            $message = $this->resolveTabbyUnavailableMessage($charge);
+            $this->markPaymentAttemptFailed($attemptId, $message, [
+                'gateway_transaction_id' => $checkoutId,
+                'gateway_checkout_id' => $checkoutId,
+                'gateway_response' => $charge,
+                'callback_payload' => $request->all(),
+            ]);
+            session()->forget('tabby_payment');
+            return $this->respondFailure($request, $message, 502);
         }
 
-        $status = $charge['status'];
-        $attemptId = $this->resolveAttemptId($request, $data);
+        $normalizedStatus = $this->normalizeTabbyStatus($charge['status'] ?? null);
 
-        $normalizedStatus = strtolower((string) $status);
-        switch ($normalizedStatus) {
-            case "captured":
-            case "authorized":
-            case "approved":
+        if ($normalizedStatus === 'authorized') {
+            try {
+                $capturedCharge = $this->captureTabbyPayment((string) $paymentId, $charge);
+                if (! empty($capturedCharge)) {
+                    $charge = array_replace_recursive($charge, $capturedCharge);
+                }
+                $normalizedStatus = $this->normalizeTabbyStatus($charge['status'] ?? 'closed');
+            } catch (\Throwable $e) {
+                $this->markPaymentAttemptFailed($attemptId, $e->getMessage(), [
+                    'gateway_transaction_id' => $checkoutId,
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $charge,
+                    'callback_payload' => $request->all(),
+                ]);
+                session()->forget('tabby_payment');
+                return $this->respondFailure($request, $e->getMessage(), 502);
+            }
+        }
+
+        if ($this->isTabbySuccessfulStatus($normalizedStatus)) {
+            switch ($normalizedStatus) {
+                case 'authorized':
+                case 'closed':
+                case 'captured':
+                case 'approved':
                 if ($data) {
+                    $payerUserId = (int) ($data['user_id'] ?? auth()->id());
+                    if ($payerUserId <= 0) {
+                        $this->markPaymentAttemptFailed($attemptId, 'Tabby user missing on callback', [
+                            'gateway_transaction_id' => $checkoutId,
+                            'gateway_checkout_id' => $checkoutId,
+                            'gateway_response' => $charge,
+                            'callback_payload' => $request->all(),
+                        ]);
+                        session()->forget('tabby_payment');
+                        return $this->respondFailure($request, 'User not found.', 404);
+                    }
+
                     if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
                         $this->markPaymentAttemptPaid($attemptId, [
                             'gateway_transaction_id' => $checkoutId,
@@ -241,7 +459,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                             'loyalty'   => $data['submethods']['loyalty'] ?? false,
                             'gift_code' => $data['submethods']['gift_code'] ?? null,
                         ]);
-                        $subResult = $subMethodService->apply(auth()->id(), $fakeRequest, $data['final_before_sub']);
+                        $subResult = $subMethodService->apply($payerUserId, $fakeRequest, $data['final_before_sub']);
                         if (isset($subResult['error'])) {
                             $this->markPaymentAttemptFailed($attemptId, $subResult['error'], [
                                 'gateway_transaction_id' => $checkoutId,
@@ -252,7 +470,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                             session()->forget('tabby_payment');
                             return $this->respondFailure($request, $subResult['error'], 422);
                         }
-                        $invoiceId = $this->commitFinalizedPayment(auth()->id(), $fakeRequest, $data, $subResult, [
+                        $invoiceId = $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
                             'attempt_id' => $attemptId,
                             'transaction_id' => $checkoutId,
                             'merchant_reference' => data_get($charge, 'order.reference_id'),
@@ -350,35 +568,41 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                 return $this->respondSuccess($request, 'Payment captured successfully.', [
                     'invoice_id' => $invoiceId ?? null,
                 ]);
-            case "failed":
-            case "cancelled":
-                if ($normalizedStatus === 'cancelled') {
-                    $this->markPaymentAttemptCancelled($attemptId, $status, [
-                        'gateway_transaction_id' => $checkoutId,
-                        'gateway_checkout_id' => $checkoutId,
-                        'gateway_response' => $charge,
-                        'callback_payload' => $request->all(),
-                    ]);
-                } else {
-                    $this->markPaymentAttemptFailed($attemptId, $status, [
-                        'gateway_transaction_id' => $checkoutId,
-                        'gateway_checkout_id' => $checkoutId,
-                        'gateway_response' => $charge,
-                        'callback_payload' => $request->all(),
-                    ]);
-                }
-                session()->forget('tabby_payment');
-                return $this->respondFailure($request, $status, 402);
-            default:
-                $this->markPaymentAttemptFailed($attemptId, 'Unknown status: ' . $status, [
+            }
+        }
+
+        if ($this->isTabbyFailureStatus($normalizedStatus)) {
+            $message = $this->resolveTabbyUnavailableMessage($charge);
+
+            if (in_array($normalizedStatus, ['cancelled', 'canceled', 'expired'], true)) {
+                $this->markPaymentAttemptCancelled($attemptId, $message, [
                     'gateway_transaction_id' => $checkoutId,
                     'gateway_checkout_id' => $checkoutId,
                     'gateway_response' => $charge,
                     'callback_payload' => $request->all(),
                 ]);
-                session()->forget('tabby_payment');
-                return $this->respondFailure($request, 'Unknown status: ' . $status, 400);
+            } else {
+                $this->markPaymentAttemptFailed($attemptId, $message, [
+                    'gateway_transaction_id' => $checkoutId,
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $charge,
+                    'callback_payload' => $request->all(),
+                ]);
+            }
+
+            session()->forget('tabby_payment');
+            return $this->respondFailure($request, $message, 402);
         }
+
+        $message = $normalizedStatus !== '' ? 'Tabby payment pending: ' . $normalizedStatus : 'Tabby payment pending';
+        $this->markPaymentAttemptPending($attemptId, [
+            'gateway_transaction_id' => $checkoutId,
+            'gateway_checkout_id' => $checkoutId,
+            'gateway_response' => $charge,
+            'callback_payload' => $request->all(),
+        ]);
+
+        return $this->respondFailure($request, $message, 409);
     }
 
     public function fail(Request $request, $invoice = null)
@@ -401,8 +625,9 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
 
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
     {
+        $invoiceRef = $this->buildTabbyInvoiceReference($data);
         $params = array_filter([
-            'invoice' => 'INV-' . implode('-', $data['cart_ids'] ?? []),
+            'invoice' => $invoiceRef,
             'attempt_id' => $data['attempt_id'] ?? null,
             'user_id' => $data['user_id'],
             'page' => $typePage,
@@ -427,14 +652,14 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
 
         return [
             "success" => $successUrl,
-            "fail" => route($failRoute, ['invoice' => $params['invoice'] ?? null, 'attempt_id' => $data['attempt_id'] ?? null]),
+            "failure" => route($failRoute, ['invoice' => $params['invoice'] ?? null, 'attempt_id' => $data['attempt_id'] ?? null]),
             "cancel"  => route($cancelRoute, ['invoice' => $params['invoice'] ?? null, 'attempt_id' => $data['attempt_id'] ?? null]),
         ];
     }
 
     private function resolveStatelessContext(Request $request): ?array
     {
-        if (! $request->hasValidSignatureWhileIgnoring(['checkout_id', 'payment_id', 'status', 'payment_status', 'order_id'])) {
+        if (! $request->hasValidSignatureWhileIgnoring(['checkout_id', 'checkoutId', 'payment_id', 'status', 'payment_status', 'order_id', 'id'])) {
             return null;
         }
 
