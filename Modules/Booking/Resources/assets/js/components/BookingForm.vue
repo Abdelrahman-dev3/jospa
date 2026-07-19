@@ -161,7 +161,29 @@
               <div class="d-flex flex-column gap-2">
                 <div class="d-flex align-items-center justify-content-between">
                   <h6>{{ service.service_name }} ({{ formatCurrencyVue(service.service_price) }})</h6>
-                  <button type="button" v-if="canDeleteService" @click="removeService(service.service_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                  <div class="d-flex align-items-center gap-2">
+                    <button
+                      type="button"
+                      v-if="canEditFullBooking && employee_id"
+                      @click="toggleServiceEditor(index, service.service_id)"
+                      class="btn btn-sm btn-outline-primary"
+                    >
+                      <i class="fa-regular fa-pen-to-square"></i>
+                    </button>
+                    <button type="button" v-if="canDeleteService" @click="removeService(service.service_id)" class="btn btn-sm text-danger"><i class="fa-regular fa-trash-can"></i></button>
+                  </div>
+                </div>
+                <div v-if="editingServiceIndex === index && canEditFullBooking" class="mt-2">
+                  <Multiselect
+                    :canClear="false"
+                    :placeholder="$t('booking.select_service')"
+                    v-model="editingServiceValue"
+                    :value="editingServiceValue"
+                    v-bind="singleSelectOption"
+                    :options="replaceableServiceOptions(service)"
+                    @select="replaceService(index, $event)"
+                    class="form-group"
+                  ></Multiselect>
                 </div>
                 <p class="m-0">
                   <label
@@ -1455,6 +1477,8 @@ const removeCustomer = () => {
 
 const selectedService = ref([])
 const newSelectedServices = ref([])
+const editingServiceIndex = ref(null)
+const editingServiceValue = ref(null)
 
 const effectiveBookingDuration = computed(() =>
   selectedService.value.reduce((total, serviceItem) => total + Number(serviceItem.duration_min ?? 0), 0)
@@ -1489,6 +1513,97 @@ const parseCustomDuration = (value) => {
 
 const serviceDurationPlaceholder = (serviceItem) => String(getDefaultServiceDuration(serviceItem))
 const serviceDurationHint = (serviceItem) => `${getDefaultServiceDuration(serviceItem)} ${t('booking.lbl_minutes')}`
+
+const replaceableServiceOptions = (currentService) => {
+  const selectedIds = selectedService.value
+    .map((serviceItem) => String(serviceItem.service_id))
+    .filter((serviceId) => serviceId !== String(currentService.service_id))
+
+  const options = service.value.options.filter((option) => !selectedIds.includes(String(option.value)))
+
+  if (!options.some((option) => String(option.value) === String(currentService.service_id))) {
+    options.unshift({
+      value: currentService.service_id,
+      label: currentService.service_name
+    })
+  }
+
+  return options
+}
+
+const toggleServiceEditor = (index, currentServiceId) => {
+  if (editingServiceIndex.value === index) {
+    editingServiceIndex.value = null
+    editingServiceValue.value = null
+    return
+  }
+
+  editingServiceIndex.value = index
+  editingServiceValue.value = currentServiceId
+}
+
+const syncReplacedNewService = (oldService, updatedService) => {
+  const newServiceIndex = newSelectedServices.value.findIndex((serviceItem) => {
+    if (oldService.id && serviceItem.id) {
+      return String(serviceItem.id) === String(oldService.id)
+    }
+
+    return String(serviceItem.service_id) === String(oldService.service_id)
+  })
+
+  if (newServiceIndex !== -1) {
+    newSelectedServices.value[newServiceIndex] = {
+      ...newSelectedServices.value[newServiceIndex],
+      ...updatedService
+    }
+  }
+}
+
+const replaceService = (index, value) => {
+  const nextServiceId = value?.value ?? value
+  const currentService = selectedService.value[index]
+
+  if (!currentService || !nextServiceId) {
+    return
+  }
+
+  const selectedServiceOption = service.value.list.find((serviceItem) => String(serviceItem.service_id) === String(nextServiceId))
+
+  if (!selectedServiceOption) {
+    return
+  }
+
+  const oldServiceId = currentService.service_id
+  const updatedService = hydrateBookingService({
+    ...currentService,
+    service_id: selectedServiceOption.service_id,
+    service_name: selectedServiceOption.service_name,
+    service_price: selectedServiceOption.service_price,
+    duration_min: selectedServiceOption.duration_min,
+    employee_id: employee_id.value,
+    branch_id: branch_id.value
+  })
+
+  selectedService.value[index] = updatedService
+  services_id.value = selectedService.value.map((serviceItem) => serviceItem.service_id)
+  syncReplacedNewService(currentService, updatedService)
+  selectedPackageService.value = selectedPackageService.value.filter((serviceItem) => String(serviceItem.service_id) !== String(oldServiceId))
+  tempSelectedPackageService.value = tempSelectedPackageService.value.filter((serviceItem) => String(serviceItem.service_id) !== String(oldServiceId))
+  appliedServices.value = appliedServices.value.filter((serviceItem) => String(serviceItem.id) !== String(oldServiceId))
+  editingServiceIndex.value = null
+  editingServiceValue.value = null
+  resetServiceTime()
+  syncEndTimeState()
+
+  getSlots().then(() => {
+    if (start_date_time.value && !slots.value.some((slot) => String(slot.value) === String(start_date_time.value)) && !canKeepSelectedUnavailableSlot()) {
+      start_date_time.value = null
+      resetServiceTime()
+    } else if (start_date_time.value) {
+      ensureSelectedSlotOption()
+    }
+  })
+}
 
 const refreshSlotAvailabilityForServices = async () => {
   if (!branch_id.value || !current_date.value || !employee_id.value) {
@@ -1585,6 +1700,8 @@ const resetServices = () => {
   selectedService.value = []
   services_id.value = []
   newSelectedServices.value = []
+  editingServiceIndex.value = null
+  editingServiceValue.value = null
   end_time_input.value = ''
   end_time_error.value = ''
   is_end_time_manual.value = false
@@ -1620,6 +1737,8 @@ const removeService = (id) => {
   services_id.value = servicesIds.filter((serviceid) => serviceid !== id)
   selectedService.value = selectedService.value.filter((BKservice) => BKservice.service_id !== id)
   newSelectedServices.value = newSelectedServices.value.filter((BKservice) => BKservice.service_id !== id)
+  editingServiceIndex.value = null
+  editingServiceValue.value = null
   resetServiceTime()
   syncEndTimeState()
   getSlots()
