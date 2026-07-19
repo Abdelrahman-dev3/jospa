@@ -186,6 +186,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
         // Prefer Tamara's order_id for the GET /orders/{order_id} verification endpoint.
         // Falls back to checkout_id for backwards compatibility.
         $tamaraOrderId = $request->order_id
+            ?? $request->orderId
             ?? ($data['tamara_order_id'] ?? null)
             ?? session('tamara_payment.tamara_order_id')
             ?? $request->checkout_id
@@ -197,6 +198,9 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             ]);
             return $this->respondFailure($request, 'Tamara order id missing', 400);
         }
+
+        // Alias so all audit/logging references ($checkoutId) below continue to work without undefined variable error.
+        $checkoutId = $tamaraOrderId;
 
         // Correct verification endpoint: GET /orders/{order_id}
         $response = Http::withToken(config('tamara.secret_key'))
