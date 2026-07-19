@@ -1102,6 +1102,38 @@ const ensureSelectedSlotOption = () => {
   }
 }
 
+const buildSlotCandidateForCurrentDate = (slotValue) => {
+  if (!slotValue || !current_date.value || !moment(slotValue).isValid()) {
+    return null
+  }
+
+  return `${moment(current_date.value).format('YYYY-MM-DD')} ${moment(slotValue).format('HH:mm:ss')}`
+}
+
+const restoreSlotIfAvailable = (previousSlotValue) => {
+  const candidateSlot = buildSlotCandidateForCurrentDate(previousSlotValue)
+
+  if (!candidateSlot) {
+    start_date_time.value = null
+    resetServiceTime()
+    return
+  }
+
+  const matchedSlot = slots.value.find((slot) => String(slot.value) === String(candidateSlot))
+
+  if (matchedSlot) {
+    start_date_time.value = matchedSlot.value
+    ensureSelectedSlotOption()
+    resetServiceTime()
+    syncEndTimeState()
+    return
+  }
+
+  start_date_time.value = null
+  resetServiceTime()
+  syncEndTimeState()
+}
+
 useOnOffcanvasHide('booking-form', () => setFormData(defaultData()))
 useOnOffcanvasShow('booking-form', () => {
   useSelect({ url: BRANCH_LIST }, { value: 'id', label: 'name' }).then((data) => {
@@ -1128,6 +1160,8 @@ const getCustomers = (cb) =>
   })
 
 const dateChange = () => {
+  const previousSlotValue = start_date_time.value
+
   if (current_date.value && moment(current_date.value).startOf('day').isBefore(moment().startOf('day'))) {
     current_date.value = moment().format('YYYY-MM-DD')
   }
@@ -1141,9 +1175,10 @@ const dateChange = () => {
   if (!isPaidBooking.value) {
     resetServices()
   }
+
   loadAvailableEmployees().then(() => {
     if (employee_id.value) {
-      getSlots()
+      getSlots().then(() => restoreSlotIfAvailable(previousSlotValue))
     }
   })
 }
@@ -1282,17 +1317,11 @@ const updateSelectedBookingItemsEmployee = (value) => {
   }))
 }
 
-// ============================================================
-// ✅ الإصلاح الأول: employeeSelect
-// المشكلة: كان يستدعي resetServices() عند كل تغيير للموظف
-// حتى في المواعيد الموجودة (id.value > 0)، مما يمسح الخدمات
-// ويجعل canSubmitBooking = false
-// الحل: لا تمسح الخدمات إذا كان الموعد موجوداً (id.value)
-// ============================================================
 const employeeSelect = (value, preserveSelection = false) => {
+  const previousSlotValue = start_date_time.value
+
   employee_id.value = value
   if (!preserveSelection) {
-    // امسح الوقت والـ slots دائماً عند تغيير الموظف (صحيح)
     start_date_time.value = null
     end_time_input.value = ''
     end_time_error.value = ''
@@ -1300,24 +1329,30 @@ const employeeSelect = (value, preserveSelection = false) => {
     slots.value = []
   }
   if (isPaidBooking.value || id.value) {
-    // موعد موجود أو مدفوع: حدّث الموظف في الخدمات بدلاً من مسحها
     updateSelectedBookingItemsEmployee(value)
     if (start_date_time.value) {
       resetServiceTime()
     }
-  } else if (!preserveSelection && !id.value) {
-    // ✅ الإصلاح: أضفنا && !id.value
-    // موعد جديد فقط: امسح الخدمات عند تغيير الموظف
-    resetServices()
   }
+
   useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, {
     value: 'service_id',
     label: 'service_name'
   }).then((data) => {
     service.value = data
     ensureCalendarPresetOptions()
+    if (!preserveSelection) {
+      syncServicesForSelectedEmployee(data.list || [], value)
+    }
+    return getSlots()
+  }).then(() => {
+    if (preserveSelection) {
+      ensureCalendarPresetOptions()
+      return
+    }
+
+    restoreSlotIfAvailable(previousSlotValue)
   })
-  getSlots()
 }
 
 const removeEmployee = () => {
@@ -1542,6 +1577,31 @@ const resetServices = () => {
   end_time_input.value = ''
   end_time_error.value = ''
   is_end_time_manual.value = false
+}
+
+const syncServicesForSelectedEmployee = (availableServices, nextEmployeeId) => {
+  const availableServiceIds = availableServices.map((serviceItem) => String(serviceItem.service_id))
+
+  selectedService.value = selectedService.value
+    .filter((bookingService) => availableServiceIds.includes(String(bookingService.service_id)))
+    .map((bookingService) => ({
+      ...bookingService,
+      employee_id: nextEmployeeId,
+      employee: selectedEmployee.value || bookingService.employee
+    }))
+
+  newSelectedServices.value = newSelectedServices.value
+    .filter((bookingService) => availableServiceIds.includes(String(bookingService.service_id)))
+    .map((bookingService) => ({
+      ...bookingService,
+      employee_id: nextEmployeeId,
+      employee: selectedEmployee.value || bookingService.employee
+    }))
+
+  services_id.value = services_id.value.filter((serviceId) => availableServiceIds.includes(String(serviceId)))
+
+  resetServiceTime()
+  syncEndTimeState()
 }
 
 const removeService = (id) => {
