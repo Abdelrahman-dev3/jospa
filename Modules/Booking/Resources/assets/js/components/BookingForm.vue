@@ -1316,6 +1316,18 @@ const fetchEmployeeServices = (employeeValue) => {
   })
 }
 
+const hasSelectionValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.length > 0
+  }
+
+  if (value && typeof value === 'object') {
+    return value.value !== undefined || value.id !== undefined
+  }
+
+  return value !== null && value !== undefined && value !== ''
+}
+
 const branchSelect = (value, preserveSelection = false) => {
   branch_id.value = Number(value) > 0 ? value : null
   if (preserveSelection) {
@@ -1352,6 +1364,10 @@ function fetchHolidays(value) {
 }
 
 const removeBranch = (value) => {
+  if (hasSelectionValue(value)) {
+    return
+  }
+
   employee_id.value = null
   start_date_time.value = null
   end_time_input.value = ''
@@ -1409,7 +1425,11 @@ const employeeSelect = (value, preserveSelection = false) => {
   })
 }
 
-const removeEmployee = () => {
+const removeEmployee = (value) => {
+  if (hasSelectionValue(value)) {
+    return
+  }
+
   employee_id.value = null
   start_date_time.value = null
   end_time_input.value = ''
@@ -1469,7 +1489,11 @@ const slotSelect = () => {
   syncEndTimeState()
 }
 
-const removeSlot = () => {
+const removeSlot = (value) => {
+  if (hasSelectionValue(value)) {
+    return
+  }
+
   start_date_time.value = null
   end_time_input.value = ''
   end_time_error.value = ''
