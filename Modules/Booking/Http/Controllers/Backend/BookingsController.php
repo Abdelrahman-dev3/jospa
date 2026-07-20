@@ -1198,24 +1198,32 @@ public function index_list(Request $request)
                     return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
                 }
 
-                $booking->update($request->all());
+                $booking->update($request->except([
+                    'services',
+                    'products',
+                    'packages',
+                    'purchase_packages',
+                    'services_id',
+                    'product_variation_id',
+                    'package_id',
+                ]));
 
                 $services = $request->input('services', []);
                 $purchasePackages = $request->input('purchase_packages', []);
 
                 if (is_array($services) && count($services) > 0) {
                     $this->updateBookingService($services, $booking->id);
-                } else {
-                    $this->updateExistingBookingSchedule($booking, $request);
                 }
+
+                $this->updateExistingBookingSchedule($booking, $request);
 
                 if (is_array($purchasePackages) && count($purchasePackages) > 0) {
                     $this->updateBookingPackage($purchasePackages, $booking->id);
-                } elseif (! (is_array($services) && count($services) > 0)) {
-                    BookingPackages::where('booking_id', $booking->id)->update([
-                        'employee_id' => $request->input('employee_id'),
-                    ]);
                 }
+
+                BookingPackages::where('booking_id', $booking->id)->update([
+                    'employee_id' => $request->input('employee_id'),
+                ]);
 
                 // FIX: reject the update if it results in a double-booked employee,
                 // an internal overlap, or a slot outside the employee's availability.
@@ -1239,9 +1247,11 @@ public function index_list(Request $request)
     {
         $startDateTime = $request->input('start_date_time');
         $employeeId = $request->input('employee_id');
+        $branchId = $request->input('branch_id');
 
         $booking->update([
             'start_date_time' => $startDateTime,
+            'branch_id' => $branchId ?: $booking->branch_id,
         ]);
 
         $nextStart = Carbon::parse($startDateTime);

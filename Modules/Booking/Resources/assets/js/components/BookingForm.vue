@@ -293,7 +293,7 @@
             <span>{{ formatCurrencyVue(SUB_TOTAL_SERVICE_AMOUNT) }}</span>
           </div>
           <div class="d-grid gap-3" v-if="canSaveBooking">
-            <button :disabled="IS_SUBMITED || !canSubmitBooking" :class="`btn ${canSubmitBooking ? 'btn-primary' : 'disabled btn-gray'} btn-lg rounded-0 d-block`" @click="formSubmit">
+            <button type="button" :disabled="IS_SUBMITED || !canSubmitBooking" :class="`btn ${canSubmitBooking ? 'btn-primary' : 'disabled btn-gray'} btn-lg rounded-0 d-block`" @click="formSubmit">
               <template v-if="IS_SUBMITED">
                 <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 {{ $t('booking.loading') }}
@@ -1204,15 +1204,25 @@ const dateChange = () => {
   end_time_error.value = ''
   is_end_time_manual.value = false
   slots.value = []
-  service.value = { options: [], list: [] }
-  if (!isPaidBooking.value) {
-    resetServices()
-  }
 
   loadAvailableEmployees().then(() => {
-    if (employee_id.value) {
-      getSlots().then(() => restoreSlotIfAvailable(previousSlotValue))
+    if (!employee_id.value) {
+      service.value = { options: [], list: [] }
+      if (!isPaidBooking.value) {
+        resetServices()
+      }
+      return
     }
+
+    fetchEmployeeServices(employee_id.value)
+      .then((data) => {
+        if (!isPaidBooking.value) {
+          syncServicesForSelectedEmployee(data.list || [], employee_id.value)
+        }
+
+        return getSlots()
+      })
+      .then(() => restoreSlotIfAvailable(previousSlotValue))
   })
 }
 
@@ -1287,6 +1297,22 @@ const loadAvailableEmployees = () => {
     ensureCalendarPresetOptions()
   }).finally(() => {
     IS_EMPLOYEES_LOADING.value = false
+  })
+}
+
+const fetchEmployeeServices = (employeeValue) => {
+  if (!employeeValue || !branch_id.value) {
+    service.value = { options: [], list: [] }
+    return Promise.resolve({ options: [], list: [] })
+  }
+
+  return useSelect({ url: SERVICE_LIST, data: { id: employeeValue, branch_id: branch_id.value } }, {
+    value: 'service_id',
+    label: 'service_name'
+  }).then((data) => {
+    service.value = data
+    ensureCalendarPresetOptions()
+    return data
   })
 }
 
@@ -1368,12 +1394,7 @@ const employeeSelect = (value, preserveSelection = false) => {
     }
   }
 
-  useSelect({ url: SERVICE_LIST, data: { id: value, branch_id: branch_id.value } }, {
-    value: 'service_id',
-    label: 'service_name'
-  }).then((data) => {
-    service.value = data
-    ensureCalendarPresetOptions()
+  fetchEmployeeServices(value).then((data) => {
     if (!preserveSelection) {
       syncServicesForSelectedEmployee(data.list || [], value)
     }
@@ -1935,6 +1956,11 @@ const canSubmitBooking = computed(() => {
 const formSubmit = handleSubmit((values) => {
   if (!IS_SUBMITED.value) {
     IS_SUBMITED.value = true
+    values['start_date_time'] = start_date_time.value
+    values['employee_id'] = employee_id.value
+    values['branch_id'] = branch_id.value
+    values['user_id'] = user_id.value
+    values['services_id'] = services_id.value
     values['services'] = selectedService.value
     values['products'] = selectedProduct.value
     values['packages'] = selectedPackage.value
