@@ -231,7 +231,7 @@ class OdooBookingSyncService
                 ],
                 'employee' => [
                     'id' => $employee->id ?? null,
-                    'name' => $employee?->full_name,
+                    'name' => $employee?->first_name . ' ' . $employee?->last_name,
                 ],
                 'location' => [
                     'id' => $branch->id ?? null,
@@ -272,7 +272,7 @@ class OdooBookingSyncService
                 'invoice_id' => $invoice->id,
                 'user_id' => (int) $giftCard->user_id,
                 'ref' => $giftCard->ref,
-                'buyer_name' => $user?->full_name,
+                'buyer_name' => $user?->first_name . ' ' . $user?->last_name,
                 'buyer_email' => $user?->email,
                 'buyer_phone' => $user?->mobile,
                 'sender_name' => $giftCard->sender_name,
