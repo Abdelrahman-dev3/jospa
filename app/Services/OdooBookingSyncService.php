@@ -213,7 +213,7 @@ class OdooBookingSyncService
                 'bookingInfo_id' => $invoice->id,
                 'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
                 'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
-                'client_name' => $user?->full_name,
+                'client_name' => $user?->first_name . ' ' . $user?->last_name,
                 'client_email' => $user?->email,
                 'client_phone' => $user?->mobile,
                 'notes' => $booking->note,
