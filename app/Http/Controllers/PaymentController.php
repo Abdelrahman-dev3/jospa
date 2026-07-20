@@ -89,6 +89,17 @@ class PaymentController extends Controller
         $method = $request->get('paymentMethod');
         $isPayNow = $request->ids ? 'payment' : 'cart';
 
+        if ($this->isComingSoonPaymentChoice($request)) {
+            $message = $this->comingSoonPaymentMessage();
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => $message], 422);
+            }
+
+            throw ValidationException::withMessages([
+                'paymentMethod' => $message,
+            ]);
+        }
+
         if (! $this->isPaymentMethodEnabled($method)) {
             $message = __('messages.invalid_payment_method');
             if ($request->expectsJson()) {
@@ -150,5 +161,24 @@ class PaymentController extends Controller
         }
 
         return (FrontendPaymentSettings::paymentMethods()[$method] ?? 0) === 1;
+    }
+
+    private function isComingSoonPaymentChoice(Request $request): bool
+    {
+        $method = (string) $request->get('paymentMethod', '');
+        $brand = strtoupper((string) $request->get('brand', ''));
+
+        if (in_array($method, ['tabby', 'tamara'], true)) {
+            return true;
+        }
+
+        return $method === 'card' && $brand === 'MADA';
+    }
+
+    private function comingSoonPaymentMessage(): string
+    {
+        return app()->getLocale() === 'ar'
+            ? 'وسيلة الدفع هذه ستكون متاحة قريبًا.'
+            : 'This payment method will be available soon.';
     }
 }

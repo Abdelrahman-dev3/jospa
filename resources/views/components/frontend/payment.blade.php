@@ -12,6 +12,10 @@
         'gatewayDiscounts' => [],
         'tapPaymentSources' => [],
     ])
+@php
+    $comingSoonPaymentMethods = ['tabby', 'tamara'];
+    $madaComingSoon = true;
+@endphp
   <style>
     :root{
       --gold:#BF9456;
@@ -246,6 +250,16 @@
       border-color:var(--gold);
       background:#fff6e8;
       box-shadow:0 8px 20px rgba(191, 148, 86, 0.14);
+    }
+
+    .hyperpay-brand-option.is-coming-soon{
+      cursor:not-allowed;
+    }
+
+    .hyperpay-brand-option.is-coming-soon .hyperpay-brand-box{
+      background:#fbf7ef;
+      border-style:dashed;
+      opacity:.82;
     }
 
     .hyperpay-brand-title{
@@ -781,14 +795,17 @@
                                         </span>
                                     </span>
                                 </label>
-                                <label class="hyperpay-brand-option">
-                                    <input type="radio" name="cardBrandChoice" value="MADA">
+                                <label class="hyperpay-brand-option {{ $madaComingSoon ? 'is-coming-soon' : '' }}" {{ $madaComingSoon ? 'data-coming-soon=true' : '' }}>
+                                    <input type="radio" name="cardBrandChoice" value="MADA" {{ $madaComingSoon ? 'disabled' : '' }}>
                                     <span class="hyperpay-brand-box">
                                         <span class="hyperpay-brand-title">Mada</span>
                                         <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع عبر مدى باستخدام الربط المخصص لها' : 'Pay using the dedicated Mada flow' }}</span>
                                         <span class="hyperpay-brand-icons">
                                             <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                         </span>
+                                        @if($madaComingSoon)
+                                            <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
+                                        @endif
                                     </span>
                                 </label>
                             </div>
@@ -813,9 +830,9 @@
 
                     @if(($paymentMethods['tabby'] ?? 1) == 1)
                         <!-- METHOD: Tabby -->
-                        <div class="method payment-method-card" data-method="tabby" tabindex="0">
+                        <div class="method payment-method-card {{ in_array('tabby', $comingSoonPaymentMethods, true) ? 'is-coming-soon' : '' }}" data-method="tabby" {{ in_array('tabby', $comingSoonPaymentMethods, true) ? 'data-coming-soon=true' : '' }} tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }}>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tabby" {{ $defaultPaymentMethod === 'tabby' ? 'checked' : '' }} {{ in_array('tabby', $comingSoonPaymentMethods, true) ? 'disabled' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.installments_4')}}
@@ -827,15 +844,18 @@
                             </div>
                             <div class="payment-brand-group">
                                 <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tabby (2).png')}}" alt="tabby">
+                                @if(in_array('tabby', $comingSoonPaymentMethods, true))
+                                    <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
+                                @endif
                             </div>
                         </div>
                     @endif
 
                     @if(($paymentMethods['tamara'] ?? 1) == 1)
                         <!-- METHOD: Tamara -->
-                        <div class="method payment-method-card" data-method="tamara" tabindex="0">
+                        <div class="method payment-method-card {{ in_array('tamara', $comingSoonPaymentMethods, true) ? 'is-coming-soon' : '' }}" data-method="tamara" {{ in_array('tamara', $comingSoonPaymentMethods, true) ? 'data-coming-soon=true' : '' }} tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }}>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="tamara" {{ $defaultPaymentMethod === 'tamara' ? 'checked' : '' }} {{ in_array('tamara', $comingSoonPaymentMethods, true) ? 'disabled' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{__('messagess.split_bill_4_payments')}}
@@ -847,6 +867,9 @@
                             </div>
                             <div class="payment-brand-group">
                                 <img class="payment-brand-logo is-wide" src="{{asset('images/icons/tmara.png')}}" alt="tamara">
+                                @if(in_array('tamara', $comingSoonPaymentMethods, true))
+                                    <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
+                                @endif
                             </div>
                         </div>
                     @endif
@@ -1079,6 +1102,44 @@
                 syncPaymentBrand();
                 updateTotal();
             });
+        });
+
+        const madaBrandLabel = document.querySelector('.hyperpay-brand-option[data-coming-soon="true"]');
+        const madaBrandInput = madaBrandLabel?.querySelector('input[name="cardBrandChoice"]');
+
+        if (madaBrandInput?.checked) {
+            const firstAvailableBrand = document.querySelector('input[name="cardBrandChoice"]:not(:disabled)');
+            if (firstAvailableBrand) {
+                firstAvailableBrand.checked = true;
+            }
+        }
+
+        madaBrandLabel?.addEventListener('click', function (event) {
+            event.preventDefault();
+
+            const firstAvailableBrand = document.querySelector('input[name="cardBrandChoice"]:not(:disabled)');
+            if (firstAvailableBrand) {
+                firstAvailableBrand.checked = true;
+            }
+
+            syncPaymentBrand();
+            showComingSoonNotification();
+        });
+
+        madaBrandLabel?.addEventListener('keydown', function (event) {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+            }
+
+            event.preventDefault();
+
+            const firstAvailableBrand = document.querySelector('input[name="cardBrandChoice"]:not(:disabled)');
+            if (firstAvailableBrand) {
+                firstAvailableBrand.checked = true;
+            }
+
+            syncPaymentBrand();
+            showComingSoonNotification();
         });
 
         syncPaymentBrand();
