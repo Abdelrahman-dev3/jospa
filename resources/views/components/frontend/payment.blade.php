@@ -781,6 +781,7 @@
                                 <div class="payment-brand-group">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
+                                    <span class="payment-brand-pill">STC Pay</span>
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
@@ -807,6 +808,16 @@
                                         @if($madaComingSoon)
                                             <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
                                         @endif
+                                    </span>
+                                </label>
+                                <label class="hyperpay-brand-option">
+                                    <input type="radio" name="cardBrandChoice" value="STCPAY" {{ $defaultCardBrand === 'STCPAY' ? 'checked' : '' }}>
+                                    <span class="hyperpay-brand-box">
+                                        <span class="hyperpay-brand-title">STC Pay</span>
+                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع عبر محفظة STC Pay' : 'Pay using STC Pay wallet' }}</span>
+                                        <span class="hyperpay-brand-icons">
+                                            <span class="payment-brand-pill">STC Pay</span>
+                                        </span>
                                     </span>
                                 </label>
                             </div>

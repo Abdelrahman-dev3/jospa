@@ -26,7 +26,8 @@ class PaymentController extends Controller
         
         $productPrice = $productCount = $GifttCount = $GiftPrice = 0;
         
-        $cartproduct = [];
+        $cartproduct = collect();
+        $gifts = collect();
         
         if($isPayNow == 'payment'){
             $cartservice = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service','service.employee','branch:id,name,description',]);
@@ -42,6 +43,14 @@ class PaymentController extends Controller
             $gifts = GiftCard::where('user_id', $userId)->where('payment_status', 0 )->get();
             $GifttCount = $gifts->count();
             $GiftPrice = $gifts->sum(fn($g) => $g->subtotal ?? 0);
+        }
+
+        $hasPayableItems = $isPayNow === 'payment'
+            ? $cartservice->isNotEmpty()
+            : $cartservice->isNotEmpty() || $cartproduct->isNotEmpty() || $gifts->isNotEmpty();
+
+        if (! $hasPayableItems) {
+            return redirect()->route('cart.page')->with('error', __('messages.cart_empty'));
         }
 
         $servicePrice = $cartservice->sum(function ($item) {

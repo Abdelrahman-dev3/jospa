@@ -165,6 +165,9 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         ]);
 
         $buyerName = $user->full_name ?? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+        $email = config('tabby.mode')=='test'
+    ? 'otp.success@tabby.ai'
+    : $user->email;
         $payload = [
             'merchant_code' => $merchantCode,
             'payment'       => [
@@ -174,7 +177,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                 'buyer'       => [
                     'phone' => $user->mobile,
                     'name'  => $buyerName,
-                    'email' => $user->email,
+                    'email' => $email,
                 ],
             ],
             'order'         => [
@@ -310,9 +313,10 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
     {
         $secretKey = config('tabby.secret_key');
         $baseUrl = rtrim(config('tabby.base_url', 'https://api.tabby.ai'), '/');
-        $orderReference = (string) (data_get($charge, 'order.reference_id') ?? $paymentId);
+        //$orderReference = (string) (data_get($charge, 'order.reference_id') ?? $paymentId);
+        $orderReference = (string) data_get($charge, 'order.reference_id')!='' ? data_get($charge, 'order.reference_id') : $paymentId;
         $amount = (float) (data_get($charge, 'amount') ?? data_get($charge, 'payment.amount') ?? 0);
-
+        //dd((string) (data_get($charge, 'order.reference_id') ?? $paymentId);
         $payload = [
             'amount' => $amount,
             'reference_id' => $orderReference,
@@ -328,12 +332,14 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             ]],
         ];
 
+        //dd($payload);
+
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $secretKey,
             'Content-Type'  => 'application/json',
             'Accept'        => 'application/json',
         ])->post($baseUrl . '/api/v2/payments/' . $paymentId . '/captures', $payload);
-
+        //dd($response->json());
         if (! $response->successful()) {
             throw new \Exception('Tabby capture failed: ' . $response->body());
         }
