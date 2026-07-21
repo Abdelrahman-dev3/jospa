@@ -2,6 +2,7 @@
 
 namespace App\Services\Payment\Strategies;
 
+use App\Models\PaymentAttempt;
 use App\Services\HyperpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -59,23 +60,25 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 );
             }
 
+            $cachedPaymentData = array_merge($data, [
+                'amount'                  => $remainingAmount,
+                'subResult'               => $subResult,
+                'checkout_id'             => $checkoutId,
+                'merchant_transaction_id' => $merchantTransactionId,
+                'callback_url'            => $signedCallbackUrl,
+                'hyperpay_brand'          => $brand, // stored so callback uses the correct entity ID
+            ]);
+
             Cache::put(
                 $this->paymentCacheKey($merchantTransactionId),
-                array_merge($data, [
-                    'amount'                  => $remainingAmount,
-                    'subResult'               => $subResult,
-                    'checkout_id'             => $checkoutId,
-                    'merchant_transaction_id' => $merchantTransactionId,
-                    'callback_url'            => $signedCallbackUrl,
-                    'hyperpay_brand'          => $brand, // stored so callback uses the correct entity ID
-                ]),
+                $cachedPaymentData,
                 now()->addMinutes(self::CACHE_TTL_MINUTES)
             );
 
             $this->markPaymentAttemptPending($data['attempt_id'] ?? null, [
                 'merchant_reference' => $merchantTransactionId,
                 'gateway_checkout_id' => $checkoutId,
-                'gateway_response' => $checkout,
+                'gateway_response' => $this->buildAttemptGatewayResponse($checkout, $cachedPaymentData),
             ]);
 
             $paymentUrl = $this->buildHostedCheckoutUrl($checkoutId, $merchantTransactionId);
@@ -110,7 +113,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
         $merchantTransactionId = (string) $request->get('mtid');
         $checkoutId = (string) $request->get('checkoutId');
-        $data = Cache::get($this->paymentCacheKey($merchantTransactionId));
+        $data = $this->resolvePaymentData($merchantTransactionId);
 
         if (! $data || ($data['checkout_id'] ?? null) !== $checkoutId) {
             return $this->respondFailure(
@@ -153,7 +156,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
         $merchantTransactionId = (string) $request->get('mtid', '');
         $fallbackBrand = (string) $request->get('brand', '');
 
-        if ($resourcePath === '' || $merchantTransactionId === '') {
+        if ($resourcePath === '') {
             return $this->respondFailure(
                 $request,
                 app()->getLocale() === 'ar'
@@ -195,9 +198,9 @@ class CardPaymentStrategy extends BasePaymentStrategy
         try {
             $hyperpay = app(HyperpayService::class);
 
-            // Load cache first so we know which brand/entity was used at checkout creation
-            $cacheKey = $this->paymentCacheKey($merchantTransactionId);
-            $data = Cache::get($cacheKey);
+            // Load cache first; fall back to payment_attempts if cache expired or was cleared.
+            $cacheKey = $merchantTransactionId !== '' ? $this->paymentCacheKey($merchantTransactionId) : null;
+            $data = $this->resolvePaymentData($merchantTransactionId);
             $brand = $this->normalizeHyperpayBrand($data['hyperpay_brand'] ?? $fallbackBrand ?? 'VISA');
 
             // Try to get payment result from callback parameters first
@@ -206,16 +209,16 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
             // If no payment data in callback, fall back to API call
             if (! $payment) {
-                $payment = $this->fetchPaymentStatusWithFallback($hyperpay, $resourcePath, $brand, $merchantTransactionId, $request->all());
+                $payment = $this->fetchPaymentStatusWithFallback($hyperpay, $resourcePath, $brand, $merchantTransactionId ?: 'unknown', $request->all());
             }
 
             $resultCode = (string) data_get($payment, 'result.code', '');
 
             // Hyperpay may return the merchantTransactionId in the payment response
             $resolvedMtid = (string) (data_get($payment, 'merchantTransactionId') ?: $merchantTransactionId);
-            if ($resolvedMtid !== $merchantTransactionId) {
+            if ($resolvedMtid !== '' && $resolvedMtid !== $merchantTransactionId) {
                 $cacheKey = $this->paymentCacheKey($resolvedMtid);
-                $data = Cache::get($cacheKey) ?? $data;
+                $data = $this->resolvePaymentData($resolvedMtid) ?? $data;
                 $merchantTransactionId = $resolvedMtid;
             }
             if (! $data) {
@@ -240,7 +243,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
                     'gateway_response' => $payment,
                     'callback_payload' => $request->all(),
                 ]);
-                Cache::forget($cacheKey);
+                $this->forgetPaymentCache($cacheKey);
 
                 return $this->respondFailure(
                     $request,
@@ -272,7 +275,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
                     'gateway_response' => $payment,
                     'callback_payload' => $request->all(),
                 ]);
-                Cache::forget($cacheKey);
+                $this->forgetPaymentCache($cacheKey);
 
                 return $this->respondFailure($request, $message, 409);
             }
@@ -290,7 +293,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
                     'gateway_response' => $payment,
                     'callback_payload' => $request->all(),
                 ]);
-                Cache::forget($cacheKey);
+                $this->forgetPaymentCache($cacheKey);
 
                 return $this->respondFailure(
                     $request,
@@ -309,7 +312,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
                     'gateway_response' => $payment,
                     'callback_payload' => $request->all(),
                 ]);
-                Cache::forget($cacheKey);
+                $this->forgetPaymentCache($cacheKey);
 
                 return $this->respondSuccess($request, 'Payment already finalized.', [
                     'payment_id' => data_get($payment, 'id'),
@@ -337,7 +340,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 ]
             );
 
-            Cache::forget($cacheKey);
+            $this->forgetPaymentCache($cacheKey);
 
             return $this->respondSuccess($request, 'Payment successful.', [
                 'payment_id' => data_get($payment, 'id'),
@@ -472,6 +475,125 @@ class CardPaymentStrategy extends BasePaymentStrategy
     private function paymentCacheKey(string $merchantTransactionId): string
     {
         return 'hyperpay_payment_' . $merchantTransactionId;
+    }
+
+    private function buildAttemptGatewayResponse(array $checkout, array $paymentData): array
+    {
+        return [
+            'checkout' => $checkout,
+            'hyperpay_brand' => $paymentData['hyperpay_brand'] ?? 'VISA',
+            'payment_context' => [
+                'user_id' => $paymentData['user_id'] ?? null,
+                'page' => $paymentData['page'] ?? 'cart',
+                'payment_method' => $paymentData['payment_method'] ?? 'card',
+                'couponCode' => $paymentData['couponCode'] ?? '',
+                'submethods' => $paymentData['submethods'] ?? [],
+                'final_before_sub' => $paymentData['final_before_sub'] ?? 0,
+                'discountAmount' => $paymentData['discountAmount'] ?? 0,
+                'couponDiscountAmount' => $paymentData['couponDiscountAmount'] ?? 0,
+                'paymentGatewayDiscountAmount' => $paymentData['paymentGatewayDiscountAmount'] ?? 0,
+                'paymentGatewayDiscountMethod' => $paymentData['paymentGatewayDiscountMethod'] ?? null,
+                'paymentGatewayDiscountLabel' => $paymentData['paymentGatewayDiscountLabel'] ?? null,
+                'tax' => $paymentData['tax'] ?? 0,
+                'cart_ids' => $paymentData['cart_ids'] ?? [],
+                'gift_ids' => $paymentData['gift_ids'] ?? [],
+                'product_ids' => $paymentData['product_ids'] ?? [],
+                'amount' => $paymentData['amount'] ?? 0,
+                'subResult' => $paymentData['subResult'] ?? [],
+                'checkout_id' => $paymentData['checkout_id'] ?? null,
+                'merchant_transaction_id' => $paymentData['merchant_transaction_id'] ?? null,
+                'callback_url' => $paymentData['callback_url'] ?? null,
+                'hyperpay_brand' => $paymentData['hyperpay_brand'] ?? 'VISA',
+                'attempt_id' => $paymentData['attempt_id'] ?? null,
+            ],
+        ];
+    }
+
+    private function resolvePaymentData(string $merchantTransactionId): ?array
+    {
+        if ($merchantTransactionId === '') {
+            return null;
+        }
+
+        $cached = Cache::get($this->paymentCacheKey($merchantTransactionId));
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $attempt = PaymentAttempt::where('gateway', 'hyperpay')
+            ->where('merchant_reference', $merchantTransactionId)
+            ->latest('id')
+            ->first();
+
+        return $attempt ? $this->restorePaymentDataFromAttempt($attempt) : null;
+    }
+
+    private function restorePaymentDataFromAttempt(PaymentAttempt $attempt): array
+    {
+        $gatewayResponse = is_array($attempt->gateway_response) ? $attempt->gateway_response : [];
+        $context = data_get($gatewayResponse, 'payment_context', []);
+        $context = is_array($context) ? $context : [];
+        $submethods = $context['submethods'] ?? [
+            'wallet' => (bool) $attempt->wallet_used,
+            'loyalty' => (bool) $attempt->loyalty_used,
+            'gift_code' => $attempt->gift_code,
+        ];
+        $submethods = is_array($submethods) ? $submethods : [];
+
+        $subResult = $context['subResult'] ?? [
+            'remaining_amount' => (float) $attempt->amount,
+            'used_wallet' => 0,
+            'used_loyalty' => 0,
+            'used_gift' => 0,
+        ];
+        $subResult = is_array($subResult) ? $subResult : [];
+
+        return [
+            'user_id' => (int) ($context['user_id'] ?? $attempt->user_id),
+            'page' => (string) ($context['page'] ?? $attempt->page ?? 'cart'),
+            'payment_method' => (string) ($context['payment_method'] ?? $attempt->payment_method ?? 'card'),
+            'couponCode' => (string) ($context['couponCode'] ?? $attempt->coupon_code ?? ''),
+            'submethods' => [
+                'wallet' => (bool) ($submethods['wallet'] ?? $attempt->wallet_used),
+                'loyalty' => (bool) ($submethods['loyalty'] ?? $attempt->loyalty_used),
+                'gift_code' => $submethods['gift_code'] ?? $attempt->gift_code,
+            ],
+            'final_before_sub' => (float) ($context['final_before_sub'] ?? $attempt->amount),
+            'discountAmount' => (float) ($context['discountAmount'] ?? $attempt->discount_amount),
+            'couponDiscountAmount' => (float) ($context['couponDiscountAmount'] ?? 0),
+            'paymentGatewayDiscountAmount' => (float) ($context['paymentGatewayDiscountAmount'] ?? 0),
+            'paymentGatewayDiscountMethod' => $context['paymentGatewayDiscountMethod'] ?? null,
+            'paymentGatewayDiscountLabel' => $context['paymentGatewayDiscountLabel'] ?? null,
+            'tax' => (float) ($context['tax'] ?? 0),
+            'cart_ids' => $this->normalizeIdArray($context['cart_ids'] ?? $attempt->cart_ids ?? []),
+            'gift_ids' => $this->normalizeIdArray($context['gift_ids'] ?? $attempt->gift_ids ?? []),
+            'product_ids' => $this->normalizeIdArray($context['product_ids'] ?? []),
+            'amount' => (float) ($context['amount'] ?? $attempt->amount),
+            'subResult' => $subResult,
+            'checkout_id' => (string) ($context['checkout_id'] ?? $attempt->gateway_checkout_id ?? ''),
+            'merchant_transaction_id' => (string) ($context['merchant_transaction_id'] ?? $attempt->merchant_reference ?? ''),
+            'callback_url' => $context['callback_url'] ?? null,
+            'hyperpay_brand' => $this->normalizeHyperpayBrand($context['hyperpay_brand'] ?? data_get($gatewayResponse, 'hyperpay_brand', 'VISA')),
+            'attempt_id' => (int) $attempt->id,
+        ];
+    }
+
+    private function normalizeIdArray(mixed $ids): array
+    {
+        if (! is_array($ids)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static function ($id) {
+            return is_numeric($id) ? (int) $id : null;
+        }, $ids)));
+    }
+
+    private function forgetPaymentCache(?string $cacheKey): void
+    {
+        if ($cacheKey) {
+            Cache::forget($cacheKey);
+        }
     }
 
     private function normalizeHyperpayBrand(mixed $brand): string

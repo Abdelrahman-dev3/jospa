@@ -14,7 +14,8 @@
     ])
 @php
     $comingSoonPaymentMethods = ['tabby', 'tamara'];
-    $madaComingSoon = true;
+    $madaComingSoon = (int) ($tapPaymentSources['src_sa.mada'] ?? 1) !== 1;
+    $defaultCardBrand = (! $madaComingSoon && $defaultPaymentSource === 'src_sa.mada') ? 'MADA' : 'VISA';
 @endphp
   <style>
     :root{
@@ -726,7 +727,7 @@
     <input type="hidden" name="total_price" id="form_total_price" value="0">
     <input type="hidden" name="total_amount" id="form_total_amount" value="0">
     <input type="hidden" name="discount_amount" id="form_discount_amount" value="0">
-    <input type="hidden" name="brand" id="paymentBrand" value="VISA">
+    <input type="hidden" name="brand" id="paymentBrand" value="{{ $defaultCardBrand }}">
 
     <div class="page-wrap">
         <div class="row gx-4 gy-4">
@@ -764,7 +765,7 @@
 
                     @if(($paymentMethods['card'] ?? 1) == 1)
                         <!-- METHOD: CARD -->
-                        <div class="method payment-method-card" data-method="card" data-default-brand="VISA" tabindex="0">
+                        <div class="method payment-method-card" data-method="card" data-default-brand="{{ $defaultCardBrand }}" tabindex="0">
                             <div class="con-card">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" name="paymentMethod" value="card" {{ $defaultPaymentMethod === 'card' ? 'checked' : '' }}>
@@ -785,7 +786,7 @@
                             </div>
                             <div class="hyperpay-brand-selector">
                                 <label class="hyperpay-brand-option">
-                                    <input type="radio" name="cardBrandChoice" value="VISA" checked>
+                                    <input type="radio" name="cardBrandChoice" value="VISA" {{ $defaultCardBrand === 'VISA' ? 'checked' : '' }}>
                                     <span class="hyperpay-brand-box">
                                         <span class="hyperpay-brand-title">{{ app()->getLocale() === 'ar' ? 'بطاقات فيزا وماستركارد' : 'Visa & Mastercard' }}</span>
                                         <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع بالبطاقات البنكية المعتادة' : 'Pay using standard bank cards' }}</span>
@@ -796,7 +797,7 @@
                                     </span>
                                 </label>
                                 <label class="hyperpay-brand-option {{ $madaComingSoon ? 'is-coming-soon' : '' }}" {{ $madaComingSoon ? 'data-coming-soon=true' : '' }}>
-                                    <input type="radio" name="cardBrandChoice" value="MADA" {{ $madaComingSoon ? 'disabled' : '' }}>
+                                    <input type="radio" name="cardBrandChoice" value="MADA" {{ $defaultCardBrand === 'MADA' ? 'checked' : '' }} {{ $madaComingSoon ? 'disabled' : '' }}>
                                     <span class="hyperpay-brand-box">
                                         <span class="hyperpay-brand-title">Mada</span>
                                         <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع عبر مدى باستخدام الربط المخصص لها' : 'Pay using the dedicated Mada flow' }}</span>

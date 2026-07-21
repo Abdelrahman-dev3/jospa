@@ -85,7 +85,7 @@
     });
     Route::get('/payment/hyperpay/checkout', [CardPaymentStrategy::class, 'checkout'])->name('hyperpay.checkout');
     Route::get('/payment/callback', [CardPaymentStrategy::class, 'callback'])->name('hyperpay.callback');
-    Route::get('/payment/hyperpay/result', [CardPaymentStrategy::class, 'callbackPlain'])->name('hyperpay.callback.plain');
+    Route::match(['get', 'post'], '/payment/hyperpay/result', [CardPaymentStrategy::class, 'callbackPlain'])->name('hyperpay.callback.plain');
 
 
     Route::controller(EmployeesController::class)->group(function () {

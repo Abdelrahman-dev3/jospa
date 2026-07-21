@@ -100,7 +100,7 @@ class PaymentController extends Controller
             ]);
         }
 
-        if (! $this->isPaymentMethodEnabled($method)) {
+        if (! $this->isPaymentMethodEnabled($method, $request)) {
             $message = __('messages.invalid_payment_method');
             if ($request->expectsJson()) {
                 return response()->json(['status' => false, 'message' => $message], 422);
@@ -154,25 +154,35 @@ class PaymentController extends Controller
         return app(UrPayPaymentStrategy::class)->cancel($request);
     }
 
-    private function isPaymentMethodEnabled(?string $method): bool
+    private function isPaymentMethodEnabled(?string $method, Request $request): bool
     {
         if (! $method) {
             return false;
         }
 
-        return (FrontendPaymentSettings::paymentMethods()[$method] ?? 0) === 1;
+        if ((FrontendPaymentSettings::paymentMethods()[$method] ?? 0) !== 1) {
+            return false;
+        }
+
+        if ($method !== 'card') {
+            return true;
+        }
+
+        $brand = strtoupper((string) $request->get('brand', 'VISA'));
+        $source = $brand === 'MADA' ? 'src_sa.mada' : 'src_card';
+
+        return FrontendPaymentSettings::isEnabledTapSource($source);
     }
 
     private function isComingSoonPaymentChoice(Request $request): bool
     {
         $method = (string) $request->get('paymentMethod', '');
-        $brand = strtoupper((string) $request->get('brand', ''));
 
         if (in_array($method, ['tabby', 'tamara'], true)) {
             return true;
         }
 
-        return $method === 'card' && $brand === 'MADA';
+        return false;
     }
 
     private function comingSoonPaymentMessage(): string
