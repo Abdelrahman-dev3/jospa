@@ -13,7 +13,7 @@
         'tapPaymentSources' => [],
     ])
 @php
-    $comingSoonPaymentMethods = ['tamara'];
+    $comingSoonPaymentMethods = [];
     $madaComingSoon = (int) ($tapPaymentSources['src_sa.mada'] ?? 1) !== 1;
     $defaultCardBrand = (! $madaComingSoon && $defaultPaymentSource === 'src_sa.mada') ? 'MADA' : 'VISA';
 @endphp

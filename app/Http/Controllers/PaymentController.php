@@ -185,12 +185,6 @@ class PaymentController extends Controller
 
     private function isComingSoonPaymentChoice(Request $request): bool
     {
-        $method = (string) $request->get('paymentMethod', '');
-
-        if ($method === 'tamara') {
-            return true;
-        }
-
         return false;
     }
 
