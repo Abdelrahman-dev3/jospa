@@ -14,7 +14,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 {
     public function pay(Request $request, $typePage)
     {
-        $prepared = $this->preparePaymentFlow($request, $typePage, 'urpay');
+        $method = $request->get('paymentMethod', 'urpay');
+        $prepared = $this->preparePaymentFlow($request, $typePage, $method);
         if (isset($prepared['response'])) {
             return $prepared['response'];
         }
@@ -33,7 +34,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             }
         }
 
-        [, $data] = $this->createPaymentAttempt($request, $data, 'urpay', $remainingAmount);
+        [, $data] = $this->createPaymentAttempt($request, $data, $method, $remainingAmount);
         $merchantUrls = $this->buildSignedMerchantUrls($request, $typePage, $data);
 
         try {
@@ -229,7 +230,8 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'urpay', $user->id);
+        $paymentMethod = $context['payment_method'] ?? 'urpay';
+        $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], $paymentMethod, $user->id);
         if (isset($totalData['error'])) {
             return $this->respondFailure($request, $totalData['error'], 422);
         }
@@ -270,7 +272,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'page' => $context['page'],
             'cart_ids' => $totalData['cart_ids'] ?? [],
             'gift_ids' => $totalData['gift_ids'] ?? [],
-            'payment_method' => 'urpay',
+            'payment_method' => $paymentMethod,
             'couponCode' => $context['couponCode'] ?? '',
             'attempt_id' => $context['attempt_id'] ?? null,
         ], $subResult, [
@@ -586,6 +588,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'loyalty' => $request->boolean('loyalty') ? 1 : null,
             'gift_code' => $request->get('gift_code'),
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
+            'payment_method' => $data['payment_method'] ?? 'urpay',
         ], function ($value) {
             return $value !== null && $value !== '';
         });
@@ -657,6 +660,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'loyalty' => $request->boolean('loyalty'),
             'gift_code' => $request->get('gift_code'),
             'discount_amount' => $discount,
+            'payment_method' => $request->get('payment_method', 'urpay'),
         ];
     }
 

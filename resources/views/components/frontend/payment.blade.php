@@ -13,7 +13,7 @@
         'tapPaymentSources' => [],
     ])
 @php
-    $comingSoonPaymentMethods = ['tabby', 'tamara', 'stcpay'];
+    $comingSoonPaymentMethods = ['tabby', 'tamara'];
     $madaComingSoon = (int) ($tapPaymentSources['src_sa.mada'] ?? 1) !== 1;
     $defaultCardBrand = (! $madaComingSoon && $defaultPaymentSource === 'src_sa.mada') ? 'MADA' : 'VISA';
 @endphp
@@ -829,17 +829,21 @@
                         </div>
 
                         <!-- METHOD: STC Pay through UrPay -->
-                        <div class="method payment-method-card is-coming-soon" data-method="stcpay" data-coming-soon="true" tabindex="0">
+                        <div class="method payment-method-card" data-method="stcpay" tabindex="0">
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="paymentMethod" value="stcpay" disabled>
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="stcpay" {{ $defaultPaymentMethod === 'stcpay' ? 'checked' : '' }}>
                             </div>
                             <div class="flex-fill muted payment-method-copy">
                                 {{ app()->getLocale() === 'ar' ? 'الدفع عبر STC Pay' : 'Pay with STC Pay' }}
+                                @if($urpayDiscountLabel = $formatGatewayDiscount('urpay'))
+                                    <span class="gateway-discount-note">
+                                        {{ $urpayDiscountLabel }}
+                                    </span>
+                                @endif
                             </div>
                             <div class="payment-brand-group">
                                 <span class="payment-brand-pill">STC Pay</span>
                                 <span class="payment-brand-pill">UrPay</span>
-                                <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
                             </div>
                         </div>
                     @endif

@@ -122,7 +122,7 @@ class PaymentController extends Controller
 
         $strategy = match ($method) {
             'card' => app(CardPaymentStrategy::class),
-            'urpay' => app(UrPayPaymentStrategy::class),
+            'urpay', 'stcpay' => app(UrPayPaymentStrategy::class),
             'tabby' => app(TabbyPaymentStrategy::class),
             'tamara' => app(TamaraPaymentStrategy::class),
             default => throw ValidationException::withMessages([
@@ -169,7 +169,9 @@ class PaymentController extends Controller
             return false;
         }
 
-        if ((FrontendPaymentSettings::paymentMethods()[$method] ?? 0) !== 1) {
+        $checkMethod = $method === 'stcpay' ? 'urpay' : $method;
+
+        if ((FrontendPaymentSettings::paymentMethods()[$checkMethod] ?? 0) !== 1) {
             return false;
         }
 
@@ -188,7 +190,6 @@ class PaymentController extends Controller
         return in_array((string) $request->get('paymentMethod', ''), [
             'tabby',
             'tamara',
-            'stcpay',
         ], true);
     }
 
