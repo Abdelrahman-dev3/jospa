@@ -185,7 +185,11 @@ class PaymentController extends Controller
 
     private function isComingSoonPaymentChoice(Request $request): bool
     {
-        return false;
+        return in_array((string) $request->get('paymentMethod', ''), [
+            'tabby',
+            'tamara',
+            'stcpay',
+        ], true);
     }
 
     private function comingSoonPaymentMessage(): string
