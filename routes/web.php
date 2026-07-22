@@ -250,6 +250,9 @@
             });
 
             Route::controller(ReportsController::class)->group(function () {
+                Route::get('sales-by-date', 'sales_by_date_report')->name('reports.sales-by-date');
+                Route::get('sales-by-date-index-data', 'sales_by_date_report_index_data')->name('reports.sales-by-date.index_data');
+                Route::get('sales-by-date-export', 'sales_by_date_report_export')->name('reports.sales-by-date.export');
                 Route::get('daily-booking-report', 'daily_booking_report')->name('reports.daily-booking-report');
                 Route::get('daily-booking-report-index-data', 'daily_booking_report_index_data')->name('reports.daily-booking-report.index_data');
                 Route::get('overall-booking-report', 'overall_booking_report')->name('reports.overall-booking-report');

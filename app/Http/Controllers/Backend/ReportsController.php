@@ -80,6 +80,214 @@ class ReportsController extends Controller
         return view('backend.reports.daily-booking-report', compact('module_title', 'module_name', 'export_import', 'export_columns', 'export_url'));
     }
 
+    public function sales_by_date_report(Request $request)
+    {
+        $module_title = __('report.title_sales_report');
+        $module_name = 'sales-by-date-report';
+
+        return view('backend.reports.sales-by-date-report', compact('module_title', 'module_name'));
+    }
+
+    public function sales_by_date_report_index_data(Request $request)
+    {
+        $preset = $request->input('preset', 'this_month');
+        $customRange = $request->input('date_range');
+
+        [$startDate, $endDate] = $this->resolveReportDates($preset, $customRange);
+
+        $orderQuery = OrderGroup::query()->with('order.orderItems');
+        if ($startDate) {
+            $orderQuery->whereDate('created_at', '>=', $startDate->toDateString());
+        }
+        if ($endDate) {
+            $orderQuery->whereDate('created_at', '<=', $endDate->toDateString());
+        }
+        $orders = $orderQuery->get();
+
+        $bookingQuery = BookingTransaction::with(['booking.services', 'booking.products', 'booking.bookingPackages'])
+            ->where('payment_status', 1);
+        if ($startDate) {
+            $bookingQuery->whereDate('created_at', '>=', $startDate->toDateString());
+        }
+        if ($endDate) {
+            $bookingQuery->whereDate('created_at', '<=', $endDate->toDateString());
+        }
+        $bookings = $bookingQuery->get();
+
+        $periodMap = [];
+        if ($startDate && $endDate) {
+            $cursor = clone $startDate;
+            while ($cursor <= $endDate) {
+                $dateStr = $cursor->format('Y-m-d');
+                $periodMap[$dateStr] = [
+                    'date' => $dateStr,
+                    'orders_count' => 0,
+                    'items_count' => 0,
+                    'gross_sales' => 0.0,
+                    'net_sales' => 0.0,
+                    'shipping_cost' => 0.0,
+                    'coupons_value' => 0.0,
+                    'refunds_amount' => 0.0,
+                ];
+                $cursor->addDay();
+            }
+        }
+
+        foreach ($orders as $og) {
+            $dateStr = optional($og->created_at)->format('Y-m-d');
+            if (! isset($periodMap[$dateStr])) {
+                $periodMap[$dateStr] = [
+                    'date' => $dateStr,
+                    'orders_count' => 0,
+                    'items_count' => 0,
+                    'gross_sales' => 0.0,
+                    'net_sales' => 0.0,
+                    'shipping_cost' => 0.0,
+                    'coupons_value' => 0.0,
+                    'refunds_amount' => 0.0,
+                ];
+            }
+
+            $itemsQty = $og->order && $og->order->orderItems ? $og->order->orderItems->sum('product_qty') : 0;
+            $gross = (float) ($og->sub_total_amount ?? 0) + (float) ($og->total_shipping_cost ?? 0) + (float) ($og->total_tax_amount ?? 0);
+            if ($gross <= 0) {
+                $gross = (float) ($og->grand_total_amount ?? 0) + (float) ($og->total_coupon_discount_amount ?? 0);
+            }
+            $net = (float) ($og->grand_total_amount ?? 0);
+            $shipping = (float) ($og->total_shipping_cost ?? 0);
+            $coupons = (float) ($og->total_coupon_discount_amount ?? 0) + (float) ($og->total_discount_amount ?? 0);
+
+            $periodMap[$dateStr]['orders_count'] += 1;
+            $periodMap[$dateStr]['items_count'] += $itemsQty;
+            $periodMap[$dateStr]['gross_sales'] += $gross;
+            $periodMap[$dateStr]['net_sales'] += $net;
+            $periodMap[$dateStr]['shipping_cost'] += $shipping;
+            $periodMap[$dateStr]['coupons_value'] += $coupons;
+        }
+
+        foreach ($bookings as $tx) {
+            $dateStr = optional($tx->created_at)->format('Y-m-d');
+            if (! isset($periodMap[$dateStr])) {
+                $periodMap[$dateStr] = [
+                    'date' => $dateStr,
+                    'orders_count' => 0,
+                    'items_count' => 0,
+                    'gross_sales' => 0.0,
+                    'net_sales' => 0.0,
+                    'shipping_cost' => 0.0,
+                    'coupons_value' => 0.0,
+                    'refunds_amount' => 0.0,
+                ];
+            }
+
+            $booking = $tx->booking;
+            $serviceAmt = $booking && $booking->services ? $booking->services->sum('service_price') : 0;
+            $productAmt = $booking && $booking->products ? $booking->products->sum(function ($p) {
+                $price = $p->discounted_price && $p->discounted_price > 0 ? $p->discounted_price : $p->product_price;
+                return $price * ($p->product_qty ?? 1);
+            }) : 0;
+            $pkgAmt = $booking && $booking->bookingPackages ? $booking->bookingPackages->sum('package_price') : 0;
+
+            $itemsCount = ($booking && $booking->services ? $booking->services->count() : 0)
+                + ($booking && $booking->products ? $booking->products->count() : 0)
+                + ($booking && $booking->bookingPackages ? $booking->bookingPackages->count() : 0);
+
+            $gross = $serviceAmt + $productAmt + $pkgAmt;
+            $discount = (float) ($tx->discount_amount ?? 0);
+            $net = max(0, $gross - $discount);
+
+            $periodMap[$dateStr]['orders_count'] += 1;
+            $periodMap[$dateStr]['items_count'] += $itemsCount;
+            $periodMap[$dateStr]['gross_sales'] += $gross;
+            $periodMap[$dateStr]['net_sales'] += $net;
+            $periodMap[$dateStr]['coupons_value'] += $discount;
+        }
+
+        ksort($periodMap);
+        $periodList = collect(array_values($periodMap));
+
+        $totalGross = $periodList->sum('gross_sales');
+        $totalNet = $periodList->sum('net_sales');
+        $totalOrders = $periodList->sum('orders_count');
+        $totalItems = $periodList->sum('items_count');
+        $totalShipping = $periodList->sum('shipping_cost');
+        $totalCoupons = $periodList->sum('coupons_value');
+        $totalRefunds = $periodList->sum('refunds_amount');
+
+        $chartCategories = $periodList->pluck('date')->toArray();
+        $chartGross = $periodList->pluck('gross_sales')->map(fn ($v) => round($v, 2))->toArray();
+        $chartNet = $periodList->pluck('net_sales')->map(fn ($v) => round($v, 2))->toArray();
+
+        $tableRows = $periodList->map(function ($row) {
+            return [
+                'date' => $row['date'],
+                'orders_count' => $row['orders_count'],
+                'items_count' => $row['items_count'],
+                'gross_sales' => Currency::format($row['gross_sales']),
+                'net_sales' => Currency::format($row['net_sales']),
+                'shipping_cost' => Currency::format($row['shipping_cost']),
+                'coupons_value' => Currency::format($row['coupons_value']),
+            ];
+        });
+
+        return response()->json([
+            'summary' => [
+                'gross_sales_formatted' => Currency::format($totalGross),
+                'net_sales_formatted' => Currency::format($totalNet),
+                'orders_count' => $totalOrders,
+                'items_count' => $totalItems,
+                'refund_amount_formatted' => Currency::format($totalRefunds),
+                'shipping_cost_formatted' => Currency::format($totalShipping),
+                'coupons_used_formatted' => Currency::format($totalCoupons),
+            ],
+            'chart' => [
+                'categories' => $chartCategories,
+                'gross_sales' => $chartGross,
+                'net_sales' => $chartNet,
+            ],
+            'table_rows' => $tableRows,
+        ]);
+    }
+
+    public function sales_by_date_report_export(Request $request)
+    {
+        $preset = $request->input('preset', 'this_month');
+        $customRange = $request->input('date_range');
+
+        [$startDate, $endDate] = $this->resolveReportDates($preset, $customRange);
+
+        $columns = ['date', 'orders_count', 'items_count', 'gross_sales', 'net_sales', 'shipping_cost', 'coupons_value'];
+
+        return \Excel::download(new \App\Exports\SalesByDateExport($columns, [$startDate, $endDate]), 'sales-by-date-report.csv');
+    }
+
+    private function resolveReportDates(string $preset, ?string $customRange): array
+    {
+        $now = Carbon::now();
+
+        switch ($preset) {
+            case 'last_7_days':
+                return [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay()];
+
+            case 'last_month':
+                $lastMonth = $now->copy()->subMonth();
+                return [$lastMonth->copy()->startOfMonth()->startOfDay(), $lastMonth->copy()->endOfMonth()->endOfDay()];
+
+            case 'this_year':
+                return [$now->copy()->startOfYear()->startOfDay(), $now->copy()->endOfDay()];
+
+            case 'custom':
+                if ($customRange) {
+                    return $this->parseDateRange($customRange);
+                }
+                return [$now->copy()->startOfMonth()->startOfDay(), $now->copy()->endOfDay()];
+
+            case 'this_month':
+            default:
+                return [$now->copy()->startOfMonth()->startOfDay(), $now->copy()->endOfDay()];
+        }
+    }
+
     public function financial_report(Request $request)
     {
         $module_title = __('report.title_financial_report');

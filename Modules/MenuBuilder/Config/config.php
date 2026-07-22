@@ -202,6 +202,14 @@ return [
             'order' => 17,
         ],
         [
+            'start_icon' => 'fa-solid fa-chart-line',
+            'title' => 'report.title_sales_report',
+            'route' => 'backend.reports.sales-by-date',
+            'active' => ['app/sales-by-date'],
+            'permission' => ['daily_booking_report'],
+            'order' => 17,
+        ],
+        [
             'start_icon' => 'fa-solid fa-file-invoice-dollar',
             'title' => 'sidebar.daily_bookings',
             'route' => 'backend.reports.daily-booking-report',
