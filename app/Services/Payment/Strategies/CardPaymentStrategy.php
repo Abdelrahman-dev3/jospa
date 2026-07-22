@@ -602,7 +602,6 @@ class CardPaymentStrategy extends BasePaymentStrategy
 
         return match ($brand) {
             'MADA' => 'MADA',
-            'STCPAY', 'STC_PAY', 'STC' => 'STCPAY',
             'MASTER', 'MASTERCARD', 'VISA', '' => 'VISA',
             default => 'VISA',
         };
@@ -612,7 +611,6 @@ class CardPaymentStrategy extends BasePaymentStrategy
     {
         return match ($brand) {
             'MADA' => ['MADA', ['Mada']],
-            'STCPAY' => ['STCPAY', ['STC Pay']],
             default => ['VISA MASTER', ['Visa', 'Mastercard']],
         };
     }

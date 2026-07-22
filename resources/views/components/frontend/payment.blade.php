@@ -781,7 +781,6 @@
                                 <div class="payment-brand-group">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
-                                    <span class="payment-brand-pill">STC Pay</span>
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
@@ -810,16 +809,6 @@
                                         @endif
                                     </span>
                                 </label>
-                                <label class="hyperpay-brand-option">
-                                    <input type="radio" name="cardBrandChoice" value="STCPAY" {{ $defaultCardBrand === 'STCPAY' ? 'checked' : '' }}>
-                                    <span class="hyperpay-brand-box">
-                                        <span class="hyperpay-brand-title">STC Pay</span>
-                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع عبر محفظة STC Pay' : 'Pay using STC Pay wallet' }}</span>
-                                        <span class="hyperpay-brand-icons">
-                                            <span class="payment-brand-pill">STC Pay</span>
-                                        </span>
-                                    </span>
-                                </label>
                             </div>
                         </div>
                     @endif
@@ -833,6 +822,7 @@
                             <div class="flex-fill muted payment-method-copy">&#1575;&#1604;&#1583;&#1601;&#1593; &#1593;&#1576;&#1585; &#1605;&#1581;&#1601;&#1592;&#1577; urpay</div>
                             <div class="payment-brand-group">
                                 <span class="payment-brand-pill">UrPay</span>
+                                <span class="payment-brand-pill">STC Pay</span>
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
