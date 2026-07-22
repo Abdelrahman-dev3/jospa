@@ -631,7 +631,11 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 throw $exception;
             }
 
-            $alternateBrand = $brand === 'MADA' ? 'VISA' : 'MADA';
+            $alternateBrand = match ($brand) {
+                'MADA' => 'VISA',
+                'APPLEPAY' => 'VISA',
+                default => 'MADA',
+            };
 
             \Log::warning('Retrying Hyperpay status fetch with alternate brand entity.', [
                 'merchant_reference' => $merchantTransactionId,
