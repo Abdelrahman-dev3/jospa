@@ -187,7 +187,7 @@ class PaymentController extends Controller
     {
         $method = (string) $request->get('paymentMethod', '');
 
-        if (in_array($method, ['tabby', 'tamara'], true)) {
+        if ($method === 'tamara') {
             return true;
         }
 
