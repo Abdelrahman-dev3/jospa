@@ -822,10 +822,23 @@
                             <div class="flex-fill muted payment-method-copy">&#1575;&#1604;&#1583;&#1601;&#1593; &#1593;&#1576;&#1585; &#1605;&#1581;&#1601;&#1592;&#1577; urpay</div>
                             <div class="payment-brand-group">
                                 <span class="payment-brand-pill">UrPay</span>
-                                <span class="payment-brand-pill">STC Pay</span>
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
+                            </div>
+                        </div>
+
+                        <!-- METHOD: STC Pay through UrPay -->
+                        <div class="method payment-method-card" data-method="urpay" tabindex="0">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="paymentMethod" value="urpay">
+                            </div>
+                            <div class="flex-fill muted payment-method-copy">
+                                {{ app()->getLocale() === 'ar' ? 'الدفع عبر STC Pay' : 'Pay with STC Pay' }}
+                            </div>
+                            <div class="payment-brand-group">
+                                <span class="payment-brand-pill">STC Pay</span>
+                                <span class="payment-brand-pill">UrPay</span>
                             </div>
                         </div>
                     @endif
