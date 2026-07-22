@@ -83,6 +83,8 @@
             applePay: {
                 displayName: "{{ config('app.name', 'Jospa') }}",
                 total: { label: "{{ config('app.name', 'Jospa') }}" },
+                countryCode: "SA",
+                currencyCode: "SAR",
                 style: "black",
                 supportedNetworks: ["visa", "masterCard", "mada"],
                 merchantCapabilities: ["supports3DS"]
@@ -92,7 +94,11 @@
             },
             onError: function(error) {
                 console.error('Hyperpay widget error:', error);
-                alert('Payment error: ' + (error.message || 'Unknown error'));
+                var message = error.message || 'Unknown error';
+                if (message.indexOf('400') !== -1 || message.indexOf('Apple Pay session') !== -1) {
+                    message = "{{ app()->getLocale() === 'ar' ? 'فشل بدء جلسة Apple Pay (خطأ 400). يرجى التأكد من تفعيل Apple Pay على القناة وربط النطاق وبطاقة التاجر في حساب Hyperpay.' : 'Failed to start Apple Pay session (status 400). Please verify Apple Pay channel activation and domain/merchant binding on Hyperpay.' }}";
+                }
+                alert(message);
             },
             beforeSubmit: function() {
                 console.log('Payment before submit');
