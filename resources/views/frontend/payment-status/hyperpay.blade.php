@@ -60,45 +60,20 @@
                 <span class="brand">{{ $brand }}</span>
             @endforeach
         </div>
-        <div id="applePayUnsupported" style="display: none; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 12px; padding: 16px; margin-bottom: 18px; font-size: 15px; line-height: 1.6;">
-            {{ app()->getLocale() === 'ar' ? 'عذرًا، Apple Pay غير مدعوم على هذا الجهاز أو المتصفح. يرجى استخدام متصفح Safari على جهاز Apple مدعوم.' : 'Apple Pay is not supported on this device/browser. Please use Safari on a supported Apple device.' }}
-        </div>
         <form action="{{ $resultUrl }}" class="paymentWidgets" data-brands="{{ $brands }}"></form>
     </div>
-
-    <script>
-        if ("{{ $brands }}" === "APPLEPAY" && !(window.ApplePaySession && window.ApplePaySession.canMakePayments())) {
-            var warningEl = document.getElementById('applePayUnsupported');
-            if (warningEl) {
-                warningEl.style.display = 'block';
-            }
-        }
-    </script>
 
     {{-- wpwlOptions MUST be declared before the widget script --}}
     <script>
         var wpwlOptions = {
             locale: "{{ app()->getLocale() === 'ar' ? 'ar' : 'en' }}",
             paymentTarget: "_top",
-            applePay: {
-                displayName: "{{ config('app.name', 'Jospa') }}",
-                total: { label: "{{ config('app.name', 'Jospa') }}" },
-                countryCode: "SA",
-                currencyCode: "SAR",
-                style: "black",
-                supportedNetworks: ["visa", "masterCard", "mada"],
-                merchantCapabilities: ["supports3DS"]
-            },
             onReady: function() {
                 console.log('Hyperpay widget ready');
             },
             onError: function(error) {
                 console.error('Hyperpay widget error:', error);
-                var message = error.message || 'Unknown error';
-                if (message.indexOf('400') !== -1 || message.indexOf('Apple Pay session') !== -1) {
-                    message = "{{ app()->getLocale() === 'ar' ? 'فشل بدء جلسة Apple Pay (خطأ 400). يرجى التأكد من تفعيل Apple Pay على القناة وربط النطاق وبطاقة التاجر في حساب Hyperpay.' : 'Failed to start Apple Pay session (status 400). Please verify Apple Pay channel activation and domain/merchant binding on Hyperpay.' }}";
-                }
-                alert(message);
+                alert('Payment error: ' + (error.message || 'Unknown error'));
             },
             beforeSubmit: function() {
                 console.log('Payment before submit');
