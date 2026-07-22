@@ -62,4 +62,51 @@ class PaymentAttempt extends Model
     {
         return $this->belongsTo(Invoice::class);
     }
+
+    public function getPaymentBrandLabelAttribute(): string
+    {
+        $brandPaths = [
+            'paymentBrand',
+            'payment_brand',
+            'payment.brand',
+            'card.brand',
+            'brand',
+            'hyperpay_brand',
+            'payment_context.hyperpay_brand',
+        ];
+
+        $brand = null;
+        foreach ([$this->gateway_response, $this->callback_payload] as $payload) {
+            if (! is_array($payload)) {
+                continue;
+            }
+
+            foreach ($brandPaths as $path) {
+                $value = data_get($payload, $path);
+                if (is_string($value) && trim($value) !== '') {
+                    $brand = strtoupper(trim($value));
+                    break 2;
+                }
+            }
+        }
+
+        if ($brand !== null) {
+            return match ($brand) {
+                'VISA' => 'Visa',
+                'MASTER', 'MASTERCARD' => 'Mastercard',
+                'MADA' => 'Mada',
+                'STC', 'STCPAY', 'STC_PAY', 'STC PAY' => 'STC Pay',
+                default => ucwords(strtolower(str_replace(['_', '-'], ' ', $brand))),
+            };
+        }
+
+        return match (strtolower((string) ($this->payment_method ?: $this->gateway))) {
+            'tabby' => 'Tabby',
+            'tamara' => 'Tamara',
+            'urpay' => 'UrPay',
+            'stcpay' => 'STC Pay',
+            'card' => 'Visa / Mastercard',
+            default => strtoupper((string) ($this->payment_method ?: $this->gateway ?: '-')),
+        };
+    }
 }

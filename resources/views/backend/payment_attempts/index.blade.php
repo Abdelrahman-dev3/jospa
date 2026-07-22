@@ -268,6 +268,7 @@
                     <tr>
                         <th>{{ app()->getLocale() === 'ar' ? 'العميل' : 'Customer' }}</th>
                         <th>{{ app()->getLocale() === 'ar' ? 'البوابة' : 'Gateway' }}</th>
+                        <th>{{ app()->getLocale() === 'ar' ? 'وسيلة الدفع' : 'Payment Method' }}</th>
                         <th>{{ app()->getLocale() === 'ar' ? 'الحالة' : 'Status' }}</th>
                         <th>{{ app()->getLocale() === 'ar' ? 'المبلغ' : 'Amount' }}</th>
                         <th>{{ app()->getLocale() === 'ar' ? 'المعرفات' : 'Identifiers' }}</th>
@@ -289,6 +290,9 @@
                             <td>
                                 <span class="gateway-pill">{{ strtoupper($attempt->gateway ?? $attempt->payment_method ?? '-') }}</span>
                                 <div class="meta-text mt-2">{{ strtoupper($attempt->payment_method ?? '-') }} / {{ $attempt->page ?? '-' }}</div>
+                            </td>
+                            <td>
+                                <span class="gateway-pill">{{ $attempt->payment_brand_label }}</span>
                             </td>
                             <td>
                                 <span class="status-badge is-{{ $status }}">{{ $statusLabels[$status] ?? ucfirst($status) }}</span>
@@ -333,7 +337,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="empty-state">
+                            <td colspan="8" class="empty-state">
                                 {{ app()->getLocale() === 'ar' ? 'لا توجد محاولات دفع مطابقة للفلترة الحالية.' : 'No payment attempts matched the current filters.' }}
                             </td>
                         </tr>
