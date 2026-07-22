@@ -60,8 +60,20 @@
                 <span class="brand">{{ $brand }}</span>
             @endforeach
         </div>
+        <div id="applePayUnsupported" style="display: none; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 12px; padding: 16px; margin-bottom: 18px; font-size: 15px; line-height: 1.6;">
+            {{ app()->getLocale() === 'ar' ? 'عذرًا، Apple Pay غير مدعوم على هذا الجهاز أو المتصفح. يرجى استخدام متصفح Safari على جهاز Apple مدعوم.' : 'Apple Pay is not supported on this device/browser. Please use Safari on a supported Apple device.' }}
+        </div>
         <form action="{{ $resultUrl }}" class="paymentWidgets" data-brands="{{ $brands }}"></form>
     </div>
+
+    <script>
+        if ("{{ $brands }}" === "APPLEPAY" && !(window.ApplePaySession && window.ApplePaySession.canMakePayments())) {
+            var warningEl = document.getElementById('applePayUnsupported');
+            if (warningEl) {
+                warningEl.style.display = 'block';
+            }
+        }
+    </script>
 
     {{-- wpwlOptions MUST be declared before the widget script --}}
     <script>

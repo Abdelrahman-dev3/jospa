@@ -788,7 +788,7 @@
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
-                                    <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="applepay">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="applepay" data-apple-pay-logo="true">
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
@@ -817,7 +817,7 @@
                                         @endif
                                     </span>
                                 </label>
-                                <label class="hyperpay-brand-option {{ $applePayComingSoon ? 'is-coming-soon' : '' }}" {{ $applePayComingSoon ? 'data-coming-soon=true' : '' }}>
+                                <label class="hyperpay-brand-option {{ $applePayComingSoon ? 'is-coming-soon' : '' }}" {{ $applePayComingSoon ? 'data-coming-soon=true' : '' }} data-apple-pay-option="true">
                                     <input type="radio" name="cardBrandChoice" value="APPLEPAY" {{ $defaultCardBrand === 'APPLEPAY' ? 'checked' : '' }} {{ $applePayComingSoon ? 'disabled' : '' }}>
                                     <span class="hyperpay-brand-box">
                                         <span class="hyperpay-brand-title">Apple Pay</span>
@@ -843,7 +843,7 @@
                             <div class="flex-fill muted payment-method-copy">{{ app()->getLocale() === 'ar' ? 'الدفع عبر محفظة UrPay / Apple Pay' : 'Pay via UrPay wallet / Apple Pay' }}</div>
                             <div class="payment-brand-group">
                                 <span class="payment-brand-pill">UrPay</span>
-                                <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="applepay">
+                                <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="applepay" data-apple-pay-logo="true">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
@@ -1134,6 +1134,29 @@
 
             paymentBrandInput.value = selectedBrand;
         }
+
+        function checkApplePaySupport() {
+            const isApplePaySupported = !!(window.ApplePaySession && window.ApplePaySession.canMakePayments());
+
+            if (!isApplePaySupported) {
+                document.querySelectorAll('[data-apple-pay-option="true"], [data-apple-pay-logo="true"]').forEach(el => {
+                    el.style.setProperty('display', 'none', 'important');
+                });
+
+                const applePayRadio = document.querySelector('input[name="cardBrandChoice"][value="APPLEPAY"]');
+                if (applePayRadio && applePayRadio.checked) {
+                    applePayRadio.checked = false;
+                    const visaRadio = document.querySelector('input[name="cardBrandChoice"][value="VISA"]');
+                    if (visaRadio) {
+                        visaRadio.checked = true;
+                    }
+                }
+                syncPaymentBrand();
+            }
+        }
+
+        checkApplePaySupport();
+        document.addEventListener('DOMContentLoaded', checkApplePaySupport);
 
         document.querySelectorAll('input[name="cardBrandChoice"]').forEach(input => {
             input.addEventListener('change', function () {
