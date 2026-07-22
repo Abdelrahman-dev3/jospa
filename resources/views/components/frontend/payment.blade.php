@@ -15,7 +15,13 @@
 @php
     $comingSoonPaymentMethods = ['tabby', 'tamara'];
     $madaComingSoon = (int) ($tapPaymentSources['src_sa.mada'] ?? 1) !== 1;
-    $defaultCardBrand = (! $madaComingSoon && $defaultPaymentSource === 'src_sa.mada') ? 'MADA' : 'VISA';
+    $applePayComingSoon = (int) ($tapPaymentSources['src_apple_pay'] ?? 1) !== 1;
+    $defaultCardBrand = 'VISA';
+    if (! $applePayComingSoon && $defaultPaymentSource === 'src_apple_pay') {
+        $defaultCardBrand = 'APPLEPAY';
+    } elseif (! $madaComingSoon && $defaultPaymentSource === 'src_sa.mada') {
+        $defaultCardBrand = 'MADA';
+    }
 @endphp
   <style>
     :root{
@@ -781,6 +787,8 @@
                                 <div class="payment-brand-group">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="applepay">
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
@@ -805,6 +813,19 @@
                                             <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                         </span>
                                         @if($madaComingSoon)
+                                            <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
+                                        @endif
+                                    </span>
+                                </label>
+                                <label class="hyperpay-brand-option {{ $applePayComingSoon ? 'is-coming-soon' : '' }}" {{ $applePayComingSoon ? 'data-coming-soon=true' : '' }}>
+                                    <input type="radio" name="cardBrandChoice" value="APPLEPAY" {{ $defaultCardBrand === 'APPLEPAY' ? 'checked' : '' }} {{ $applePayComingSoon ? 'disabled' : '' }}>
+                                    <span class="hyperpay-brand-box">
+                                        <span class="hyperpay-brand-title">Apple Pay</span>
+                                        <span class="hyperpay-brand-subtitle">{{ app()->getLocale() === 'ar' ? 'الدفع السريع والآمن عبر Apple Pay' : 'Fast and secure payment via Apple Pay' }}</span>
+                                        <span class="hyperpay-brand-icons">
+                                            <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="apple pay">
+                                        </span>
+                                        @if($applePayComingSoon)
                                             <span class="coming-soon-badge">{{ app()->getLocale() === 'ar' ? 'قريبًا' : 'Coming Soon' }}</span>
                                         @endif
                                     </span>

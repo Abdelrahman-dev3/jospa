@@ -68,6 +68,13 @@
         var wpwlOptions = {
             locale: "{{ app()->getLocale() === 'ar' ? 'ar' : 'en' }}",
             paymentTarget: "_top",
+            applePay: {
+                displayName: "{{ config('app.name', 'Jospa') }}",
+                total: { label: "{{ config('app.name', 'Jospa') }}" },
+                style: "black",
+                supportedNetworks: ["visa", "masterCard", "mada"],
+                merchantCapabilities: ["supports3DS"]
+            },
             onReady: function() {
                 console.log('Hyperpay widget ready');
             },
