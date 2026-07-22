@@ -171,7 +171,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         $payload = [
             'merchant_code' => $merchantCode,
             'payment'       => [
-                'amount'      => $remainingAmount,
+                'amount'      => number_format($remainingAmount, 2, '.', ''),
                 'currency'    => 'SAR',
                 'description' => "Invoice #{$invoiceRef}",
                 'buyer'       => [
@@ -179,9 +179,17 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                     'name'  => $buyerName,
                     'email' => $email,
                 ],
-            ],
-            'order'         => [
-                'reference_id' => $invoiceRef,
+                'order'       => [
+                    'reference_id' => $invoiceRef,
+                    'items' => [[
+                        'title' => "Invoice #{$invoiceRef}",
+                        'description' => 'Jospa checkout payment',
+                        'quantity' => 1,
+                        'unit_price' => number_format($remainingAmount, 2, '.', ''),
+                        'category' => 'Services',
+                        'reference_id' => $invoiceRef,
+                    ]],
+                ],
             ],
             'lang'          => app()->getLocale() ?? 'en',
             'merchant_urls' => $merchantUrls ?? [
@@ -204,6 +212,18 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         $responseData = $response->json();
         $responseData = is_array($responseData) ? $responseData : [];
         $checkoutId   = $responseData['id'] ?? $responseData['checkout_id'] ?? null;
+
+        if ($checkoutId && ! $this->extractTabbyPaymentUrl($responseData)) {
+            $checkoutResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $secretKey,
+                'Accept' => 'application/json',
+            ])->get(rtrim(config('tabby.base_url', 'https://api.tabby.ai'), '/') . '/api/v2/checkout/' . urlencode((string) $checkoutId));
+
+            if ($checkoutResponse->successful() && is_array($checkoutResponse->json())) {
+                $responseData = array_replace_recursive($responseData, $checkoutResponse->json());
+            }
+        }
+
         if ($checkoutId) {
             session()->put('tabby_payment.checkout_id', $checkoutId);
         }
@@ -259,6 +279,9 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             'configuration.products.pay_later.web_url',
             'available_products.installments.0.web_url',
             'available_products.pay_later.0.web_url',
+            'configuration.web_url',
+            'payment.web_url',
+            'checkout.web_url',
             'web_url',
             'url',
         ];
