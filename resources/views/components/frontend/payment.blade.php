@@ -508,14 +508,18 @@
             /* wrapper */
             .cart-wrapper {
                 position: fixed;
-                z-index: 999;
-                right: 47px;
+                z-index: 9999;
+                bottom: 30px;
+                right: 25px;
+                display: flex;
+                align-items: flex-end;
+                justify-content: flex-end;
             }
 
             /* main cart */
             .cart {
-                width: 70px;
-                height: 70px;
+                width: 60px;
+                height: 60px;
                 background: #bf9456;
                 color: #fff;
                 border-radius: 50%;
@@ -527,11 +531,14 @@
                 justify-content: center;
                 align-items: center;
 
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                transform-origin: bottom right;
+
                 transition:
-                    width 0.6s ease,
-                    height 0.6s ease,
-                    border-radius 0.6s ease,
-                    transform 0.6s ease;
+                    width 0.4s ease,
+                    height 0.4s ease,
+                    border-radius 0.4s ease,
+                    transform 0.4s ease;
             }
 
             /* rotation + scale */
@@ -539,7 +546,24 @@
                 width: 320px;
                 height: 360px;
                 border-radius: 20px;
-                transform: rotate(360deg) scale(1.05);
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            }
+
+            @media (max-width: 767px) {
+                .cart-wrapper {
+                    bottom: 20px;
+                    right: 15px;
+                }
+                .cart {
+                    width: 56px;
+                    height: 56px;
+                }
+                .cart.open {
+                    width: calc(100vw - 30px);
+                    max-width: 320px;
+                    height: 360px;
+                }
             }
 
             /* icon */
