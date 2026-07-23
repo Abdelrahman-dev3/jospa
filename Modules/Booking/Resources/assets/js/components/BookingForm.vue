@@ -1953,27 +1953,16 @@ var SUB_TOTAL_SERVICE_AMOUNT = computed(() =>
   (couponRedeem.value || 0)
 )
 
-// ============================================================
-// ✅ الإصلاح الثاني: canSubmitBooking
-// المشكلة: كان يشترط hasSelectedServices حتى في المواعيد الموجودة
-// بعد تغيير الموظف تصبح selectedService فارغة مؤقتاً → الزر يُعطّل
-// الحل: إضافة شرط isExistingBookingWithSchedule
-// إذا كان الموعد موجوداً (id) وتم اختيار branch + employee + time
-// يصبح الزر فعّالاً بغض النظر عن عدد الخدمات المحددة
-// ============================================================
 const canSubmitBooking = computed(() => {
   const hasSelectedServices = selectedService.value.length > 0 || services_id.value.length > 0
   const hasSelectedPackages = selectPurchasePackages.value.length > 0 && status.value !== 'cancelled'
   const hasSchedule = Boolean(branch_id.value && employee_id.value && start_date_time.value)
   const isExistingPaidBooking = Boolean(id.value && isPaidBooking.value)
-  // ✅ الشرط الجديد: موعد موجود + جدول مكتمل → اسمح بالحفظ
-  const isExistingBookingWithSchedule = Boolean(id.value && hasSchedule)
-
   return (
     canSaveBooking.value &&
     !end_time_error.value &&
     hasSchedule &&
-    (isExistingPaidBooking || isExistingBookingWithSchedule || hasSelectedServices || hasSelectedPackages)
+    (isExistingPaidBooking || hasSelectedServices || hasSelectedPackages)
   )
 })
 

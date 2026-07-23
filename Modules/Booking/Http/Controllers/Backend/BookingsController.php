@@ -28,6 +28,7 @@ use Modules\Constant\Models\Constant;
 use Modules\Holiday\Models\Holiday;
 use Modules\Product\Trait\ProductTrait;
 use Modules\Service\Models\Service;
+use Modules\Service\Models\ServiceEmployee;
 use Modules\Tax\Models\Tax;
 use Yajra\DataTables\DataTables;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1292,6 +1293,8 @@ public function index_list(Request $request)
         $booking->refresh();
         $booking->load(['services', 'bookingPackages.services']);
 
+        $this->assertEmployeesCanPerformBookedServices($booking);
+
         $items = [];
 
         foreach ($booking->services as $service) {
@@ -2234,6 +2237,58 @@ public function index_list(Request $request)
                 ]
             );
         }
+    }
+
+    /**
+     * Enforce the employee/service relation at the write boundary. The calendar
+     * selector is only a convenience and must not be the source of authorization.
+     */
+    private function assertEmployeesCanPerformBookedServices(Booking $booking): void
+    {
+        foreach ($booking->services as $bookingService) {
+            $employeeId = (int) $bookingService->employee_id;
+            $serviceId = (int) $bookingService->service_id;
+
+            if ($employeeId <= 0 || $serviceId <= 0) {
+                throw ValidationException::withMessages([
+                    'services' => ['كل خدمة في الحجز يجب أن يكون لها موظف صالح.'],
+                ]);
+            }
+
+            $canPerformService = ServiceEmployee::query()
+                ->where('employee_id', $employeeId)
+                ->where('service_id', $serviceId)
+                ->exists();
+
+            if (! $canPerformService) {
+                $employeeName = User::query()->whereKey($employeeId)->value('first_name') ?: "#{$employeeId}";
+                $serviceName = Service::query()->whereKey($serviceId)->value('name');
+                $serviceLabel = $this->localizedServiceName($serviceName) ?: "#{$serviceId}";
+
+                throw ValidationException::withMessages([
+                    'employee_id' => ["الموظف {$employeeName} غير مخصص لتقديم خدمة {$serviceLabel}."],
+                ]);
+            }
+        }
+    }
+
+    private function localizedServiceName($name): string
+    {
+        if (is_array($name)) {
+            return (string) ($name[app()->getLocale()] ?? $name['ar'] ?? $name['en'] ?? '');
+        }
+
+        if (! is_string($name)) {
+            return '';
+        }
+
+        $decoded = json_decode($name, true);
+
+        if (is_array($decoded)) {
+            return (string) ($decoded[app()->getLocale()] ?? $decoded['ar'] ?? $decoded['en'] ?? '');
+        }
+
+        return $name;
     }
 
 }
