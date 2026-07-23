@@ -15,6 +15,7 @@
 @php
     $comingSoonPaymentMethods = ['tabby', 'tamara'];
     $madaComingSoon = (int) ($tapPaymentSources['src_sa.mada'] ?? 1) !== 1;
+    $applePayComingSoon = (int) ($tapPaymentSources['src_apple_pay'] ?? 1) !== 1;
     $defaultCardBrand = (! $madaComingSoon && $defaultPaymentSource === 'src_sa.mada') ? 'MADA' : 'VISA';
 @endphp
   <style>
@@ -507,14 +508,18 @@
             /* wrapper */
             .cart-wrapper {
                 position: fixed;
-                z-index: 999;
-                right: 47px;
+                z-index: 9999;
+                bottom: 30px;
+                right: 25px;
+                display: flex;
+                align-items: flex-end;
+                justify-content: flex-end;
             }
 
             /* main cart */
             .cart {
-                width: 70px;
-                height: 70px;
+                width: 60px;
+                height: 60px;
                 background: #bf9456;
                 color: #fff;
                 border-radius: 50%;
@@ -526,11 +531,14 @@
                 justify-content: center;
                 align-items: center;
 
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                transform-origin: bottom right;
+
                 transition:
-                    width 0.6s ease,
-                    height 0.6s ease,
-                    border-radius 0.6s ease,
-                    transform 0.6s ease;
+                    width 0.4s ease,
+                    height 0.4s ease,
+                    border-radius 0.4s ease,
+                    transform 0.4s ease;
             }
 
             /* rotation + scale */
@@ -538,7 +546,24 @@
                 width: 320px;
                 height: 360px;
                 border-radius: 20px;
-                transform: rotate(360deg) scale(1.05);
+                transform: scale(1);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            }
+
+            @media (max-width: 767px) {
+                .cart-wrapper {
+                    bottom: 20px;
+                    right: 15px;
+                }
+                .cart {
+                    width: 56px;
+                    height: 56px;
+                }
+                .cart.open {
+                    width: calc(100vw - 30px);
+                    max-width: 320px;
+                    height: 360px;
+                }
             }
 
             /* icon */
@@ -781,6 +806,7 @@
                                 <div class="payment-brand-group">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                     <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
+                                    <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                     <span class="payment-brand-pill">Hyperpay</span>
                                 </div>
                             </div>
@@ -819,9 +845,10 @@
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="paymentMethod" value="urpay" {{ $defaultPaymentMethod === 'urpay' ? 'checked' : '' }}>
                             </div>
-                            <div class="flex-fill muted payment-method-copy">&#1575;&#1604;&#1583;&#1601;&#1593; &#1593;&#1576;&#1585; &#1605;&#1581;&#1601;&#1592;&#1577; urpay</div>
+                            <div class="flex-fill muted payment-method-copy">{{ app()->getLocale() === 'ar' ? 'الدفع عبر محفظة UrPay / Apple Pay' : 'Pay via UrPay wallet / Apple Pay' }}</div>
                             <div class="payment-brand-group">
                                 <span class="payment-brand-pill">UrPay</span>
+                                <img class="payment-brand-logo" src="{{ asset('images/icons/applepay.png') }}" alt="applepay" data-apple-pay-logo="true">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/visa (2).png') }}" alt="visa">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/mada (2).png') }}" alt="mada">
                                 <img class="payment-brand-logo" src="{{ asset('images/icons/master.png') }}" alt="mastercard">
@@ -1112,6 +1139,29 @@
 
             paymentBrandInput.value = selectedBrand;
         }
+
+        function checkApplePaySupport() {
+            const isApplePaySupported = !!(window.ApplePaySession && window.ApplePaySession.canMakePayments());
+
+            if (!isApplePaySupported) {
+                document.querySelectorAll('[data-apple-pay-option="true"], [data-apple-pay-logo="true"]').forEach(el => {
+                    el.style.setProperty('display', 'none', 'important');
+                });
+
+                const applePayRadio = document.querySelector('input[name="cardBrandChoice"][value="APPLEPAY"]');
+                if (applePayRadio && applePayRadio.checked) {
+                    applePayRadio.checked = false;
+                    const visaRadio = document.querySelector('input[name="cardBrandChoice"][value="VISA"]');
+                    if (visaRadio) {
+                        visaRadio.checked = true;
+                    }
+                }
+                syncPaymentBrand();
+            }
+        }
+
+        checkApplePaySupport();
+        document.addEventListener('DOMContentLoaded', checkApplePaySupport);
 
         document.querySelectorAll('input[name="cardBrandChoice"]').forEach(input => {
             input.addEventListener('change', function () {

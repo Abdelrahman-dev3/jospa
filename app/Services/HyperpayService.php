@@ -13,6 +13,7 @@ class HyperpayService
     private string $baseUrl;
     private ?string $entityId;
     private ?string $entityIdMada;
+    private ?string $entityIdApplepay;
     private ?string $authorizationToken;
     private ?string $fallbackAuthorizationToken;
 
@@ -21,6 +22,7 @@ class HyperpayService
         $this->baseUrl = $this->resolveBaseUrl();
         [$this->entityId, $this->authorizationToken, $this->fallbackAuthorizationToken] = $this->resolveCredentials();
         $this->entityIdMada = $this->normalizeConfigValue(config('services.hyperpay.entity_id_mada')) ?: null;
+        $this->entityIdApplepay = $this->normalizeConfigValue(config('services.hyperpay.entity_id_applepay')) ?: null;
     }
 
     public function createCheckout(float $amount, string $merchantTransactionId, string $shopperResultUrl, array $customer = [], string $brand = 'VISA'): array
@@ -36,9 +38,12 @@ class HyperpayService
 
         $this->guardCredentials();
 
-        // Select entity ID: MADA uses its own entity ID if configured
+        // Select entity ID: Apple Pay / MADA use their own entity ID if configured
+        $isApplePay = strtoupper($brand) === 'APPLEPAY';
         $isMada = strtoupper($brand) === 'MADA';
-        $entityId = ($isMada && $this->entityIdMada) ? $this->entityIdMada : $this->entityId;
+        $entityId = ($isApplePay && $this->entityIdApplepay)
+            ? $this->entityIdApplepay
+            : (($isMada && $this->entityIdMada) ? $this->entityIdMada : $this->entityId);
 
         // Sanitize givenName — VISA-ACP processor requires Latin characters only.
         // Arabic / non-Latin chars cause 200.300.404 "invalid or missing parameter".
@@ -141,8 +146,11 @@ class HyperpayService
         $this->guardCredentials();
 
         // Use the correct entity ID for status fetch too
+        $isApplePay = strtoupper($brand) === 'APPLEPAY';
         $isMada = strtoupper($brand) === 'MADA';
-        $entityId = ($isMada && $this->entityIdMada) ? $this->entityIdMada : $this->entityId;
+        $entityId = ($isApplePay && $this->entityIdApplepay)
+            ? $this->entityIdApplepay
+            : (($isMada && $this->entityIdMada) ? $this->entityIdMada : $this->entityId);
 
         // Build the URL using the resourcePath directly as provided by Hyperpay
         $url = str_starts_with($resourcePath, 'http')
@@ -179,7 +187,7 @@ class HyperpayService
 
     public function brands(): array
     {
-        return ['VISA', 'MASTER', 'MADA'];
+        return ['VISA', 'MASTER', 'MADA', 'APPLEPAY'];
     }
 
     public function isSuccessfulResult(?string $resultCode): bool

@@ -122,7 +122,7 @@ class PaymentController extends Controller
 
         $strategy = match ($method) {
             'card' => app(CardPaymentStrategy::class),
-            'urpay', 'stcpay' => app(UrPayPaymentStrategy::class),
+            'urpay', 'stcpay', 'applepay_urpay' => app(UrPayPaymentStrategy::class),
             'tabby' => app(TabbyPaymentStrategy::class),
             'tamara' => app(TamaraPaymentStrategy::class),
             default => throw ValidationException::withMessages([
@@ -169,7 +169,7 @@ class PaymentController extends Controller
             return false;
         }
 
-        $checkMethod = $method === 'stcpay' ? 'urpay' : $method;
+        $checkMethod = in_array($method, ['stcpay', 'applepay_urpay'], true) ? 'urpay' : $method;
 
         if ((FrontendPaymentSettings::paymentMethods()[$checkMethod] ?? 0) !== 1) {
             return false;
@@ -180,7 +180,11 @@ class PaymentController extends Controller
         }
 
         $brand = strtoupper((string) $request->get('brand', 'VISA'));
-        $source = $brand === 'MADA' ? 'src_sa.mada' : 'src_card';
+        $source = match ($brand) {
+            'MADA' => 'src_sa.mada',
+            'APPLEPAY', 'APPLE_PAY', 'APPLE' => 'src_apple_pay',
+            default => 'src_card',
+        };
 
         return FrontendPaymentSettings::isEnabledTapSource($source);
     }
