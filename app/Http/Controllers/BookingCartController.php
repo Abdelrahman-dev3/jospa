@@ -88,6 +88,25 @@ class BookingCartController extends Controller
             ], 200);
         }
 
+        $isHomeService = isset($data['branch']) && (int)$data['branch'] === 0;
+        if ($isHomeService) {
+            $minHomeAmount = (float) setting('min_home_booking_amount', 0);
+            if ($minHomeAmount > 0) {
+                $totalAmount = 0;
+                foreach ($data['services'] ?? [] as $service) {
+                    foreach ($service['subServices'] ?? [] as $sub) {
+                        $totalAmount += (float) ($sub['price'] ?? 0);
+                    }
+                }
+                if ($totalAmount < $minHomeAmount) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'عفواً، الحد الأدنى لحجز الخدمات المنزلية هو ' . $minHomeAmount . ' ريال'
+                    ], 422);
+                }
+            }
+        }
+
         $employeeIds = [];
         $dates = [];
         foreach ($data['services'] ?? [] as $service) {

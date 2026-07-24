@@ -1296,6 +1296,16 @@
         }
 
         function completeBooking(btn) {
+            const minHomeBookingAmount = Number("{{ setting('min_home_booking_amount', 0) }}");
+            const { total } = getBookingSummaryStats();
+            if (minHomeBookingAmount > 0 && total < minHomeBookingAmount) {
+                const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+                const msg = lang === 'ar' 
+                    ? `عفواً، الحد الأدنى لحجز الخدمات المنزلية هو ${minHomeBookingAmount} ريال` 
+                    : `Sorry, the minimum amount for booking home services is ${minHomeBookingAmount} SAR`;
+                createNotify({ title: lang === 'ar' ? 'تنبيه' : 'Alert', desc: msg });
+                return;
+            }
 
             const payload = {
                 ...selectedData, 

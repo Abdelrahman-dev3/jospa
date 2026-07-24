@@ -319,6 +319,15 @@ return [
                 'class' => '', // any class for input
                 'value' => '#0EA5E9', // default value if you want
             ],
+            [
+                'type' => 'text', // input fields type
+                'data' => 'misc', // data type, string, int, boolean
+                'name' => 'min_home_booking_amount', // unique name for field
+                'label' => 'Minimum Home Booking Amount', // you know what label it is
+                'rules' => 'nullable|numeric|min:0', // validation rule of laravel
+                'class' => '', // any class for input
+                'value' => '0', // default value if you want
+            ],
         ],
     ],
     'analytics' => [

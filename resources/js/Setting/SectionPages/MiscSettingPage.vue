@@ -42,16 +42,10 @@
           <span class="text-danger">{{ errors.home_booking_calendar_color }}</span>
         </div>
       </div>
-      <!-- <div class="col-md-4">
-        <label class="form-label">{{ $t('setting_language_page.lbl_currency') }}</label>
-        <Multiselect id="currency" v-model="default_currency" :value="default_currency" v-bind="currencyOption"   :options="currency.options" class="form-group"></Multiselect>
-        <span class="text-danger">{{ errors.default_currency }}</span>
-      </div> -->
+      <div class="col-md-4">
+        <InputField :label="'الحد الأدنى لحجز الخدمات المنزلية (ريال)'" :placeholder="'مثال: 150'" v-model="min_home_booking_amount" :errorMessage="errors.min_home_booking_amount" type="number"></InputField>
+      </div>
     </div>
-    <!-- <p>Time Zone</p>
-      <p>Invoice Prefix</p>
-      <p>Default Language</p>
-      <p>Time Format</p> -->
     <div class="row py-4">
       <SubmitButton :IS_SUBMITED="IS_SUBMITED"></SubmitButton>
     </div>
@@ -146,7 +140,8 @@ const setFormData = (data) => {
       default_language: data.default_language,
       default_time_zone: data.default_time_zone,
       data_table_limit: data.data_table_limit,
-      default_currency: data.default_currency
+      default_currency: data.default_currency,
+      min_home_booking_amount: data.min_home_booking_amount || 0
     }
   })
 }
@@ -159,9 +154,11 @@ const { value: default_language } = useField('default_language')
 const { value: default_time_zone } = useField('default_time_zone')
 const { value: data_table_limit } = useField('data_table_limit')
 const { value: default_currency } = useField('default_currency')
+const { value: min_home_booking_amount } = useField('min_home_booking_amount')
 slot_duration.value = '00:30'
 home_booking_calendar_color.value = '#0EA5E9'
-const data = 'slot_duration,google_analytics,home_booking_calendar_color,default_language,default_time_zone,data_table_limit,default_currency'
+min_home_booking_amount.value = 0
+const data = 'slot_duration,google_analytics,home_booking_calendar_color,default_language,default_time_zone,data_table_limit,default_currency,min_home_booking_amount'
 onMounted(() => {
   createRequest(GET_URL(data)).then((response) => {
     setFormData(response)
