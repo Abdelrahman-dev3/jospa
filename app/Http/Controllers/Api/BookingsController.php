@@ -1,12 +1,12 @@
 <?php
-
+ 
 namespace App\Http\Controllers\Api;
-
+ 
 use App\Http\Controllers\Controller;
 use Modules\Booking\Models\BookingService;
 use Modules\BussinessHour\Models\BussinessHour;
-
-
+use Modules\Package\Models\BookingPackages;
+ 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -378,7 +378,7 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
 
     private function buildBookedTimes(int $staffId, string $date, int $fallbackDuration): array
     {
-        $times = BookingService::where('employee_id', $staffId)
+        $serviceTimes = BookingService::where('employee_id', $staffId)
             ->whereDate('start_date_time', $date)
             ->whereHas('booking', function ($q) {
                 $q->whereIn('status', ['pending', 'confirmed', 'check_in']);
@@ -398,11 +398,32 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
 
                 return $minutes;
             })
-            ->unique()
-            ->values()
             ->toArray();
 
-        return $times;
+        $packageTimes = BookingPackages::with('booking', 'services')
+            ->where('employee_id', $staffId)
+            ->whereHas('booking', function ($q) use ($date) {
+                $q->whereDate('start_date_time', $date)
+                  ->whereIn('status', ['pending', 'confirmed', 'check_in']);
+            })
+            ->get()
+            ->flatMap(function ($package) use ($fallbackDuration) {
+                $start = Carbon::parse($package->booking->start_date_time);
+                $duration = (int) $package->services->sum('duration_min');
+                if ($duration < 1) {
+                    $duration = $fallbackDuration;
+                }
+
+                $minutes = [];
+                for ($i = 0; $i < $duration; $i++) {
+                    $minutes[] = $start->copy()->addMinutes($i)->format('H:i');
+                }
+
+                return $minutes;
+            })
+            ->toArray();
+
+        return array_values(array_unique(array_merge($serviceTimes, $packageTimes)));
     }
 
 }

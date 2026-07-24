@@ -70,7 +70,7 @@ class BookingCartController extends Controller
         return view('frontend.cart.index', compact('services' , 'products' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount', 'gifts'));
     }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
         $user = auth()->user();
         $data = $request->all();
@@ -87,99 +87,117 @@ class BookingCartController extends Controller
                 'message' => 'يرجى تسجيل الدخول لإكمال الحجز.'
             ], 200);
         }
-        $pendingSlots = [];
+
+        $employeeIds = [];
+        $dates = [];
         foreach ($data['services'] ?? [] as $service) {
             foreach ($service['subServices'] ?? [] as $sub) {
-                $slotData = $this->prepareSlotData($sub);
-                if (!$slotData) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('messages.invalid_data')
-                    ], 422);
+                if (!empty($sub['staffId'])) {
+                    $employeeIds[] = (int) $sub['staffId'];
                 }
-
-                if ($this->hasSlotConflict($slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('branch.branch_reserved')
-                    ], 409);
+                if (!empty($sub['date'])) {
+                    $dates[] = $sub['date'];
                 }
-
-                if ($this->hasPendingSlotConflict($pendingSlots, $slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => __('branch.branch_reserved')
-                    ], 409);
-                }
-
-                $pendingSlots[] = [
-                    'staff_id' => $slotData['staff_id'],
-                    'start_date_time' => $slotData['start_date_time']->copy(),
-                    'duration' => $slotData['duration'],
-                ];
             }
         }
+        $employeeIds = array_values(array_unique($employeeIds));
+        $lockDate = !empty($dates) ? $dates[0] : Carbon::today()->toDateString();
 
-        DB::beginTransaction();
-        try {
-            if (!empty($data['services'])) {
-                foreach ($data['services'] as $service) {
-                    if (!empty($service['subServices'])) {
-                        foreach ($service['subServices'] as $sub) {
-                            $subId = $sub['id'];
-                            $date = $sub['date'];
-                            $time = $sub['time'];
-                            $duration = $sub['duration'];
-                            $price = $sub['price'];
-                            $staffId = $sub['staffId'];
-                            $startDateTime = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $date . ' ' . $time);
-                            
-                            $booking = new Booking();
-                            if($data['branch'] != 0){
-                                $booking->note = 'العميل: ' . $user->first_name .
-                                    '، الجوال: ' .  $user->mobile .
-                                    '، الخدمة: ' . $subId;
-                            }else{
-                                $booking->note =  'اسم العميل ' . $data['customerName'] . 'رقم العميل ' . $data['mobileNo'] . 'الحي ' . $data['neighborhood'] ;
-                                $booking->location       =  $data['locationInput'];
+        return $this->withEmployeeScheduleLocks($employeeIds, $lockDate, function () use ($data, $btn_value, $user) {
+            $pendingSlots = [];
+            foreach ($data['services'] ?? [] as $service) {
+                foreach ($service['subServices'] ?? [] as $sub) {
+                    $slotData = $this->prepareSlotData($sub);
+                    if (!$slotData) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => __('messages.invalid_data')
+                        ], 422);
+                    }
+
+                    if ($this->hasSlotConflict($slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => __('branch.branch_reserved')
+                        ], 409);
+                    }
+
+                    if ($this->hasPendingSlotConflict($pendingSlots, $slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => __('branch.branch_reserved')
+                        ], 409);
+                    }
+
+                    $pendingSlots[] = [
+                        'staff_id' => $slotData['staff_id'],
+                        'start_date_time' => $slotData['start_date_time']->copy(),
+                        'duration' => $slotData['duration'],
+                    ];
+                }
+            }
+
+            DB::beginTransaction();
+            try {
+                if (!empty($data['services'])) {
+                    foreach ($data['services'] as $service) {
+                        if (!empty($service['subServices'])) {
+                            foreach ($service['subServices'] as $sub) {
+                                $subId = $sub['id'];
+                                $dateVal = $sub['date'];
+                                $timeVal = $sub['time'];
+                                $duration = $sub['duration'];
+                                $price = $sub['price'];
+                                $staffId = $sub['staffId'];
+                                $startDateTime = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $dateVal . ' ' . $timeVal);
+                                
+                                $booking = new Booking();
+                                if ($data['branch'] != 0) {
+                                    $booking->note = 'العميل: ' . $user->first_name .
+                                        '، الجوال: ' .  $user->mobile .
+                                        '، الخدمة: ' . $subId;
+                                } else {
+                                    $booking->note =  'اسم العميل ' . $data['customerName'] . 'رقم العميل ' . $data['mobileNo'] . 'الحي ' . $data['neighborhood'] ;
+                                    $booking->location       =  $data['locationInput'];
+                                }
+                                $booking->start_date_time = $startDateTime;
+                                $booking->user_id         = $user->id;
+                                $booking->branch_id       = $data['branch'] ?? 1;
+                                $booking->created_by      = $user->id;
+                                $booking->status          = 'pending';
+                                $booking->payment_type    =  $btn_value;
+                                $booking->save();
+                                
+                                //  الحجز التاني
+                                $bookingService = new BookingService();
+                                $bookingService->booking_id       = $booking->id;
+                                $bookingService->service_id       = $subId;
+                                $bookingService->employee_id      = $staffId;
+                                $bookingService->start_date_time  = $startDateTime;
+                                $bookingService->service_price    = \Modules\Service\Models\Service::find($subId)->default_price ?? 0;
+                                $bookingService->duration_min     = $duration;
+                                $bookingService->sequance         = 1;
+                                $bookingService->created_by       = $user->id;
+                                $bookingService->save();
+
+                                $loyalty = \App\Models\LoyaltyPoint::firstOrCreate(
+                                    ['user_id' => $user->id],
+                                    ['points' => 0]
+                                );
                             }
-                            $booking->start_date_time = $startDateTime;
-                            $booking->user_id         = $user->id;
-                            $booking->branch_id       = $data['branch'] ?? 1;
-                            $booking->created_by      = $user->id;
-                            $booking->status          = 'pending';
-                            $booking->payment_type       =  $btn_value;
-                            $booking->save();
-                            
-                            //  الحجز التاني
-                            $bookingService = new BookingService();
-                            $bookingService->booking_id       = $booking->id;
-                            $bookingService->service_id       = $subId;
-                            $bookingService->employee_id      = $staffId;
-                            $bookingService->start_date_time  = $startDateTime;
-                            $bookingService->service_price    = \Modules\Service\Models\Service::find($subId)->default_price ?? 0;
-                            $bookingService->duration_min     = $duration;
-                            $bookingService->sequance         = 1;
-                            $bookingService->created_by      = $user->id;
-                            $bookingService->save();
-
-                            $loyalty = \App\Models\LoyaltyPoint::firstOrCreate(
-                                ['user_id' => $user->id],
-                                ['points' => 0]
-                            );
                         }
                     }
                 }
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => __('messages.booking_added_to_cart')
+                ], 201);
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                throw $e;
             }
-            DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => __('messages.booking_added_to_cart')
-            ], 201);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            throw $e;
-        }
+        });
     }
     
     private function prepareSlotData(array $sub): ?array
@@ -212,6 +230,7 @@ class BookingCartController extends Controller
     {
         $requestedEnd = $startDateTime->copy()->addMinutes(max(1, $duration));
 
+        // 1. Check Service Booking Conflicts
         $existingSlots = BookingService::where('employee_id', $staffId)
             ->whereDate('start_date_time', $startDateTime->toDateString())
             ->whereHas('booking', function ($query) {
@@ -229,7 +248,61 @@ class BookingCartController extends Controller
             }
         }
 
+        // 2. Check Package Booking Conflicts
+        $existingPackages = BookingPackages::with('booking', 'services')
+            ->where('employee_id', $staffId)
+            ->whereHas('booking', function ($query) use ($startDateTime) {
+                $query->whereDate('start_date_time', $startDateTime->toDateString())
+                    ->whereIn('status', ['pending', 'confirmed', 'check_in']);
+            })
+            ->get();
+
+        foreach ($existingPackages as $package) {
+            $existingStart = Carbon::parse($package->booking->start_date_time);
+            $existingDuration = (int) $package->services->sum('duration_min');
+            $existingDuration = max(1, $existingDuration);
+            $existingEnd = $existingStart->copy()->addMinutes($existingDuration);
+
+            if ($existingStart->lt($requestedEnd) && $existingEnd->gt($startDateTime)) {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    private function withEmployeeScheduleLocks(array $employeeIds, string $date, \Closure $callback)
+    {
+        $employeeIds = array_values(array_unique(array_filter(array_map('intval', $employeeIds), fn ($id) => $id > 0)));
+        sort($employeeIds);
+
+        if (empty($employeeIds) || DB::connection()->getDriverName() !== 'mysql') {
+            return $callback();
+        }
+
+        $acquired = [];
+
+        try {
+            foreach ($employeeIds as $employeeId) {
+                $lockName = 'booking_emp_' . $employeeId . '_' . $date;
+                $result = DB::selectOne('SELECT GET_LOCK(?, ?) AS acquired', [$lockName, 10]);
+
+                if (! $result || (int) $result->acquired !== 1) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'هناك حجز آخر قيد المعالجة حالياً لهذا الموظف، يرجى المحاولة مرة أخرى بعد قليل.'
+                    ], 409);
+                }
+
+                $acquired[] = $lockName;
+            }
+
+            return $callback();
+        } finally {
+            foreach (array_reverse($acquired) as $lockName) {
+                DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+            }
+        }
     }
 
     private function hasPendingSlotConflict(array $pendingSlots, int $staffId, Carbon $startDateTime, int $duration): bool

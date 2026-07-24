@@ -132,6 +132,21 @@ class QuickBookingsController extends Controller
         }
 
         $bookingData = $request->booking;
+
+        if (!empty($bookingData['services'])) {
+            foreach ($bookingData['services'] as $srv) {
+                $srvEmployeeId = (int) ($srv['employee_id'] ?? 0);
+                $srvStart = $srv['start_date_time'] ?? null;
+                $srvDuration = (int) ($srv['duration_min'] ?? 30);
+                
+                if ($srvEmployeeId > 0 && $srvStart) {
+                    if ($this->hasSlotConflict($srvEmployeeId, $srvStart, $srvDuration)) {
+                        return $this->sendError('الموظف المختار محجوز بالفعل في هذا الوقت.', [], 409);
+                    }
+                }
+            }
+        }
+
         $bookingData['user_id'] = $user->id;
         $bookingData['created_by'] = $user->id;
         $bookingData['updated_by'] = $user->id;

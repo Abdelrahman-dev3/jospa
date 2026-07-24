@@ -44,6 +44,22 @@ class BookingsController extends Controller
             $data['start_date_time'] = Carbon::createFromFormat('d/m/Y h:i A', $data['date'] . ' ' . $data['time']);
         }
 
+        $employeeId = (int) ($request->employee_id ?? 0);
+        $startDateTime = isset($data['start_date_time']) ? $data['start_date_time'] : null;
+        if ($employeeId > 0 && $startDateTime) {
+            $durationMinutes = 0;
+            if (!empty($request->services)) {
+                $durationMinutes = array_sum(array_column($request->services, 'duration_min'));
+            }
+            if ($durationMinutes <= 0) {
+                $durationMinutes = 30;
+            }
+
+            if ($this->hasSlotConflict($employeeId, $startDateTime, $durationMinutes)) {
+                return response()->json(['message' => 'This staff member is already booked at this time.', 'status' => false], 409);
+            }
+        }
+
         $data['user_id'] = !empty($request->user_id) ? $request->user_id : auth()->user()->id;
         $userId = $data['user_id'];
         $is_reclaim = false;

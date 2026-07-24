@@ -274,13 +274,52 @@ trait BookingTrait
             $slot_minutes = intval($slot_parts[1]);
 
             $slot_duration_minutes = $slot_hours * 60 + $slot_minutes;
+            if ($slot_duration_minutes <= 0) {
+                $slot_duration_minutes = 15;
+            }
+
+            // 1. Resolve booked times for the employee
+            $bookedMinutes = [];
+            if ($employee_id) {
+                // Fetch service bookings
+                $serviceBookings = BookingService::where('employee_id', $employee_id)
+                    ->whereDate('start_date_time', $date)
+                    ->whereHas('booking', function ($query) {
+                        $query->where('status', '!=', 'cancelled');
+                    })
+                    ->get(['start_date_time', 'duration_min']);
+
+                foreach ($serviceBookings as $booking) {
+                    $start_ts = strtotime($booking->start_date_time);
+                    $duration = max(1, (int) ($booking->duration_min ?? 0));
+                    for ($i = 0; $i < $duration; $i++) {
+                        $bookedMinutes[date('H:i', $start_ts + ($i * 60))] = true;
+                    }
+                }
+
+                // Fetch package bookings
+                $packageBookings = BookingPackages::with('booking', 'services')
+                    ->where('employee_id', $employee_id)
+                    ->whereHas('booking', function ($query) use ($date) {
+                        $query->whereDate('start_date_time', $date)
+                            ->where('status', '!=', 'cancelled');
+                    })
+                    ->get();
+
+                foreach ($packageBookings as $package) {
+                    $start_ts = strtotime($package->booking->start_date_time);
+                    $duration = (int) $package->services->sum('duration_min');
+                    $duration = max(1, $duration);
+                    for ($i = 0; $i < $duration; $i++) {
+                        $bookedMinutes[date('H:i', $start_ts + ($i * 60))] = true;
+                    }
+                }
+            }
 
             $current_time = $start_time;
             $slots = [];
 
             while ($current_time < $end_time) {
-
-                // Check if the current date & time are greater than the slot time
                 // Skip slots that overlap with break hours
                 $is_break_hour = false;
                 foreach ($slotDay->breaks as $break) {
@@ -296,34 +335,36 @@ trait BookingTrait
                 if ($is_break_hour) {
                     continue; // Skip this iteration and proceed to the next slot
                 }
-                $slot_end_time = $current_time + ($serviceDuration * 60);
+                
+                $resolvedDuration = $serviceDuration > 0 ? $serviceDuration : $slot_duration_minutes;
+                $slot_end_time = $current_time + ($resolvedDuration * 60);
              
                 if ($slot_end_time > $end_time) {
                     break; 
                 }
-                $slot_start = $current_time;
-                $current_time += $slot_duration_minutes * 60;
 
-                $startDateTime = date('Y-m-d', strtotime($date)) . ' ' . date('H:i:s', $slot_start);
-                $startTimestamp = strtotime($startDateTime);
+                // Verify breaks overlap with the candidate slot
+                $overlaps_break = false;
+                foreach ($slotDay->breaks as $break) {
+                    $start_break = strtotime($break['start_break']);
+                    $end_break = strtotime($break['end_break']);
+                    if ($current_time < $end_break && $slot_end_time > $start_break) {
+                        $overlaps_break = true;
+                        break;
+                    }
+                }
 
-                $endTimestamp = $startTimestamp + ($slot_duration_minutes * 60);
+                if ($overlaps_break) {
+                    $current_time += $slot_duration_minutes * 60;
+                    continue;
+                }
 
-                // Check if the slot overlaps with any existing appointments
+                // Verify existing appointments overlap with the candidate slot
                 $is_booked = false;
                 if ($employee_id) {
-                    $existingAppointments = BookingService::where('employee_id', $employee_id)
-                        ->where('start_date_time', '<', date('Y-m-d H:i:s', $endTimestamp))
-                        ->whereHas('booking', function ($query) {
-                            $query->where('status', '!=', 'cancelled');
-                        })
-                        ->get();
-
-                    foreach ($existingAppointments as $appointment) {
-                        $appointment_start = strtotime($appointment->start_date_time);
-                        $appointment_end = $appointment_start + ($appointment->duration_min * 60);
-
-                        if ($startTimestamp >= $appointment_start && $startTimestamp < $appointment_end) {
+                    for ($t = 0; $t < $resolvedDuration; $t++) {
+                        $minute_str = date('H:i', $current_time + ($t * 60));
+                        if (isset($bookedMinutes[$minute_str])) {
                             $is_booked = true;
                             break;
                         }
@@ -331,18 +372,72 @@ trait BookingTrait
                 }
 
                 if (!$is_booked) {
-                    $slot = [
-                        'value' => date('Y-m-d H:i:s', $startTimestamp),
-                        'label' => date('h:i A', $slot_start),
+                    $slots[] = [
+                        'value' => date('Y-m-d H:i:s', strtotime(date('Y-m-d', strtotime($date)) . ' ' . date('H:i:s', $current_time))),
+                        'label' => date('h:i A', $current_time),
                         'disabled' => false,
                     ];
-                    $slots[] = $slot;
                 }
+
+                $current_time += $slot_duration_minutes * 60;
             }
         }
 
         return $slots;
     }
+
+    public function hasSlotConflict(int $staffId, $startDateTime, int $duration, int $ignoreBookingId = 0): bool
+    {
+        $start = \Carbon\Carbon::parse($startDateTime);
+        $requestedEnd = $start->copy()->addMinutes(max(1, $duration));
+
+        // 1. Check Service Booking Conflicts
+        $existingSlots = BookingService::where('employee_id', $staffId)
+            ->whereDate('start_date_time', $start->toDateString())
+            ->whereHas('booking', function ($query) use ($ignoreBookingId) {
+                $query->whereIn('status', ['pending', 'confirmed', 'check_in']);
+                if ($ignoreBookingId > 0) {
+                    $query->where('id', '!=', $ignoreBookingId);
+                }
+            })
+            ->get(['start_date_time', 'duration_min']);
+
+        foreach ($existingSlots as $slot) {
+            $existingStart = \Carbon\Carbon::parse($slot->start_date_time);
+            $existingDuration = max(1, (int) ($slot->duration_min ?? 0));
+            $existingEnd = $existingStart->copy()->addMinutes($existingDuration);
+
+            if ($existingStart->lt($requestedEnd) && $existingEnd->gt($start)) {
+                return true;
+            }
+        }
+
+        // 2. Check Package Booking Conflicts
+        $existingPackages = BookingPackages::with('booking', 'services')
+            ->where('employee_id', $staffId)
+            ->whereHas('booking', function ($query) use ($start, $ignoreBookingId) {
+                $query->whereDate('start_date_time', $start->toDateString())
+                    ->whereIn('status', ['pending', 'confirmed', 'check_in']);
+                if ($ignoreBookingId > 0) {
+                    $query->where('id', '!=', $ignoreBookingId);
+                }
+            })
+            ->get();
+
+        foreach ($existingPackages as $package) {
+            $existingStart = \Carbon\Carbon::parse($package->booking->start_date_time);
+            $existingDuration = (int) $package->services->sum('duration_min');
+            $existingDuration = max(1, $existingDuration);
+            $existingEnd = $existingStart->copy()->addMinutes($existingDuration);
+
+            if ($existingStart->lt($requestedEnd) && $existingEnd->gt($start)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     protected function sendNotificationOnBookingUpdate($type, $notify_message, $booking, $notify = true)
     {
