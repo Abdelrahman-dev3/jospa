@@ -526,18 +526,22 @@
                                         price: parseInt(service.default_price)
                                     });
                                     updateSummarySteps();
-                                    setTimeout(() => {
-                                        currentStep++;
-                                        updateUI();
-                                        updateSummarySteps();
-                                    
+                                    const minHomeBookingAmount = Number("{{ setting('min_home_booking_amount', 0) }}");
+                                    const { total } = getBookingSummaryStats();
+                                    if (minHomeBookingAmount <= 0 || total >= minHomeBookingAmount) {
                                         setTimeout(() => {
-                                            const firstSummaryCard = document.querySelector('.sammary-steps .summary-card');
-                                            if (firstSummaryCard) {
-                                                firstSummaryCard.click();
-                                            }
-                                        }, 300);
-                                    }, 500);
+                                            currentStep++;
+                                            updateUI();
+                                            updateSummarySteps();
+                                        
+                                            setTimeout(() => {
+                                                const firstSummaryCard = document.querySelector('.sammary-steps .summary-card');
+                                                if (firstSummaryCard) {
+                                                    firstSummaryCard.click();
+                                                }
+                                            }, 300);
+                                        }, 500);
+                                    }
 
                                 }
                             }
@@ -1005,7 +1009,27 @@
                     break;
                 case 2:
                     if (!selectedData.services || selectedData.services.length === 0) {
-                        alert('Please select at least one service');
+                        const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+                        const msg = lang === 'ar' ? 'يرجى اختيار خدمة واحدة على الأقل' : 'Please select at least one service';
+                        if (typeof createNotify === 'function') {
+                            createNotify({ title: lang === 'ar' ? 'تنبيه' : 'Alert', desc: msg });
+                        } else {
+                            alert(msg);
+                        }
+                        return false;
+                    }
+                    const minHomeBookingAmount = Number("{{ setting('min_home_booking_amount', 0) }}");
+                    const { total } = getBookingSummaryStats();
+                    if (minHomeBookingAmount > 0 && total < minHomeBookingAmount) {
+                        const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+                        const msg = lang === 'ar' 
+                            ? `عفواً، الحد الأدنى لحجز الخدمات المنزلية هو ${minHomeBookingAmount} ريال (المجموع الحالي: ${total} ريال)` 
+                            : `Sorry, the minimum amount for booking home services is ${minHomeBookingAmount} SAR (Current total: ${total} SAR)`;
+                        if (typeof createNotify === 'function') {
+                            createNotify({ title: lang === 'ar' ? 'تنبيه' : 'Alert', desc: msg });
+                        } else {
+                            alert(msg);
+                        }
                         return false;
                     }
                     break;
