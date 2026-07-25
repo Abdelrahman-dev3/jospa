@@ -184,12 +184,37 @@ class Booking extends BaseModel
         });
     }
 
+    public static function cleanupExpiredBookings()
+    {
+        try {
+            $tenMinutesAgo = \Carbon\Carbon::now()->subMinutes(10);
+            $expiredBookings = static::where('status', 'pending')
+                ->whereIn('payment_type', ['cart', 'payment'])
+                ->where('created_at', '<=', $tenMinutesAgo)
+                ->unpaid()
+                ->get();
+
+            foreach ($expiredBookings as $booking) {
+                $booking->bookingService()->delete();
+                $booking->packages()->delete();
+                $booking->products()->delete();
+                $booking->transactions()->delete();
+                $booking->userCouponRedeem()->delete();
+                $booking->delete();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to auto-delete expired bookings: " . $e->getMessage());
+        }
+    }
+
     public static function userBaseQuery(int $userId, array $relations = []): Builder
     {
         return static::with($relations)->where('created_by', $userId)->whereNull('deleted_by');
     }
 
     public static function getUserIncompleteBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {
+        static::cleanupExpiredBookings();
+
         return static::userBaseQuery($userId, $relations)
             ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
             ->unpaid()

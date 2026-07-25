@@ -73,6 +73,7 @@ class BookingCartController extends Controller
 
     public function store(Request $request)
     {
+        Booking::cleanupExpiredBookings();
         $user = auth()->user();
         $data = $request->all();
         $btn_value = $request->btn_value;
