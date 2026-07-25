@@ -564,6 +564,61 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             ];
         }
 
+        // Fallback: If trandata is missing or decryption failed, perform a double-inquiry query
+        $paymentId = $this->resolveUrPayTransactionId($request, $data);
+        $trackId = $this->resolveUrPayCheckoutId($request, $data);
+        $amount = (float) ($data['amount'] ?? 0);
+        $currency = config('urpay.currency', 'SAR');
+        $currencyCode = $this->resolveCurrencyCode($currency);
+
+        if ($paymentId && $trackId && $amount > 0) {
+            Log::warning('UrPay callback missing trandata. Querying transaction status from gateway...', [
+                'payment_id' => $paymentId,
+                'track_id' => $trackId,
+                'amount' => $amount,
+            ]);
+
+            $queryPayload = $this->queryTransactionStatus($paymentId, $trackId, $amount, $currencyCode);
+            if ($queryPayload) {
+                $request->attributes->set('urpay_decrypted_payload', $queryPayload);
+
+                $result = strtolower(trim((string) ($queryPayload['result'] ?? '')));
+                if ($result !== '') {
+                    if ($this->containsAny($result, ['captured', 'approved', 'authorized', 'authorised', 'paid', 'success'])) {
+                        return [
+                            'ok' => true,
+                            'status' => 'success',
+                        ];
+                    }
+
+                    if ($this->containsAny($result, ['cancel', 'cancelled', 'canceled', 'abort'])) {
+                        return [
+                            'ok' => false,
+                            'status' => 'cancel',
+                            'message' => __('messages.payment_cancelled'),
+                        ];
+                    }
+
+                    if ($this->containsAny($result, ['fail', 'declin', 'denied', 'reject', 'error'])) {
+                        $msg = trim((string) ($queryPayload['errorText'] ?? $queryPayload['result'] ?? ''));
+                        return [
+                            'ok' => false,
+                            'status' => 'failure',
+                            'message' => $msg !== '' ? $msg : __('messages.payment_failed'),
+                        ];
+                    }
+                }
+            } else {
+                Log::error('UrPay fallback transaction query failed or returned no response.');
+            }
+        } else {
+            Log::error('UrPay fallback transaction query skipped due to missing parameters.', [
+                'payment_id' => $paymentId,
+                'track_id' => $trackId,
+                'amount' => $amount,
+            ]);
+        }
+
         if ($this->resolveCallbackReference($request, $data)) {
             return [
                 'ok' => false,
@@ -575,6 +630,76 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'ok' => false,
             'message' => 'UrPay transaction reference is missing.',
         ];
+    }
+
+    private function queryTransactionStatus(string $paymentId, string $trackId, float $amount, string $currencyCode): ?array
+    {
+        $tranportalId = trim((string) config('urpay.tranportal_id'));
+        $tranportalPassword = trim((string) config('urpay.tranportal_password'));
+        $baseUrl = rtrim((string) config('urpay.base_url'), '/');
+        $verifyOrderPath = trim((string) config('urpay.verify_order_path'), '/');
+
+        if ($tranportalId === '' || $tranportalPassword === '' || $baseUrl === '' || $verifyOrderPath === '') {
+            Log::error('URPAY Query: Configuration values are missing.');
+            return null;
+        }
+
+        $plainTrandata = [[
+            'amt' => number_format($amount, 2, '.', ''),
+            'action' => '8', // 8 is query status
+            'password' => $tranportalPassword,
+            'id' => $tranportalId,
+            'currencyCode' => $currencyCode,
+            'transId' => $paymentId,
+            'trackId' => $trackId,
+        ]];
+
+        try {
+            $requestBody = [[
+                'id' => $tranportalId,
+                'trandata' => $this->encryptTrandataPayload($plainTrandata),
+            ]];
+
+            $endpoint = $baseUrl . '/' . ltrim($verifyOrderPath, '/');
+            $response = Http::acceptJson()
+                ->asJson()
+                ->withHeaders([
+                    'X-FORWARDED-FOR' => $this->buildForwardedForHeader(request()),
+                ])
+                ->post($endpoint, $requestBody);
+
+            Log::info('URPAY query transaction response received.', [
+                'status_code' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $responseData = $response->json();
+            if (is_array($responseData) && array_is_list($responseData)) {
+                $responseData = $responseData[0] ?? [];
+            }
+
+            if (isset($responseData['status']) && (string) $responseData['status'] === '1' && isset($responseData['result'])) {
+                $decrypted = $this->decryptTrandataPayload($responseData['result']);
+                if ($decrypted) {
+                    return $decrypted;
+                }
+            }
+            
+            if (isset($responseData['trandata'])) {
+                $decrypted = $this->decryptTrandataPayload($responseData['trandata']);
+                if ($decrypted) {
+                    return $decrypted;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('URPAY query error: ' . $e->getMessage(), ['exception' => $e]);
+        }
+
+        return null;
     }
 
     private function buildSignedMerchantUrls(Request $request, string $typePage, array $data): array
@@ -838,7 +963,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             return $request->attributes->get('urpay_decrypted_payload');
         }
 
-        $encrypted = trim((string) $request->input('trandata', ''));
+        $encrypted = trim((string) ($request->input('trandata') ?? $request->input('tranData') ?? $request->input('TranData') ?? $request->input('trandata_result') ?? ''));
         if ($encrypted === '') {
             $request->attributes->set('urpay_decrypted_payload', null);
             return null;
