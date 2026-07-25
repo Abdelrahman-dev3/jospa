@@ -173,7 +173,7 @@ class CustomersController extends Controller
                 $Profile_image = optional($data)->profile_image ?? default_user_avatar();
                 $name = optional($data)->full_name ?? default_user_name();
                 $mobile = optional($data)->mobile ?? '--';
-                $url = route('app.invoice') . '?customer_name=' . urlencode(optional($data)->full_name) . '&date=' ;
+                $url = route('app.invoice') . '?customer_name=' . urlencode(optional($data)->full_name) . '&date=&mobile=' . urlencode(optional($data)->mobile);
             
                 return '
                     <a href="'.$url.'" class="d-flex align-items-center text-decoration-none" style="color:#c39b61;">

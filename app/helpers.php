@@ -167,22 +167,34 @@ function sendNotification($data)
 
 function fcm($fields)
 {
-    $otherSetting = \App\Models\Setting::where('type', 'firebase_notification')->where('name', 'firebase_project_id')->first();
-    $projectID = $otherSetting->val ?? null;
-    $access_token = getAccessToken();
-    $headers = [
-        'Authorization: Bearer ' . $access_token,
-        'Content-Type: application/json',
-    ];
-    $ch = curl_init('https://fcm.googleapis.com/v1/projects/' . $projectID . '/messages:send');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+    try {
+        $otherSetting = \App\Models\Setting::where('type', 'firebase_notification')->where('name', 'firebase_project_id')->first();
+        $projectID = $otherSetting->val ?? null;
+        if (!$projectID) {
+            \Illuminate\Support\Facades\Log::warning('FCM Skipped: firebase_project_id is not set.');
+            return;
+        }
+        
+        $access_token = getAccessToken();
+        
+        $headers = [
+            'Authorization: Bearer ' . $access_token,
+            'Content-Type: application/json',
+        ];
+        $ch = curl_init('https://fcm.googleapis.com/v1/projects/' . $projectID . '/messages:send');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
 
-    $response = curl_exec($ch);
-    Log::info($response);
-    curl_close($ch);
+        $response = curl_exec($ch);
+        \Illuminate\Support\Facades\Log::info($response);
+        curl_close($ch);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('FCM Notification Failed: ' . $e->getMessage(), [
+            'exception' => $e
+        ]);
+    }
 }
 function getAccessToken()
 {

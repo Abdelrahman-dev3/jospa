@@ -411,13 +411,16 @@ use App\Models\GiftCard;
 
         <form method="GET" action="" id="filterForm" class="invoice-filter">
             <div class="row">
-                <div class="col-md-4 mb-3 mb-md-0">
+                <div class="col-md-3 mb-3 mb-md-0">
                     <input type="text" name="customer_name" class="form-control" placeholder="{{ __('booking.lbl_customer_name') }}" value="{{ request('customer_name') }}">
                 </div>
-                <div class="col-md-4 mb-3 mb-md-0">
+                <div class="col-md-3 mb-3 mb-md-0">
+                    <input type="text" name="mobile" class="form-control" placeholder="{{ __('labels.mobile') }}" value="{{ request('mobile') }}">
+                </div>
+                <div class="col-md-3 mb-3 mb-md-0">
                     <input type="date" name="date" class="form-control" value="{{ request('date') }}">
                 </div>
-                <div class="col-md-4 d-flex justify-content-md-center align-items-center gap-2">
+                <div class="col-md-3 d-flex justify-content-md-center align-items-center gap-2">
                     <button type="submit" class="btn btn-primary">{{ __('messages.search') }}</button>
                     <button type="button" id="resetButton" class="btn btn-secondary">{{ __('messages.reset') }}</button>
                 </div>
@@ -615,6 +618,8 @@ use App\Models\GiftCard;
 <script>
     document.getElementById('resetButton').addEventListener('click', function() {
         document.querySelector('input[name="customer_name"]').value = '';
+        const mobileInput = document.querySelector('input[name="mobile"]');
+        if (mobileInput) mobileInput.value = '';
         document.querySelector('input[name="date"]').value = '';
         document.getElementById('filterForm').submit();
     });

@@ -32,6 +32,50 @@ class InvoiceController extends Controller
             });
         }
 
+        if ($request->filled('mobile')) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $mobile = $request->mobile;
+                // Normalize Arabic numerals to Western Arabic
+                $mobile = strtr($mobile, [
+                    '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+                    '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+                    '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+                    '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9'
+                ]);
+                
+                $candidates = \App\Support\SaudiPhoneNumber::lookupDigits($mobile);
+                if (!empty($candidates)) {
+                    $q->whereIn('mobile', $candidates);
+                } else {
+                    $q->where(function($sub) use ($mobile) {
+                        $sub->where('mobile', 'like', '%' . $mobile . '%');
+                        
+                        // If it starts with +966, also search without +
+                        if (str_starts_with($mobile, '+')) {
+                            $sub->orWhere('mobile', 'like', '%' . substr($mobile, 1) . '%');
+                        }
+                        
+                        // If it starts with 05, it could be stored as +9665 or 9665
+                        if (str_starts_with($mobile, '05')) {
+                            $suffix = substr($mobile, 1);
+                            $sub->orWhere('mobile', 'like', '%+966' . $suffix . '%')
+                               ->orWhere('mobile', 'like', '%966' . $suffix . '%');
+                        }
+                        
+                        // If it starts with 9665 or +9665, it could be stored as 05
+                        if (str_starts_with($mobile, '9665')) {
+                            $suffix = substr($mobile, 3);
+                            $sub->orWhere('mobile', 'like', '%0' . $suffix . '%');
+                        }
+                        if (str_starts_with($mobile, '+9665')) {
+                            $suffix = substr($mobile, 4);
+                            $sub->orWhere('mobile', 'like', '%0' . $suffix . '%');
+                        }
+                    });
+                }
+            });
+        }
+
         if ($request->filled('date')) {
             $query->whereDate('created_at', $request->date);
         }

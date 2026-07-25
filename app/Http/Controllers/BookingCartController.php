@@ -5,6 +5,7 @@ use App\Models\Invoice;
 use Illuminate\Http\Request;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
+use Modules\Package\Models\BookingPackages;
 use Modules\Wallet\Models\Wallet;
 use App\Models\LoyaltyPoint;
 use App\Services\TaqnyatSmsService;
