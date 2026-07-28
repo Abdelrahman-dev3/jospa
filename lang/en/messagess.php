@@ -162,7 +162,7 @@ return [
 
     'branch_one'    => 'Branch One:',
     'branch_one_address' => 'Jeddah, Al-Baghdadiyah Al-Gharbiyah, Hail Street',
-    'branch_one_phone'   => '966504470706',
+    'branch_one_phone'   => '920012924',
 
     'branch_two'    => 'Branch Two:',
     'branch_two_address' => 'Jeddah, Al-Bawadi, Quraish Street',

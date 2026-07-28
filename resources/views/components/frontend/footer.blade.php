@@ -22,8 +22,8 @@
         </p>
 
         <div class="contact-buttons">
-            <a href="https://wa.me/966504470706" target="_blank" class="contact-btn">
-                <i class="bi bi-whatsapp"></i> 966504470706
+            <a href="https://wa.me/920012924" target="_blank" class="contact-btn">
+                <i class="bi bi-whatsapp"></i> 920012924
             </a>
             <a href="https://wa.me/966920012924" target="_blank" class="contact-btn">
                 <i class="bi bi-whatsapp"></i> 920012924

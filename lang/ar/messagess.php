@@ -161,7 +161,7 @@ return [
 
     'branch_one'    => 'الفرع الأول:',
     'branch_one_address' => 'جدة البغدادية الغربية شارع حائل',
-    'branch_one_phone'   => '966504470706',
+    'branch_one_phone'   => '920012924',
 
     'branch_two'    => 'الفرع الثاني:',
     'branch_two_address' => 'جدة البوادي شارع قريش',

@@ -499,10 +499,6 @@
       {{ $paymentError }}
     </div>
   @endif
-
-  <div class="timeout-warning" role="alert">
-    <i class="fa-solid fa-clock-rotate-left" style="font-size: 18px;"></i>
-  </div>
             @if(request()->has('ids'))
         <style>
             /* wrapper */

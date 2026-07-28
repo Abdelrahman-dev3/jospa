@@ -468,6 +468,11 @@ const setFormData = (data) => {
 
 // phone number
 const handleInput = (phone, phoneObject) => {
+  if (phone instanceof Event) {
+    contact_number.value = normalizePhoneValue(phone.target?.value)
+    return
+  }
+
   contact_number.value = normalizePhoneValue(phoneObject?.formatted ?? phone)
 };
 

@@ -60,7 +60,7 @@ class GiftCardActivationService
             ];
 
             if ($this->requiresReference($giftCard)) {
-                $attributes['ref'] = $giftCard->ref ?: $this->generateReference();
+                $attributes['ref'] = $giftCard->ref ?: $this->generateReference($giftCard);
                 $attributes['balance'] = (float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0);
             }
 
@@ -101,8 +101,17 @@ class GiftCardActivationService
         return in_array($giftCard->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true);
     }
 
-    private function generateReference(): string
+    private function generateReference(GiftCard $giftCard): string
     {
-        return 'GC-' . now()->format('YmdHis') . '-' . strtoupper(Str::random(6));
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $randomPart = substr(str_replace('-', '', (string) Str::uuid()), 0, 12);
+            $reference = implode('-', str_split($randomPart, 4)) . '-' . $giftCard->id;
+
+            if (! GiftCard::where('ref', $reference)->exists()) {
+                return $reference;
+            }
+        }
+
+        throw new \RuntimeException('Unable to generate a unique gift card reference.');
     }
 }

@@ -208,7 +208,7 @@
                             </div>
                           @endforeach
                     </div>
-                    <a href="https://wa.me/966504470706" target="_blank" class="whatsapp-btn">
+                    <a href="https://wa.me/920012924" target="_blank" class="whatsapp-btn">
                         <span class="iconify" data-icon="logos:whatsapp-icon"></span>
                         {{ __('messagess.whatsapp_contact') }}
                     </a>
