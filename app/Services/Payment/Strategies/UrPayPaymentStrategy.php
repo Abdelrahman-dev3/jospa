@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -131,6 +133,17 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     {
         $data = session('urpay_payment');
 
+        // Fallback: if session lost, try to recover from cache via attempt_id
+        if (! $data) {
+            $attemptId = $request->get('attempt_id');
+            if ($attemptId) {
+                $data = Cache::get('urpay_payment_' . $attemptId);
+                if ($data) {
+                    Log::info('UrPay: Recovered payment data from cache fallback.', ['attempt_id' => $attemptId]);
+                }
+            }
+        }
+
         if ($data && auth()->check() && $data['user_id'] !== auth()->id()) {
             abort(403);
         }
@@ -204,15 +217,20 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 return $this->respondFailure($request, $subResult['error'], 422);
             }
 
-            $invoiceId = $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult, [
-                'attempt_id' => $data['attempt_id'] ?? null,
-                'transaction_id' => $this->resolveUrPayTransactionId($request, $data),
-                'merchant_reference' => $data['invoice_reference'] ?? null,
-                'checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
-                'gateway_response' => $this->getDecryptedResponsePayload($request),
-                'callback_payload' => $request->all(),
-            ]);
+            $invoiceId = DB::transaction(function () use ($data, $fakeRequest, $request, $subResult) {
+                return $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult, [
+                    'attempt_id' => $data['attempt_id'] ?? null,
+                    'transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                    'merchant_reference' => $data['invoice_reference'] ?? null,
+                    'checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                    'gateway_response' => $this->getDecryptedResponsePayload($request),
+                    'callback_payload' => $request->all(),
+                ]);
+            });
             session()->forget('urpay_payment');
+            if (isset($data['attempt_id'])) {
+                Cache::forget('urpay_payment_' . $data['attempt_id']);
+            }
 
             return $this->respondSuccess($request, 'Payment captured successfully.', [
                 'invoice_id' => $invoiceId ?? null,
@@ -303,6 +321,16 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 'transaction_reference' => $invoiceRef,
             ]),
         ]);
+
+        // Cache backup: store payment data in cache as fallback in case session is lost
+        $attemptId = $data['attempt_id'] ?? null;
+        if ($attemptId) {
+            Cache::put('urpay_payment_' . $attemptId, array_merge($data, [
+                'amount' => $amount,
+                'invoice_reference' => $invoiceRef,
+                'transaction_reference' => $invoiceRef,
+            ]), now()->addMinutes(40));
+        }
 
         $this->markPaymentAttemptPending($data['attempt_id'] ?? null, [
             'merchant_reference' => $invoiceRef,

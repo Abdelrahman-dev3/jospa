@@ -6,6 +6,7 @@ use App\Models\PaymentAttempt;
 use App\Services\HyperpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -325,20 +326,22 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 'gift_code' => data_get($data, 'submethods.gift_code'),
             ]);
 
-            $this->commitFinalizedPayment(
-                (int) $data['user_id'],
-                $fakeRequest,
-                $data,
-                $data['subResult'] ?? [],
-                [
-                    'attempt_id' => $data['attempt_id'] ?? null,
-                    'transaction_id' => (string) data_get($payment, 'id', ''),
-                    'merchant_reference' => $merchantTransactionId,
-                    'checkout_id' => $data['checkout_id'] ?? null,
-                    'gateway_response' => $payment,
-                    'callback_payload' => $request->all(),
-                ]
-            );
+            $invoiceId = DB::transaction(function () use ($data, $fakeRequest, $payment, $merchantTransactionId, $request) {
+                return $this->commitFinalizedPayment(
+                    (int) $data['user_id'],
+                    $fakeRequest,
+                    $data,
+                    $data['subResult'] ?? [],
+                    [
+                        'attempt_id' => $data['attempt_id'] ?? null,
+                        'transaction_id' => (string) data_get($payment, 'id', ''),
+                        'merchant_reference' => $merchantTransactionId,
+                        'checkout_id' => $data['checkout_id'] ?? null,
+                        'gateway_response' => $payment,
+                        'callback_payload' => $request->all(),
+                    ]
+                );
+            });
 
             $this->forgetPaymentCache($cacheKey);
 

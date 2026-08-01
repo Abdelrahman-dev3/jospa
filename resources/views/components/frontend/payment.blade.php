@@ -184,8 +184,28 @@
       font-weight:700;
       box-shadow: 0 6px 18px rgba(198,138,62,0.18);
       transition:transform .18s ease;
+      position:relative;
     }
-    .pay-btn:hover{ transform:translateY(-3px); }
+    .pay-btn:hover:not(:disabled){ transform:translateY(-3px); }
+    .pay-btn:disabled{
+      opacity:.7;
+      cursor:not-allowed;
+      transform:none;
+    }
+    .pay-btn .pay-btn-spinner{
+      display:inline-block;
+      width:18px;
+      height:18px;
+      border:2.5px solid rgba(255,255,255,.35);
+      border-top-color:#fff;
+      border-radius:50%;
+      animation:paySpinner .6s linear infinite;
+      vertical-align:middle;
+      margin-inline-end:6px;
+    }
+    @keyframes paySpinner{
+      to{ transform:rotate(360deg); }
+    }
 
     /* right side */
     .panel{
@@ -741,7 +761,7 @@
 
             </script>
             @endif
-  <form action="{{route('payment-chanal')}}" method="POST">
+  <form action="{{route('payment-chanal')}}" method="POST" id="paymentForm">
     @csrf
     
     <input type="hidden" name="items_count" id="form_items_count" value="0">
@@ -1016,7 +1036,7 @@
                         <div>{{ __('messagess.total_amount') }}</div>
                         <div id="totalPrice" style="color:var(--gold)"><span>{{$totalPrice + getBookingTaxamount($totalPrice, 0, null )['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0) }}</span> {{ __('messagess.SR') }}</div>
                     </div>
-                    <button class="pay-btn mt-3" id="confirmPay"><i class="fa-solid fa-credit-card me-2"></i> {{ __('messagess.confirm_payment') }} </button>
+                    <button class="pay-btn mt-3" id="confirmPay" type="submit"><i class="fa-solid fa-credit-card me-2" id="confirmPayIcon"></i><span id="confirmPayText"> {{ __('messagess.confirm_payment') }}</span></button>
                 </div>
             </div>
         </div>
@@ -1355,6 +1375,56 @@
         });
 
         updateTotal();
+
+        // === Double Submit Prevention ===
+        (function() {
+            const paymentForm = document.getElementById('paymentForm');
+            const confirmBtn = document.getElementById('confirmPay');
+            const confirmIcon = document.getElementById('confirmPayIcon');
+            const confirmText = document.getElementById('confirmPayText');
+            let isSubmitting = false;
+
+            if (paymentForm && confirmBtn) {
+                paymentForm.addEventListener('submit', function(e) {
+                    // Check if a payment method is selected
+                    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+                    if (!selectedMethod) {
+                        e.preventDefault();
+                        if (typeof toastr !== 'undefined' && toastr.error) {
+                            toastr.error("{{ app()->getLocale() === 'ar' ? 'يرجى اختيار وسيلة الدفع' : 'Please select a payment method' }}");
+                        }
+                        return false;
+                    }
+
+                    // Prevent double submission
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    isSubmitting = true;
+                    confirmBtn.disabled = true;
+                    if (confirmIcon) {
+                        confirmIcon.className = 'pay-btn-spinner';
+                    }
+                    if (confirmText) {
+                        confirmText.textContent = " {{ app()->getLocale() === 'ar' ? 'جاري المعالجة...' : 'Processing...' }}";
+                    }
+
+                    // Re-enable after 30 seconds as safety net (in case of network error)
+                    setTimeout(function() {
+                        isSubmitting = false;
+                        confirmBtn.disabled = false;
+                        if (confirmIcon) {
+                            confirmIcon.className = 'fa-solid fa-credit-card me-2';
+                        }
+                        if (confirmText) {
+                            confirmText.textContent = " {{ __('messagess.confirm_payment') }}";
+                        }
+                    }, 30000);
+                });
+            }
+        })();
 
     </script>
 

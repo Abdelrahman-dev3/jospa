@@ -9,6 +9,7 @@ use App\Services\Payment\PaymentAttemptService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\Booking\Models\Booking;
 
 abstract class BasePaymentStrategy
@@ -72,11 +73,28 @@ abstract class BasePaymentStrategy
         ];
     }
 
-    protected function commitFinalizedPayment(int $userId, Request $request, array $paymentData, array $subResult, array $gatewayMeta = []): int
+    protected function commitFinalizedPayment(int $userId, Request $request, array $paymentData, array $subResult, array $gatewayMeta = [], bool $subMethodsAlreadyCommitted = false): int
     {
         $finalizer = app(PaymentFinalizerService::class);
         $subMethodService = app(PaymentSubMethodsService::class);
         $attemptService = app(PaymentAttemptService::class);
+
+        // Lock the PaymentAttempt to prevent concurrent finalization (race condition)
+        $attemptId = $this->resolveAttemptId($request, $paymentData);
+        if ($attemptId) {
+            $lockedAttempt = $this->lockPaymentAttemptForFinalization($attemptId);
+            if ($lockedAttempt === null) {
+                // Attempt not found — proceed without lock (backward compat)
+            } elseif ($lockedAttempt->status === PaymentAttempt::STATUS_PAID) {
+                // Already finalized by another concurrent request
+                \Log::info('Payment attempt already finalized, skipping duplicate finalization.', [
+                    'attempt_id' => $attemptId,
+                    'invoice_id' => $lockedAttempt->invoice_id,
+                ]);
+                return (int) ($lockedAttempt->invoice_id ?? 0);
+            }
+        }
+
         $subPayments = array_merge($subResult, [
             'gift_code' => $request->get('gift_code'),
             'coupon_discount_amount' => $paymentData['couponDiscountAmount'] ?? 0,
@@ -100,9 +118,12 @@ abstract class BasePaymentStrategy
             $gatewayMeta
         );
 
-        $subMethodService->apply($userId, $request, $paymentData['final_before_sub'], true);
+        // Only apply sub-methods if they haven't been committed by the caller already
+        if (! $subMethodsAlreadyCommitted) {
+            $subMethodService->apply($userId, $request, $paymentData['final_before_sub'], true);
+        }
 
-        $attemptService->markPaid($this->resolveAttemptId($request, $paymentData), [
+        $attemptService->markPaid($attemptId, [
             'invoice_id' => $invoiceId,
             'merchant_reference' => $gatewayMeta['merchant_reference'] ?? null,
             'gateway_transaction_id' => $gatewayMeta['transaction_id'] ?? null,
@@ -257,5 +278,18 @@ abstract class BasePaymentStrategy
     protected function markPaymentAttemptPaid(?int $attemptId, array $attributes = []): ?PaymentAttempt
     {
         return app(PaymentAttemptService::class)->markPaid($attemptId, $attributes);
+    }
+
+    /**
+     * Lock the PaymentAttempt row to prevent concurrent finalization (race condition).
+     * Returns null if the attempt doesn't exist.
+     */
+    protected function lockPaymentAttemptForFinalization(?int $attemptId): ?PaymentAttempt
+    {
+        if (! $attemptId) {
+            return null;
+        }
+
+        return PaymentAttempt::where('id', $attemptId)->lockForUpdate()->first();
     }
 }
