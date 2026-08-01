@@ -107,6 +107,27 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .phone-number {
+      direction: ltr;
+      unicode-bidi: isolate;
+      display: inline-block;
+    }
+
+    .branch-whatsapp-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #25d366;
+      font-size: 18px;
+      line-height: 1;
+      text-decoration: none;
+    }
+
+    .branch-whatsapp-link:hover {
+      color: #1ebe5d;
     }
 
     .whatsapp-btn {
@@ -201,10 +222,40 @@
 
                         <div class="branches">
                           @forEach($branches as $branch)
+                            @php
+                              $branchPhone = trim((string) ($branch->contact_number ?? ''));
+                              $whatsappNumber = preg_replace('/\D+/', '', $branchPhone);
+
+                              if (substr($whatsappNumber, 0, 2) === '00') {
+                                  $whatsappNumber = substr($whatsappNumber, 2);
+                              }
+
+                              if ($whatsappNumber !== '' && substr($whatsappNumber, 0, 3) !== '966') {
+                                  $whatsappNumber = substr($whatsappNumber, 0, 1) === '0'
+                                      ? '966' . substr($whatsappNumber, 1)
+                                      : (strlen($whatsappNumber) <= 9 ? '966' . $whatsappNumber : $whatsappNumber);
+                              }
+                            @endphp
                             <div class="branch">
                               <strong>{{$branch->name ?? ''}}</strong>
                               <p>{{$branch->description ?? ''}}</p>
-                              <p class="phone"> <img src="{{ asset('images/icons/basil_phone-solid.png') }}"> {{$branch->contact_number ?? ''}}</p>
+                              @if ($branchPhone !== '')
+                                <p class="phone">
+                                  <img src="{{ asset('images/icons/basil_phone-solid.png') }}" alt="">
+                                  <span class="phone-number" dir="ltr">{{ $branchPhone }}</span>
+                                  @if ($whatsappNumber !== '')
+                                    <a
+                                      href="https://wa.me/{{ $whatsappNumber }}"
+                                      target="_blank"
+                                      rel="noopener"
+                                      class="branch-whatsapp-link"
+                                      aria-label="WhatsApp {{ $branchPhone }}"
+                                    >
+                                      <i class="bi bi-whatsapp"></i>
+                                    </a>
+                                  @endif
+                                </p>
+                              @endif
                             </div>
                           @endforeach
                     </div>
