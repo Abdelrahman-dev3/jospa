@@ -95,7 +95,7 @@ class ReportsController extends Controller
 
         [$startDate, $endDate] = $this->resolveReportDates($preset, $customRange);
 
-        $orderQuery = OrderGroup::query()->with('order.orderItems');
+        $orderQuery = OrderGroup::query()->where('payment_status', 'paid')->with('order.orderItems');
         if ($startDate) {
             $orderQuery->whereDate('created_at', '>=', $startDate->toDateString());
         }
@@ -431,11 +431,29 @@ class ReportsController extends Controller
             $range = explode(' to ', $range);
         }
 
-        if (is_array($range) && isset($range[0]) && $range[0] !== '') {
-            $start = Carbon::createFromFormat('d-m-Y', trim($range[0]))->startOfDay();
-        }
-        if (is_array($range) && isset($range[1]) && $range[1] !== '') {
-            $end = Carbon::createFromFormat('d-m-Y', trim($range[1]))->endOfDay();
+        if (is_array($range)) {
+            if (isset($range[0]) && trim((string) $range[0]) !== '') {
+                $startStr = trim((string) $range[0]);
+                try {
+                    $start = Carbon::hasFormat($startStr, 'd-m-Y')
+                        ? Carbon::createFromFormat('d-m-Y', $startStr)->startOfDay()
+                        : Carbon::parse($startStr)->startOfDay();
+                } catch (\Exception $e) {
+                    $start = null;
+                }
+            }
+            if (isset($range[1]) && trim((string) $range[1]) !== '') {
+                $endStr = trim((string) $range[1]);
+                try {
+                    $end = Carbon::hasFormat($endStr, 'd-m-Y')
+                        ? Carbon::createFromFormat('d-m-Y', $endStr)->endOfDay()
+                        : Carbon::parse($endStr)->endOfDay();
+                } catch (\Exception $e) {
+                    $end = null;
+                }
+            } elseif ($start) {
+                $end = $start->copy()->endOfDay();
+            }
         }
 
         return [$start, $end];
@@ -690,34 +708,37 @@ class ReportsController extends Controller
 
     public function order_report_index_data(DataTables $datatable, Request $request)
     {
-        $bookings = Booking::with('booking_service.employee', 'booking_service.service', 'user', 'bookingTransaction');
-
+        $orders = Order::with('orderGroup', 'user', 'orderItems');
 
         $filter = $request->filter;
 
         if (isset($filter)) {
             if (isset($filter['payment_status']) && $filter['payment_status'] !== '') {
                 if ((int) $filter['payment_status'] === 1) {
-                    $bookings->paid();
+                    $orders->whereHas('orderGroup', function ($q) {
+                        $q->where('payment_status', 'paid');
+                    });
                 } else {
-                    $bookings->unpaid();
+                    $orders->whereHas('orderGroup', function ($q) {
+                        $q->where('payment_status', '!=', 'paid');
+                    });
                 }
             }
 
-            if (isset($filter['order_date'][0])) {
+            if (isset($filter['order_date'][0]) && $filter['order_date'][0] !== '') {
                 $startDate = $filter['order_date'][0];
                 $endDate = $filter['order_date'][1] ?? null;
 
                 if ($endDate) {
-                    $bookings->whereDate('created_at', '>=', date('Y-m-d', strtotime($startDate)));
-                    $bookings->whereDate('created_at', '<=', date('Y-m-d', strtotime($endDate)));
+                    $orders->whereDate('orders.created_at', '>=', date('Y-m-d', strtotime($startDate)));
+                    $orders->whereDate('orders.created_at', '<=', date('Y-m-d', strtotime($endDate)));
                 } else {
-                    $bookings->whereDate('created_at', date('Y-m-d', strtotime($startDate)));
+                    $orders->whereDate('orders.created_at', date('Y-m-d', strtotime($startDate)));
                 }
             }
         }
 
-        return $datatable->eloquent($bookings)
+        return $datatable->eloquent($orders)
             ->addIndexColumn()
             ->editColumn('order_code', function ($data) {
                 return setting('inv_prefix') . optional($data->orderGroup)->order_code;
@@ -735,20 +756,17 @@ class ReportsController extends Controller
                 return customDate($data->created_at);
             })
             ->editColumn('items', function ($data) {
-                return $data->booking_service->pluck('service.name')->join(', ');
+                $itemNames = $data->orderItems ? $data->orderItems->pluck('product_name')->filter()->join(', ') : '';
+                return $itemNames !== '' ? $itemNames : ($data->orderItems ? $data->orderItems->count() . ' item(s)' : '0');
             })
             ->editColumn('payment', function ($data) {
-                return $data->bookingTransaction ? __('order_report.paid') : __('order_report.unpaid');
+                return optional($data->orderGroup)->payment_status === 'paid' ? __('order_report.paid') : __('order_report.unpaid');
             })
             ->editColumn('status', function ($data) {
-                return $data->booking_service->pluck('discount_amount')->join(', ');
+                return Currency::format($data->coupon_discount_amount ?? 0);
             })
             ->editColumn('total_admin_earnings', function ($data) {
-                $totalPrice = $data->booking_service->sum('service_price');
-                $totalDiscount = $data->booking_service->sum('discount_amount');
-                $netTotal = $totalPrice - $totalDiscount;
-
-                return Currency::format($netTotal);
+                return Currency::format($data->total_admin_earnings ?? $data->grand_total_amount ?? 0);
             })
             ->filterColumn('customer_name', function ($query, $keyword) {
                 $query->whereHas('user', function ($q) use ($keyword) {
@@ -1010,9 +1028,7 @@ class ReportsController extends Controller
         }
 
         if (isset($filter['employee_id'])) {
-            $query->whereHas('employee', function ($q) use ($filter) {
-                $q->where('employee_id', $filter['employee_id']);
-            });
+            $query->where('employee_id', $filter['employee_id']);
         }
 
         return $datatable->eloquent($query)
@@ -1417,28 +1433,16 @@ class ReportsController extends Controller
                 }
             })
             ->orderColumn('total_services', function ($data, $order) {
-                $data->selectRaw('(SELECT COUNT(service_id) FROM booking_services WHERE employee_id = users.id) as total_services')
-                    ->orderBy('total_services', $order);
+                $data->orderBy('employee_booking_count', $order);
             })
-
             ->orderColumn('total_service_amount', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(service_price) FROM booking_services WHERE employee_id = users.id) as total_service_amount')
-                    ->orderBy('total_service_amount', $order);
+                $data->orderBy('employee_booking_sum_service_price', $order);
             })
-
-            ->orderColumn('total_service_amount', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(service_price) FROM booking_services WHERE employee_id = users.id) as total_service_amount')
-                    ->orderBy('total_service_amount', $order);
-            })
-
             ->orderColumn('total_commission_earn', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(commission_amount) FROM commission_earnings WHERE employee_id = users.id) as total_commission_earn')
-                    ->orderBy('total_commission_earn', $order);
+                $data->orderBy('commission_earning_sum_commission_amount', $order);
             })
-
             ->orderColumn('total_earning', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(service_price) FROM booking_services WHERE employee_id = users.id) as total_earning')
-                    ->orderBy('total_earning', $order);
+                $data->orderBy('commission_earning_sum_commission_amount', $order);
             })
 
             ->addIndexColumn()

@@ -233,47 +233,40 @@ class Booking extends BaseModel
     // Reports Query
     public static function dailyReport()
     {
+        $bsSub = DB::table('booking_services')
+            ->select('booking_id', DB::raw('COUNT(*) as total_service'), DB::raw('SUM(service_price) as total_service_amount'))
+            ->groupBy('booking_id');
+
+        $txSub = DB::table('booking_transactions as bt')
+            ->select('bt.booking_id', DB::raw('
+                SUM(CASE
+                    WHEN JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.type\')) = \'percent\'
+                    THEN (SELECT COALESCE(SUM(service_price), 0) FROM booking_services WHERE booking_id = bt.booking_id) * CAST(JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.percent\')) AS DECIMAL(10,2)) / 100
+                    WHEN JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.type\')) = \'fixed\'
+                    THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.tax_amount\')) AS DECIMAL(10,2))
+                    ELSE 0
+                END) as total_tax_amount
+            '))
+            ->join(DB::raw('(
+                SELECT id, booking_id, JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \']\')) AS tax_item
+                FROM booking_transactions
+                CROSS JOIN (SELECT 0 AS idx UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) AS idxs
+                WHERE tax_percentage IS NOT NULL AND JSON_VALID(tax_percentage) AND idx < JSON_LENGTH(tax_percentage)
+            ) AS jt'), 'bt.id', '=', 'jt.id')
+            ->groupBy('bt.booking_id');
+
         return self::select(
             DB::raw('DATE(bookings.start_date_time) AS start_date_time'),
-            DB::raw('COUNT(DISTINCT bookings.id) AS total_booking'),
-            DB::raw('COUNT(DISTINCT CONCAT(booking_services.booking_id, "-", booking_services.service_id)) AS total_service'),
-            DB::raw('SUM(CASE WHEN booking_services.service_id = (SELECT   service_id FROM booking_services AS bs2 WHERE bs2.booking_id = bookings.id LIMIT 1) THEN booking_services.service_price ELSE 0 END) AS total_service_amount_per_service'),
-            DB::raw('SUM(CASE
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'percent\' THEN booking_services.service_price * JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.percent\')) / 100
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'fixed\' THEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.tax_amount\'))
-              ELSE 0
-          END) AS total_tax_amount'),
-          DB::raw('
-          COALESCE(SUM(DISTINCT booking_services.service_price), 0) +
-          SUM(CASE
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'percent\'
-              THEN booking_services.service_price * JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.percent\')) / 100
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'fixed\'
-              THEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.tax_amount\'))
-              ELSE 0
-          END) AS total_amount')
+            DB::raw('COUNT(bookings.id) AS total_booking'),
+            DB::raw('COALESCE(SUM(bs_agg.total_service), 0) AS total_service'),
+            DB::raw('COALESCE(SUM(bs_agg.total_service_amount), 0) AS total_service_amount'),
+            DB::raw('COALESCE(SUM(tx_agg.total_tax_amount), 0) AS total_tax_amount'),
+            DB::raw('COALESCE(SUM(bs_agg.total_service_amount), 0) + COALESCE(SUM(tx_agg.total_tax_amount), 0) AS total_amount')
         )
-            ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
-            ->leftJoin(DB::raw('(SELECT
-                  booking_id,
-                  CONCAT(
-                      \'{ "type": "\', jt.type, \'", "percent": \', jt.percent, \', "tax_amount": \', jt.tax_amount, \' }\'
-                  ) AS tax_info
-              FROM (
-                  SELECT
-                      booking_id,
-                      JSON_UNQUOTE(JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \'].type\'))) AS type,
-                      JSON_UNQUOTE(JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \'].percent\'))) AS percent,
-                      JSON_UNQUOTE(JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \'].tax_amount\'))) AS tax_amount
-                  FROM booking_transactions
-                  CROSS JOIN (
-                      SELECT 0 AS idx UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
-                  ) AS indices
-                  WHERE idx < JSON_LENGTH(tax_percentage)
-              ) AS jt
-              GROUP BY booking_id, jt.type, jt.percent, jt.tax_amount) AS tx'), 'bookings.id', '=', 'tx.booking_id')
+            ->leftJoinSub($bsSub, 'bs_agg', 'bookings.id', '=', 'bs_agg.booking_id')
+            ->leftJoinSub($txSub, 'tx_agg', 'bookings.id', '=', 'tx_agg.booking_id')
             ->where('bookings.status', 'completed')
-            ->groupBy('start_date_time');
+            ->groupBy(DB::raw('DATE(bookings.start_date_time)'));
     }
 
     public static function totalservice($taxAmount)
@@ -284,7 +277,7 @@ class Booking extends BaseModel
             DB::raw('COALESCE(SUM(booking_services.service_price), 0) as total_service_amount'),
             DB::raw('
                 COALESCE(SUM(booking_services.service_price), 0) +
-                ' . $taxAmount . ' AS total_amount')
+                ' . (float) $taxAmount . ' AS total_amount')
         )
             ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
             ->where('bookings.status', 'completed')
@@ -293,45 +286,39 @@ class Booking extends BaseModel
 
     public static function overallReport()
     {
+        $bsSub = DB::table('booking_services')
+            ->select('booking_id', DB::raw('COUNT(*) as total_service'), DB::raw('SUM(service_price) as total_service_amount'))
+            ->groupBy('booking_id');
+
+        $txSub = DB::table('booking_transactions as bt')
+            ->select('bt.booking_id', DB::raw('
+                SUM(CASE
+                    WHEN JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.type\')) = \'percent\'
+                    THEN (SELECT COALESCE(SUM(service_price), 0) FROM booking_services WHERE booking_id = bt.booking_id) * CAST(JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.percent\')) AS DECIMAL(10,2)) / 100
+                    WHEN JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.type\')) = \'fixed\'
+                    THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(jt.tax_item, \'$.tax_amount\')) AS DECIMAL(10,2))
+                    ELSE 0
+                END) as total_tax_amount
+            '))
+            ->join(DB::raw('(
+                SELECT id, booking_id, JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \']\')) AS tax_item
+                FROM booking_transactions
+                CROSS JOIN (SELECT 0 AS idx UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) AS idxs
+                WHERE tax_percentage IS NOT NULL AND JSON_VALID(tax_percentage) AND idx < JSON_LENGTH(tax_percentage)
+            ) AS jt'), 'bt.id', '=', 'jt.id')
+            ->groupBy('bt.booking_id');
+
         return self::select(
             'bookings.id as id',
-            DB::raw('COALESCE(SUM(DISTINCT booking_services.service_price), 0) as total_service_amount'),
-            DB::raw('COUNT(DISTINCT booking_services.service_id) AS total_service'),
-
-            DB::raw('SUM(CASE
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'percent\' THEN booking_services.service_price * JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.percent\')) / 100
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'fixed\' THEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.tax_amount\'))
-              ELSE 0
-          END) AS total_tax_amount'),
-            DB::raw('COALESCE(SUM(DISTINCT booking_services.service_price), 0) +
-          SUM(CASE
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'percent\' THEN booking_services.service_price * JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.percent\')) / 100
-              WHEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.type\')) = \'fixed\' THEN JSON_UNQUOTE(JSON_EXTRACT(tx.tax_info, \'$.tax_amount\'))
-              ELSE 0
-          END) AS total_amount'),
+            DB::raw('COALESCE(bs_agg.total_service_amount, 0) as total_service_amount'),
+            DB::raw('COALESCE(bs_agg.total_service, 0) as total_service'),
+            DB::raw('COALESCE(tx_agg.total_tax_amount, 0) as total_tax_amount'),
+            DB::raw('COALESCE(bs_agg.total_service_amount, 0) + COALESCE(tx_agg.total_tax_amount, 0) as total_amount'),
             'bookings.start_date_time'
         )
-            ->leftJoin('booking_services', 'bookings.id', '=', 'booking_services.booking_id')
-            ->leftJoin(DB::raw('(SELECT
-                  booking_id,
-                  CONCAT(
-                      \'{ "type": "\', jt.type, \'", "percent": \', jt.percent, \', "tax_amount": \', jt.tax_amount, \' }\'
-                  ) AS tax_info
-              FROM (
-                  SELECT
-                      booking_id,
-                      JSON_UNQUOTE(JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \'].type\'))) AS type,
-                      JSON_UNQUOTE(JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \'].percent\'))) AS percent,
-                      JSON_UNQUOTE(JSON_EXTRACT(tax_percentage, CONCAT(\'$[\', idx, \'].tax_amount\'))) AS tax_amount
-                  FROM booking_transactions
-                  CROSS JOIN (
-                      SELECT 0 AS idx UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
-                  ) AS indices
-                  WHERE idx < JSON_LENGTH(tax_percentage)
-              ) AS jt
-              GROUP BY booking_id, jt.type, jt.percent, jt.tax_amount) AS tx'), 'bookings.id', '=', 'tx.booking_id')
-            ->where('bookings.status', 'completed')
-            ->groupBy('bookings.id', 'bookings.start_date_time');
+            ->leftJoinSub($bsSub, 'bs_agg', 'bookings.id', '=', 'bs_agg.booking_id')
+            ->leftJoinSub($txSub, 'tx_agg', 'bookings.id', '=', 'tx_agg.booking_id')
+            ->where('bookings.status', 'completed');
     }
 
     public function calculateServiceDuration()
