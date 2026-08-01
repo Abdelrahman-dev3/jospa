@@ -8,6 +8,8 @@ use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentSubMethodsService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use App\Models\User;
 
 class TabbyPaymentStrategy extends BasePaymentStrategy
@@ -57,6 +59,11 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                 'gateway_response' => $chargeData,
             ]);
 
+            // Cache backup
+            if (!empty($data['attempt_id'])) {
+                Cache::put('tabby_payment_' . $data['attempt_id'], $data, now()->addMinutes(40));
+            }
+
             $paymentUrl = $this->extractTabbyPaymentUrl($chargeData);
             
             if (!$paymentUrl) {
@@ -101,6 +108,11 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
             'gateway_order_id' => data_get($data, 'order.reference_id'),
             'gateway_response' => $data,
         ]);
+
+        // Cache backup
+        if (session('tabby_payment.attempt_id')) {
+            Cache::put('tabby_payment_' . session('tabby_payment.attempt_id'), session('tabby_payment'), now()->addMinutes(40));
+        }
 
         $paymentUrl = $this->extractTabbyPaymentUrl($data);
         
@@ -376,8 +388,19 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
     public function callback(Request $request)
     {
         $data = session('tabby_payment');
-        $subMethodService = app(PaymentSubMethodsService::class);
+        
+        // Resolve attempt_id first to get the cache key if session is missing
         $attemptId = $this->resolveAttemptId($request, $data);
+
+        // Fallback: if session lost, try to recover from cache via attempt_id
+        if (! $data && $attemptId) {
+            $data = Cache::get('tabby_payment_' . $attemptId);
+            if ($data) {
+                \Log::info('Tabby: Recovered payment data from cache fallback.', ['attempt_id' => $attemptId]);
+            }
+        }
+
+        $subMethodService = app(PaymentSubMethodsService::class);
         $attempt = $attemptId ? PaymentAttempt::find($attemptId) : null;
 
         if ($attempt && $attempt->status === PaymentAttempt::STATUS_PAID) {
@@ -499,17 +522,22 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                             session()->forget('tabby_payment');
                             return $this->respondFailure($request, $subResult['error'], 422);
                         }
-                        $invoiceId = $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
-                            'attempt_id' => $attemptId,
-                            'transaction_id' => $checkoutId,
-                            'merchant_reference' => data_get($charge, 'order.reference_id'),
-                            'checkout_id' => $checkoutId,
-                            'order_id' => data_get($charge, 'order.reference_id'),
-                            'gateway_response' => $charge,
-                            'callback_payload' => $request->all(),
-                        ]);
+                        $invoiceId = DB::transaction(function () use ($payerUserId, $fakeRequest, $data, $subResult, $checkoutId, $charge, $attemptId, $request) {
+                            return $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
+                                'attempt_id' => $attemptId,
+                                'transaction_id' => $checkoutId,
+                                'merchant_reference' => data_get($charge, 'order.reference_id'),
+                                'checkout_id' => $checkoutId,
+                                'order_id' => data_get($charge, 'order.reference_id'),
+                                'gateway_response' => $charge,
+                                'callback_payload' => $request->all(),
+                            ], true); // sub-methods committed = true because $subMethodService->apply was called above
+                        });
         
                         session()->forget('tabby_payment');
+                        if ($attemptId) {
+                            Cache::forget('tabby_payment_' . $attemptId);
+                        }
                         return $this->respondSuccess($request, 'Payment captured successfully.', [
                             'invoice_id' => $invoiceId ?? null,
                         ]);
@@ -521,6 +549,9 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                             'callback_payload' => $request->all(),
                         ]);
                         session()->forget('tabby_payment');
+                        if ($attemptId) {
+                            Cache::forget('tabby_payment_' . $attemptId);
+                        }
                         return $this->respondFailure($request, $e->getMessage(), 500);
                     }
                 }
@@ -570,30 +601,32 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                     ]);
                     return $this->respondFailure($request, $subResult['error'], 422);
                 }
-                $invoiceId = $this->commitFinalizedPayment($user->id, $fakeRequest, [
-                    'final_before_sub' => $totalData['total'],
-                    'tax' => $totalData['tax'],
-                    'discountAmount' => $totalData['discountAmount'],
-                    'couponDiscountAmount' => $totalData['couponDiscountAmount'] ?? 0,
-                    'paymentGatewayDiscountAmount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
-                    'paymentGatewayDiscountMethod' => $totalData['paymentGatewayDiscountMethod'] ?? null,
-                    'paymentGatewayDiscountLabel' => $totalData['paymentGatewayDiscountLabel'] ?? null,
-                    'page' => $context['page'],
-                    'cart_ids' => $totalData['cart_ids'] ?? [],
-                    'gift_ids' => $totalData['gift_ids'] ?? [],
-                    'payment_method' => 'tabby',
-                    'couponCode' => $context['couponCode'] ?? '',
-                    'attempt_id' => $context['attempt_id'] ?? null,
-                ], $subResult, [
-                    'attempt_id' => $context['attempt_id'] ?? null,
-                    'transaction_id' => $checkoutId,
-                    'merchant_reference' => data_get($charge, 'order.reference_id'),
-                    'checkout_id' => $checkoutId,
-                    'order_id' => data_get($charge, 'order.reference_id'),
-                    'gateway_response' => $charge,
-                    'callback_payload' => $request->all(),
-                ]);
-
+                $invoiceId = DB::transaction(function () use ($user, $fakeRequest, $totalData, $subResult, $checkoutId, $charge, $request, $context) {
+                    return $this->commitFinalizedPayment($user->id, $fakeRequest, [
+                        'final_before_sub' => $totalData['total'],
+                        'tax' => $totalData['tax'],
+                        'discountAmount' => $totalData['discountAmount'],
+                        'couponDiscountAmount' => $totalData['couponDiscountAmount'] ?? 0,
+                        'paymentGatewayDiscountAmount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
+                        'paymentGatewayDiscountMethod' => $totalData['paymentGatewayDiscountMethod'] ?? null,
+                        'paymentGatewayDiscountLabel' => $totalData['paymentGatewayDiscountLabel'] ?? null,
+                        'page' => $context['page'],
+                        'cart_ids' => $totalData['cart_ids'] ?? [],
+                        'gift_ids' => $totalData['gift_ids'] ?? [],
+                        'payment_method' => 'tabby',
+                        'couponCode' => $context['couponCode'] ?? '',
+                        'attempt_id' => $context['attempt_id'] ?? null,
+                    ], $subResult, [
+                        'attempt_id' => $context['attempt_id'] ?? null,
+                        'transaction_id' => $checkoutId,
+                        'merchant_reference' => data_get($charge, 'order.reference_id'),
+                        'checkout_id' => $checkoutId,
+                        'order_id' => data_get($charge, 'order.reference_id'),
+                        'gateway_response' => $charge,
+                        'callback_payload' => $request->all(),
+                    ], true); // sub-methods committed = true because $subMethodService->apply was called above
+                });
+ 
                 return $this->respondSuccess($request, 'Payment captured successfully.', [
                     'invoice_id' => $invoiceId ?? null,
                 ]);

@@ -188,10 +188,24 @@ class Booking extends BaseModel
     {
         try {
             $tenMinutesAgo = \Carbon\Carbon::now()->subMinutes(10);
+            
+            // Get all booking IDs that are in an active (initiated or pending) PaymentAttempt created in the last 1 hour
+            $activePaymentAttemptBookingIds = \App\Models\PaymentAttempt::whereIn('status', ['initiated', 'pending'])
+                ->where('created_at', '>=', \Carbon\Carbon::now()->subHour())
+                ->get()
+                ->pluck('cart_ids')
+                ->flatten()
+                ->filter()
+                ->unique()
+                ->toArray();
+
             $expiredBookings = static::where('status', 'pending')
                 ->whereIn('payment_type', ['cart', 'payment'])
                 ->where('created_at', '<=', $tenMinutesAgo)
                 ->unpaid()
+                ->when(!empty($activePaymentAttemptBookingIds), function ($query) use ($activePaymentAttemptBookingIds) {
+                    $query->whereNotIn('id', $activePaymentAttemptBookingIds);
+                })
                 ->get();
 
             foreach ($expiredBookings as $booking) {
