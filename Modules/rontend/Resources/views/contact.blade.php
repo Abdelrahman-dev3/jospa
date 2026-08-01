@@ -116,6 +116,12 @@
       display: inline-block;
     }
 
+    .branch-contact-icons {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .branch-whatsapp-link {
       display: inline-flex;
       align-items: center;
@@ -241,19 +247,21 @@
                               <p>{{$branch->description ?? ''}}</p>
                               @if ($branchPhone !== '')
                                 <p class="phone">
-                                  <img src="{{ asset('images/icons/basil_phone-solid.png') }}" alt="">
+                                  <span class="branch-contact-icons">
+                                    <img src="{{ asset('images/icons/basil_phone-solid.png') }}" alt="">
+                                    @if ($whatsappNumber !== '')
+                                      <a
+                                        href="https://wa.me/{{ $whatsappNumber }}"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="branch-whatsapp-link"
+                                        aria-label="WhatsApp {{ $branchPhone }}"
+                                      >
+                                        <i class="bi bi-whatsapp"></i>
+                                      </a>
+                                    @endif
+                                  </span>
                                   <span class="phone-number" dir="ltr">{{ $branchPhone }}</span>
-                                  @if ($whatsappNumber !== '')
-                                    <a
-                                      href="https://wa.me/{{ $whatsappNumber }}"
-                                      target="_blank"
-                                      rel="noopener"
-                                      class="branch-whatsapp-link"
-                                      aria-label="WhatsApp {{ $branchPhone }}"
-                                    >
-                                      <i class="bi bi-whatsapp"></i>
-                                    </a>
-                                  @endif
                                 </p>
                               @endif
                             </div>
