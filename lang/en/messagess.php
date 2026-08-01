@@ -156,7 +156,7 @@ return [
     'submit'            => 'Save Offer',
     'valid_offer' => "Valid offer\nFrom :start to :end",
     'working_hours' => 'Working Hours',
-    'working_time'  => 'Daily from 9:00 AM to 1:00 PM',
+    'working_time'  => 'Daily from 11:00 AM to 11:00 PM',
 
     'addresses'     => 'Addresses',
 
