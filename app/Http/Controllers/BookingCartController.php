@@ -506,7 +506,8 @@ class BookingCartController extends Controller
             $this->addLoyaltyPoints($user->id, $charge['amount']);
             $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
             $giftCode = $request->get('gift_code');
-            $invoiceId = $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode, 'card');
+            $giftAmount = (float) $request->get('gift_amount', 0);
+            $invoiceId = $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode, 'card', $giftAmount);
             $this->paymentSuccess($cartIds, 'card', $tapId, $invoiceId);
 
             $this->activateGiftCards($user->id);
@@ -589,6 +590,7 @@ class BookingCartController extends Controller
         $finalizer = app(PaymentFinalizerService::class);
         $subPayments = array_merge($subResult ?? [], [
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'coupon_discount_amount' => $totalData['couponDiscountAmount'] ?? 0,
             'payment_gateway_discount_amount' => $totalData['paymentGatewayDiscountAmount'] ?? 0,
             'payment_gateway_discount_method' => $totalData['paymentGatewayDiscountMethod'] ?? null,
@@ -650,6 +652,7 @@ class BookingCartController extends Controller
             'wallet' => $request->boolean('wallet') ? 1 : null,
             'loyalty' => $request->boolean('loyalty') ? 1 : null,
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'payment_method' => $this->getRequestedPaymentMethod($request),
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
         ], function ($value) {
@@ -719,14 +722,15 @@ class BookingCartController extends Controller
         $loyalty->save();
     }
 
-    private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids = null, $couponCode = null, $giftCode = null, $paymentMethod = null)
+    private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids = null, $couponCode = null, $giftCode = null, $paymentMethod = null, float $giftAmount = 0)
     {
         $invoice = Invoice::create([
             'user_id' => $userId,
             'cart_ids' => json_encode($cartIds),
             'gift_ids' => json_encode($gift_ids),
             'coupon_code' => $couponCode ?: null,
-            'gift_code' => $giftCode ?: null,
+            'gift_code' => $giftAmount > 0 ? ($giftCode ?: null) : null,
+            'gift_amount' => $giftAmount,
             'payment_method' => $paymentMethod ?: null,
             'discount_amount' => $discountAmount,
             'loyalty_points_discount' => $loyaltyDiscount,

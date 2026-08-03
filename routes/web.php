@@ -1,6 +1,6 @@
 <?php
     use App\Http\Controllers\Backend\{
-        AdsController,ContactMessageController,GiftController,InvoiceController,PaymentAttemptController,
+        AdsController,BlogPostController,ContactMessageController,GiftController,InvoiceController,PaymentAttemptController,
         LoyaltyController,ModuleController,offersController,ReportsController,
         RejectController,TermsAndConditionsController,TextController,
         BackendController,BackupController,BranchController,NotificationsController,
@@ -373,7 +373,7 @@
     Route::middleware(['auth'])->group(function () {
         Route::controller(GiftController::class)->group(function () {
             Route::get('/app/gift', 'index')->name('app.gift');
-            Route::get('/validate-gift-code', 'validateGiftCode');
+            Route::match(['get', 'post'], '/validate-gift-code', 'validateGiftCode');
             Route::get('/gift/delete/{id}', 'destroy')->name('gift.delete');
         });
 
@@ -402,6 +402,15 @@
             Route::put('/ads/update-status/{id}', 'updateStatus')->name('ads.update-status');
             Route::put('app/ads/update-link', 'update_link')->name('ads.update_link');
             Route::delete('/app/ads/destroy/{id}', 'destroy')->name('ads.destroy');
+        });
+
+        Route::controller(BlogPostController::class)->group(function () {
+            Route::get('/app/blog', 'index')->name('app.blog.index');
+            Route::get('/app/blog/create', 'create')->name('app.blog.create');
+            Route::post('/app/blog', 'store')->name('app.blog.store');
+            Route::get('/app/blog/{blogPost}/edit', 'edit')->name('app.blog.edit');
+            Route::put('/app/blog/{blogPost}', 'update')->name('app.blog.update');
+            Route::delete('/app/blog/{blogPost}', 'destroy')->name('app.blog.destroy');
         });
 
         Route::controller(RejectController::class)->group(function () {

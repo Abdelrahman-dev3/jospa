@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\GiftCard;
+use App\Services\OdooGiftCardService;
 
 class GiftController extends Controller
 {
@@ -32,22 +32,21 @@ class GiftController extends Controller
 
     public function validateGiftCode(Request $request)
     {
-        $code = $request->query('code');
+        $code = (string) ($request->input('code') ?? $request->query('code', ''));
+        $result = app(OdooGiftCardService::class)->check($code);
+        $valid = (bool) ($result['valid'] ?? false);
+        $statusCode = (int) ($result['status_code'] ?? ($valid ? 200 : 422));
 
-        $gift = GiftCard::where( 'ref' , $code )->where( 'payment_status' , 1 )->first();
-        
-        if (!$gift) {
-            return response()->json([
-                'status'  => false,
-                'message' => __('messagess.invalid_gift_code')
-            ], 404);
-        }
-    
         return response()->json([
-            'status'  => true,
-            'balance' => $gift->balance,
-            'message' => __('messagess.gift_code_valid') 
-        ], 200);
+            'status' => $valid,
+            'valid' => $valid,
+            'code' => $result['code'] ?? $code,
+            'balance' => (float) ($result['balance'] ?? 0),
+            'expiration_date' => $result['expiration_date'] ?? null,
+            'expired' => (bool) ($result['expired'] ?? false),
+            'partner' => $result['partner'] ?? false,
+            'message' => $result['message'] ?? ($valid ? __('messagess.gift_code_valid') : __('messagess.invalid_gift_code')),
+        ], $valid ? 200 : ($statusCode === 404 ? 404 : 422));
 
     }
     

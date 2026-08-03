@@ -376,6 +376,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $context['wallet'],
             'loyalty' => $context['loyalty'],
             'gift_code' => $context['gift_code'],
+            'gift_amount' => $context['gift_amount'],
         ]);
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {
@@ -445,6 +446,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $request->boolean('wallet') ? 1 : null,
             'loyalty' => $request->boolean('loyalty') ? 1 : null,
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
         ], function ($value) {
             return $value !== null && $value !== '';
@@ -492,6 +494,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $request->boolean('wallet'),
             'loyalty' => $request->boolean('loyalty'),
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'discount_amount' => $discount,
         ];
     }

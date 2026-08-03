@@ -420,7 +420,6 @@ class PaidInvoiceWhatsAppService
     {
         return $giftCards->map(function (GiftCard $giftCard) {
             $parts = array_filter([
-                'بطاقة #' . ($giftCard->ref ?: $giftCard->id),
                 'القيمة: ' . $this->formatAmount($giftCard->subtotal ?? $giftCard->options_amount ?? 0) . ' ر.س',
                 filled($giftCard->recipient_name) ? 'إلى: ' . $giftCard->recipient_name : null,
                 $this->buildGiftServicesLine($giftCard),

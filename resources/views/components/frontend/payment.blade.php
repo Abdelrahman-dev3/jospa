@@ -164,6 +164,18 @@
     .coupon-input .form-control , .gift-input .form-control{
       border-radius:8px;
     }
+    .gift-amount-input{
+      display:none;
+      margin:-8px 0 18px;
+    }
+    .gift-amount-input .form-control{
+      border-radius:8px;
+    }
+    .gift-amount-hint{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:12px;
+    }
     .apply-btn{
       background:transparent;
       color:var(--gold);
@@ -768,6 +780,7 @@
     <input type="hidden" name="total_price" id="form_total_price" value="0">
     <input type="hidden" name="total_amount" id="form_total_amount" value="0">
     <input type="hidden" name="discount_amount" id="form_discount_amount" value="0">
+    <input type="hidden" name="gift_amount" id="form_gift_amount" value="0">
     <input type="hidden" name="brand" id="paymentBrand" value="{{ $defaultCardBrand }}">
 
     <div class="page-wrap">
@@ -1022,6 +1035,10 @@
                         <input class="form-control" name="gift_code" placeholder="{{ __('messagess.gift_code') }}">
                         <button class="apply-btn" type="button" id="gift_code">{{ __('messagess.apply') }}</button>
                     </div>
+                    <div class="gift-amount-input" id="giftAmountWrapper">
+                        <input class="form-control" id="giftAmountInput" type="number" min="0" step="0.01" placeholder="{{ app()->getLocale() === 'ar' ? 'المبلغ المستخدم من بطاقة الهدية' : 'Gift card amount' }}">
+                        <div class="gift-amount-hint" id="giftBalanceHint"></div>
+                    </div>
 
                     <div class="inv-m">
                         <div>{{ __('messagess.Invoice_code') }}</div>
@@ -1087,6 +1104,16 @@
             amount: 0,
         };
         let appliedGiftAmount = 0;
+        let giftState = {
+            applied: false,
+            code: '',
+            balance: 0,
+        };
+        const giftAmountWrapper = document.getElementById('giftAmountWrapper');
+        const giftAmountInput = document.getElementById('giftAmountInput');
+        const giftBalanceHint = document.getElementById('giftBalanceHint');
+        const giftAmountHidden = document.getElementById('form_gift_amount');
+        const giftBalanceLabel = "{{ app()->getLocale() === 'ar' ? 'الرصيد المتاح' : 'Available balance' }}";
         appendGatewayDiscountBadges();
         
         const showComingSoonNotification = () => {
@@ -1262,6 +1289,22 @@
 
             return Math.min(configuredAmount, Math.max(amountAfterCoupon, 0));
         }
+
+        function getAmountBeforeGift() {
+            const walletCheckbox = document.querySelector('input[name="wallet"]');
+            const loyaltyCheckbox = document.querySelector('input[name="loyalty"]');
+            const walletAmount = parseFloat(document.getElementById('wallet').dataset.amount || 0);
+            const loyaltyAmount = parseFloat(document.getElementById('loyalty').dataset.amount || 0);
+            const couponDiscount = Math.min(getCouponDiscountAmount(), baseTotal);
+            const amountAfterCoupon = Math.max(baseTotal - couponDiscount, 0);
+            const gatewayDiscount = getGatewayDiscountAmount(amountAfterCoupon);
+            let total = Math.max(amountAfterCoupon - gatewayDiscount, 0);
+
+            if (walletCheckbox.checked) total -= walletAmount;
+            if (loyaltyCheckbox.checked) total -= loyaltyAmount;
+
+            return Math.max(total, 0);
+        }
         
         function updateTotal() {
             let walletCheckbox = document.querySelector('input[name="wallet"]');
@@ -1274,10 +1317,32 @@
             let totalDiscount = couponDiscount + gatewayDiscount;
         
             let total = Math.max(amountAfterCoupon - gatewayDiscount, 0);
-            total -= appliedGiftAmount;
         
             if (walletCheckbox.checked) total -= walletAmount;
             if (loyaltyCheckbox.checked) total -= loyaltyAmount;
+
+            if (total < 0) total = 0;
+
+            let requestedGiftAmount = 0;
+            if (giftState.applied) {
+                const maxGiftAmount = Math.min(giftState.balance, total);
+                const giftInputFocused = document.activeElement === giftAmountInput;
+                requestedGiftAmount = parseFloat(giftAmountInput.value);
+
+                if (!Number.isFinite(requestedGiftAmount)) {
+                    requestedGiftAmount = giftInputFocused ? 0 : maxGiftAmount;
+                }
+
+                requestedGiftAmount = Math.min(Math.max(requestedGiftAmount, 0), maxGiftAmount);
+                giftAmountInput.max = maxGiftAmount.toFixed(2);
+                if (!giftInputFocused || requestedGiftAmount === maxGiftAmount) {
+                    giftAmountInput.value = requestedGiftAmount.toFixed(2);
+                }
+                giftBalanceHint.textContent = `${giftBalanceLabel}: ${giftState.balance.toFixed(2)} {{ __('messagess.SR') }}`;
+            }
+
+            appliedGiftAmount = requestedGiftAmount;
+            total -= appliedGiftAmount;
         
             if (total < 0) total = 0;
 
@@ -1304,10 +1369,19 @@
             document.getElementById('form_total_price').value = total;
             document.getElementById('form_total_amount').value = total;
             document.getElementById('form_discount_amount').value = totalDiscount.toFixed(2);
+            giftAmountHidden.value = appliedGiftAmount.toFixed(2);
         }
         
         document.querySelector('input[name="wallet"]').addEventListener('change', updateTotal);
         document.querySelector('input[name="loyalty"]').addEventListener('change', updateTotal);
+        giftAmountInput.addEventListener('input', updateTotal);
+        giftAmountInput.addEventListener('blur', function () {
+            if (giftState.applied && this.value === '') {
+                this.value = Math.min(giftState.balance, getAmountBeforeGift()).toFixed(2);
+            }
+
+            updateTotal();
+        });
         
         // Coupon
         document.querySelector('#applyCoupon').addEventListener('click', function() {
@@ -1357,21 +1431,27 @@
             }
         
             fetch(`/validate-gift-code?code=${encodeURIComponent(giftCode)}`)
-              .then(res => res.json())
-              .then(data => {
-                    if (data.status) {
+              .then(res => res.json().then(data => ({ ok: res.ok, data })))
+              .then(({ ok, data }) => {
+                    if (ok && (data.status || data.valid)) {
                         toastr.success("{{ __('messagess.code_applied') }}: " + giftCode);
-            
-                        appliedGiftAmount = parseFloat(data.balance ?? 0);
+                        giftState = {
+                            applied: true,
+                            code: giftCode,
+                            balance: parseFloat(data.balance ?? 0),
+                        };
+                        giftAmountWrapper.style.display = 'block';
+                        giftAmountInput.value = Math.min(giftState.balance, getAmountBeforeGift()).toFixed(2);
             
                         button.disabled = true;
                         button.classList.add('disabled');
             
                         updateTotal();
                     } else {
-                        toastr.error(data.message);
+                        toastr.error(data.message || "{{ __('messagess.invalid_gift_code') }}");
                     }
               })
+              .catch(() => { toastr.error("{{ __('messagess.error_occurred') }}"); });
         });
 
         updateTotal();

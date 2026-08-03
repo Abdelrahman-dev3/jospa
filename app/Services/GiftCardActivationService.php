@@ -82,7 +82,6 @@ class GiftCardActivationService
                     'recipient_name' => $giftCard->recipient_name,
                     'recipient_phone' => $giftCard->recipient_phone,
                     'gift_message' => $giftCard->message,
-                    'ref' => $giftCard->ref,
                 ],
                 'recipient'
             );

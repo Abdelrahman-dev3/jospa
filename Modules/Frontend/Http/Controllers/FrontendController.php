@@ -10,6 +10,7 @@ use Modules\Category\Models\Category;
 use Modules\Package\Models\Package;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\ProductCategory;
+use App\Models\BlogPost;
 use App\Models\Ouroffersection;
 use App\Models\Term;
 use App\Models\Ad;
@@ -59,8 +60,13 @@ class FrontendController extends Controller
             ->take(6)
             ->get();
 
+        $blogPosts = BlogPost::published()
+            ->latest('published_at')
+            ->latest()
+            ->take(3)
+            ->get();
 
-        return view('frontend::index', compact('services', 'categories', 'packages' , 'products'));
+        return view('frontend::index', compact('services', 'categories', 'packages' , 'products', 'blogPosts'));
     }
     public function privacyPolicy()
     {
@@ -180,6 +186,13 @@ class FrontendController extends Controller
         $suggest = Product::with(['media' , 'categories'])->where('status', 1)->where('is_featured', 1)->where('deleted_at', null)->get();
 
         return view('frontend::product-details', compact('product', 'suggest'));
+    }
+
+    public function blogDetails(BlogPost $blogPost)
+    {
+        abort_unless($blogPost->is_active && (! $blogPost->published_at || $blogPost->published_at->lte(now())), 404);
+
+        return view('frontend::blog-details', compact('blogPost'));
     }
 
     /**

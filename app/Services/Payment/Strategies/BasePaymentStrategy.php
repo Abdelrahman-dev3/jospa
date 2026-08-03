@@ -25,6 +25,7 @@ abstract class BasePaymentStrategy
                 'wallet' => (bool) $request->wallet,
                 'loyalty' => (bool) $request->loyalty,
                 'gift_code' => $request->gift_code,
+                'gift_amount' => $request->gift_amount,
             ],
             'final_before_sub' => $request->total ?? $request->total_price ?? 0,
             'discountAmount' => $request->discountAmount ?? $request->discount_amount ?? 0,
@@ -95,8 +96,18 @@ abstract class BasePaymentStrategy
             }
         }
 
+        if (! $subMethodsAlreadyCommitted) {
+            $refreshedSubResult = $subMethodService->apply($userId, $request, $paymentData['final_before_sub']);
+            if (isset($refreshedSubResult['error'])) {
+                throw new \RuntimeException((string) $refreshedSubResult['error']);
+            }
+
+            $subResult = $refreshedSubResult;
+        }
+
         $subPayments = array_merge($subResult, [
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'coupon_discount_amount' => $paymentData['couponDiscountAmount'] ?? 0,
             'payment_gateway_discount_amount' => $paymentData['paymentGatewayDiscountAmount'] ?? 0,
             'payment_gateway_discount_method' => $paymentData['paymentGatewayDiscountMethod'] ?? null,

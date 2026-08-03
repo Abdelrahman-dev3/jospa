@@ -209,6 +209,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 'wallet' => $data['submethods']['wallet'] ?? false,
                 'loyalty' => $data['submethods']['loyalty'] ?? false,
                 'gift_code' => $data['submethods']['gift_code'] ?? null,
+                'gift_amount' => $data['submethods']['gift_amount'] ?? null,
             ]);
             $subResult = $subMethodService->apply($data['user_id'], $fakeRequest, $data['final_before_sub']);
             if (isset($subResult['error'])) {
@@ -273,6 +274,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'wallet' => $context['wallet'],
             'loyalty' => $context['loyalty'],
             'gift_code' => $context['gift_code'],
+            'gift_amount' => $context['gift_amount'],
         ]);
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {
@@ -740,6 +742,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'wallet' => $request->boolean('wallet') ? 1 : null,
             'loyalty' => $request->boolean('loyalty') ? 1 : null,
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
             'payment_method' => $data['payment_method'] ?? 'urpay',
         ], function ($value) {
@@ -812,6 +815,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'wallet' => $request->boolean('wallet'),
             'loyalty' => $request->boolean('loyalty'),
             'gift_code' => $request->get('gift_code'),
+            'gift_amount' => $request->get('gift_amount'),
             'discount_amount' => $discount,
             'payment_method' => $request->get('payment_method', 'urpay'),
         ];

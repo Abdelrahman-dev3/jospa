@@ -197,8 +197,8 @@ class PaymentFinalizerService
      */
     private function storeInvoice(int $userId, float $discountAmount, float $tax, float $finalTotal, array $cartIds, array $giftIds, array $product_ids, string $couponCode, string $paymentMethod, array $subPayments = []): int
     {
-        $giftCode = $subPayments['gift_code'] ?? null;
-        $giftAmount = (float) ($subPayments['used_gift'] ?? 0);
+        $giftAmount = (float) ($subPayments['used_gift'] ?? $subPayments['gift_amount'] ?? 0);
+        $giftCode = $giftAmount > 0 ? ($subPayments['gift_code'] ?? null) : null;
         $couponDiscountAmount = (float) ($subPayments['coupon_discount_amount'] ?? 0);
         $paymentGatewayDiscountAmount = (float) ($subPayments['payment_gateway_discount_amount'] ?? 0);
         $paymentGatewayDiscountMethod = $subPayments['payment_gateway_discount_method'] ?? null;
