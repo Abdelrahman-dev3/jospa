@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\OdooGiftCardService;
+use App\Models\GiftCard;
 
 class GiftController extends Controller
 {
