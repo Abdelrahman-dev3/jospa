@@ -156,12 +156,7 @@ class PaymentFinalizerService
 
         foreach ($bookings as $booking) {
             try {
-                $notifyMessage = str_replace(
-                    '[[booking_id]]',
-                    $booking->id,
-                    'New booking #[[booking_id]] has been paid successfully.'
-                );
-
+                $notifyMessage = str_replace( '[[booking_id]]', $booking->id, 'New booking #[[booking_id]] has been paid successfully.');
                 $this->sendNotificationOnBookingUpdate('new_booking', $notifyMessage, $booking);
             } catch (\Throwable $e) {
                 \Log::error($e->getMessage());
@@ -169,7 +164,7 @@ class PaymentFinalizerService
         }
     }
 
-    /**
+    /**s
      * Add loyalty points to user account
      */
     private function addLoyaltyPoints(int $userId, float $paidAmount): void

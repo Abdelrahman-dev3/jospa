@@ -486,4 +486,36 @@ class OdooBookingSyncService
             return null;
         }
     }
+
+    private function extractErrorMessage(Response $response): string
+    {
+        $body = $response->json();
+        if (is_array($body)) {
+            if (! empty($body['message']) && is_string($body['message'])) {
+                return $body['message'];
+            }
+            if (! empty($body['error']) && is_string($body['error'])) {
+                return $body['error'];
+            }
+            if (! empty($body['reason']) && is_string($body['reason'])) {
+                return $body['reason'];
+            }
+            if (! empty($body['detail']) && is_string($body['detail'])) {
+                return $body['detail'];
+            }
+            if (isset($body['error']['message']) && is_string($body['error']['message'])) {
+                return $body['error']['message'];
+            }
+            if (isset($body['error']['data']['message']) && is_string($body['error']['data']['message'])) {
+                return $body['error']['data']['message'];
+            }
+        }
+
+        $rawBody = trim($response->body());
+        if ($rawBody !== '') {
+            return $rawBody;
+        }
+
+        return 'Failed to synchronize invoice with Odoo.';
+    }
 }
