@@ -430,22 +430,8 @@ use App\Models\GiftCard;
         <div class="invoice-list">
             @forelse($invoices as $invoice)
                 @php
-                    $cartIds = $invoice->cart_ids;
-                    
-                    if (is_string($cartIds)) {
-                        $cartIds = json_decode($cartIds, true);
-                        if (is_string($cartIds)) $cartIds = json_decode($cartIds, true);
-                    }
-                    $cartIds = is_array($cartIds) ? $cartIds : [];
-                    $bookings = Modules\Booking\Models\Booking::whereIn('id', $cartIds)
-                        ->with('services.employee', 'branch')
-                        ->get();
-                    $giftIds = $invoice->gift_ids ?? [];
-                    if (is_string($giftIds)) {
-                        $giftIds = json_decode($giftIds, true);
-                        if (is_string($giftIds)) $giftIds = json_decode($giftIds, true); 
-                    }
-                    $bookingsGift = GiftCard::whereIn('id', $giftIds)->get();
+                    $bookings = $invoice->bookings;
+                    $bookingsGift = $invoice->gift_cards;
                     $productItems = $invoice->product_items;
                     $couponCode = $invoice->coupon_code ?? null;
                     $couponAmount = (float) ($invoice->coupon_discount_amount ?? 0);

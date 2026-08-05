@@ -189,15 +189,26 @@ class Booking extends BaseModel
         try {
             $tenMinutesAgo = \Carbon\Carbon::now()->subMinutes(10);
             
-            // Get all booking IDs that are in an active (initiated or pending) PaymentAttempt created in the last 1 hour
-            $activePaymentAttemptBookingIds = \App\Models\PaymentAttempt::whereIn('status', ['initiated', 'pending'])
-                ->where('created_at', '>=', \Carbon\Carbon::now()->subHour())
-                ->get()
-                ->pluck('cart_ids')
-                ->flatten()
-                ->filter()
-                ->unique()
-                ->toArray();
+            // Get all booking IDs that are in active or recent PaymentAttempts (created in the last 24 hours)
+            $attempts = \App\Models\PaymentAttempt::whereIn('status', ['initiated', 'pending', 'paid'])
+                ->where('created_at', '>=', \Carbon\Carbon::now()->subHours(24))
+                ->get(['cart_ids']);
+
+            $activePaymentAttemptBookingIds = [];
+            foreach ($attempts as $att) {
+                $ids = $att->cart_ids;
+                if (is_string($ids)) {
+                    $ids = json_decode($ids, true);
+                }
+                if (is_array($ids)) {
+                    foreach ($ids as $id) {
+                        if (is_numeric($id)) {
+                            $activePaymentAttemptBookingIds[] = (int) $id;
+                        }
+                    }
+                }
+            }
+            $activePaymentAttemptBookingIds = array_unique(array_filter($activePaymentAttemptBookingIds));
 
             $expiredBookings = static::where('status', 'pending')
                 ->whereIn('payment_type', ['cart', 'payment'])
@@ -223,7 +234,11 @@ class Booking extends BaseModel
 
     public static function userBaseQuery(int $userId, array $relations = []): Builder
     {
-        return static::with($relations)->where('created_by', $userId)->whereNull('deleted_by');
+        return static::with($relations)
+            ->where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)->orWhere('created_by', $userId);
+            })
+            ->whereNull('deleted_by');
     }
 
     public static function getUserIncompleteBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {

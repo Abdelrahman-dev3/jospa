@@ -353,7 +353,17 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
 
         $calculator = app(PaymentCalculatorService::class);
         $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'tamara', $user->id);
-        if (isset($totalData['error'])) {
+
+        $attempt = !empty($context['attempt_id']) ? PaymentAttempt::find($context['attempt_id']) : null;
+        if ($attempt && (($totalData['total'] ?? 0) <= 0 || (empty($totalData['cart_ids']) && empty($totalData['gift_ids']) && empty($totalData['product_ids'])))) {
+            $totalData['total'] = (float) $attempt->amount;
+            $totalData['cart_ids'] = $attempt->cart_ids ?? [];
+            $totalData['gift_ids'] = $attempt->gift_ids ?? [];
+            $totalData['product_ids'] = $attempt->product_ids ?? [];
+            $totalData['discountAmount'] = (float) $attempt->discount_amount;
+        }
+
+        if (isset($totalData['error']) && ! $attempt) {
             return $this->respondFailure($request, $totalData['error'], 422);
         }
 

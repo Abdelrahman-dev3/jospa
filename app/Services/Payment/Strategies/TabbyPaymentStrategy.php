@@ -569,22 +569,18 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
 
                 $calculator = app(PaymentCalculatorService::class);
                 $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'tabby', $user->id);
-                if (isset($totalData['error'])) {
+
+                $attempt = !empty($context['attempt_id']) ? PaymentAttempt::find($context['attempt_id']) : null;
+                if ($attempt && (($totalData['total'] ?? 0) <= 0 || (empty($totalData['cart_ids']) && empty($totalData['gift_ids']) && empty($totalData['product_ids'])))) {
+                    $totalData['total'] = (float) $attempt->amount;
+                    $totalData['cart_ids'] = $attempt->cart_ids ?? [];
+                    $totalData['gift_ids'] = $attempt->gift_ids ?? [];
+                    $totalData['product_ids'] = $attempt->product_ids ?? [];
+                    $totalData['discountAmount'] = (float) $attempt->discount_amount;
+                }
+
+                if (isset($totalData['error']) && ! $attempt) {
                     return $this->respondFailure($request, $totalData['error'], 422);
-                }
-
-                if ($context['discount_amount'] !== null && ! $this->isClientDiscountMatching($context['discount_amount'], $totalData['discountAmount'])) {
-                    return $this->respondFailure($request, 'Discount amount mismatch.', 422);
-                }
-
-                if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
-                    $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
-                        'gateway_transaction_id' => $checkoutId,
-                        'gateway_checkout_id' => $checkoutId,
-                        'gateway_response' => $charge,
-                        'callback_payload' => $request->all(),
-                    ]);
-                    return $this->respondSuccess($request, 'Payment already finalized.');
                 }
 
                 $fakeRequest = new Request([

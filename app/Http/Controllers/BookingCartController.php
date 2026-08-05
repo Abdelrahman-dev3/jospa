@@ -721,19 +721,83 @@ class BookingCartController extends Controller
         $loyalty->points = ($loyalty->points ?? 0) + $pointsToAdd;
         $loyalty->save();
     }
+        ], function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        if ($request->expectsJson()) {
+            return URL::temporarySignedRoute(
+                'api.cart.payment.success',
+                now()->addMinutes(30),
+                $params
+            );
+        }
+
+        $baseUrl = url('/success-py-invoice');
+        return $params ? $baseUrl . '?' . http_build_query($params) : $baseUrl;
+    }
+
+    private function applyTapLanguage(string $paymentUrl): string
+    {
+        $lang = app()->getLocale() ?? 'en';
+        $paymentUrl = preg_replace('/([&?])language=[^&]+/', '$1language=' . $lang, $paymentUrl);
+
+        if (!str_contains($paymentUrl, 'language=')) {
+            $paymentUrl .= (str_contains($paymentUrl, '?') ? '&' : '?') . 'language=' . $lang;
+        }
+
+        return $paymentUrl;
+    }
+
+    private function resolvePaymentUser(Request $request): ?User
+    {
+        $user = $request->user() ?? auth()->user();
+        if ($user) {
+            return $user;
+        }
+
+        if (! $request->hasValidSignatureWhileIgnoring(['tap_id', 'payment_id', 'checkout_id', 'status', 'payment_method'])) {
+            return null;
+        }
+
+        $userId = (int) $request->get('user_id');
+        if ($userId <= 0) {
+            return null;
+        }
+
+        return User::find($userId);
+    }
+
+    private function hasLegacyPaymentSession(): bool
+    {
+        return session()->has('finalTotal')
+            || session()->has('discountAmount')
+            || session()->has('loyaltyDiscount');
+    }
+
+    public function addLoyaltyPoints($userId, $paidAmount)
+    {
+        $pointsToAdd = floor($paidAmount / 100) * 5;
+
+        if ($pointsToAdd <= 0) {
+            return;
+        }
+
+        $loyalty = LoyaltyPoint::firstOrNew(['user_id' => $userId]);
+        $loyalty->points = ($loyalty->points ?? 0) + $pointsToAdd;
+        $loyalty->save();
+    }
 
     private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids = null, $couponCode = null, $giftCode = null, $paymentMethod = null, float $giftAmount = 0)
     {
         $invoice = Invoice::create([
             'user_id' => $userId,
-            'cart_ids' => json_encode($cartIds),
-            'gift_ids' => json_encode($gift_ids),
+            'cart_ids' => is_array($cartIds) ? $cartIds : (is_string($cartIds) ? json_decode($cartIds, true) : []),
+            'gift_ids' => is_array($gift_ids) ? $gift_ids : (is_string($gift_ids) ? json_decode($gift_ids, true) : []),
             'coupon_code' => $couponCode ?: null,
             'gift_code' => $giftAmount > 0 ? ($giftCode ?: null) : null,
             'gift_amount' => $giftAmount,
             'payment_method' => $paymentMethod ?: null,
-            'discount_amount' => $discountAmount,
-            'loyalty_points_discount' => $loyaltyDiscount,
             'final_total' => $finalTotal,
         ]);
 

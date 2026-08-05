@@ -28,6 +28,7 @@ class Invoice extends Model
         'loyalty_points_discount',
         'final_total',
         'javna_whatsapp_message_id',
+        'javna_whatsapp_message_id',
         'javna_whatsapp_status',
         'javna_whatsapp_payload_style',
         'javna_whatsapp_sent_at',
@@ -48,16 +49,82 @@ class Invoice extends Model
     }
     
 
+    public function getNormalizedCartIdsAttribute(): array
+    {
+        $raw = $this->cart_ids;
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+            if (is_string($raw)) {
+                $raw = json_decode($raw, true);
+            }
+        }
+        if (! is_array($raw)) {
+            return [];
+        }
+        return array_values(array_filter(array_map('intval', $raw)));
+    }
+
+    public function getNormalizedGiftIdsAttribute(): array
+    {
+        $raw = $this->gift_ids;
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+            if (is_string($raw)) {
+                $raw = json_decode($raw, true);
+            }
+        }
+        if (! is_array($raw)) {
+            return [];
+        }
+        return array_values(array_filter(array_map('intval', $raw)));
+    }
+
+    public function getNormalizedProductIdsAttribute(): array
+    {
+        $raw = $this->product_ids;
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+            if (is_string($raw)) {
+                $raw = json_decode($raw, true);
+            }
+        }
+        if (! is_array($raw)) {
+            return [];
+        }
+        return array_values(array_filter(array_map('intval', $raw)));
+    }
+
+    public function getBookingsAttribute()
+    {
+        $ids = $this->normalized_cart_ids;
+        if (empty($ids)) {
+            return collect();
+        }
+        return \Modules\Booking\Models\Booking::whereIn('id', $ids)
+            ->with(['services.employee', 'branch', 'user'])
+            ->get();
+    }
+
+    public function getGiftCardsAttribute()
+    {
+        $ids = $this->normalized_gift_ids;
+        if (empty($ids)) {
+            return collect();
+        }
+        return \App\Models\GiftCard::whereIn('id', $ids)->get();
+    }
+
     public function getProductsAttribute()
     {
-        if (empty($this->product_ids)) {
+        $ids = $this->normalized_product_ids;
+        if (empty($ids)) {
             return collect();
         }
     
         return OrderGroup::with([
             'order.orderItems.product'
         ])
-        ->whereIn('id', $this->product_ids)
+        ->whereIn('id', $ids)
         ->get()
         ->flatMap(function ($group) {
             return optional($group->order)->orderItems ?? [];
@@ -70,14 +137,15 @@ class Invoice extends Model
 
     public function getProductItemsAttribute()
     {
-        if (empty($this->product_ids)) {
+        $ids = $this->normalized_product_ids;
+        if (empty($ids)) {
             return collect();
         }
 
         return OrderGroup::with([
             'order.orderItems.product'
         ])
-        ->whereIn('id', $this->product_ids)
+        ->whereIn('id', $ids)
         ->get()
         ->flatMap(function ($group) {
             return optional($group->order)->orderItems ?? [];
@@ -85,4 +153,3 @@ class Invoice extends Model
     }
 
 }
-
