@@ -106,6 +106,20 @@ class OdooBookingSyncService
                 ->send('POST', $url);
 
             if ($response->successful()) {
+                $body = $response->json();
+                if (is_array($body) && (
+                    (isset($body['status']) && ($body['status'] === false || $body['status'] === 'failed' || $body['status'] === 'error'))
+                    || (isset($body['valid']) && $body['valid'] === false)
+                    || (!empty($body['error']))
+                )) {
+                    $errorMsg = $this->extractErrorMessage($response);
+                    Log::error('Odoo booking sync rejected by Odoo response.', [
+                        'invoice_id' => $invoiceId,
+                        'response' => $body,
+                    ]);
+                    throw new \RuntimeException($errorMsg);
+                }
+
                 Log::info('Odoo booking sync completed.', [
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
@@ -122,18 +136,22 @@ class OdooBookingSyncService
                 ]);
             }
 
+            $errorMsg = $this->extractErrorMessage($response);
             Log::error('Odoo booking sync failed.', [
                 'invoice_id' => $invoiceId,
                 'status' => $response->status(),
                 'response' => $response->body(),
                 'payload' => $payload,
             ]);
+
+            throw new \RuntimeException($errorMsg);
         } catch (\Throwable $e) {
             Log::error('Odoo booking sync exception.', [
                 'invoice_id' => $invoiceId,
                 'message' => $e->getMessage(),
                 'payload' => $payload,
             ]);
+            throw $e;
         }
 
         return false;
@@ -217,6 +235,8 @@ class OdooBookingSyncService
         $redeemedGiftCard = $this->buildRedeemedGiftCard($invoice);
         if ($redeemedGiftCard !== null) {
             $payload['gift_card'] = $redeemedGiftCard;
+            $payload['giftcard_code'] = $redeemedGiftCard['code'];
+            $payload['giftcard_amount'] = (float) $redeemedGiftCard['amount'];
         }
 
         return $payload;
