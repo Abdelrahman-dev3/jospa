@@ -378,7 +378,7 @@ class OdooBookingSyncService
         $code = trim((string) $invoice->gift_code);
         $amount = (float) ($invoice->gift_amount ?? 0);
 
-        if ($code === '' || $amount <= 0) {
+        if ($code === '') {
             return null;
         }
 
