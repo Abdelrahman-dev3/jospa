@@ -729,7 +729,7 @@ class BookingCartController extends Controller
             'cart_ids' => is_array($cartIds) ? $cartIds : (is_string($cartIds) ? json_decode($cartIds, true) : []),
             'gift_ids' => is_array($gift_ids) ? $gift_ids : (is_string($gift_ids) ? json_decode($gift_ids, true) : []),
             'coupon_code' => $couponCode ?: null,
-            'gift_code' => $giftAmount > 0 ? ($giftCode ?: null) : null,
+            'gift_code' => !empty($giftCode) ? trim((string) $giftCode) : null,
             'gift_amount' => $giftAmount,
             'payment_method' => $paymentMethod ?: null,
             'final_total' => $finalTotal,

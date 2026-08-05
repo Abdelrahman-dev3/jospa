@@ -192,13 +192,83 @@ class PaymentFinalizerService
         ]);
     }
 
+                app(PaidInvoiceWhatsAppService::class)->sendForInvoice($invoiceId);
+            } catch (\Throwable $exception) {
+                \Log::error('Failed to send paid invoice WhatsApp message.', [
+                    'invoice_id' => $invoiceId,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return $invoiceId;
+    }
+
+    private function sendPaidCartBookingNotifications(array $bookingIds): void
+    {
+        if (empty($bookingIds)) {
+            return;
+        }
+
+        $bookings = Booking::with([
+            'branch.address.city_data',
+            'branch.address.state_data',
+            'branch.address.country_data',
+            'branch.employee',
+            'user',
+            'services.employee',
+            'products',
+            'packages',
+            'mainServices',
+            'payment',
+            'userCouponRedeem',
+        ])->whereIn('id', $bookingIds)->get();
+
+        foreach ($bookings as $booking) {
+            try {
+                $notifyMessage = str_replace(
+                    '[[booking_id]]',
+                    $booking->id,
+                    'New booking #[[booking_id]] has been paid successfully.'
+                );
+
+                $this->sendNotificationOnBookingUpdate('new_booking', $notifyMessage, $booking);
+            } catch (\Throwable $e) {
+                \Log::error($e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Add loyalty points to user account
+     */
+    private function addLoyaltyPoints(int $userId, float $paidAmount): void
+    {
+        $pointsPer100 = Setting::get('points_per_100') ?? 5;
+        $pointsToAdd = floor($paidAmount / 100) * $pointsPer100;
+
+        if ($pointsToAdd <= 0) return;
+
+        $loyalty = LoyaltyPoint::firstOrNew(['user_id' => $userId]);
+        $loyalty->points = ($loyalty->points ?? 0) + $pointsToAdd;
+        $loyalty->save();
+        
+        LoyaltyPointTransaction::create([
+            'user_id' => $userId,
+            'action' => 'add',
+            'points' => $pointsToAdd,
+            'balance_after' => $loyalty->points,
+            'source' => 'اضافة نقاط ولاء بناءا علي المبلغ الاجمالي :' . $paidAmount ,
+        ]);
+    }
+
     /**
      * Store invoice
      */
     private function storeInvoice(int $userId, float $discountAmount, float $tax, float $finalTotal, array $cartIds, array $giftIds, array $product_ids, string $couponCode, string $paymentMethod, array $subPayments = []): int
     {
         $giftAmount = (float) ($subPayments['used_gift'] ?? $subPayments['gift_amount'] ?? 0);
-        $giftCode = $giftAmount > 0 ? ($subPayments['gift_code'] ?? null) : null;
+        $giftCode = !empty($subPayments['gift_code']) ? trim((string) $subPayments['gift_code']) : null;
         $couponDiscountAmount = (float) ($subPayments['coupon_discount_amount'] ?? 0);
         $paymentGatewayDiscountAmount = (float) ($subPayments['payment_gateway_discount_amount'] ?? 0);
         $paymentGatewayDiscountMethod = $subPayments['payment_gateway_discount_method'] ?? null;
