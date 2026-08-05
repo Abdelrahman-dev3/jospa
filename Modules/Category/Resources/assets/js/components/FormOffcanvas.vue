@@ -20,7 +20,7 @@
                 <img :src="ImageViewer || defaultImage" alt="feature-image" class="img-fluid mb-2 avatar-140 avatar-rounded" />
                 <div v-if="validationMessage" class="text-danger mb-2">{{ validationMessage }}</div>
                 <div class="d-flex align-items-center justify-content-center gap-2">
-                  <input type="file" ref="profileInputRef" class="form-control d-none" id="feature_image" name="feature_image" @change="fileUpload" accept=".jpeg, .jpg, .png, .gif" />
+                  <input type="file" ref="profileInputRef" class="form-control d-none" id="feature_image" name="feature_image" @change="fileUpload" accept="image/*" />
                   <label class="btn btn-info" for="feature_image">{{ $t('messages.upload') }}</label>
                   <input type="button" class="btn btn-danger" name="remove" :value="$t('messages.remove')" @click="removeLogo()" v-if="ImageViewer" />
                 </div>
@@ -162,12 +162,76 @@ const updatecurrentId = (e) => {
   setFormData(defaultData())
   currentId.value = Number(e.detail.form_id)
   parent_id.value = e.detail.parent_id || null
+  category_name.value = null
+  if(props.isSubCategory) {
+    getCategories()
+    parent_id.value = -1
+  }
+}
+watch(
+  currentId,
+  () => {
+    if (currentId.value > 0) {
+      getRequest({ url: EDIT_URL, id: currentId.value }).then((res) => res.status && setFormData(res.data))
+    } else {
+      setFormData(defaultData())
+    }
+  },
+  { deep: true }
+)
+
+onMounted(() => document.addEventListener('crud_change_id', updatecurrentId))
+onUnmounted(() => document.removeEventListener('crud_change_id', updatecurrentId))
+
+/*
+ * Form Data & Validation & Handeling
+ */
+
+// File Upload Function
+const ImageViewer = ref(null)
+const profileInputRef = ref(null)
+const fileUpload = async (e) => {
+  let file = e.target.files[0];
+  const maxSizeInMB = 2;
+  const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+
+  if (file) {
+    if (file.size > maxSizeInBytes) {
+      // File is too large
+      validationMessage.value = `File size exceeds ${maxSizeInMB} MB. Please upload a smaller file.`;
+      // Clear the file input
+      if (profileInputRef.value) profileInputRef.value.value = '';
+      return;
+    }
+
+    await readFile(file, (fileB64) => {
+      ImageViewer.value = fileB64;
+      if (profileInputRef.value) profileInputRef.value.value = '';
+      validationMessage.value = ''; 
+    });
+    feature_image.value = file;
+  } else {
+    validationMessage.value = '';
+  }
+};
+
+// Function to delete Images
+const removeImage = ({ imageViewerBS64, changeFile }) => {
+  imageViewerBS64.value = null
+  changeFile.value = null
+}
+
+const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile: feature_image })
+
+// Default FORM DATA
+const defaultData = () => {
+  ImageViewer.value = props.defaultImage
   errorMessages.value = {}
   return {
-     name: {
-        ar: '',
-        en: ''
-      },
+    name: {
+      ar: '',
+      en: ''
+    },
     parent_id: props.categoryId ?? null,
     is_visible: 0,
     status: true,
@@ -175,8 +239,7 @@ const updatecurrentId = (e) => {
     is_online: true,
     calendar_color: '#BF9456',
     feature_image: null,
-    custom_fields_data: {
-    }
+    custom_fields_data: {}
   }
 }
 
