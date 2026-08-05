@@ -177,56 +177,6 @@ watch(
       setFormData(defaultData())
     }
   },
-  { deep: true }
-)
-
-onMounted(() => document.addEventListener('crud_change_id', updatecurrentId))
-onUnmounted(() => document.removeEventListener('crud_change_id', updatecurrentId))
-
-/*
- * Form Data & Validation & Handeling
- */
-
-// File Upload Function
-const ImageViewer = ref(null)
-const profileInputRef = ref(null)
-const fileUpload = async (e) => {
-  let file = e.target.files[0];
-  const allowedTypes = ['image/jpeg', 'image/png'];
-  const maxSizeInMB = 2;
-  const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-
-  if (!allowedTypes.includes(file.type)) {
-    window.errorSnackbar('Only JPG, JPEG, and PNG files are allowed.'); 
-   profileInputRef.value.value = ''; // Clear the file input
-    return;
-  }
-
-  if (file) {
-    if (file.size > maxSizeInBytes) {
-      // File is too large
-      validationMessage.value = `File size exceeds ${maxSizeInMB} MB. Please upload a smaller file.`;
-      // Clear the file input
-      profileInputRef.value.value = '';
-      return;
-    }
-
-    await readFile(file, (fileB64) => {
-      ImageViewer.value = fileB64;
-      profileInputRef.value.value = '';
-      validationMessage.value = ''; 
-    });
-    feature_image.value = file;
-  } else {
-    validationMessage.value = '';
-  }
-
-};
-
-
-// Function to delete Images
-const removeImage = ({ imageViewerBS64, changeFile }) => {
-  imageViewerBS64.value = null
   changeFile.value = null
 }
 
