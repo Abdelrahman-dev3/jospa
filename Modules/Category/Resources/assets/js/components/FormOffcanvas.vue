@@ -162,30 +162,6 @@ const updatecurrentId = (e) => {
   setFormData(defaultData())
   currentId.value = Number(e.detail.form_id)
   parent_id.value = e.detail.parent_id || null
-  category_name.value = null
-  if(props.isSubCategory) {
-    getCategories()
-    parent_id.value = -1
-  }
-}
-watch(
-  currentId,
-  () => {
-    if (currentId.value > 0) {
-      getRequest({ url: EDIT_URL, id: currentId.value }).then((res) => res.status && setFormData(res.data))
-    } else {
-      setFormData(defaultData())
-    }
-  },
-  changeFile.value = null
-}
-
-const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile: feature_image })
-
-
-// Default FORM DATA
-const defaultData = () => {
-  ImageViewer.value = props.defaultImage
   errorMessages.value = {}
   return {
      name: {
