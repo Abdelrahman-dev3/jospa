@@ -497,8 +497,16 @@ use App\Models\GiftCard;
                                         $discount = (float) ($service->discount_amount ?? 0);
                                         $net      = max($price - $discount, 0);
                                         $employeeName = trim(($service->employee->full_name ?? '') . ' ' . ($service->employee->last_name ?? ''));
-                                        // يظهر شريط الكوبون لما يكون فيه خصم على الخدمة وعندنا كوبون
-                                        $showCouponBadge = $couponCode && $discount > 0;
+                                        // حساب نسبة خصم الكوبون على هذه الخدمة
+                                        $serviceOriginalPrice = $price; // السعر قبل أي خصم
+                                        $hasCoupon = $couponCode && $effectiveCouponAmount > 0;
+                                        // السعر بعد خصم الكوبون = net - نصيب هذه الخدمة من الكوبون
+                                        // نسبة هذه الخدمة من إجمالي الخدمات
+                                        $serviceCouponShare = 0;
+                                        if ($hasCoupon && $servicesSubtotal > 0) {
+                                            $serviceCouponShare = round(($net / $servicesSubtotal) * $effectiveCouponAmount, 2);
+                                        }
+                                        $priceAfterCoupon = max($net - $serviceCouponShare, 0);
                                     @endphp
                                     <div class="line-item">
                                         <div>
@@ -506,15 +514,15 @@ use App\Models\GiftCard;
                                             <div class="line-meta">
                                                 #{{ $booking->id }} | {{ $booking->branch->name ?? '-' }} | {{ $employeeName ?: '-' }}
                                             </div>
-                                            @if($showCouponBadge)
+                                            @if($hasCoupon)
                                                 <div class="line-meta" style="margin-top:4px;">
-                                                    <span style="text-decoration:line-through; color:var(--muted, #999); font-size:0.82em;">{{ number_format($price, 2) }} SR</span>
+                                                    <span style="text-decoration:line-through; color:var(--muted, #999); font-size:0.82em;">{{ number_format($net, 2) }} SR</span>
                                                     <span style="background:var(--rose,#e74c3c); color:#fff; border-radius:4px; padding:1px 7px; font-size:0.75em; margin:0 4px;">{{ $couponCode }}</span>
-                                                    <span style="color:var(--emerald,#27ae60); font-weight:600;">{{ number_format($net, 2) }} SR</span>
+                                                    <span style="color:var(--emerald,#27ae60); font-weight:600;">{{ number_format($priceAfterCoupon, 2) }} SR</span>
                                                 </div>
                                             @endif
                                         </div>
-                                        <div class="line-amount">{{ number_format($net, 2) }} SR</div>
+                                        <div class="line-amount">{{ number_format($hasCoupon ? $priceAfterCoupon : $net, 2) }} SR</div>
                                     </div>
                                 @endforeach
                             @empty
