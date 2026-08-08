@@ -22,7 +22,7 @@ class BookingDetailResource extends JsonResource
         $employee_id = optional($this->booking_service->first())->employee_id ?? optional($this->bookingPackages->first())->employee_id;
         $primaryAmount = ($this->booking_service ? $this->booking_service->sum('service_price') : 0) + ($this->bookingPackages ? $this->bookingPackages->sum('package_price') : 0);
         $couponAmount = UserCouponRedeem::where('booking_id', $this->id)->sum('discount'); 
-        $couponcut_amount = $primaryAmount - $couponAmount;
+        $couponcut_amount = $primaryAmount;
         $tax_details = getBookingTaxamount(
             $primaryAmount + ($this->products ? $this->products->sum('discounted_price') : 0),
             $couponAmount,
