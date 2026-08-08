@@ -36,6 +36,7 @@
     "/modules/wallet/script.js": "/modules/wallet/script.js",
     "/modules/frontend/script.js": "/modules/frontend/script.js",
     "/modules/tracking/script.js": "/modules/tracking/script.js",
+    "/css/icon.min.css": "/css/icon.min.css",
     "/css/libs.min.css": "/css/libs.min.css",
     "/css/dark.css": "/css/dark.css",
     "/css/custom.css": "/css/custom.css",

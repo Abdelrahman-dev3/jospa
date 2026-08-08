@@ -18,7 +18,7 @@
 
     <title>@yield('title') | {{ app_name() }}</title>
 
-    <!-- <link rel="stylesheet" href="{{ mix('css/icon.min.css') }}"> -->
+    <!-- <link rel="stylesheet" href="{{ asset('css/icon.min.css') }}"> -->
     @stack('before-styles')
     <!-- <link rel="stylesheet" href="{{ mix('css/libs.min.css') }}"> -->
     <link rel="stylesheet" href="{{asset('vendor/flatpickr/flatpickr.min.css')}}">

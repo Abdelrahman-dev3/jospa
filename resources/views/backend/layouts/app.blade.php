@@ -26,7 +26,7 @@
 
     <title>@yield('title') | {{ app_name() }}</title>
 
-    <link rel="stylesheet" href="{{ mix('css/icon.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/icon.min.css') }}">
     @if ($isNoUISlider ?? '')
         <!-- NoUI Slider css -->
         <link rel="stylesheet" href="{{ asset('vendor/noUiSilder/style/nouislider.min.css') }}">
