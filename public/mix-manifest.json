@@ -36,7 +36,6 @@
     "/modules/wallet/script.js": "/modules/wallet/script.js",
     "/modules/frontend/script.js": "/modules/frontend/script.js",
     "/modules/tracking/script.js": "/modules/tracking/script.js",
-    "/css/icon.min.css": "/css/icon.min.css",
     "/css/libs.min.css": "/css/libs.min.css",
     "/css/dark.css": "/css/dark.css",
     "/css/custom.css": "/css/custom.css",
@@ -74,5 +73,16 @@
     "/css/app.css": "/css/app.css",
     "/css/pro.css": "/css/pro.css",
     "/css/customizer.css": "/css/customizer.css",
-    "/css/rtl.css": "/css/rtl.css"
+    "/css/rtl.css": "/css/rtl.css",
+    "/webfonts/fa-brands-400.ttf": "/webfonts/fa-brands-400.ttf",
+    "/webfonts/fa-brands-400.woff2": "/webfonts/fa-brands-400.woff2",
+    "/webfonts/fa-regular-400.ttf": "/webfonts/fa-regular-400.ttf",
+    "/webfonts/fa-regular-400.woff2": "/webfonts/fa-regular-400.woff2",
+    "/webfonts/fa-solid-900.ttf": "/webfonts/fa-solid-900.ttf",
+    "/webfonts/fa-solid-900.woff2": "/webfonts/fa-solid-900.woff2",
+    "/webfonts/fa-v4compatibility.ttf": "/webfonts/fa-v4compatibility.ttf",
+    "/webfonts/fa-v4compatibility.woff2": "/webfonts/fa-v4compatibility.woff2",
+    "/css/backend.css": "/css/backend.css",
+    "/css/icon.min.css": "/css/icon.min.css",
+    "/js/backend.js": "/js/backend.js"
 }
