@@ -164,7 +164,7 @@ class PaymentFinalizerService
         }
     }
 
-    /**s
+    /**
      * Add loyalty points to user account
      */
     private function addLoyaltyPoints(int $userId, float $paidAmount): void

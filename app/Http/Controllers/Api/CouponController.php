@@ -34,9 +34,9 @@ class CouponController extends Controller
 
         $services = $this->normalizeServices($coupon?->services ?? []);
         $serviceId = (int) $serviceId;
-
-        if ($coupon && in_array($serviceId, $services, true)) {
-            $bookingService = BookingService::where('booking_id', $bookingId)->whereNull('coupon_code')->first();
+        if ($coupon && (in_array($serviceId, $services) || in_array(0, $services))) {
+            $bookingService = BookingService::where('booking_id', $bookingId)->where('service_id', $serviceId)->whereNull('coupon_code')->first()
+                ?? BookingService::where('booking_id', $bookingId)->where('service_id', $serviceId)->first();
 
             if (!$bookingService) {
                 return response()->json(['valid' => false]);

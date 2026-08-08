@@ -62,7 +62,7 @@ class OdooBookingSyncService
 
         $bookings = collect();
         if ($cartIds !== []) {
-            $bookings = Booking::with(['user', 'branch', 'service.service', 'service.employee', 'bookingTransaction'])
+            $bookings = Booking::with(['user', 'branch', 'services.service', 'services.employee', 'bookingTransaction'])
                 ->whereIn('id', $cartIds)
                 ->get();
         }
@@ -178,7 +178,7 @@ class OdooBookingSyncService
 
     private function buildPayload(Invoice $invoice, $bookings, $giftCards): array
     {
-        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->service->service_price ?? 0));
+        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->services->count() ? $booking->services->sum('service_price') : ($booking->service->service_price ?? 0)));
         $bookingTax = (float) (getBookingTaxamount($bookingSubTotal, 0, null)['total_tax_amount'] ?? 0);
         $bookingGross = $bookingSubTotal + $bookingTax;
 
@@ -244,60 +244,69 @@ class OdooBookingSyncService
 
     private function buildBookingDetails(Invoice $invoice, $bookings): array
     {
-        return $bookings->map(function ($booking) use ($invoice) {
-            $bookingService = $booking->service;
-            $service = $bookingService?->service;
-            $employee = $bookingService?->employee;
-            $branch = $booking->branch;
-            $user = $booking->user ?? $invoice->user;
-            $serviceImage = $service->feature_image ?? null;
+        $details = [];
+        foreach ($bookings as $booking) {
+            $services = $booking->services->count() ? $booking->services : collect([$booking->service]);
+            foreach ($services as $bookingService) {
+                if (!$bookingService) continue;
+                $service = $bookingService->service;
+                $employee = $bookingService->employee;
+                $branch = $booking->branch;
+                $user = $booking->user ?? $invoice->user;
+                $serviceImage = $service->feature_image ?? null;
 
-            return [
-                'id' => $booking->id,
-                'user_id' => (int) $booking->user_id,
-                'bookingInfo_id' => $invoice->id,
-                'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
-                'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
-                'client_name' => $user?->first_name . ' ' . $user?->last_name,
-                'client_email' => $user?->email,
-                'client_phone' => $user?->mobile,
-                'notes' => $booking->note,
-                'service' => [
-                    'id' => $service->id ?? null,
-                    'odoo_id' => $service->odoo_id ?? null,
-                    'name' => $this->resolveName($service->name ?? null),
-                    'image1' => $serviceImage,
-                ],
-                'pricing' => [
-                    'id' => $bookingService->id ?? null,
-                    'name' => $this->resolveName($service->name ?? null),
-                    'price' => (float) ($bookingService->service_price ?? 0),
-                    'image' => $serviceImage,
-                ],
-                'employee' => [
-                    'id' => $employee->id ?? null,
-                    'name' => $employee?->first_name . ' ' . $employee?->last_name,
-                ],
-                'location' => [
-                    'id' => $branch->id ?? null,
-                    'name' => $this->resolveName($branch->name ?? null),
-                ],
-            ];
-        })->values()->all();
+                $details[] = [
+                    'id' => $booking->id,
+                    'user_id' => (int) $booking->user_id,
+                    'bookingInfo_id' => $invoice->id,
+                    'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
+                    'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
+                    'client_name' => $user?->first_name . ' ' . $user?->last_name,
+                    'client_email' => $user?->email,
+                    'client_phone' => $user?->mobile,
+                    'notes' => $booking->note,
+                    'service' => [
+                        'id' => $service->id ?? null,
+                        'odoo_id' => $service->odoo_id ?? null,
+                        'name' => $this->resolveName($service->name ?? null),
+                        'image1' => $serviceImage,
+                    ],
+                    'pricing' => [
+                        'id' => $bookingService->id ?? null,
+                        'name' => $this->resolveName($service->name ?? null),
+                        'price' => (float) ($bookingService->service_price ?? 0),
+                        'image' => $serviceImage,
+                    ],
+                    'employee' => [
+                        'id' => $employee->id ?? null,
+                        'name' => $employee?->first_name . ' ' . $employee?->last_name,
+                    ],
+                    'location' => [
+                        'id' => $branch->id ?? null,
+                        'name' => $this->resolveName($branch->name ?? null),
+                    ],
+                ];
+            }
+        }
+        return $details;
     }
 
     private function buildOrderServices($bookings): array
     {
-        return $bookings->map(function ($booking) {
-            $bookingService = $booking->service;
-            $service = $bookingService?->service;
-
-            return [
-                'id' => (int) ($service->odoo_id ?? $service->id ?? $bookingService->id ?? $booking->id),
-                'quantity' => 1,
-                'price' => (float) ($bookingService->service_price ?? 0),
-            ];
-        })->values()->all();
+        $orderServices = [];
+        foreach ($bookings as $booking) {
+            $services = $booking->services->count() ? $booking->services : collect([$booking->service]);
+            foreach ($services as $bookingService) {
+                if (!$bookingService) continue;
+                $service = $bookingService->service;
+                $orderServices[] = [
+                    'id' => (int) ($service->odoo_id ?? $service->id ?? $bookingService->id ?? $booking->id),
+                    'quantity' => 1,
+                    'price' => (float) ($bookingService->service_price ?? 0),
+                ];
+            }
+        }
+        return $orderServices;
     }
 
     private function buildGiftCardDetails(Invoice $invoice, $giftCards, string $paymentDate): array

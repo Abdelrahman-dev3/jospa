@@ -581,10 +581,15 @@ use App\Models\GiftCard;
                                 <div style="color: var(--teal);">{{ number_format($invoice->gift_amount ?? 0, 2) }} SR</div>
                             </div>
                         @endif
-                        <div class="summary-row">
-                            <div>{{ __('messages.invoice_discount') }}</div>
-                            <div style="color: var(--rose);">- {{ number_format($invoice->discount_amount, 2) }} SR</div>
-                        </div>
+                        @php
+                            $otherDiscount = max((float)$invoice->discount_amount - $couponAmount - $gatewayAmount, 0);
+                        @endphp
+                        @if($otherDiscount > 0)
+                            <div class="summary-row">
+                                <div>{{ __('messages.invoice_discount') }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($otherDiscount, 2) }} SR</div>
+                            </div>
+                        @endif
                         <div class="summary-row">
                             <div>Tax & Service</div>
                             <div style="color: var(--emerald);">{{ number_format($invoice->taxs_service, 2) }} SR</div>
