@@ -148,7 +148,7 @@ class ReportsController extends Controller
                 ];
             }
 
-            $itemsQty = $og->order && $og->order->orderItems ? $og->order->orderItems->sum('product_qty') : 0;
+            $itemsQty = $og->order && $og->order->orderItems ? $og->order->orderItems->sum('qty') : 0;
             $gross = (float) ($og->sub_total_amount ?? 0) + (float) ($og->total_shipping_cost ?? 0) + (float) ($og->total_tax_amount ?? 0);
             if ($gross <= 0) {
                 $gross = (float) ($og->grand_total_amount ?? 0) + (float) ($og->total_coupon_discount_amount ?? 0);
@@ -189,7 +189,7 @@ class ReportsController extends Controller
             $pkgAmt = $booking && $booking->bookingPackages ? $booking->bookingPackages->sum('package_price') : 0;
 
             $itemsCount = ($booking && $booking->services ? $booking->services->count() : 0)
-                + ($booking && $booking->products ? $booking->products->count() : 0)
+                + ($booking && $booking->products ? $booking->products->sum('product_qty') : 0)
                 + ($booking && $booking->bookingPackages ? $booking->bookingPackages->count() : 0);
 
             $gross = $serviceAmt + $productAmt + $pkgAmt;
