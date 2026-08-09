@@ -63,7 +63,7 @@ class StaffServiceReportExport implements FromCollection, WithHeadings,WithStyle
                         break;
 
                     case 'total_earning':
-                        $selectedData[$column] = Currency::format($row->commission_earning_sum_commission_amount ?? 0);
+                        $selectedData[$column] = Currency::format($row->employee_booking_sum_service_price ?? 0);
                         break;
 
                     default:
