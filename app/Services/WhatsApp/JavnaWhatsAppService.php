@@ -135,6 +135,90 @@ class JavnaWhatsAppService
         );
     }
 
+    public function sendDocument(string $phone, string $fileUrlOrBase64, string $filename = 'document.pdf', ?string $caption = null): bool
+    {
+        $this->lastAcceptedMessage = null;
+
+        if (! $this->isEnabled()) {
+            Log::warning('WhatsApp document sending is disabled or incomplete.', [
+                'enabled' => (bool) config('services.javna.whatsapp_enabled'),
+                'missing_config' => $this->missingConfigKeys(),
+            ]);
+
+            return false;
+        }
+
+        $normalizedPhone = $this->normalizePhoneForWhatsApp($phone);
+        if ($normalizedPhone === null) {
+            Log::warning('WhatsApp document skipped because the phone number is invalid.', [
+                'original_phone' => $phone,
+            ]);
+
+            return false;
+        }
+
+        $apiUrl = (string) config('services.javna.whatsapp_api_url');
+        $apiToken = (string) config('services.javna.whatsapp_api_token');
+        $timeout = (int) config('services.javna.whatsapp_timeout', 15);
+
+        $fileUrl = null;
+        $base64Data = null;
+
+        if (str_starts_with($fileUrlOrBase64, 'http://') || str_starts_with($fileUrlOrBase64, 'https://')) {
+            $fileUrl = $fileUrlOrBase64;
+        } else {
+            $base64Data = preg_replace('#^data:application/\w+;base64,#i', '', trim($fileUrlOrBase64));
+            $base64Data = str_replace([' ', "\r", "\n"], '', (string) $base64Data);
+
+            $savedUrl = $this->saveBase64ToPublicStorage($base64Data, $filename);
+            if ($savedUrl) {
+                $fileUrl = $savedUrl;
+            }
+        }
+
+        $payloadCandidates = $this->buildDocumentPayloadCandidates(
+            phone: $normalizedPhone,
+            fileUrl: $fileUrl,
+            base64Data: $base64Data,
+            filename: $filename,
+            caption: $caption
+        );
+
+        Log::info('Attempting outbound WhatsApp document send.', [
+            'phone' => $normalizedPhone,
+            'api_url' => $apiUrl,
+            'filename' => $filename,
+            'file_url' => $fileUrl,
+            'has_base64' => ! empty($base64Data),
+            'payload_styles' => array_keys($payloadCandidates),
+        ]);
+
+        $sent = $this->deliverPayloadCandidates(
+            endpoint: $this->resolveDocumentEndpoint($apiUrl),
+            apiToken: $apiToken,
+            timeout: $timeout,
+            phone: $normalizedPhone,
+            payloadCandidates: $payloadCandidates,
+            successLogMessage: 'Outbound WhatsApp document sent successfully.',
+            rejectedLogMessage: 'WhatsApp provider rejected outbound document payload.',
+            exceptionLogMessage: 'Failed to send outbound WhatsApp document.',
+            finalErrorLogMessage: 'All outbound WhatsApp document payload styles failed.'
+        );
+
+        if (! $sent && $fileUrl !== null) {
+            $fallbackMessage = trim(($caption ? $caption . "\n" : '') . 'تحميل المستند: ' . $fileUrl);
+            Log::info('Fallback: sending WhatsApp text with document link.', [
+                'phone' => $normalizedPhone,
+                'filename' => $filename,
+                'url' => $fileUrl,
+            ]);
+
+            return $this->sendText($phone, $fallbackMessage);
+        }
+
+        return $sent;
+    }
+
     public function getLastAcceptedMessage(): ?array
     {
         return $this->lastAcceptedMessage;
@@ -966,6 +1050,115 @@ class JavnaWhatsAppService
         $path = trim((string) config('services.javna.whatsapp_template_path', '/whatsapp/v1.0/message/template'));
 
         return rtrim($apiUrl, '/') . '/' . ltrim($path, '/');
+    }
+
+    private function resolveDocumentEndpoint(string $apiUrl): string
+    {
+        $path = trim((string) config('services.javna.whatsapp_document_path', '/whatsapp/v1.0/message/document'));
+
+        return rtrim($apiUrl, '/') . '/' . ltrim($path, '/');
+    }
+
+    private function saveBase64ToPublicStorage(string $base64Data, string $filename): ?string
+    {
+        try {
+            $decoded = base64_decode($base64Data, true);
+            if ($decoded === false) {
+                return null;
+            }
+
+            $sanitizedFilename = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $filename);
+            if (! str_ends_with(strtolower($sanitizedFilename), '.pdf')) {
+                $sanitizedFilename .= '.pdf';
+            }
+
+            $directory = public_path('media/pdfs');
+            if (! is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            $filePath = $directory . '/' . $sanitizedFilename;
+            file_put_contents($filePath, $decoded);
+
+            return url('media/pdfs/' . $sanitizedFilename);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to save base64 document to public storage.', [
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function buildDocumentPayloadCandidates(
+        string $phone,
+        ?string $fileUrl,
+        ?string $base64Data,
+        string $filename,
+        ?string $caption
+    ): array {
+        $sender = trim((string) config('services.javna.whatsapp_sender', ''));
+        $channelId = trim((string) config('services.javna.whatsapp_channel_id', ''));
+
+        return [
+            'javna_content_document' => array_filter([
+                'To' => $phone,
+                'From' => $sender !== '' ? $sender : null,
+                'Content' => array_filter([
+                    'Type' => 'document',
+                    'Document' => array_filter([
+                        'Url' => $fileUrl,
+                        'Filename' => $filename,
+                        'Caption' => $caption,
+                        'Data' => $base64Data,
+                    ]),
+                ]),
+                'ChannelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_media' => array_filter([
+                'To' => $phone,
+                'From' => $sender !== '' ? $sender : null,
+                'MediaUrl' => $fileUrl,
+                'MediaType' => 'document',
+                'FileName' => $filename,
+                'Caption' => $caption,
+                'ChannelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'meta_document' => array_filter([
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $phone,
+                'type' => 'document',
+                'document' => array_filter([
+                    'link' => $fileUrl,
+                    'filename' => $filename,
+                    'caption' => $caption,
+                ]),
+                'from' => $sender !== '' ? $sender : null,
+                'channelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'simple_document' => array_filter([
+                'to' => $phone,
+                'type' => 'document',
+                'url' => $fileUrl,
+                'filename' => $filename,
+                'caption' => $caption,
+                'sender' => $sender !== '' ? $sender : null,
+                'channelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
+            'javna_document_lower' => array_filter([
+                'to' => $phone,
+                'from' => $sender !== '' ? $sender : null,
+                'content' => array_filter([
+                    'type' => 'document',
+                    'url' => $fileUrl,
+                    'filename' => $filename,
+                    'caption' => $caption,
+                ]),
+                'channelId' => $channelId !== '' ? $channelId : null,
+            ], fn ($value) => $value !== null && $value !== ''),
+        ];
     }
 
     private function normalizePhoneForWhatsApp(string $phone): ?string

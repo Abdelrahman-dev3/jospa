@@ -10,6 +10,7 @@ use Modules\Booking\Models\Booking;
 use Modules\Service\Models\Service;
 use App\Models\GiftCard;
 use App\Models\Invoice;
+use App\Services\WhatsApp\JavnaWhatsAppService;
 
 class OdooBookingSyncService
 {
@@ -124,6 +125,10 @@ class OdooBookingSyncService
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
                 ]);
+
+                if (is_array($body)) {
+                    $this->handleOdooPaymentResponse($invoice, $body);
+                }
 
                 return true;
             }
@@ -526,5 +531,166 @@ class OdooBookingSyncService
         }
 
         return 'Failed to synchronize invoice with Odoo.';
+    }
+
+    /**
+     * Process Odoo payment response and send WhatsApp PDFs:
+     * - Invoice PDF to the buyer/payer (اللي دفع)
+     * - Gift card PDFs to the recipients (المهدي اليه)
+     * - Redeemed gift card PDF to the buyer (if any)
+     */
+    private function handleOdooPaymentResponse(Invoice $invoice, array $responseBody): void
+    {
+        try {
+            $user = $invoice->user;
+            $buyerPhone = $user?->mobile;
+            $buyerName = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : 'عميلنا العزيز';
+            if ($buyerName === '') {
+                $buyerName = $user->full_name ?? 'عميلنا العزيز';
+            }
+
+            $whatsAppService = app(JavnaWhatsAppService::class);
+
+            // 1. Send Invoice PDF to the buyer / payer (اللي دفع)
+            $invoicePdfBase64 = $responseBody['invoice_pdf'] ?? null;
+            if (filled($invoicePdfBase64) && filled($buyerPhone)) {
+                $invoiceFilename = "Invoice_INV-{$invoice->id}.pdf";
+                $caption = "مرحباً {$buyerName}، مرفق لك فاتورة عملية الدفع رقم INV-{$invoice->id} من جو سبا (JO SPA). شكراً لاختيارك لنا!";
+
+                $sentInvoice = $whatsAppService->sendDocument(
+                    phone: (string) $buyerPhone,
+                    fileUrlOrBase64: (string) $invoicePdfBase64,
+                    filename: $invoiceFilename,
+                    caption: $caption
+                );
+
+                Log::info('Invoice PDF WhatsApp sent from Odoo response.', [
+                    'invoice_id' => $invoice->id,
+                    'buyer_phone' => $buyerPhone,
+                    'sent' => $sentInvoice,
+                ]);
+            } else {
+                Log::warning('Invoice PDF sending skipped: missing base64 or buyer phone.', [
+                    'invoice_id' => $invoice->id,
+                    'has_pdf' => filled($invoicePdfBase64),
+                    'has_phone' => filled($buyerPhone),
+                ]);
+            }
+
+            // 2. Send Gift Card PDFs to Recipients (المهدي اليه)
+            $giftCardsCreated = $responseBody['gift_cards_created'] ?? [];
+            if (is_array($giftCardsCreated) && ! empty($giftCardsCreated)) {
+                $giftIds = $invoice->gift_ids;
+                if (is_string($giftIds)) {
+                    $giftIds = json_decode($giftIds, true);
+                }
+                $giftIds = array_values(array_filter((array) ($giftIds ?? [])));
+
+                $localGiftCards = GiftCard::whereIn('id', $giftIds)->get()->keyBy('id');
+
+                foreach ($giftCardsCreated as $index => $giftItem) {
+                    if (! is_array($giftItem)) {
+                        continue;
+                    }
+
+                    $giftPdfBase64 = $giftItem['pdf'] ?? null;
+                    $code = $giftItem['code'] ?? null;
+                    $amount = $giftItem['amount'] ?? 0;
+                    $isGift = ! empty($giftItem['is_gift']);
+
+                    if (blank($giftPdfBase64)) {
+                        Log::warning('Gift card created PDF is missing in Odoo response.', [
+                            'invoice_id' => $invoice->id,
+                            'index' => $index,
+                            'code' => $code,
+                        ]);
+                        continue;
+                    }
+
+                    // Match local GiftCard record
+                    $matchingGiftCard = null;
+                    if ($code !== null) {
+                        $matchingGiftCard = $localGiftCards->first(fn ($g) => $g->ref === $code);
+                    }
+                    if (! $matchingGiftCard && isset($giftIds[$index])) {
+                        $matchingGiftCard = $localGiftCards->get($giftIds[$index]);
+                    }
+                    if (! $matchingGiftCard && $localGiftCards->isNotEmpty()) {
+                        $matchingGiftCard = $localGiftCards->values()->get($index) ?? $localGiftCards->first();
+                    }
+
+                    $recipientPhone = $matchingGiftCard?->recipient_phone;
+                    $recipientName = $matchingGiftCard?->recipient_name ?? 'عزيزنا/عزيزتنا';
+                    $senderName = $matchingGiftCard?->sender_name ?? $buyerName;
+                    $personalMessage = trim((string) ($matchingGiftCard?->message ?? ''));
+
+                    // Send to Recipient (المهدي اليه) phone, fallback to sender/buyer phone if recipient phone not set
+                    $targetPhone = filled($recipientPhone) ? $recipientPhone : ($matchingGiftCard?->sender_phone ?: $buyerPhone);
+
+                    if (blank($targetPhone)) {
+                        Log::warning('Gift card PDF WhatsApp skipped: target phone number missing.', [
+                            'invoice_id' => $invoice->id,
+                            'code' => $code,
+                        ]);
+                        continue;
+                    }
+
+                    $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : ($index + 1)) . ".pdf";
+
+                    $giftCaption = "مرحباً {$recipientName}، لقد تلقيت بطاقة إهداء من {$senderName} من جو سبا (JO SPA)!";
+                    if ($personalMessage !== '') {
+                        $giftCaption .= "\nالرسالة المرفقة: \"{$personalMessage}\"";
+                    }
+                    $giftCaption .= "\nمرفق لكم بطاقة الإهداء الخاصة بكم.";
+
+                    $sentGift = $whatsAppService->sendDocument(
+                        phone: (string) $targetPhone,
+                        fileUrlOrBase64: (string) $giftPdfBase64,
+                        filename: $giftCardFilename,
+                        caption: $giftCaption
+                    );
+
+                    Log::info('Gift card PDF WhatsApp sent from Odoo response.', [
+                        'invoice_id' => $invoice->id,
+                        'code' => $code,
+                        'recipient_name' => $recipientName,
+                        'target_phone' => $targetPhone,
+                        'sent' => $sentGift,
+                    ]);
+                }
+            }
+
+            // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
+            $giftCardRedeemed = $responseBody['gift_card_redeemed'] ?? null;
+            if (is_array($giftCardRedeemed) && filled($giftCardRedeemed['pdf'] ?? null) && filled($buyerPhone)) {
+                $redeemedPdfBase64 = $giftCardRedeemed['pdf'];
+                $redeemedCode = $giftCardRedeemed['code'] ?? 'GC';
+                $remainingBalance = $giftCardRedeemed['remaining_balance'] ?? 0;
+
+                $redeemedFilename = "Redeemed_GiftCard_" . preg_replace('/[^a-zA-Z0-9_-]/', '_', $redeemedCode) . ".pdf";
+                $redeemedCaption = "مرحباً {$buyerName}، تم استخدام بطاقة الهدايا ({$redeemedCode}) بنجاح.\nالرصيد المتبقي في البطاقة: {$remainingBalance} ر.س.\nمرفق لكم تفاصيل البطاقة والمبلغ المتبقي.";
+
+                $sentRedeemed = $whatsAppService->sendDocument(
+                    phone: (string) $buyerPhone,
+                    fileUrlOrBase64: (string) $redeemedPdfBase64,
+                    filename: $redeemedFilename,
+                    caption: $redeemedCaption
+                );
+
+                Log::info('Redeemed gift card PDF WhatsApp sent from Odoo response.', [
+                    'invoice_id' => $invoice->id,
+                    'code' => $redeemedCode,
+                    'remaining_balance' => $remainingBalance,
+                    'buyer_phone' => $buyerPhone,
+                    'sent' => $sentRedeemed,
+                ]);
+            }
+
+        } catch (\Throwable $e) {
+            Log::error('Error handling Odoo payment response for WhatsApp delivery.', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
