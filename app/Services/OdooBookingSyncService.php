@@ -10,6 +10,7 @@ use Modules\Booking\Models\Booking;
 use Modules\Service\Models\Service;
 use App\Models\GiftCard;
 use App\Models\Invoice;
+use App\Services\WhatsApp\JavnaWhatsAppService;
 
 class OdooBookingSyncService
 {
@@ -117,14 +118,15 @@ class OdooBookingSyncService
 
             if ($response->successful()) {
                 $body = $response->json();
+                $resultData = is_array($body) && isset($body['result']) && is_array($body['result']) ? $body['result'] : $body;
                 
                 Log::info('Odoo booking sync response received.', [
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
-                    'has_invoice_pdf' => ! empty($body['invoice_pdf']),
-                    'invoice_pdf_bytes' => isset($body['invoice_pdf']) && is_string($body['invoice_pdf']) ? strlen($body['invoice_pdf']) : 0,
-                    'gift_cards_created_count' => is_array($body['gift_cards_created'] ?? null) ? count($body['gift_cards_created']) : 0,
-                    'has_gift_card_redeemed' => ! empty($body['gift_card_redeemed']),
+                    'has_invoice_pdf' => ! empty($resultData['invoice_pdf']),
+                    'invoice_pdf_bytes' => isset($resultData['invoice_pdf']) && is_string($resultData['invoice_pdf']) ? strlen($resultData['invoice_pdf']) : 0,
+                    'gift_cards_created_count' => is_array($resultData['gift_cards_created'] ?? null) ? count($resultData['gift_cards_created']) : 0,
+                    'has_gift_card_redeemed' => ! empty($resultData['gift_card_redeemed']),
                     'response_body' => $this->sanitizeResponseForLog($body),
                 ]);
 
@@ -467,8 +469,12 @@ class OdooBookingSyncService
 
             $whatsAppService = app(JavnaWhatsAppService::class);
 
+            $data = is_array($responseBody) && isset($responseBody['result']) && is_array($responseBody['result'])
+                ? $responseBody['result']
+                : $responseBody;
+
             // 1. Send Invoice PDF to the buyer / payer (اللي دفع)
-            $invoicePdfBase64 = $responseBody['invoice_pdf'] ?? null;
+            $invoicePdfBase64 = $data['invoice_pdf'] ?? null;
             if (filled($invoicePdfBase64) && filled($buyerPhone)) {
                 $invoiceFilename = "Invoice_INV-{$invoice->id}.pdf";
                 $caption = "مرحباً {$buyerName}، مرفق لك فاتورة عملية الدفع رقم INV-{$invoice->id} من جو سبا (JO SPA). شكراً لاختيارك لنا!";
@@ -494,7 +500,7 @@ class OdooBookingSyncService
             }
 
             // 2. Send Gift Card PDFs to Recipients (المهدي اليه)
-            $giftCardsCreated = $responseBody['gift_cards_created'] ?? [];
+            $giftCardsCreated = $data['gift_cards_created'] ?? [];
             if (is_array($giftCardsCreated) && ! empty($giftCardsCreated)) {
                 $giftIds = $invoice->gift_ids;
                 if (is_string($giftIds)) {
@@ -577,7 +583,7 @@ class OdooBookingSyncService
             }
 
             // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
-            $giftCardRedeemed = $responseBody['gift_card_redeemed'] ?? null;
+            $giftCardRedeemed = $data['gift_card_redeemed'] ?? null;
             if (is_array($giftCardRedeemed) && filled($giftCardRedeemed['pdf'] ?? null) && filled($buyerPhone)) {
                 $redeemedPdfBase64 = $giftCardRedeemed['pdf'];
                 $redeemedCode = $giftCardRedeemed['code'] ?? 'GC';
