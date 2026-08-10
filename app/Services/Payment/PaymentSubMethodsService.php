@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Modules\Wallet\Models\Wallet;
 use Modules\Wallet\Models\WalletHistory;
 use App\Models\LoyaltyPoint;
-use App\Services\OdooGiftCardService;
+use App\Models\GiftCard;
 use Illuminate\Support\Facades\DB;
 use App\Models\LoyaltyPointTransaction;
 
@@ -19,34 +19,13 @@ class PaymentSubMethodsService
     {
         $final = $amount;
         $usedWallet = $usedLoyalty = $usedGift = 0;
-        $giftBalance = null;
+        $giftError = false;
 
         $isWallet   = (bool)$request->wallet;
         $isLoyalty  = (bool)$request->loyalty;
         $isGiftCode = !empty($request->gift_code);
-        $requestedGiftAmount = $this->requestedGiftAmount($request);
-        $shouldUseGift = $isGiftCode && ($requestedGiftAmount > 0 || ! $request->has('gift_amount'));
 
-        if ($shouldUseGift) {
-            $result = app(OdooGiftCardService::class)->check((string) $request->gift_code);
-            $giftBalance = (float) ($result['balance'] ?? 0);
-
-            if (! ($result['valid'] ?? false) || $giftBalance <= 0) {
-                return [
-                    'error' => $result['message'] ?? __('messagess.invalid_gift_code'),
-                    'gift_balance' => $giftBalance,
-                ];
-            }
-
-            if ($requestedGiftAmount > 0 && $requestedGiftAmount - $giftBalance > 0.01) {
-                return [
-                    'error' => 'Insufficient gift card balance.',
-                    'gift_balance' => $giftBalance,
-                ];
-            }
-        }
-
-        DB::transaction(function () use (&$final, &$usedWallet, &$usedLoyalty, &$usedGift, $userId, $isWallet, $isLoyalty, $shouldUseGift, $requestedGiftAmount, $giftBalance, $commit) {
+        DB::transaction(function () use (&$final, &$usedWallet, &$usedLoyalty, &$usedGift, &$giftError, $userId, $isWallet, $isLoyalty, $isGiftCode, $request, $commit) {
 
             // Wallet
             if ($isWallet && $final > 0) {
@@ -96,14 +75,28 @@ class PaymentSubMethodsService
             }
 
             // Gift Card
-            if ($shouldUseGift && $final > 0) {
-                $usedGift = $requestedGiftAmount > 0
-                    ? min($requestedGiftAmount, $final)
-                    : min($giftBalance, $final);
+            if ($isGiftCode && $final > 0) {
+                $gift = GiftCard::where('ref', $request->gift_code)
+                    ->where('payment_status', 1)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$gift) {
+                    $giftError = true;
+                    return;
+                }
 
+                $usedGift = min($gift->balance, $final);
+                if ($commit) {
+                    $gift->balance -= $usedGift;
+                    $gift->save();
+                }
                 $final -= $usedGift;
             }
         });
+
+        if ($giftError) {
+            return ['error' => __('messagess.invalid_gift_code')];
+        }
 
         return [
             'remaining_amount' => max($final, 0),
@@ -111,16 +104,5 @@ class PaymentSubMethodsService
             'used_loyalty'     => $usedLoyalty,
             'used_gift'        => $usedGift,
         ];
-    }
-
-    private function requestedGiftAmount(Request $request): float
-    {
-        $value = $request->input('gift_amount', $request->input('used_gift'));
-
-        if ($value === null || $value === '' || ! is_numeric($value)) {
-            return 0.0;
-        }
-
-        return max((float) $value, 0.0);
     }
 }

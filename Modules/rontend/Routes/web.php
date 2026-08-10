@@ -24,7 +24,6 @@ Route::group(['prefix' => ''], function () {
     Route::get('/services/category/{id}', [FrontendController::class, 'categoryDetails'])->name('frontend.category.details');
     Route::get('/services/{id}', [FrontendController::class, 'serviceDetails'])->name('frontend.service.details');
     Route::get('/product/{id}', [FrontendController::class, 'productDetails'])->name('frontend.product.details');
-    Route::get('/blog/{blogPost:slug}', [FrontendController::class, 'blogDetails'])->name('frontend.blog.show');
     Route::get('/contact', [FrontendController::class, 'contact'])->name('frontend.contact');
     Route::get('/branches', [FrontendController::class, 'branches'])->name('frontend.branches');
     Route::get('/Ouroffers', [FrontendController::class, 'Ouroffers'])->name('frontend.Ouroffers');

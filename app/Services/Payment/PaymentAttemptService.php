@@ -20,7 +20,6 @@ class PaymentAttemptService
             'discount_amount' => (float) ($paymentData['discountAmount'] ?? 0),
             'cart_ids' => $paymentData['cart_ids'] ?? [],
             'gift_ids' => $paymentData['gift_ids'] ?? [],
-            'product_ids' => $paymentData['product_ids'] ?? [],
             'coupon_code' => $paymentData['couponCode'] ?? null,
             'gift_code' => data_get($paymentData, 'submethods.gift_code'),
             'wallet_used' => (bool) data_get($paymentData, 'submethods.wallet', false),

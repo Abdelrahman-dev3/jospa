@@ -422,6 +422,34 @@ class ReportsController extends Controller
         });
     }
 
+    private function parseReportDate(?string $dateStr): ?Carbon
+    {
+        if (empty($dateStr)) {
+            return null;
+        }
+
+        $dateStr = trim($dateStr);
+
+        try {
+            if (str_contains($dateStr, '-')) {
+                $parts = explode('-', $dateStr);
+                if (count($parts) === 3) {
+                    if (strlen($parts[0]) === 4) {
+                        return Carbon::createFromFormat('Y-m-d', substr($dateStr, 0, 10));
+                    }
+                    return Carbon::createFromFormat('d-m-Y', substr($dateStr, 0, 10));
+                }
+            }
+            return Carbon::parse($dateStr);
+        } catch (\Throwable $e) {
+            try {
+                return Carbon::parse($dateStr);
+            } catch (\Throwable $ex) {
+                return null;
+            }
+        }
+    }
+
     private function parseDateRange($range): array
     {
         $start = null;
@@ -432,10 +460,12 @@ class ReportsController extends Controller
         }
 
         if (is_array($range) && isset($range[0]) && $range[0] !== '') {
-            $start = Carbon::createFromFormat('d-m-Y', trim($range[0]))->startOfDay();
+            $parsedStart = $this->parseReportDate($range[0]);
+            $start = $parsedStart ? $parsedStart->startOfDay() : null;
         }
         if (is_array($range) && isset($range[1]) && $range[1] !== '') {
-            $end = Carbon::createFromFormat('d-m-Y', trim($range[1]))->endOfDay();
+            $parsedEnd = $this->parseReportDate($range[1]);
+            $end = $parsedEnd ? $parsedEnd->endOfDay() : null;
         }
 
         return [$start, $end];
@@ -481,15 +511,13 @@ class ReportsController extends Controller
             $query->where('coupon_id', $filter['coupon_id']);
         }
 
-        if (isset($filter['coupon_date'][0]) && $filter['coupon_date'][0] !== '') {
-            $startDate = $filter['coupon_date'][0];
-            $endDate = $filter['coupon_date'][1] ?? null;
-
-            if ($endDate) {
-                $query->whereDate('created_at', '>=', date('Y-m-d', strtotime($startDate)));
-                $query->whereDate('created_at', '<=', date('Y-m-d', strtotime($endDate)));
-            } else {
-                $query->whereDate('created_at', date('Y-m-d', strtotime($startDate)));
+        if (isset($filter['coupon_date'])) {
+            [$startDate, $endDate] = $this->parseDateRange($filter['coupon_date']);
+            if ($startDate && $endDate) {
+                $query->whereDate('created_at', '>=', $startDate->toDateString())
+                    ->whereDate('created_at', '<=', $endDate->toDateString());
+            } elseif ($startDate) {
+                $query->whereDate('created_at', $startDate->toDateString());
             }
         }
 
@@ -593,20 +621,24 @@ class ReportsController extends Controller
         $filter = $request->filter;
 
         if (isset($filter['promotion_id']) && $filter['promotion_id'] !== '') {
-            $query->whereHas('coupon', function ($q) use ($filter) {
-                $q->where('promotion_id', $filter['promotion_id']);
+            $query->where(function ($q) use ($filter) {
+                $q->whereHas('coupon', function ($cq) use ($filter) {
+                    $cq->where('promotion_id', $filter['promotion_id']);
+                })->orWhereIn('coupon_code', function ($sub) use ($filter) {
+                    $sub->select('coupon_code')
+                        ->from('promotions_coupon')
+                        ->where('promotion_id', $filter['promotion_id']);
+                });
             });
         }
 
-        if (isset($filter['promotion_date'][0]) && $filter['promotion_date'][0] !== '') {
-            $startDate = $filter['promotion_date'][0];
-            $endDate = $filter['promotion_date'][1] ?? null;
-
-            if ($endDate) {
-                $query->whereDate('created_at', '>=', date('Y-m-d', strtotime($startDate)));
-                $query->whereDate('created_at', '<=', date('Y-m-d', strtotime($endDate)));
-            } else {
-                $query->whereDate('created_at', date('Y-m-d', strtotime($startDate)));
+        if (isset($filter['promotion_date'])) {
+            [$startDate, $endDate] = $this->parseDateRange($filter['promotion_date']);
+            if ($startDate && $endDate) {
+                $query->whereDate('created_at', '>=', $startDate->toDateString())
+                    ->whereDate('created_at', '<=', $endDate->toDateString());
+            } elseif ($startDate) {
+                $query->whereDate('created_at', $startDate->toDateString());
             }
         }
 
@@ -702,15 +734,13 @@ class ReportsController extends Controller
                 });
             }
 
-            if (isset($filter['order_date'][0]) && $filter['order_date'][0] !== '') {
-                $startDate = $filter['order_date'][0];
-                $endDate = $filter['order_date'][1] ?? null;
-
-                if ($endDate) {
-                    $orders->whereDate('created_at', '>=', date('Y-m-d', strtotime($startDate)));
-                    $orders->whereDate('created_at', '<=', date('Y-m-d', strtotime($endDate)));
-                } else {
-                    $orders->whereDate('created_at', date('Y-m-d', strtotime($startDate)));
+            if (isset($filter['order_date'])) {
+                [$startDate, $endDate] = $this->parseDateRange($filter['order_date']);
+                if ($startDate && $endDate) {
+                    $orders->whereDate('created_at', '>=', $startDate->toDateString())
+                        ->whereDate('created_at', '<=', $endDate->toDateString());
+                } elseif ($startDate) {
+                    $orders->whereDate('created_at', $startDate->toDateString());
                 }
             }
         }
@@ -777,19 +807,12 @@ class ReportsController extends Controller
 
         $filter = $request->filter;
         if (isset($filter['booking_date'])) {
-            $bookingDates = explode(' to ', $filter['booking_date']);
-
-            if (count($bookingDates) >= 2) {
-                $startDate = date('Y-m-d 00:00:00', strtotime($bookingDates[0]));
-                $endDate = date('Y-m-d 23:59:59', strtotime($bookingDates[1]));
-
-                $query->where('bookings.start_date_time', '>=', $startDate)
-                    ->where('bookings.start_date_time', '<=', $endDate);
-            } elseif (count($bookingDates) === 1) {
-                $singleDate = date('Y-m-d', strtotime($bookingDates[0]));
-                $startDate = $singleDate . ' 00:00:00';
-                $endDate = $singleDate . ' 23:59:59';
-                $query->whereBetween('bookings.start_date_time', [$startDate, $endDate]);
+            [$startDate, $endDate] = $this->parseDateRange($filter['booking_date']);
+            if ($startDate && $endDate) {
+                $query->where('bookings.start_date_time', '>=', $startDate->toDateTimeString())
+                    ->where('bookings.start_date_time', '<=', $endDate->toDateTimeString());
+            } elseif ($startDate) {
+                $query->whereDate('bookings.start_date_time', $startDate->toDateString());
             }
         }
 
@@ -881,19 +904,12 @@ class ReportsController extends Controller
 
         $filter = $request->filter;
         if (isset($filter['booking_date'])) {
-            $bookingDates = explode(' to ', $filter['booking_date']);
-
-            if (count($bookingDates) >= 2) {
-                $startDate = date('Y-m-d 00:00:00', strtotime($bookingDates[0]));
-                $endDate = date('Y-m-d 23:59:59', strtotime($bookingDates[1]));
-
-                $query->where('bookings.start_date_time', '>=', $startDate)
-                    ->where('bookings.start_date_time', '<=', $endDate);
-            } elseif (count($bookingDates) === 1) {
-                $singleDate = date('Y-m-d', strtotime($bookingDates[0]));
-                $startDate = $singleDate . ' 00:00:00';
-                $endDate = $singleDate . ' 23:59:59';
-                $query->whereBetween('bookings.start_date_time', [$startDate, $endDate]);
+            [$startDate, $endDate] = $this->parseDateRange($filter['booking_date']);
+            if ($startDate && $endDate) {
+                $query->where('bookings.start_date_time', '>=', $startDate->toDateTimeString())
+                    ->where('bookings.start_date_time', '<=', $endDate->toDateTimeString());
+            } elseif ($startDate) {
+                $query->whereDate('bookings.start_date_time', $startDate->toDateString());
             }
         }
 
@@ -983,19 +999,12 @@ class ReportsController extends Controller
         $filter = $request->filter;
 
         if (isset($filter['booking_date'])) {
-            $bookingDates = explode(' to ', $filter['booking_date']);
-
-            if (count($bookingDates) >= 2) {
-                $startDate = date('Y-m-d 00:00:00', strtotime($bookingDates[0]));
-                $endDate = date('Y-m-d 23:59:59', strtotime($bookingDates[1]));
-
-                $query->where('payment_date', '>=', $startDate)
-                    ->where('payment_date', '<=', $endDate);
-            } elseif (count($bookingDates) === 1) {
-                $singleDate = date('Y-m-d', strtotime($bookingDates[0]));
-                $startDate = $singleDate . ' 00:00:00';
-                $endDate = $singleDate . ' 23:59:59';
-                $query->whereBetween('payment_date', [$startDate, $endDate]);
+            [$startDate, $endDate] = $this->parseDateRange($filter['booking_date']);
+            if ($startDate && $endDate) {
+                $query->where('payment_date', '>=', $startDate->toDateTimeString())
+                    ->where('payment_date', '<=', $endDate->toDateTimeString());
+            } elseif ($startDate) {
+                $query->whereDate('payment_date', $startDate->toDateString());
             }
         }
 

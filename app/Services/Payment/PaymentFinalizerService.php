@@ -110,11 +110,11 @@ class PaymentFinalizerService
                     ]);
                 }
             }
-
-            if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
-                app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
-            }
         });
+
+        if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
+            app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+        }
 
         if (! empty($giftIds)) {
             app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds);
@@ -156,7 +156,12 @@ class PaymentFinalizerService
 
         foreach ($bookings as $booking) {
             try {
-                $notifyMessage = str_replace( '[[booking_id]]', $booking->id, 'New booking #[[booking_id]] has been paid successfully.');
+                $notifyMessage = str_replace(
+                    '[[booking_id]]',
+                    $booking->id,
+                    'New booking #[[booking_id]] has been paid successfully.'
+                );
+
                 $this->sendNotificationOnBookingUpdate('new_booking', $notifyMessage, $booking);
             } catch (\Throwable $e) {
                 \Log::error($e->getMessage());
@@ -192,8 +197,8 @@ class PaymentFinalizerService
      */
     private function storeInvoice(int $userId, float $discountAmount, float $tax, float $finalTotal, array $cartIds, array $giftIds, array $product_ids, string $couponCode, string $paymentMethod, array $subPayments = []): int
     {
-        $giftAmount = (float) ($subPayments['used_gift'] ?? $subPayments['gift_amount'] ?? 0);
-        $giftCode = !empty($subPayments['gift_code']) ? trim((string) $subPayments['gift_code']) : null;
+        $giftCode = $subPayments['gift_code'] ?? null;
+        $giftAmount = (float) ($subPayments['used_gift'] ?? 0);
         $couponDiscountAmount = (float) ($subPayments['coupon_discount_amount'] ?? 0);
         $paymentGatewayDiscountAmount = (float) ($subPayments['payment_gateway_discount_amount'] ?? 0);
         $paymentGatewayDiscountMethod = $subPayments['payment_gateway_discount_method'] ?? null;

@@ -10,14 +10,15 @@ use Modules\Booking\Models\Booking;
 use Modules\Service\Models\Service;
 use App\Models\GiftCard;
 use App\Models\Invoice;
-use App\Services\WhatsApp\JavnaWhatsAppService;
 
 class OdooBookingSyncService
 {
     public function syncPaidInvoice(int $invoiceId): bool
     {
         $url = (string) config('services.odoo.booking_create_url');
-        $authHeaders = app(OdooGiftCardService::class)->authHeaders();
+        $db = (string) config('services.odoo.db');
+        $login = (string) config('services.odoo.login');
+        $password = (string) config('services.odoo.password');
 
         if ($url === '') {
             Log::warning('Odoo booking sync skipped: missing booking_create_url.', [
@@ -27,8 +28,8 @@ class OdooBookingSyncService
             return false;
         }
 
-        if (empty($authHeaders)) {
-            Log::warning('Odoo booking sync skipped: missing authentication.', [
+        if ($db === '' || $login === '' || $password === '') {
+            Log::warning('Odoo booking sync skipped: missing credentials.', [
                 'invoice_id' => $invoiceId,
             ]);
 
@@ -63,7 +64,7 @@ class OdooBookingSyncService
 
         $bookings = collect();
         if ($cartIds !== []) {
-            $bookings = Booking::with(['user', 'branch', 'services.service', 'services.employee', 'bookingTransaction'])
+            $bookings = Booking::with(['user', 'branch', 'service.service', 'service.employee', 'bookingTransaction'])
                 ->whereIn('id', $cartIds)
                 ->get();
         }
@@ -85,10 +86,10 @@ class OdooBookingSyncService
             return false;
         }
 
-        $payload = $this->buildRequestPayload(
-            $url,
-            $this->buildPayload($invoice, $bookings, $giftCards)
-        );
+        $payload = [
+            'event' => 'odoo_create_booking',
+            'data' => $this->buildPayload($invoice, $bookings, $giftCards),
+        ];
 
         try {
             $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -104,14 +105,18 @@ class OdooBookingSyncService
 
             $response = Http::timeout((int) config('services.odoo.timeout', 15))
                 ->acceptJson()
-                ->withHeaders(array_merge([
+                ->withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                ], $authHeaders))
+                    'db' => $db,
+                    'login' => $login,
+                    'password' => $password,
+                ])
                 ->withBody($jsonPayload, 'application/json')
                 ->send('POST', $url);
 
             if ($response->successful()) {
+<<<<<<< HEAD
                 $body = $response->json();
                 
                 Log::info('Odoo booking sync response received.', [
@@ -137,14 +142,12 @@ class OdooBookingSyncService
                     throw new \RuntimeException($errorMsg);
                 }
 
+=======
+>>>>>>> cd30a090a83cb4200f4a6dc8e18752afb7b74aea
                 Log::info('Odoo booking sync completed.', [
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
                 ]);
-
-                if (is_array($body)) {
-                    $this->handleOdooPaymentResponse($invoice, $body);
-                }
 
                 return true;
             }
@@ -157,22 +160,18 @@ class OdooBookingSyncService
                 ]);
             }
 
-            $errorMsg = $this->extractErrorMessage($response);
             Log::error('Odoo booking sync failed.', [
                 'invoice_id' => $invoiceId,
                 'status' => $response->status(),
                 'response' => $response->body(),
                 'payload' => $payload,
             ]);
-
-            throw new \RuntimeException($errorMsg);
         } catch (\Throwable $e) {
             Log::error('Odoo booking sync exception.', [
                 'invoice_id' => $invoiceId,
                 'message' => $e->getMessage(),
                 'payload' => $payload,
             ]);
-            throw $e;
         }
 
         return false;
@@ -183,23 +182,9 @@ class OdooBookingSyncService
         return $this->syncPaidInvoice($invoiceId);
     }
 
-    private function buildRequestPayload(string $url, array $data): array
-    {
-        if (str_contains($url, '/odoo/order/create')) {
-            return [
-                'data' => $data,
-            ];
-        }
-
-        return [
-            'event' => 'odoo_create_booking',
-            'data' => $data,
-        ];
-    }
-
     private function buildPayload(Invoice $invoice, $bookings, $giftCards): array
     {
-        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->services->count() ? $booking->services->sum('service_price') : ($booking->service->service_price ?? 0)));
+        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->service->service_price ?? 0));
         $bookingTax = (float) (getBookingTaxamount($bookingSubTotal, 0, null)['total_tax_amount'] ?? 0);
         $bookingGross = $bookingSubTotal + $bookingTax;
 
@@ -221,16 +206,10 @@ class OdooBookingSyncService
         $transaction = $bookings->first()?->bookingTransaction;
         $paymentDate = optional($invoice->created_at)->toDateString() ?? now()->toDateString();
         $transactionReference = $transaction->external_transaction_id ?? ('INV-' . $invoice->id);
-        $firstBooking = $bookings->first();
-        $customer = $firstBooking?->user ?? $invoice->user;
 
-        $payload = [
+        return [
             'id' => $invoice->id,
-            'payment_type_code' => $this->resolvePaymentTypeCode($transaction->transaction_type ?? $invoice->payment_method),
             'user_id' => (int) $invoice->user_id,
-            'client_name' => $this->resolveCustomerName($customer),
-            'client_mobile' => $customer?->mobile,
-            'client_email' => $customer?->email,
             'coupon_code' => $invoice->coupon_code,
             'coupon_discount' => $bookingDiscount,
             'gift_coupon_discount' => $giftDiscount,
@@ -246,88 +225,53 @@ class OdooBookingSyncService
             'payment_type' => $this->normalizePaymentType($transaction->transaction_type ?? $invoice->payment_method),
             'payment_status' => 'Paid',
             'date_of_paid' => $paymentDate,
-            'booking_date' => $this->formatDate($firstBooking?->start_date_time, 'd/m/Y'),
-            'booking_time' => $this->formatDate($firstBooking?->start_date_time, 'H:i'),
-            'order_services' => $this->buildOrderServices($bookings),
             'booking_details' => $this->buildBookingDetails($invoice, $bookings),
             'gift_card_details' => $this->buildGiftCardDetails($invoice, $giftCards, $paymentDate),
         ];
-
-        $redeemedGiftCard = $this->buildRedeemedGiftCard($invoice);
-        if ($redeemedGiftCard !== null) {
-            $payload['gift_card'] = $redeemedGiftCard;
-            $payload['giftcard_code'] = $redeemedGiftCard['code'];
-            $payload['giftcard_amount'] = (float) $redeemedGiftCard['amount'];
-        }
-
-        return $payload;
     }
 
     private function buildBookingDetails(Invoice $invoice, $bookings): array
     {
-        $details = [];
-        foreach ($bookings as $booking) {
-            $services = $booking->services->count() ? $booking->services : collect([$booking->service]);
-            foreach ($services as $bookingService) {
-                if (!$bookingService) continue;
-                $service = $bookingService->service;
-                $employee = $bookingService->employee;
-                $branch = $booking->branch;
-                $user = $booking->user ?? $invoice->user;
-                $serviceImage = $service->feature_image ?? null;
+        return $bookings->map(function ($booking) use ($invoice) {
+            $bookingService = $booking->service;
+            $service = $bookingService?->service;
+            $employee = $bookingService?->employee;
+            $branch = $booking->branch;
+            $user = $booking->user ?? $invoice->user;
+            $serviceImage = $service->feature_image ?? null;
 
-                $details[] = [
-                    'id' => $booking->id,
-                    'user_id' => (int) $booking->user_id,
-                    'bookingInfo_id' => $invoice->id,
-                    'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
-                    'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
-                    'client_name' => $user?->first_name . ' ' . $user?->last_name,
-                    'client_email' => $user?->email,
-                    'client_phone' => $user?->mobile,
-                    'notes' => $booking->note,
-                    'service' => [
-                        'id' => $service->id ?? null,
-                        'odoo_id' => $service->odoo_id ?? null,
-                        'name' => $this->resolveName($service->name ?? null),
-                        'image1' => $serviceImage,
-                    ],
-                    'pricing' => [
-                        'id' => $bookingService->id ?? null,
-                        'name' => $this->resolveName($service->name ?? null),
-                        'price' => (float) ($bookingService->service_price ?? 0),
-                        'image' => $serviceImage,
-                    ],
-                    'employee' => [
-                        'id' => $employee->id ?? null,
-                        'name' => $employee?->first_name . ' ' . $employee?->last_name,
-                    ],
-                    'location' => [
-                        'id' => $branch->id ?? null,
-                        'name' => $this->resolveName($branch->name ?? null),
-                    ],
-                ];
-            }
-        }
-        return $details;
-    }
-
-    private function buildOrderServices($bookings): array
-    {
-        $orderServices = [];
-        foreach ($bookings as $booking) {
-            $services = $booking->services->count() ? $booking->services : collect([$booking->service]);
-            foreach ($services as $bookingService) {
-                if (!$bookingService) continue;
-                $service = $bookingService->service;
-                $orderServices[] = [
-                    'id' => (int) ($service->odoo_id ?? $service->id ?? $bookingService->id ?? $booking->id),
-                    'quantity' => 1,
+            return [
+                'id' => $booking->id,
+                'user_id' => (int) $booking->user_id,
+                'bookingInfo_id' => $invoice->id,
+                'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
+                'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
+                'client_name' => $user?->first_name . ' ' . $user?->last_name,
+                'client_email' => $user?->email,
+                'client_phone' => $user?->mobile,
+                'notes' => $booking->note,
+                'service' => [
+                    'id' => $service->id ?? null,
+                    'odoo_id' => $service->odoo_id ?? null,
+                    'name' => $this->resolveName($service->name ?? null),
+                    'image1' => $serviceImage,
+                ],
+                'pricing' => [
+                    'id' => $bookingService->id ?? null,
+                    'name' => $this->resolveName($service->name ?? null),
                     'price' => (float) ($bookingService->service_price ?? 0),
-                ];
-            }
-        }
-        return $orderServices;
+                    'image' => $serviceImage,
+                ],
+                'employee' => [
+                    'id' => $employee->id ?? null,
+                    'name' => $employee?->first_name . ' ' . $employee?->last_name,
+                ],
+                'location' => [
+                    'id' => $branch->id ?? null,
+                    'name' => $this->resolveName($branch->name ?? null),
+                ],
+            ];
+        })->values()->all();
     }
 
     private function buildGiftCardDetails(Invoice $invoice, $giftCards, string $paymentDate): array
@@ -403,21 +347,6 @@ class OdooBookingSyncService
         return '#JO-' . now()->format('Ymd') . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
     }
 
-    private function buildRedeemedGiftCard(Invoice $invoice): ?array
-    {
-        $code = trim((string) $invoice->gift_code);
-        $amount = (float) ($invoice->gift_amount ?? 0);
-
-        if ($code === '') {
-            return null;
-        }
-
-        return [
-            'code' => $code,
-            'amount' => round($amount, 2),
-        ];
-    }
-
     private function normalizePaymentType(?string $paymentType): string
     {
         $paymentType = trim((string) $paymentType);
@@ -436,36 +365,6 @@ class OdooBookingSyncService
             'sub_methods' => 'Wallet/Loyalty/Gift',
             default => ucfirst($paymentType),
         };
-    }
-
-    private function resolvePaymentTypeCode(?string $paymentType): string
-    {
-        $configuredCode = trim((string) config('services.odoo.payment_type_code'));
-        if ($configuredCode !== '') {
-            return $configuredCode;
-        }
-
-        $paymentType = strtolower(trim((string) $paymentType));
-
-        return match ($paymentType) {
-            'card', 'tap' => 'CARD',
-            'wallet' => 'WALLET',
-            'urpay', 'stcpay', 'applepay_urpay' => 'URPAY',
-            'tabby' => 'TABBY',
-            'tamara' => 'TAMARA',
-            default => $paymentType !== '' ? strtoupper($paymentType) : 'CSH1',
-        };
-    }
-
-    private function resolveCustomerName($user): ?string
-    {
-        if (! $user) {
-            return null;
-        }
-
-        $name = trim((string) (($user->first_name ?? '') . ' ' . ($user->last_name ?? '')));
-
-        return $name !== '' ? $name : ($user->full_name ?? $user->name ?? null);
     }
 
     private function normalizeDeliveryMethod(?string $deliveryMethod): string
@@ -516,6 +415,7 @@ class OdooBookingSyncService
             return null;
         }
     }
+<<<<<<< HEAD
 
     private function extractErrorMessage(Response $response): string
     {
@@ -741,4 +641,6 @@ class OdooBookingSyncService
 
         return $sanitized;
     }
+=======
+>>>>>>> cd30a090a83cb4200f4a6dc8e18752afb7b74aea
 }

@@ -353,17 +353,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
 
         $calculator = app(PaymentCalculatorService::class);
         $totalData = $calculator->calculateTotal($context['page'], $context['couponCode'], 'tamara', $user->id);
-
-        $attempt = !empty($context['attempt_id']) ? PaymentAttempt::find($context['attempt_id']) : null;
-        if ($attempt && (($totalData['total'] ?? 0) <= 0 || (empty($totalData['cart_ids']) && empty($totalData['gift_ids']) && empty($totalData['product_ids'])))) {
-            $totalData['total'] = (float) $attempt->amount;
-            $totalData['cart_ids'] = $attempt->cart_ids ?? [];
-            $totalData['gift_ids'] = $attempt->gift_ids ?? [];
-            $totalData['product_ids'] = $attempt->product_ids ?? [];
-            $totalData['discountAmount'] = (float) $attempt->discount_amount;
-        }
-
-        if (isset($totalData['error']) && ! $attempt) {
+        if (isset($totalData['error'])) {
             return $this->respondFailure($request, $totalData['error'], 422);
         }
 
@@ -386,7 +376,6 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $context['wallet'],
             'loyalty' => $context['loyalty'],
             'gift_code' => $context['gift_code'],
-            'gift_amount' => $context['gift_amount'],
         ]);
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {
@@ -456,7 +445,6 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $request->boolean('wallet') ? 1 : null,
             'loyalty' => $request->boolean('loyalty') ? 1 : null,
             'gift_code' => $request->get('gift_code'),
-            'gift_amount' => $request->get('gift_amount'),
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount')),
         ], function ($value) {
             return $value !== null && $value !== '';
@@ -504,7 +492,6 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $request->boolean('wallet'),
             'loyalty' => $request->boolean('loyalty'),
             'gift_code' => $request->get('gift_code'),
-            'gift_amount' => $request->get('gift_amount'),
             'discount_amount' => $discount,
         ];
     }

@@ -25,7 +25,7 @@ class UserCouponRedeem extends Model
 
     public function coupon()
     {
-        return $this->belongsTo(Coupon::class, 'coupon_code');
+        return $this->belongsTo(Coupon::class, 'coupon_id');
     }
 
     public function user()

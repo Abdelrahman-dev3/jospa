@@ -100,7 +100,7 @@ class TaqnyatSmsService
             'sender_phone' => '',
             'recipient_name' => '',
             'recipient_phone' => '',
-            'ref' => '',
+            'ref' => $ref,
             'gift_message' => '',
             'gift_message_line' => '',
         ];
@@ -113,10 +113,6 @@ class TaqnyatSmsService
         } elseif ($to === 'recipient') {
             $variables['recipient_name'] = $payload;
             $variables['recipient_phone'] = $phone;
-        }
-
-        if ($to === 'recipient') {
-            $variables['ref'] = '';
         }
 
         $variables['gift_message'] = $this->sanitizeGiftMessage($variables['gift_message'] ?? '');
@@ -162,7 +158,7 @@ class TaqnyatSmsService
             return $legacyTemplate;
         }
 
-        return 'لقد تلقيت هدية من [[sender_name]].[[gift_message_line]]';
+        return 'لقد تلقيت هدية من [[sender_name]]. الرقم المرجعي للحصول على الهدية من الموقع: [[ref]][[gift_message_line]]';
     }
 
     protected function replaceVariables($message, $variables)
@@ -217,6 +213,7 @@ class TaqnyatSmsService
         $senderPhone = trim((string) ($variables['sender_phone'] ?? ''));
         $recipientName = trim((string) ($variables['recipient_name'] ?? ''));
         $recipientPhone = trim((string) ($variables['recipient_phone'] ?? ''));
+        $reference = trim((string) ($variables['ref'] ?? ''));
         $giftMessage = $this->sanitizeGiftMessage($variables['gift_message'] ?? '');
 
         $lines = [];
@@ -230,6 +227,10 @@ class TaqnyatSmsService
 
         if ($senderPhone !== '') {
             $lines[] = "رقم المرسل: {$senderPhone}";
+        }
+
+        if ($reference !== '') {
+            $lines[] = "الرقم المرجعي للحصول على الهدية من الموقع: {$reference}";
         }
 
         if ($giftMessage !== '') {

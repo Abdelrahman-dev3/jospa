@@ -164,18 +164,6 @@
     .coupon-input .form-control , .gift-input .form-control{
       border-radius:8px;
     }
-    .gift-amount-input{
-      display:none;
-      margin:-8px 0 18px;
-    }
-    .gift-amount-input .form-control{
-      border-radius:8px;
-    }
-    .gift-amount-hint{
-      margin-top:6px;
-      color:var(--muted);
-      font-size:12px;
-    }
     .apply-btn{
       background:transparent;
       color:var(--gold);
@@ -196,28 +184,8 @@
       font-weight:700;
       box-shadow: 0 6px 18px rgba(198,138,62,0.18);
       transition:transform .18s ease;
-      position:relative;
     }
-    .pay-btn:hover:not(:disabled){ transform:translateY(-3px); }
-    .pay-btn:disabled{
-      opacity:.7;
-      cursor:not-allowed;
-      transform:none;
-    }
-    .pay-btn .pay-btn-spinner{
-      display:inline-block;
-      width:18px;
-      height:18px;
-      border:2.5px solid rgba(255,255,255,.35);
-      border-top-color:#fff;
-      border-radius:50%;
-      animation:paySpinner .6s linear infinite;
-      vertical-align:middle;
-      margin-inline-end:6px;
-    }
-    @keyframes paySpinner{
-      to{ transform:rotate(360deg); }
-    }
+    .pay-btn:hover{ transform:translateY(-3px); }
 
     /* right side */
     .panel{
@@ -773,14 +741,13 @@
 
             </script>
             @endif
-  <form action="{{route('payment-chanal')}}" method="POST" id="paymentForm">
+  <form action="{{route('payment-chanal')}}" method="POST">
     @csrf
     
     <input type="hidden" name="items_count" id="form_items_count" value="0">
     <input type="hidden" name="total_price" id="form_total_price" value="0">
     <input type="hidden" name="total_amount" id="form_total_amount" value="0">
     <input type="hidden" name="discount_amount" id="form_discount_amount" value="0">
-    <input type="hidden" name="gift_amount" id="form_gift_amount" value="0">
     <input type="hidden" name="brand" id="paymentBrand" value="{{ $defaultCardBrand }}">
 
     <div class="page-wrap">
@@ -1035,10 +1002,6 @@
                         <input class="form-control" name="gift_code" placeholder="{{ __('messagess.gift_code') }}">
                         <button class="apply-btn" type="button" id="gift_code">{{ __('messagess.apply') }}</button>
                     </div>
-                    <div class="gift-amount-input" id="giftAmountWrapper">
-                        <input class="form-control" id="giftAmountInput" type="number" min="0" step="0.01" placeholder="{{ app()->getLocale() === 'ar' ? 'المبلغ المستخدم من بطاقة الهدية' : 'Gift card amount' }}">
-                        <div class="gift-amount-hint" id="giftBalanceHint"></div>
-                    </div>
 
                     <div class="inv-m">
                         <div>{{ __('messagess.Invoice_code') }}</div>
@@ -1053,7 +1016,7 @@
                         <div>{{ __('messagess.total_amount') }}</div>
                         <div id="totalPrice" style="color:var(--gold)"><span>{{$totalPrice + getBookingTaxamount($totalPrice, 0, null )['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0) }}</span> {{ __('messagess.SR') }}</div>
                     </div>
-                    <button class="pay-btn mt-3" id="confirmPay" type="submit"><i class="fa-solid fa-credit-card me-2" id="confirmPayIcon"></i><span id="confirmPayText"> {{ __('messagess.confirm_payment') }}</span></button>
+                    <button class="pay-btn mt-3" id="confirmPay"><i class="fa-solid fa-credit-card me-2"></i> {{ __('messagess.confirm_payment') }} </button>
                 </div>
             </div>
         </div>
@@ -1104,16 +1067,6 @@
             amount: 0,
         };
         let appliedGiftAmount = 0;
-        let giftState = {
-            applied: false,
-            code: '',
-            balance: 0,
-        };
-        const giftAmountWrapper = document.getElementById('giftAmountWrapper');
-        const giftAmountInput = document.getElementById('giftAmountInput');
-        const giftBalanceHint = document.getElementById('giftBalanceHint');
-        const giftAmountHidden = document.getElementById('form_gift_amount');
-        const giftBalanceLabel = "{{ app()->getLocale() === 'ar' ? 'الرصيد المتاح' : 'Available balance' }}";
         appendGatewayDiscountBadges();
         
         const showComingSoonNotification = () => {
@@ -1289,22 +1242,6 @@
 
             return Math.min(configuredAmount, Math.max(amountAfterCoupon, 0));
         }
-
-        function getAmountBeforeGift() {
-            const walletCheckbox = document.querySelector('input[name="wallet"]');
-            const loyaltyCheckbox = document.querySelector('input[name="loyalty"]');
-            const walletAmount = parseFloat(document.getElementById('wallet').dataset.amount || 0);
-            const loyaltyAmount = parseFloat(document.getElementById('loyalty').dataset.amount || 0);
-            const couponDiscount = Math.min(getCouponDiscountAmount(), baseTotal);
-            const amountAfterCoupon = Math.max(baseTotal - couponDiscount, 0);
-            const gatewayDiscount = getGatewayDiscountAmount(amountAfterCoupon);
-            let total = Math.max(amountAfterCoupon - gatewayDiscount, 0);
-
-            if (walletCheckbox.checked) total -= walletAmount;
-            if (loyaltyCheckbox.checked) total -= loyaltyAmount;
-
-            return Math.max(total, 0);
-        }
         
         function updateTotal() {
             let walletCheckbox = document.querySelector('input[name="wallet"]');
@@ -1317,32 +1254,10 @@
             let totalDiscount = couponDiscount + gatewayDiscount;
         
             let total = Math.max(amountAfterCoupon - gatewayDiscount, 0);
+            total -= appliedGiftAmount;
         
             if (walletCheckbox.checked) total -= walletAmount;
             if (loyaltyCheckbox.checked) total -= loyaltyAmount;
-
-            if (total < 0) total = 0;
-
-            let requestedGiftAmount = 0;
-            if (giftState.applied) {
-                const maxGiftAmount = Math.min(giftState.balance, total);
-                const giftInputFocused = document.activeElement === giftAmountInput;
-                requestedGiftAmount = parseFloat(giftAmountInput.value);
-
-                if (!Number.isFinite(requestedGiftAmount)) {
-                    requestedGiftAmount = giftInputFocused ? 0 : maxGiftAmount;
-                }
-
-                requestedGiftAmount = Math.min(Math.max(requestedGiftAmount, 0), maxGiftAmount);
-                giftAmountInput.max = maxGiftAmount.toFixed(2);
-                if (!giftInputFocused || requestedGiftAmount === maxGiftAmount) {
-                    giftAmountInput.value = requestedGiftAmount.toFixed(2);
-                }
-                giftBalanceHint.textContent = `${giftBalanceLabel}: ${giftState.balance.toFixed(2)} {{ __('messagess.SR') }}`;
-            }
-
-            appliedGiftAmount = requestedGiftAmount;
-            total -= appliedGiftAmount;
         
             if (total < 0) total = 0;
 
@@ -1369,19 +1284,10 @@
             document.getElementById('form_total_price').value = total;
             document.getElementById('form_total_amount').value = total;
             document.getElementById('form_discount_amount').value = totalDiscount.toFixed(2);
-            giftAmountHidden.value = appliedGiftAmount.toFixed(2);
         }
         
         document.querySelector('input[name="wallet"]').addEventListener('change', updateTotal);
         document.querySelector('input[name="loyalty"]').addEventListener('change', updateTotal);
-        giftAmountInput.addEventListener('input', updateTotal);
-        giftAmountInput.addEventListener('blur', function () {
-            if (giftState.applied && this.value === '') {
-                this.value = Math.min(giftState.balance, getAmountBeforeGift()).toFixed(2);
-            }
-
-            updateTotal();
-        });
         
         // Coupon
         document.querySelector('#applyCoupon').addEventListener('click', function() {
@@ -1431,80 +1337,24 @@
             }
         
             fetch(`/validate-gift-code?code=${encodeURIComponent(giftCode)}`)
-              .then(res => res.json().then(data => ({ ok: res.ok, data })))
-              .then(({ ok, data }) => {
-                    if (ok && (data.status || data.valid)) {
+              .then(res => res.json())
+              .then(data => {
+                    if (data.status) {
                         toastr.success("{{ __('messagess.code_applied') }}: " + giftCode);
-                        giftState = {
-                            applied: true,
-                            code: giftCode,
-                            balance: parseFloat(data.balance ?? 0),
-                        };
-                        giftAmountWrapper.style.display = 'block';
-                        giftAmountInput.value = Math.min(giftState.balance, getAmountBeforeGift()).toFixed(2);
+            
+                        appliedGiftAmount = parseFloat(data.balance ?? 0);
             
                         button.disabled = true;
                         button.classList.add('disabled');
             
                         updateTotal();
                     } else {
-                        toastr.error(data.message || "{{ __('messagess.invalid_gift_code') }}");
+                        toastr.error(data.message);
                     }
               })
-              .catch(() => { toastr.error("{{ __('messagess.error_occurred') }}"); });
         });
 
         updateTotal();
-
-        // === Double Submit Prevention ===
-        (function() {
-            const paymentForm = document.getElementById('paymentForm');
-            const confirmBtn = document.getElementById('confirmPay');
-            const confirmIcon = document.getElementById('confirmPayIcon');
-            const confirmText = document.getElementById('confirmPayText');
-            let isSubmitting = false;
-
-            if (paymentForm && confirmBtn) {
-                paymentForm.addEventListener('submit', function(e) {
-                    // Check if a payment method is selected
-                    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
-                    if (!selectedMethod) {
-                        e.preventDefault();
-                        if (typeof toastr !== 'undefined' && toastr.error) {
-                            toastr.error("{{ app()->getLocale() === 'ar' ? 'يرجى اختيار وسيلة الدفع' : 'Please select a payment method' }}");
-                        }
-                        return false;
-                    }
-
-                    // Prevent double submission
-                    if (isSubmitting) {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    isSubmitting = true;
-                    confirmBtn.disabled = true;
-                    if (confirmIcon) {
-                        confirmIcon.className = 'pay-btn-spinner';
-                    }
-                    if (confirmText) {
-                        confirmText.textContent = " {{ app()->getLocale() === 'ar' ? 'جاري المعالجة...' : 'Processing...' }}";
-                    }
-
-                    // Re-enable after 30 seconds as safety net (in case of network error)
-                    setTimeout(function() {
-                        isSubmitting = false;
-                        confirmBtn.disabled = false;
-                        if (confirmIcon) {
-                            confirmIcon.className = 'fa-solid fa-credit-card me-2';
-                        }
-                        if (confirmText) {
-                            confirmText.textContent = " {{ __('messagess.confirm_payment') }}";
-                        }
-                    }, 30000);
-                });
-            }
-        })();
 
     </script>
 

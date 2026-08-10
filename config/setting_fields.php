@@ -622,7 +622,7 @@ return [
                 'label' => 'integration', // label
                 'rules' => 'required|max:500', // validation rule of laravel
                 'class' => '', // any class for input
-                'value' => 'لقد تلقيت هدية! تم إرسال هدية لك من [[recipient_name]] على الرقم [[recipient_phone]]', // default value
+                'value' => 'لقد تلقيت هدية! تم إرسال هدية لك من [[recipient_name]] على الرقم [[recipient_phone]] الرقم المرجعي للحصول علي الهدية من الموقع [[ref]]', // default value
                 'help'  => 'رسالة عند إنشاء حجز جديد للمستلم (استخدم [[recipient_name]] و[[recipient_phone]] لاستبدال اسم المرسل ورقمه تلقائيًا)', // Help text
             ],
             [
