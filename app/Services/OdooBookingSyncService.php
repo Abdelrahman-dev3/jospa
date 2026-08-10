@@ -116,7 +116,6 @@ class OdooBookingSyncService
                 ->send('POST', $url);
 
             if ($response->successful()) {
-<<<<<<< HEAD
                 $body = $response->json();
                 
                 Log::info('Odoo booking sync response received.', [
@@ -142,12 +141,14 @@ class OdooBookingSyncService
                     throw new \RuntimeException($errorMsg);
                 }
 
-=======
->>>>>>> cd30a090a83cb4200f4a6dc8e18752afb7b74aea
                 Log::info('Odoo booking sync completed.', [
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
                 ]);
+
+                if (is_array($body)) {
+                    $this->handleOdooPaymentResponse($invoice, $body);
+                }
 
                 return true;
             }
@@ -415,7 +416,6 @@ class OdooBookingSyncService
             return null;
         }
     }
-<<<<<<< HEAD
 
     private function extractErrorMessage(Response $response): string
     {
@@ -641,6 +641,4 @@ class OdooBookingSyncService
 
         return $sanitized;
     }
-=======
->>>>>>> cd30a090a83cb4200f4a6dc8e18752afb7b74aea
 }
