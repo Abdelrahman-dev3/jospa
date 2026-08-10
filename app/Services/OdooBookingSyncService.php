@@ -118,33 +118,44 @@ class OdooBookingSyncService
 
             if ($response->successful()) {
                 $body = $response->json();
-                
+
+                // Odoo returns JSON-RPC format: { "result": { ... } }
+                // Resolve the actual result data so we can inspect PDF fields.
+                $resultData = $this->resolveOdooResultData(is_array($body) ? $body : []);
+
                 Log::info('Odoo booking sync response received.', [
-                    'invoice_id' => $invoiceId,
-                    'status' => $response->status(),
-                    'has_invoice_pdf' => ! empty($body['invoice_pdf']),
-                    'invoice_pdf_bytes' => isset($body['invoice_pdf']) && is_string($body['invoice_pdf']) ? strlen($body['invoice_pdf']) : 0,
-                    'gift_cards_created_count' => is_array($body['gift_cards_created'] ?? null) ? count($body['gift_cards_created']) : 0,
-                    'has_gift_card_redeemed' => ! empty($body['gift_card_redeemed']),
-                    'response_body' => $this->sanitizeResponseForLog($body),
+                    'invoice_id'              => $invoiceId,
+                    'status'                  => $response->status(),
+                    'has_invoice_pdf'         => filled(data_get($resultData, 'invoice_pdf')),
+                    'invoice_pdf_bytes'       => is_string(data_get($resultData, 'invoice_pdf')) ? strlen(data_get($resultData, 'invoice_pdf')) : 0,
+                    'gift_cards_created_count'=> is_array(data_get($resultData, 'gift_cards_created')) ? count(data_get($resultData, 'gift_cards_created')) : 0,
+                    'has_gift_card_redeemed'  => filled(data_get($resultData, 'gift_card_redeemed')),
+                    'response_body'           => $this->sanitizeResponseForLog($body),
                 ]);
 
                 if (is_array($body) && (
                     (isset($body['status']) && ($body['status'] === false || $body['status'] === 'failed' || $body['status'] === 'error'))
                     || (isset($body['valid']) && $body['valid'] === false)
-                    || (!empty($body['error']))
+                    || (! empty($body['error']))
                 )) {
                     $errorMsg = $this->extractErrorMessage($response);
                     Log::error('Odoo booking sync rejected by Odoo response.', [
                         'invoice_id' => $invoiceId,
-                        'response' => $this->sanitizeResponseForLog($body),
+                        'response'   => $this->sanitizeResponseForLog($body),
                     ]);
                     throw new \RuntimeException($errorMsg);
                 }
 
+                // Dispatch WhatsApp PDF delivery (invoice PDF + gift-card PDFs from Odoo).
+                // Pass the invoice model and the resolved result data so the handler
+                // can use extractInvoiceDocument() / extractGiftCardsCreated() etc.
+                if ($invoice) {
+                    $this->handleOdooPaymentResponse($invoice, $body);
+                }
+
                 Log::info('Odoo booking sync completed.', [
                     'invoice_id' => $invoiceId,
-                    'status' => $response->status(),
+                    'status'     => $response->status(),
                 ]);
 
                 return true;
