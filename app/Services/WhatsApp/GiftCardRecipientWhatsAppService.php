@@ -52,14 +52,14 @@ class GiftCardRecipientWhatsAppService
 
         Log::info('Prepared gift card recipient WhatsApp template payload.', [
             'gift_card_id' => $giftCard->id,
-            'template_name' => 'jospa_giftCard_pdf_sa',
+            'template_name' => 'jospa_giftcard_pdf_sa',
             'template_variables' => $templateVariables,
         ]);
 
         $sent = $this->whatsAppService->sendTemplate(
             phone: (string) $giftCard->recipient_phone,
             variables: $templateVariables,
-            templateName: 'jospa_giftCard_pdf_sa'
+            templateName: 'jospa_giftcard_pdf_sa'
         );
 
         if (! $sent) {
