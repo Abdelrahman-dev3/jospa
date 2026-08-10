@@ -97,6 +97,11 @@ class OdooBookingSyncService
                 throw new \RuntimeException('Failed to encode Odoo payload to JSON.');
             }
 
+            Log::info('Initiating Odoo booking sync for paid invoice.', [
+                'invoice_id' => $invoiceId,
+                'url' => $url,
+            ]);
+
             $response = Http::timeout((int) config('services.odoo.timeout', 15))
                 ->acceptJson()
                 ->withHeaders(array_merge([
@@ -108,6 +113,17 @@ class OdooBookingSyncService
 
             if ($response->successful()) {
                 $body = $response->json();
+                
+                Log::info('Odoo booking sync response received.', [
+                    'invoice_id' => $invoiceId,
+                    'status' => $response->status(),
+                    'has_invoice_pdf' => ! empty($body['invoice_pdf']),
+                    'invoice_pdf_bytes' => isset($body['invoice_pdf']) && is_string($body['invoice_pdf']) ? strlen($body['invoice_pdf']) : 0,
+                    'gift_cards_created_count' => is_array($body['gift_cards_created'] ?? null) ? count($body['gift_cards_created']) : 0,
+                    'has_gift_card_redeemed' => ! empty($body['gift_card_redeemed']),
+                    'response_body' => $this->sanitizeResponseForLog($body),
+                ]);
+
                 if (is_array($body) && (
                     (isset($body['status']) && ($body['status'] === false || $body['status'] === 'failed' || $body['status'] === 'error'))
                     || (isset($body['valid']) && $body['valid'] === false)
@@ -116,7 +132,7 @@ class OdooBookingSyncService
                     $errorMsg = $this->extractErrorMessage($response);
                     Log::error('Odoo booking sync rejected by Odoo response.', [
                         'invoice_id' => $invoiceId,
-                        'response' => $body,
+                        'response' => $this->sanitizeResponseForLog($body),
                     ]);
                     throw new \RuntimeException($errorMsg);
                 }
@@ -692,5 +708,37 @@ class OdooBookingSyncService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function sanitizeResponseForLog(mixed $body): mixed
+    {
+        if (! is_array($body)) {
+            return $body;
+        }
+
+        $sanitized = [];
+        foreach ($body as $key => $value) {
+            if ($key === 'invoice_pdf' && is_string($value) && $value !== '') {
+                $sanitized[$key] = '[BASE64_PDF_LENGTH_' . strlen($value) . '_BYTES]';
+            } elseif ($key === 'gift_cards_created' && is_array($value)) {
+                $sanitized[$key] = array_map(function ($item) {
+                    if (is_array($item) && isset($item['pdf']) && is_string($item['pdf'])) {
+                        $item['pdf'] = '[BASE64_PDF_LENGTH_' . strlen($item['pdf']) . '_BYTES]';
+                    }
+                    return $item;
+                }, $value);
+            } elseif ($key === 'gift_card_redeemed' && is_array($value)) {
+                if (isset($value['pdf']) && is_string($value['pdf'])) {
+                    $value['pdf'] = '[BASE64_PDF_LENGTH_' . strlen($value['pdf']) . '_BYTES]';
+                }
+                $sanitized[$key] = $value;
+            } elseif (is_array($value)) {
+                $sanitized[$key] = $this->sanitizeResponseForLog($value);
+            } else {
+                $sanitized[$key] = $value;
+            }
+        }
+
+        return $sanitized;
     }
 }
