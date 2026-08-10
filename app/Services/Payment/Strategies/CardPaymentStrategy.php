@@ -6,7 +6,6 @@ use App\Models\PaymentAttempt;
 use App\Services\HyperpayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -324,25 +323,22 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 'wallet' => data_get($data, 'submethods.wallet', false),
                 'loyalty' => data_get($data, 'submethods.loyalty', false),
                 'gift_code' => data_get($data, 'submethods.gift_code'),
-                'gift_amount' => data_get($data, 'submethods.gift_amount'),
             ]);
 
-            $invoiceId = DB::transaction(function () use ($data, $fakeRequest, $payment, $merchantTransactionId, $request) {
-                return $this->commitFinalizedPayment(
-                    (int) $data['user_id'],
-                    $fakeRequest,
-                    $data,
-                    $data['subResult'] ?? [],
-                    [
-                        'attempt_id' => $data['attempt_id'] ?? null,
-                        'transaction_id' => (string) data_get($payment, 'id', ''),
-                        'merchant_reference' => $merchantTransactionId,
-                        'checkout_id' => $data['checkout_id'] ?? null,
-                        'gateway_response' => $payment,
-                        'callback_payload' => $request->all(),
-                    ]
-                );
-            });
+            $this->commitFinalizedPayment(
+                (int) $data['user_id'],
+                $fakeRequest,
+                $data,
+                $data['subResult'] ?? [],
+                [
+                    'attempt_id' => $data['attempt_id'] ?? null,
+                    'transaction_id' => (string) data_get($payment, 'id', ''),
+                    'merchant_reference' => $merchantTransactionId,
+                    'checkout_id' => $data['checkout_id'] ?? null,
+                    'gateway_response' => $payment,
+                    'callback_payload' => $request->all(),
+                ]
+            );
 
             $this->forgetPaymentCache($cacheKey);
 
@@ -403,7 +399,6 @@ class CardPaymentStrategy extends BasePaymentStrategy
             'wallet' => data_get($paymentData, 'submethods.wallet') ? 1 : null,
             'loyalty' => data_get($paymentData, 'submethods.loyalty') ? 1 : null,
             'gift_code' => data_get($paymentData, 'submethods.gift_code'),
-            'gift_amount' => data_get($paymentData, 'submethods.gift_amount'),
             'payment_method' => 'card',
             'discount_amount' => $request->get('discount_amount', $request->get('discountAmount', $paymentData['discountAmount'] ?? null)),
             'page' => $paymentData['page'] ?? null,
@@ -562,7 +557,6 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 'wallet' => (bool) ($submethods['wallet'] ?? $attempt->wallet_used),
                 'loyalty' => (bool) ($submethods['loyalty'] ?? $attempt->loyalty_used),
                 'gift_code' => $submethods['gift_code'] ?? $attempt->gift_code,
-                'gift_amount' => $submethods['gift_amount'] ?? 0,
             ],
             'final_before_sub' => (float) ($context['final_before_sub'] ?? $attempt->amount),
             'discountAmount' => (float) ($context['discountAmount'] ?? $attempt->discount_amount),

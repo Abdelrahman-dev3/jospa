@@ -430,8 +430,22 @@ use App\Models\GiftCard;
         <div class="invoice-list">
             @forelse($invoices as $invoice)
                 @php
-                    $bookings = $invoice->bookings;
-                    $bookingsGift = $invoice->gift_cards;
+                    $cartIds = $invoice->cart_ids;
+                    
+                    if (is_string($cartIds)) {
+                        $cartIds = json_decode($cartIds, true);
+                        if (is_string($cartIds)) $cartIds = json_decode($cartIds, true);
+                    }
+                    $cartIds = is_array($cartIds) ? $cartIds : [];
+                    $bookings = Modules\Booking\Models\Booking::whereIn('id', $cartIds)
+                        ->with('services.employee', 'branch')
+                        ->get();
+                    $giftIds = $invoice->gift_ids ?? [];
+                    if (is_string($giftIds)) {
+                        $giftIds = json_decode($giftIds, true);
+                        if (is_string($giftIds)) $giftIds = json_decode($giftIds, true); 
+                    }
+                    $bookingsGift = GiftCard::whereIn('id', $giftIds)->get();
                     $productItems = $invoice->product_items;
                     $couponCode = $invoice->coupon_code ?? null;
                     $couponAmount = (float) ($invoice->coupon_discount_amount ?? 0);
@@ -439,25 +453,6 @@ use App\Models\GiftCard;
                     $gatewayLabel = $invoice->payment_gateway_discount_label
                         ?: ($invoice->payment_gateway_discount_method ? ucfirst($invoice->payment_gateway_discount_method) : null);
                     $couponLabel = $couponCode ?: ($couponAmount > 0 ? 'Applied' : '---');
-
-                    // حساب الإجمالي الفرعي الحقيقي من الحجوزات + بطاقات الهدايا + المنتجات
-                    $servicesSubtotal = $bookings->sum(function ($b) {
-                        return $b->services->sum(fn($s) => max((float)($s->service_price ?? 0) - (float)($s->discount_amount ?? 0), 0));
-                    });
-                    $giftsSubtotal = $bookingsGift->sum(fn($g) => (float)($g->subtotal ?? 0));
-                    $productsSubtotal = $productItems->sum(fn($item) => (float)($item->total_price ?? (($item->unit_price ?? 0) * ($item->qty ?? 1))));
-                    $invoiceSubtotal = $servicesSubtotal + $giftsSubtotal + $productsSubtotal;
-
-                    // الضريبة والإجمالي النهائي من قاعدة البيانات
-                    $taxAmount = (float)($invoice->taxs_service ?? 0);
-                    $finalTotal = (float)($invoice->final_total ?? 0);
-
-                    // الخصم الفعلي المطبق = الإجمالي الفرعي + الضريبة - الإجمالي النهائي
-                    $totalDiscountApplied = max($invoiceSubtotal + $taxAmount - $finalTotal, 0);
-
-                    // توزيع الخصم: الكوبون لا يتجاوز ما تم تطبيقه فعلاً
-                    $effectiveCouponAmount = min($couponAmount, $totalDiscountApplied);
-                    $effectiveGatewayAmount = min($gatewayAmount, max($totalDiscountApplied - $effectiveCouponAmount, 0));
                 @endphp
 
                 <div class="invoice-card" id="invoice-card-{{ $invoice->id }}" onclick="toggleInvoiceDetails({{ $invoice->id }})">
@@ -493,20 +488,10 @@ use App\Models\GiftCard;
                             @forelse($bookings as $booking)
                                 @foreach($booking->services as $service)
                                     @php
-                                        $price    = (float) ($service->service_price ?? 0);
+                                        $price = (float) ($service->service_price ?? 0);
                                         $discount = (float) ($service->discount_amount ?? 0);
-                                        $net      = max($price - $discount, 0);
+                                        $net = max($price - $discount, 0);
                                         $employeeName = trim(($service->employee->full_name ?? '') . ' ' . ($service->employee->last_name ?? ''));
-                                        // حساب نسبة خصم الكوبون على هذه الخدمة
-                                        $serviceOriginalPrice = $price; // السعر قبل أي خصم
-                                        $hasCoupon = $couponCode && $effectiveCouponAmount > 0;
-                                        // السعر بعد خصم الكوبون = net - نصيب هذه الخدمة من الكوبون
-                                        // نسبة هذه الخدمة من إجمالي الخدمات
-                                        $serviceCouponShare = 0;
-                                        if ($hasCoupon && $servicesSubtotal > 0) {
-                                            $serviceCouponShare = round(($net / $servicesSubtotal) * $effectiveCouponAmount, 2);
-                                        }
-                                        $priceAfterCoupon = max($net - $serviceCouponShare, 0);
                                     @endphp
                                     <div class="line-item">
                                         <div>
@@ -514,15 +499,8 @@ use App\Models\GiftCard;
                                             <div class="line-meta">
                                                 #{{ $booking->id }} | {{ $booking->branch->name ?? '-' }} | {{ $employeeName ?: '-' }}
                                             </div>
-                                            @if($hasCoupon)
-                                                <div class="line-meta" style="margin-top:4px;">
-                                                    <span style="text-decoration:line-through; color:var(--muted, #999); font-size:0.82em;">{{ number_format($net, 2) }} SR</span>
-                                                    <span style="background:var(--rose,#e74c3c); color:#fff; border-radius:4px; padding:1px 7px; font-size:0.75em; margin:0 4px;">{{ $couponCode }}</span>
-                                                    <span style="color:var(--emerald,#27ae60); font-weight:600;">{{ number_format($priceAfterCoupon, 2) }} SR</span>
-                                                </div>
-                                            @endif
                                         </div>
-                                        <div class="line-amount">{{ number_format($hasCoupon ? $priceAfterCoupon : $net, 2) }} SR</div>
+                                        <div class="line-amount">{{ number_format($net, 2) }} SR</div>
                                     </div>
                                 @endforeach
                             @empty
@@ -591,10 +569,20 @@ use App\Models\GiftCard;
                     </div>
 
                     <div class="invoice-summary">
-                        @if($effectiveGatewayAmount > 0)
+                        <div class="summary-row">
+                            <div>{{ __('messagess.coupon_code') }}</div>
+                            <div>{{ $couponLabel }}</div>
+                        </div>
+                        @if($couponAmount > 0)
+                            <div class="summary-row">
+                                <div>{{ app()->getLocale() === 'ar' ? 'خصم الكوبون' : 'Coupon Discount' }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($couponAmount, 2) }} SR</div>
+                            </div>
+                        @endif
+                        @if($gatewayAmount > 0)
                             <div class="summary-row">
                                 <div>{{ app()->getLocale() === 'ar' ? 'خصم بوابة الدفع' : 'Payment Gateway Discount' }}{{ $gatewayLabel ? ' (' . $gatewayLabel . ')' : '' }}</div>
-                                <div style="color: var(--rose);">- {{ number_format($effectiveGatewayAmount, 2) }} SR</div>
+                                <div style="color: var(--rose);">- {{ number_format($gatewayAmount, 2) }} SR</div>
                             </div>
                         @endif
                         @if(($invoice->gift_amount ?? 0) > 0 || !empty($invoice->gift_code))
@@ -607,16 +595,10 @@ use App\Models\GiftCard;
                                 <div style="color: var(--teal);">{{ number_format($invoice->gift_amount ?? 0, 2) }} SR</div>
                             </div>
                         @endif
-                        @php
-                            $otherDiscount = max($totalDiscountApplied - $effectiveCouponAmount - $effectiveGatewayAmount, 0);
-                            $totalShownDiscount = $effectiveCouponAmount + $effectiveGatewayAmount + $otherDiscount;
-                        @endphp
-                        @if($totalShownDiscount > 0)
-                            <div class="summary-row">
-                                <div>{{ __('messages.invoice_discount') }}</div>
-                                <div style="color: var(--rose);">- {{ number_format($totalShownDiscount, 2) }} SR</div>
-                            </div>
-                        @endif
+                        <div class="summary-row">
+                            <div>{{ __('messages.invoice_discount') }}</div>
+                            <div style="color: var(--rose);">- {{ number_format($invoice->discount_amount, 2) }} SR</div>
+                        </div>
                         <div class="summary-row">
                             <div>Tax & Service</div>
                             <div style="color: var(--emerald);">{{ number_format($invoice->taxs_service, 2) }} SR</div>

@@ -141,7 +141,7 @@
             {
                 data: 'status',
                 name: 'discount',
-                title: "{{ __('messages.discount') }}",
+                title: "{{ __('messagess.discount') }}",
                 orderable: false,
                 searchable: false,
             },

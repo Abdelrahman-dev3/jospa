@@ -62,9 +62,6 @@ return [
     ],
     'odoo' => [
         'booking_create_url' => env('ODOO_BOOKING_CREATE_URL'),
-        'gift_card_check_url' => env('ODOO_GIFT_CARD_CHECK_URL'),
-        'api_key' => env('ODOO_API_KEY'),
-        'payment_type_code' => env('ODOO_PAYMENT_TYPE_CODE'),
         'db' => env('ODOO_DB'),
         'login' => env('ODOO_LOGIN'),
         'password' => env('ODOO_PASSWORD'),

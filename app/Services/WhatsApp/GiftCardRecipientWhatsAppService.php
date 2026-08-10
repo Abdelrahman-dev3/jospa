@@ -90,6 +90,7 @@ class GiftCardRecipientWhatsAppService
         return [
             $this->fallbackTemplateValue($giftCard->sender_name, 'مرسل الهدية'),
             $this->fallbackTemplateValue($giftCard->sender_phone, '-'),
+            $this->fallbackTemplateValue($giftCard->ref, '-'),
             $personalMessage !== '' ? $personalMessage : 'نتمنى لك تجربة جميلة.',
         ];
     }
@@ -106,8 +107,10 @@ class GiftCardRecipientWhatsAppService
         $senderName = trim((string) $giftCard->sender_name);
         $senderPhone = trim((string) $giftCard->sender_phone);
         $personalMessage = trim((string) $giftCard->message);
+        $reference = trim((string) $giftCard->ref);
         $amount = $this->formatAmount((float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0));
         $appName = $this->resolveAppName();
+        $domain = $this->resolveDomain();
 
         if ($this->isElectronicCard($giftCard)) {
             $lines = [
@@ -118,6 +121,12 @@ class GiftCardRecipientWhatsAppService
 
             if ($senderPhone !== '') {
                 $lines[] = "رقم المرسل: {$senderPhone}";
+            }
+
+            if ($reference !== '') {
+                $lines[] = "الرقم المرجعي لبطاقتك هو: {$reference}";
+                $lines[] = "يمكنك استخدام هذا الرقم المرجعي عند الحجز من خلال الموقع الإلكتروني الخاص بـ {$appName}:";
+                $lines[] = $domain;
             }
         } else {
             $details = $this->buildGiftDetails($giftCard);
@@ -164,6 +173,13 @@ class GiftCardRecipientWhatsAppService
         $appName = trim((string) setting('app_name'));
 
         return $appName !== '' ? $appName : 'JOSPA';
+    }
+
+    private function resolveDomain(): string
+    {
+        $domain = trim((string) config('app.url'));
+
+        return $domain !== '' ? rtrim($domain, '/') : url('/');
     }
 
     private function isElectronicCard(GiftCard $giftCard): bool

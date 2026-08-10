@@ -86,13 +86,6 @@
                 </li>
                 @endhasPermission
 
-                <li class="nav-item {{ request()->routeIs('app.blog.*') ? 'active' : '' }}">
-                    <a href="{{ route('app.blog.index') }}" class="nav-link {{ request()->routeIs('app.blog.*') ? 'active' : '' }}">
-                        <i class="fa-solid fa-newspaper"></i>
-                        <span class="item-name">المدونة</span>
-                    </a>
-                </li>
-
                 @hasPermission('view_vartext')
                 <li class="nav-item {{ request()->routeIs('app.text') ? 'active' : '' }}">
                     <a href="{{ route('app.text') }}" class="nav-link {{ request()->routeIs('app.text') ? 'active' : '' }}">

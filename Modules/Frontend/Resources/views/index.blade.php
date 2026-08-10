@@ -6,6 +6,5 @@
     <x-frontend.gift-section />
     <x-frontend.premium-packages-section :packages="$packages" />
     <x-frontend.product-section :products="$products" />
-    <x-frontend.blog-section :blog-posts="$blogPosts" />
     <x-frontend.goals-vision-section />
 @endsection

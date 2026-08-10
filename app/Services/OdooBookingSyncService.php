@@ -10,14 +10,15 @@ use Modules\Booking\Models\Booking;
 use Modules\Service\Models\Service;
 use App\Models\GiftCard;
 use App\Models\Invoice;
-use App\Services\WhatsApp\JavnaWhatsAppService;
 
 class OdooBookingSyncService
 {
     public function syncPaidInvoice(int $invoiceId): bool
     {
         $url = (string) config('services.odoo.booking_create_url');
-        $authHeaders = app(OdooGiftCardService::class)->authHeaders();
+        $db = (string) config('services.odoo.db');
+        $login = (string) config('services.odoo.login');
+        $password = (string) config('services.odoo.password');
 
         if ($url === '') {
             Log::warning('Odoo booking sync skipped: missing booking_create_url.', [
@@ -27,8 +28,8 @@ class OdooBookingSyncService
             return false;
         }
 
-        if (empty($authHeaders)) {
-            Log::warning('Odoo booking sync skipped: missing authentication.', [
+        if ($db === '' || $login === '' || $password === '') {
+            Log::warning('Odoo booking sync skipped: missing credentials.', [
                 'invoice_id' => $invoiceId,
             ]);
 
@@ -63,7 +64,7 @@ class OdooBookingSyncService
 
         $bookings = collect();
         if ($cartIds !== []) {
-            $bookings = Booking::with(['user', 'branch', 'services.service', 'services.employee', 'bookingTransaction'])
+            $bookings = Booking::with(['user', 'branch', 'service.service', 'service.employee', 'bookingTransaction'])
                 ->whereIn('id', $cartIds)
                 ->get();
         }
@@ -85,10 +86,10 @@ class OdooBookingSyncService
             return false;
         }
 
-        $payload = $this->buildRequestPayload(
-            $url,
-            $this->buildPayload($invoice, $bookings, $giftCards)
-        );
+        $payload = [
+            'event' => 'odoo_create_booking',
+            'data' => $this->buildPayload($invoice, $bookings, $giftCards),
+        ];
 
         try {
             $jsonPayload = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -99,36 +100,21 @@ class OdooBookingSyncService
 
             $response = Http::timeout((int) config('services.odoo.timeout', 15))
                 ->acceptJson()
-                ->withHeaders(array_merge([
+                ->withHeaders([
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
-                ], $authHeaders))
+                    'db' => $db,
+                    'login' => $login,
+                    'password' => $password,
+                ])
                 ->withBody($jsonPayload, 'application/json')
                 ->send('POST', $url);
 
             if ($response->successful()) {
-                $body = $response->json();
-                if (is_array($body) && (
-                    (isset($body['status']) && ($body['status'] === false || $body['status'] === 'failed' || $body['status'] === 'error'))
-                    || (isset($body['valid']) && $body['valid'] === false)
-                    || (!empty($body['error']))
-                )) {
-                    $errorMsg = $this->extractErrorMessage($response);
-                    Log::error('Odoo booking sync rejected by Odoo response.', [
-                        'invoice_id' => $invoiceId,
-                        'response' => $body,
-                    ]);
-                    throw new \RuntimeException($errorMsg);
-                }
-
                 Log::info('Odoo booking sync completed.', [
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
                 ]);
-
-                if (is_array($body)) {
-                    $this->handleOdooPaymentResponse($invoice, $body);
-                }
 
                 return true;
             }
@@ -141,22 +127,18 @@ class OdooBookingSyncService
                 ]);
             }
 
-            $errorMsg = $this->extractErrorMessage($response);
             Log::error('Odoo booking sync failed.', [
                 'invoice_id' => $invoiceId,
                 'status' => $response->status(),
                 'response' => $response->body(),
                 'payload' => $payload,
             ]);
-
-            throw new \RuntimeException($errorMsg);
         } catch (\Throwable $e) {
             Log::error('Odoo booking sync exception.', [
                 'invoice_id' => $invoiceId,
                 'message' => $e->getMessage(),
                 'payload' => $payload,
             ]);
-            throw $e;
         }
 
         return false;
@@ -167,23 +149,9 @@ class OdooBookingSyncService
         return $this->syncPaidInvoice($invoiceId);
     }
 
-    private function buildRequestPayload(string $url, array $data): array
-    {
-        if (str_contains($url, '/odoo/order/create')) {
-            return [
-                'data' => $data,
-            ];
-        }
-
-        return [
-            'event' => 'odoo_create_booking',
-            'data' => $data,
-        ];
-    }
-
     private function buildPayload(Invoice $invoice, $bookings, $giftCards): array
     {
-        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->services->count() ? $booking->services->sum('service_price') : ($booking->service->service_price ?? 0)));
+        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->service->service_price ?? 0));
         $bookingTax = (float) (getBookingTaxamount($bookingSubTotal, 0, null)['total_tax_amount'] ?? 0);
         $bookingGross = $bookingSubTotal + $bookingTax;
 
@@ -205,16 +173,10 @@ class OdooBookingSyncService
         $transaction = $bookings->first()?->bookingTransaction;
         $paymentDate = optional($invoice->created_at)->toDateString() ?? now()->toDateString();
         $transactionReference = $transaction->external_transaction_id ?? ('INV-' . $invoice->id);
-        $firstBooking = $bookings->first();
-        $customer = $firstBooking?->user ?? $invoice->user;
 
-        $payload = [
+        return [
             'id' => $invoice->id,
-            'payment_type_code' => $this->resolvePaymentTypeCode($transaction->transaction_type ?? $invoice->payment_method),
             'user_id' => (int) $invoice->user_id,
-            'client_name' => $this->resolveCustomerName($customer),
-            'client_mobile' => $customer?->mobile,
-            'client_email' => $customer?->email,
             'coupon_code' => $invoice->coupon_code,
             'coupon_discount' => $bookingDiscount,
             'gift_coupon_discount' => $giftDiscount,
@@ -230,88 +192,53 @@ class OdooBookingSyncService
             'payment_type' => $this->normalizePaymentType($transaction->transaction_type ?? $invoice->payment_method),
             'payment_status' => 'Paid',
             'date_of_paid' => $paymentDate,
-            'booking_date' => $this->formatDate($firstBooking?->start_date_time, 'd/m/Y'),
-            'booking_time' => $this->formatDate($firstBooking?->start_date_time, 'H:i'),
-            'order_services' => $this->buildOrderServices($bookings),
             'booking_details' => $this->buildBookingDetails($invoice, $bookings),
             'gift_card_details' => $this->buildGiftCardDetails($invoice, $giftCards, $paymentDate),
         ];
-
-        $redeemedGiftCard = $this->buildRedeemedGiftCard($invoice);
-        if ($redeemedGiftCard !== null) {
-            $payload['gift_card'] = $redeemedGiftCard;
-            $payload['giftcard_code'] = $redeemedGiftCard['code'];
-            $payload['giftcard_amount'] = (float) $redeemedGiftCard['amount'];
-        }
-
-        return $payload;
     }
 
     private function buildBookingDetails(Invoice $invoice, $bookings): array
     {
-        $details = [];
-        foreach ($bookings as $booking) {
-            $services = $booking->services->count() ? $booking->services : collect([$booking->service]);
-            foreach ($services as $bookingService) {
-                if (!$bookingService) continue;
-                $service = $bookingService->service;
-                $employee = $bookingService->employee;
-                $branch = $booking->branch;
-                $user = $booking->user ?? $invoice->user;
-                $serviceImage = $service->feature_image ?? null;
+        return $bookings->map(function ($booking) use ($invoice) {
+            $bookingService = $booking->service;
+            $service = $bookingService?->service;
+            $employee = $bookingService?->employee;
+            $branch = $booking->branch;
+            $user = $booking->user ?? $invoice->user;
+            $serviceImage = $service->feature_image ?? null;
 
-                $details[] = [
-                    'id' => $booking->id,
-                    'user_id' => (int) $booking->user_id,
-                    'bookingInfo_id' => $invoice->id,
-                    'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
-                    'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
-                    'client_name' => $user?->first_name . ' ' . $user?->last_name,
-                    'client_email' => $user?->email,
-                    'client_phone' => $user?->mobile,
-                    'notes' => $booking->note,
-                    'service' => [
-                        'id' => $service->id ?? null,
-                        'odoo_id' => $service->odoo_id ?? null,
-                        'name' => $this->resolveName($service->name ?? null),
-                        'image1' => $serviceImage,
-                    ],
-                    'pricing' => [
-                        'id' => $bookingService->id ?? null,
-                        'name' => $this->resolveName($service->name ?? null),
-                        'price' => (float) ($bookingService->service_price ?? 0),
-                        'image' => $serviceImage,
-                    ],
-                    'employee' => [
-                        'id' => $employee->id ?? null,
-                        'name' => $employee?->first_name . ' ' . $employee?->last_name,
-                    ],
-                    'location' => [
-                        'id' => $branch->id ?? null,
-                        'name' => $this->resolveName($branch->name ?? null),
-                    ],
-                ];
-            }
-        }
-        return $details;
-    }
-
-    private function buildOrderServices($bookings): array
-    {
-        $orderServices = [];
-        foreach ($bookings as $booking) {
-            $services = $booking->services->count() ? $booking->services : collect([$booking->service]);
-            foreach ($services as $bookingService) {
-                if (!$bookingService) continue;
-                $service = $bookingService->service;
-                $orderServices[] = [
-                    'id' => (int) ($service->odoo_id ?? $service->id ?? $bookingService->id ?? $booking->id),
-                    'quantity' => 1,
+            return [
+                'id' => $booking->id,
+                'user_id' => (int) $booking->user_id,
+                'bookingInfo_id' => $invoice->id,
+                'booking_date' => $this->formatDate($booking->start_date_time, 'Y-m-d'),
+                'booking_time' => $this->formatDate($booking->start_date_time, 'H:i:s'),
+                'client_name' => $user?->first_name . ' ' . $user?->last_name,
+                'client_email' => $user?->email,
+                'client_phone' => $user?->mobile,
+                'notes' => $booking->note,
+                'service' => [
+                    'id' => $service->id ?? null,
+                    'odoo_id' => $service->odoo_id ?? null,
+                    'name' => $this->resolveName($service->name ?? null),
+                    'image1' => $serviceImage,
+                ],
+                'pricing' => [
+                    'id' => $bookingService->id ?? null,
+                    'name' => $this->resolveName($service->name ?? null),
                     'price' => (float) ($bookingService->service_price ?? 0),
-                ];
-            }
-        }
-        return $orderServices;
+                    'image' => $serviceImage,
+                ],
+                'employee' => [
+                    'id' => $employee->id ?? null,
+                    'name' => $employee?->first_name . ' ' . $employee?->last_name,
+                ],
+                'location' => [
+                    'id' => $branch->id ?? null,
+                    'name' => $this->resolveName($branch->name ?? null),
+                ],
+            ];
+        })->values()->all();
     }
 
     private function buildGiftCardDetails(Invoice $invoice, $giftCards, string $paymentDate): array
@@ -387,21 +314,6 @@ class OdooBookingSyncService
         return '#JO-' . now()->format('Ymd') . str_pad((string) $invoiceId, 6, '0', STR_PAD_LEFT);
     }
 
-    private function buildRedeemedGiftCard(Invoice $invoice): ?array
-    {
-        $code = trim((string) $invoice->gift_code);
-        $amount = (float) ($invoice->gift_amount ?? 0);
-
-        if ($code === '') {
-            return null;
-        }
-
-        return [
-            'code' => $code,
-            'amount' => round($amount, 2),
-        ];
-    }
-
     private function normalizePaymentType(?string $paymentType): string
     {
         $paymentType = trim((string) $paymentType);
@@ -420,36 +332,6 @@ class OdooBookingSyncService
             'sub_methods' => 'Wallet/Loyalty/Gift',
             default => ucfirst($paymentType),
         };
-    }
-
-    private function resolvePaymentTypeCode(?string $paymentType): string
-    {
-        $configuredCode = trim((string) config('services.odoo.payment_type_code'));
-        if ($configuredCode !== '') {
-            return $configuredCode;
-        }
-
-        $paymentType = strtolower(trim((string) $paymentType));
-
-        return match ($paymentType) {
-            'card', 'tap' => 'CARD',
-            'wallet' => 'WALLET',
-            'urpay', 'stcpay', 'applepay_urpay' => 'URPAY',
-            'tabby' => 'TABBY',
-            'tamara' => 'TAMARA',
-            default => $paymentType !== '' ? strtoupper($paymentType) : 'CSH1',
-        };
-    }
-
-    private function resolveCustomerName($user): ?string
-    {
-        if (! $user) {
-            return null;
-        }
-
-        $name = trim((string) (($user->first_name ?? '') . ' ' . ($user->last_name ?? '')));
-
-        return $name !== '' ? $name : ($user->full_name ?? $user->name ?? null);
     }
 
     private function normalizeDeliveryMethod(?string $deliveryMethod): string
@@ -498,199 +380,6 @@ class OdooBookingSyncService
             return Carbon::parse($value)->format($format);
         } catch (\Throwable $e) {
             return null;
-        }
-    }
-
-    private function extractErrorMessage(Response $response): string
-    {
-        $body = $response->json();
-        if (is_array($body)) {
-            if (! empty($body['message']) && is_string($body['message'])) {
-                return $body['message'];
-            }
-            if (! empty($body['error']) && is_string($body['error'])) {
-                return $body['error'];
-            }
-            if (! empty($body['reason']) && is_string($body['reason'])) {
-                return $body['reason'];
-            }
-            if (! empty($body['detail']) && is_string($body['detail'])) {
-                return $body['detail'];
-            }
-            if (isset($body['error']['message']) && is_string($body['error']['message'])) {
-                return $body['error']['message'];
-            }
-            if (isset($body['error']['data']['message']) && is_string($body['error']['data']['message'])) {
-                return $body['error']['data']['message'];
-            }
-        }
-
-        $rawBody = trim($response->body());
-        if ($rawBody !== '') {
-            return $rawBody;
-        }
-
-        return 'Failed to synchronize invoice with Odoo.';
-    }
-
-    /**
-     * Process Odoo payment response and send WhatsApp PDFs:
-     * - Invoice PDF to the buyer/payer (اللي دفع)
-     * - Gift card PDFs to the recipients (المهدي اليه)
-     * - Redeemed gift card PDF to the buyer (if any)
-     */
-    private function handleOdooPaymentResponse(Invoice $invoice, array $responseBody): void
-    {
-        try {
-            $user = $invoice->user;
-            $buyerPhone = $user?->mobile;
-            $buyerName = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : 'عميلنا العزيز';
-            if ($buyerName === '') {
-                $buyerName = $user->full_name ?? 'عميلنا العزيز';
-            }
-
-            $whatsAppService = app(JavnaWhatsAppService::class);
-
-            // 1. Send Invoice PDF to the buyer / payer (اللي دفع)
-            $invoicePdfBase64 = $responseBody['invoice_pdf'] ?? null;
-            if (filled($invoicePdfBase64) && filled($buyerPhone)) {
-                $invoiceFilename = "Invoice_INV-{$invoice->id}.pdf";
-                $caption = "مرحباً {$buyerName}، مرفق لك فاتورة عملية الدفع رقم INV-{$invoice->id} من جو سبا (JO SPA). شكراً لاختيارك لنا!";
-
-                $sentInvoice = $whatsAppService->sendDocument(
-                    phone: (string) $buyerPhone,
-                    fileUrlOrBase64: (string) $invoicePdfBase64,
-                    filename: $invoiceFilename,
-                    caption: $caption
-                );
-
-                Log::info('Invoice PDF WhatsApp sent from Odoo response.', [
-                    'invoice_id' => $invoice->id,
-                    'buyer_phone' => $buyerPhone,
-                    'sent' => $sentInvoice,
-                ]);
-            } else {
-                Log::warning('Invoice PDF sending skipped: missing base64 or buyer phone.', [
-                    'invoice_id' => $invoice->id,
-                    'has_pdf' => filled($invoicePdfBase64),
-                    'has_phone' => filled($buyerPhone),
-                ]);
-            }
-
-            // 2. Send Gift Card PDFs to Recipients (المهدي اليه)
-            $giftCardsCreated = $responseBody['gift_cards_created'] ?? [];
-            if (is_array($giftCardsCreated) && ! empty($giftCardsCreated)) {
-                $giftIds = $invoice->gift_ids;
-                if (is_string($giftIds)) {
-                    $giftIds = json_decode($giftIds, true);
-                }
-                $giftIds = array_values(array_filter((array) ($giftIds ?? [])));
-
-                $localGiftCards = GiftCard::whereIn('id', $giftIds)->get()->keyBy('id');
-
-                foreach ($giftCardsCreated as $index => $giftItem) {
-                    if (! is_array($giftItem)) {
-                        continue;
-                    }
-
-                    $giftPdfBase64 = $giftItem['pdf'] ?? null;
-                    $code = $giftItem['code'] ?? null;
-                    $amount = $giftItem['amount'] ?? 0;
-                    $isGift = ! empty($giftItem['is_gift']);
-
-                    if (blank($giftPdfBase64)) {
-                        Log::warning('Gift card created PDF is missing in Odoo response.', [
-                            'invoice_id' => $invoice->id,
-                            'index' => $index,
-                            'code' => $code,
-                        ]);
-                        continue;
-                    }
-
-                    // Match local GiftCard record
-                    $matchingGiftCard = null;
-                    if ($code !== null) {
-                        $matchingGiftCard = $localGiftCards->first(fn ($g) => $g->ref === $code);
-                    }
-                    if (! $matchingGiftCard && isset($giftIds[$index])) {
-                        $matchingGiftCard = $localGiftCards->get($giftIds[$index]);
-                    }
-                    if (! $matchingGiftCard && $localGiftCards->isNotEmpty()) {
-                        $matchingGiftCard = $localGiftCards->values()->get($index) ?? $localGiftCards->first();
-                    }
-
-                    $recipientPhone = $matchingGiftCard?->recipient_phone;
-                    $recipientName = $matchingGiftCard?->recipient_name ?? 'عزيزنا/عزيزتنا';
-                    $senderName = $matchingGiftCard?->sender_name ?? $buyerName;
-                    $personalMessage = trim((string) ($matchingGiftCard?->message ?? ''));
-
-                    // Send to Recipient (المهدي اليه) phone, fallback to sender/buyer phone if recipient phone not set
-                    $targetPhone = filled($recipientPhone) ? $recipientPhone : ($matchingGiftCard?->sender_phone ?: $buyerPhone);
-
-                    if (blank($targetPhone)) {
-                        Log::warning('Gift card PDF WhatsApp skipped: target phone number missing.', [
-                            'invoice_id' => $invoice->id,
-                            'code' => $code,
-                        ]);
-                        continue;
-                    }
-
-                    $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : ($index + 1)) . ".pdf";
-
-                    $giftCaption = "مرحباً {$recipientName}، لقد تلقيت بطاقة إهداء من {$senderName} من جو سبا (JO SPA)!";
-                    if ($personalMessage !== '') {
-                        $giftCaption .= "\nالرسالة المرفقة: \"{$personalMessage}\"";
-                    }
-                    $giftCaption .= "\nمرفق لكم بطاقة الإهداء الخاصة بكم.";
-
-                    $sentGift = $whatsAppService->sendDocument(
-                        phone: (string) $targetPhone,
-                        fileUrlOrBase64: (string) $giftPdfBase64,
-                        filename: $giftCardFilename,
-                        caption: $giftCaption
-                    );
-
-                    Log::info('Gift card PDF WhatsApp sent from Odoo response.', [
-                        'invoice_id' => $invoice->id,
-                        'code' => $code,
-                        'recipient_name' => $recipientName,
-                        'target_phone' => $targetPhone,
-                        'sent' => $sentGift,
-                    ]);
-                }
-            }
-
-            // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
-            $giftCardRedeemed = $responseBody['gift_card_redeemed'] ?? null;
-            if (is_array($giftCardRedeemed) && filled($giftCardRedeemed['pdf'] ?? null) && filled($buyerPhone)) {
-                $redeemedPdfBase64 = $giftCardRedeemed['pdf'];
-                $redeemedCode = $giftCardRedeemed['code'] ?? 'GC';
-                $remainingBalance = $giftCardRedeemed['remaining_balance'] ?? 0;
-
-                $redeemedFilename = "Redeemed_GiftCard_" . preg_replace('/[^a-zA-Z0-9_-]/', '_', $redeemedCode) . ".pdf";
-                $redeemedCaption = "مرحباً {$buyerName}، تم استخدام بطاقة الهدايا ({$redeemedCode}) بنجاح.\nالرصيد المتبقي في البطاقة: {$remainingBalance} ر.س.\nمرفق لكم تفاصيل البطاقة والمبلغ المتبقي.";
-
-                $sentRedeemed = $whatsAppService->sendDocument(
-                    phone: (string) $buyerPhone,
-                    fileUrlOrBase64: (string) $redeemedPdfBase64,
-                    filename: $redeemedFilename,
-                    caption: $redeemedCaption
-                );
-
-                Log::info('Redeemed gift card PDF WhatsApp sent from Odoo response.', [
-                    'invoice_id' => $invoice->id,
-                    'code' => $redeemedCode,
-                    'remaining_balance' => $remainingBalance,
-                    'buyer_phone' => $buyerPhone,
-                    'sent' => $sentRedeemed,
-                ]);
-            }
-
-        } catch (\Throwable $e) {
-            Log::error('Error handling Odoo payment response for WhatsApp delivery.', [
-                'invoice_id' => $invoice->id,
-                'error' => $e->getMessage(),
-            ]);
         }
     }
 }

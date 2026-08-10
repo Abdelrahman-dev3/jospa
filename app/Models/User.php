@@ -354,16 +354,8 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
     public static function staffReport()
     {
         return self::role(['manager', 'employee'])->select('users.id', 'users.first_name', 'users.last_name', 'users.email', 'users.mobile', 'users.updated_at')
-            ->withCount(['employeeBooking' => function ($q) {
-                $q->whereHas('booking', function ($b) {
-                    $b->where('status', 'completed');
-                });
-            }])
-            ->withSum(['employeeBooking' => function ($q) {
-                $q->whereHas('booking', function ($b) {
-                    $b->where('status', 'completed');
-                });
-            }], 'service_price')
+            ->withCount('employeeBooking')
+            ->withSum('employeeBooking', 'service_price')
             ->withSum('commission_earning', 'commission_amount');
     }
 

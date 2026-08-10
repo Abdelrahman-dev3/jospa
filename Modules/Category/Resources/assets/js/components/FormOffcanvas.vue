@@ -20,7 +20,7 @@
                 <img :src="ImageViewer || defaultImage" alt="feature-image" class="img-fluid mb-2 avatar-140 avatar-rounded" />
                 <div v-if="validationMessage" class="text-danger mb-2">{{ validationMessage }}</div>
                 <div class="d-flex align-items-center justify-content-center gap-2">
-                  <input type="file" ref="profileInputRef" class="form-control d-none" id="feature_image" name="feature_image" @change="fileUpload" accept="image/*" />
+                  <input type="file" ref="profileInputRef" class="form-control d-none" id="feature_image" name="feature_image" @change="fileUpload" accept=".jpeg, .jpg, .png, .gif" />
                   <label class="btn btn-info" for="feature_image">{{ $t('messages.upload') }}</label>
                   <input type="button" class="btn btn-danger" name="remove" :value="$t('messages.remove')" @click="removeLogo()" v-if="ImageViewer" />
                 </div>
@@ -192,28 +192,37 @@ const ImageViewer = ref(null)
 const profileInputRef = ref(null)
 const fileUpload = async (e) => {
   let file = e.target.files[0];
+  const allowedTypes = ['image/jpeg', 'image/png'];
   const maxSizeInMB = 2;
   const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+
+  if (!allowedTypes.includes(file.type)) {
+    window.errorSnackbar('Only JPG, JPEG, and PNG files are allowed.'); 
+   profileInputRef.value.value = ''; // Clear the file input
+    return;
+  }
 
   if (file) {
     if (file.size > maxSizeInBytes) {
       // File is too large
       validationMessage.value = `File size exceeds ${maxSizeInMB} MB. Please upload a smaller file.`;
       // Clear the file input
-      if (profileInputRef.value) profileInputRef.value.value = '';
+      profileInputRef.value.value = '';
       return;
     }
 
     await readFile(file, (fileB64) => {
       ImageViewer.value = fileB64;
-      if (profileInputRef.value) profileInputRef.value.value = '';
+      profileInputRef.value.value = '';
       validationMessage.value = ''; 
     });
     feature_image.value = file;
   } else {
     validationMessage.value = '';
   }
+
 };
+
 
 // Function to delete Images
 const removeImage = ({ imageViewerBS64, changeFile }) => {
@@ -223,15 +232,16 @@ const removeImage = ({ imageViewerBS64, changeFile }) => {
 
 const removeLogo = () => removeImage({ imageViewerBS64: ImageViewer, changeFile: feature_image })
 
+
 // Default FORM DATA
 const defaultData = () => {
   ImageViewer.value = props.defaultImage
   errorMessages.value = {}
   return {
-    name: {
-      ar: '',
-      en: ''
-    },
+     name: {
+        ar: '',
+        en: ''
+      },
     parent_id: props.categoryId ?? null,
     is_visible: 0,
     status: true,
@@ -239,7 +249,8 @@ const defaultData = () => {
     is_online: true,
     calendar_color: '#BF9456',
     feature_image: null,
-    custom_fields_data: {}
+    custom_fields_data: {
+    }
   }
 }
 

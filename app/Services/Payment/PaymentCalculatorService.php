@@ -26,15 +26,16 @@ class PaymentCalculatorService
         }
         
         if ($typePage === 'payment') {
-            $services = Booking::getUserIncompleteBookings($userId, 'payment', ['services.service']);
+            $services = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service']);
 
+            
             $cartIds = $services->pluck('id')->toArray();
 
             $total += $services->sum(fn($item) =>
-                $item->services->sum(fn($s) => ($s->service_price ?? 0) - ($s->discount_amount ?? 0))
+                ($item->service->service_price ?? 0) - ($item->service->discount_amount ?? 0)
             );
         } else {
-            $services = Booking::getUserIncompleteBookings($userId, 'cart', ['services.service']);
+            $services = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service']);
 
             $products = Cart::with('product')->where('user_id', $userId)->get();
             $gifts    = GiftCard::where('user_id', $userId)->where('payment_status', 0)->get();
@@ -44,7 +45,8 @@ class PaymentCalculatorService
             $cartIds    = $services->pluck('id')->toArray();
 
             $total += $services->sum(fn($item) =>
-                $item->services->sum(fn($s) => ($s->service_price ?? 0) - ($s->discount_amount ?? 0))
+                ($item->service->service_price ?? 0)
+                - ($item->service->discount_amount ?? 0)
             );
 
             $productTotal = $products->sum(fn($item) =>
