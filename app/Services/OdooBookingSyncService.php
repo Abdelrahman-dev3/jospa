@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Carbon\Carbon;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Package\Models\Package;
@@ -119,20 +118,14 @@ class OdooBookingSyncService
 
             if ($response->successful()) {
                 $body = $response->json();
-                $resultData = is_array($body) ? $this->resolveOdooResultData($body) : [];
-                $invoiceDocument = $this->extractInvoiceDocument($resultData);
-                $giftCardsCreated = $this->extractGiftCardsCreated($resultData);
-                $giftCardRedeemed = $this->extractGiftCardRedeemed($resultData);
                 
                 Log::info('Odoo booking sync response received.', [
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
-                    'response_keys' => array_keys($resultData),
-                    'has_invoice_pdf' => filled($invoiceDocument),
-                    'invoice_pdf_bytes' => is_string($invoiceDocument) ? strlen($invoiceDocument) : 0,
-                    'gift_cards_created_count' => count($giftCardsCreated),
-                    'gift_card_pdfs_count' => count(array_filter($giftCardsCreated, fn ($giftItem) => is_array($giftItem) && filled($this->extractGiftCardDocument($giftItem)))),
-                    'has_gift_card_redeemed' => is_array($giftCardRedeemed),
+                    'has_invoice_pdf' => ! empty($body['invoice_pdf']),
+                    'invoice_pdf_bytes' => isset($body['invoice_pdf']) && is_string($body['invoice_pdf']) ? strlen($body['invoice_pdf']) : 0,
+                    'gift_cards_created_count' => is_array($body['gift_cards_created'] ?? null) ? count($body['gift_cards_created']) : 0,
+                    'has_gift_card_redeemed' => ! empty($body['gift_card_redeemed']),
                     'response_body' => $this->sanitizeResponseForLog($body),
                 ]);
 
@@ -153,10 +146,6 @@ class OdooBookingSyncService
                     'invoice_id' => $invoiceId,
                     'status' => $response->status(),
                 ]);
-
-                if (is_array($body)) {
-                    $this->handleOdooPaymentResponse($invoice, $body);
-                }
 
                 return true;
             }
@@ -424,7 +413,6 @@ class OdooBookingSyncService
             return null;
         }
     }
-
     private function extractErrorMessage(Response $response): string
     {
         $body = $response->json();
@@ -459,7 +447,7 @@ class OdooBookingSyncService
 
     /**
      * Process Odoo payment response and send WhatsApp PDFs:
-     * - Invoice PDF to the buyer/payer (اللي دفع)
+     * - Invoice PDF to the buyer/payer (اللي دفع)  via jospa_invoice_pdf_sa template
      * - Gift card PDFs to the recipients (المهدي اليه)
      * - Redeemed gift card PDF to the buyer (if any)
      */
@@ -478,34 +466,51 @@ class OdooBookingSyncService
             $data = $this->resolveOdooResultData($responseBody);
 
             // 1. Send Invoice PDF to the buyer / payer (اللي دفع)
+            //    Uses the jospa_invoice_pdf_sa WhatsApp template (document header + 6 body vars).
+            //    Falls back to plain sendDocument inside JavnaWhatsAppService when the template fails.
             $invoiceDocument = $this->extractInvoiceDocument($data);
             if (filled($invoiceDocument) && filled($buyerPhone)) {
                 $invoiceFilename = "Invoice_INV-{$invoice->id}.pdf";
-                $caption = "مرحباً {$buyerName}، مرفق لك فاتورة عملية الدفع رقم INV-{$invoice->id} من جو سبا (JO SPA). شكراً لاختيارك لنا!";
 
-                $sentInvoice = $whatsAppService->sendDocument(
-                    phone: (string) $buyerPhone,
-                    fileUrlOrBase64: (string) $invoiceDocument,
-                    filename: $invoiceFilename,
-                    caption: $caption
-                );
+                // Build the 6 template body variables (same order as the template definition)
+                $invoiceTemplateVariables = $this->buildInvoiceTemplateVariables($invoice, $buyerName, $data);
+
+                if ($whatsAppService->shouldUseInvoicePdfTemplate()) {
+                    $sentInvoice = $whatsAppService->sendTemplateWithDocument(
+                        phone:     (string) $buyerPhone,
+                        fileUrlOrBase64: (string) $invoiceDocument,
+                        filename:  $invoiceFilename,
+                        variables: $invoiceTemplateVariables,
+                    );
+                } else {
+                    // Fallback: send as plain document with a caption
+                    $caption = "مرحباً {$buyerName}، مرفق لك فاتورة الدفع رقم INV-{$invoice->id} من جو سبا. شكراً لاختيارك لنا!";
+                    $sentInvoice = $whatsAppService->sendDocument(
+                        phone:           (string) $buyerPhone,
+                        fileUrlOrBase64: (string) $invoiceDocument,
+                        filename:        $invoiceFilename,
+                        caption:         $caption,
+                    );
+                }
 
                 Log::info('Invoice PDF WhatsApp sent from Odoo response.', [
-                    'invoice_id' => $invoice->id,
-                    'buyer_phone' => $buyerPhone,
-                    'sent' => $sentInvoice,
+                    'invoice_id'       => $invoice->id,
+                    'buyer_phone'      => $buyerPhone,
+                    'used_template'    => $whatsAppService->shouldUseInvoicePdfTemplate(),
+                    'template_name'    => $whatsAppService->resolveInvoicePdfTemplateName(),
+                    'sent'             => $sentInvoice,
                 ]);
             } else {
                 Log::warning('Invoice PDF sending skipped: missing base64 or buyer phone.', [
                     'invoice_id' => $invoice->id,
-                    'has_pdf' => filled($invoiceDocument),
-                    'has_phone' => filled($buyerPhone),
+                    'has_pdf'    => filled($invoiceDocument),
+                    'has_phone'  => filled($buyerPhone),
                     'response_keys' => array_keys($data),
                 ]);
             }
 
             // 2. Send Gift Card PDFs to Recipients (المهدي اليه)
-            $giftCardsCreated = $this->extractGiftCardsCreated($data);
+            $giftCardsCreated = $responseBody['gift_cards_created'] ?? [];
             if (is_array($giftCardsCreated) && ! empty($giftCardsCreated)) {
                 $giftIds = $invoice->gift_ids;
                 if (is_string($giftIds)) {
@@ -520,21 +525,16 @@ class OdooBookingSyncService
                         continue;
                     }
 
-                    $giftDocument = $this->extractGiftCardDocument($giftItem);
-                    $code = $this->firstFilledString($giftItem, [
-                        'code',
-                        'ref',
-                        'gift_code',
-                        'gift_card_code',
-                        'card_code',
-                        'coupon_code',
-                    ]);
-                    if (blank($giftDocument)) {
+                    $giftPdfBase64 = $giftItem['pdf'] ?? null;
+                    $code = $giftItem['code'] ?? null;
+                    $amount = $giftItem['amount'] ?? 0;
+                    $isGift = ! empty($giftItem['is_gift']);
+
+                    if (blank($giftPdfBase64)) {
                         Log::warning('Gift card created PDF is missing in Odoo response.', [
                             'invoice_id' => $invoice->id,
                             'index' => $index,
                             'code' => $code,
-                            'gift_item_keys' => array_keys($giftItem),
                         ]);
                         continue;
                     }
@@ -577,7 +577,7 @@ class OdooBookingSyncService
 
                     $sentGift = $whatsAppService->sendDocument(
                         phone: (string) $targetPhone,
-                        fileUrlOrBase64: (string) $giftDocument,
+                        fileUrlOrBase64: (string) $giftPdfBase64,
                         filename: $giftCardFilename,
                         caption: $giftCaption
                     );
@@ -593,25 +593,18 @@ class OdooBookingSyncService
             }
 
             // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
-            $giftCardRedeemed = $this->extractGiftCardRedeemed($data);
-            $redeemedDocument = is_array($giftCardRedeemed) ? $this->extractGiftCardDocument($giftCardRedeemed) : null;
-            if (is_array($giftCardRedeemed) && filled($redeemedDocument) && filled($buyerPhone)) {
-                $redeemedCode = $this->firstFilledString($giftCardRedeemed, [
-                    'code',
-                    'ref',
-                    'gift_code',
-                    'gift_card_code',
-                    'card_code',
-                    'coupon_code',
-                ]) ?? 'GC';
-                $remainingBalance = data_get($giftCardRedeemed, 'remaining_balance', data_get($giftCardRedeemed, 'balance', 0));
+            $giftCardRedeemed = $responseBody['gift_card_redeemed'] ?? null;
+            if (is_array($giftCardRedeemed) && filled($giftCardRedeemed['pdf'] ?? null) && filled($buyerPhone)) {
+                $redeemedPdfBase64 = $giftCardRedeemed['pdf'];
+                $redeemedCode = $giftCardRedeemed['code'] ?? 'GC';
+                $remainingBalance = $giftCardRedeemed['remaining_balance'] ?? 0;
 
                 $redeemedFilename = "Redeemed_GiftCard_" . preg_replace('/[^a-zA-Z0-9_-]/', '_', $redeemedCode) . ".pdf";
                 $redeemedCaption = "مرحباً {$buyerName}، تم استخدام بطاقة الهدايا ({$redeemedCode}) بنجاح.\nالرصيد المتبقي في البطاقة: {$remainingBalance} ر.س.\nمرفق لكم تفاصيل البطاقة والمبلغ المتبقي.";
 
                 $sentRedeemed = $whatsAppService->sendDocument(
                     phone: (string) $buyerPhone,
-                    fileUrlOrBase64: (string) $redeemedDocument,
+                    fileUrlOrBase64: (string) $redeemedPdfBase64,
                     filename: $redeemedFilename,
                     caption: $redeemedCaption
                 );
@@ -633,253 +626,6 @@ class OdooBookingSyncService
         }
     }
 
-    private function resolveOdooResultData(array $responseBody): array
-    {
-        foreach (['result', 'data', 'response'] as $key) {
-            if (isset($responseBody[$key]) && is_array($responseBody[$key])) {
-                return $responseBody[$key];
-            }
-        }
-
-        return $responseBody;
-    }
-
-    private function extractInvoiceDocument(array $data): ?string
-    {
-        return $this->firstFilledDocument($data, [
-            'invoice_pdf',
-            'invoice_pdf_base64',
-            'invoice_base64',
-            'invoice_attachment',
-            'invoice_url',
-            'invoice_pdf_url',
-            'invoice_file',
-            'invoice_file_url',
-            'invoice.pdf',
-            'invoice.pdf_base64',
-            'invoice.invoice_pdf',
-            'invoice.invoice_pdf_base64',
-            'invoice.attachment',
-            'invoice.attachment_base64',
-            'invoice.url',
-            'invoice.pdf_url',
-            'invoice.file',
-            'invoice.file_url',
-            'data.invoice_pdf',
-            'data.invoice_pdf_base64',
-            'data.invoice.pdf',
-            'data.invoice.pdf_base64',
-            'pdf',
-            'pdf_base64',
-            'pdf_url',
-            'file_url',
-            'download_url',
-        ]);
-    }
-
-    private function extractGiftCardsCreated(array $data): array
-    {
-        foreach ([
-            'gift_cards_created',
-            'gift_cards',
-            'giftCards',
-            'created_gift_cards',
-            'createdGiftCards',
-            'gift_card_created',
-            'giftCardCreated',
-            'gift_card_details',
-            'giftCardDetails',
-            'gift_card',
-            'giftCard',
-            'data.gift_cards_created',
-            'data.gift_cards',
-            'data.gift_card',
-        ] as $path) {
-            $value = data_get($data, $path);
-            if (! is_array($value) || empty($value)) {
-                continue;
-            }
-
-            if ($this->isListArray($value)) {
-                $items = array_values(array_filter($value, fn ($item) => is_array($item)));
-                if (! empty($items)) {
-                    return $items;
-                }
-
-                continue;
-            }
-
-            if ($this->looksLikeSingleGiftCardResponse($value)) {
-                return [$value];
-            }
-        }
-
-        $singleGiftDocument = $this->firstFilledDocument($data, [
-            'gift_card_pdf',
-            'gift_card_pdf_base64',
-            'gift_pdf',
-            'gift_pdf_base64',
-            'gift_card.pdf',
-            'gift_card.pdf_base64',
-            'gift_card.url',
-            'gift_card.pdf_url',
-            'data.gift_card_pdf',
-            'data.gift_card.pdf',
-        ]);
-
-        if (filled($singleGiftDocument)) {
-            return [[
-                'pdf' => $singleGiftDocument,
-                'code' => $this->firstFilledString($data, [
-                    'gift_card_code',
-                    'gift_code',
-                    'card_code',
-                    'code',
-                    'ref',
-                    'gift_card.code',
-                    'gift_card.ref',
-                    'data.gift_card.code',
-                    'data.gift_card.ref',
-                ]),
-            ]];
-        }
-
-        return [];
-    }
-
-    private function extractGiftCardRedeemed(array $data): ?array
-    {
-        foreach ([
-            'gift_card_redeemed',
-            'redeemed_gift_card',
-            'redeemedGiftCard',
-            'gift_card_used',
-            'used_gift_card',
-            'data.gift_card_redeemed',
-            'data.redeemed_gift_card',
-        ] as $path) {
-            $value = data_get($data, $path);
-            if (is_array($value) && ! empty($value)) {
-                return $value;
-            }
-        }
-
-        return null;
-    }
-
-    private function extractGiftCardDocument(array $giftItem): ?string
-    {
-        return $this->firstFilledDocument($giftItem, [
-            'pdf',
-            'pdf_base64',
-            'pdf_url',
-            'gift_card_pdf',
-            'gift_card_pdf_base64',
-            'gift_pdf',
-            'gift_pdf_base64',
-            'card_pdf',
-            'coupon_pdf',
-            'document',
-            'document_base64',
-            'document_url',
-            'attachment',
-            'attachment_base64',
-            'file',
-            'file_url',
-            'download_url',
-            'gift_card.pdf',
-            'gift_card.pdf_base64',
-            'gift_card.url',
-            'gift_card.pdf_url',
-        ], true);
-    }
-
-    private function firstFilledDocument(array $data, array $paths, bool $allowRecursiveFallback = false): ?string
-    {
-        foreach ($paths as $path) {
-            $value = data_get($data, $path);
-            if ($this->isDocumentValue($value)) {
-                return trim((string) $value);
-            }
-        }
-
-        return $allowRecursiveFallback ? $this->findDocumentValueRecursive($data) : null;
-    }
-
-    private function firstFilledString(array $data, array $paths): ?string
-    {
-        foreach ($paths as $path) {
-            $value = data_get($data, $path);
-            if (is_scalar($value) && filled((string) $value)) {
-                return trim((string) $value);
-            }
-        }
-
-        return null;
-    }
-
-    private function findDocumentValueRecursive(array $data): ?string
-    {
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                $nested = $this->findDocumentValueRecursive($value);
-                if ($nested !== null) {
-                    return $nested;
-                }
-
-                continue;
-            }
-
-            if ($this->looksLikeDocumentKey($key) && $this->isDocumentValue($value)) {
-                return trim((string) $value);
-            }
-        }
-
-        return null;
-    }
-
-    private function looksLikeSingleGiftCardResponse(array $value): bool
-    {
-        return $this->extractGiftCardDocument($value) !== null
-            || $this->firstFilledString($value, ['code', 'ref', 'gift_code', 'gift_card_code', 'card_code']) !== null;
-    }
-
-    private function isListArray(array $value): bool
-    {
-        return $value === [] || array_keys($value) === range(0, count($value) - 1);
-    }
-
-    private function looksLikeDocumentKey(string|int $key): bool
-    {
-        return is_string($key) && preg_match('/pdf|document|attachment|file|download_url|url|base64/i', $key) === 1;
-    }
-
-    private function isDocumentValue(mixed $value): bool
-    {
-        if (! is_string($value)) {
-            return false;
-        }
-
-        $value = trim($value);
-        if ($value === '') {
-            return false;
-        }
-
-        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
-            return true;
-        }
-
-        $base64Data = preg_replace('#^data:application/[\w.+-]+;base64,#i', '', $value);
-        $base64Data = str_replace([' ', "\r", "\n"], '', (string) $base64Data);
-
-        if (str_starts_with($base64Data, 'JVBER')) {
-            return true;
-        }
-
-        return strlen($base64Data) > 1000
-            && preg_match('/^[A-Za-z0-9+\/=]+$/', $base64Data) === 1;
-    }
-
     private function sanitizeResponseForLog(mixed $body): mixed
     {
         if (! is_array($body)) {
@@ -888,18 +634,20 @@ class OdooBookingSyncService
 
         $sanitized = [];
         foreach ($body as $key => $value) {
-            if ($this->looksLikeDocumentKey($key) && $this->isDocumentValue($value)) {
+            if ($key === 'invoice_pdf' && is_string($value) && $value !== '') {
                 $sanitized[$key] = '[BASE64_PDF_LENGTH_' . strlen($value) . '_BYTES]';
             } elseif ($key === 'gift_cards_created' && is_array($value)) {
                 $sanitized[$key] = array_map(function ($item) {
-                    if (is_array($item)) {
-                        return $this->sanitizeResponseForLog($item);
+                    if (is_array($item) && isset($item['pdf']) && is_string($item['pdf'])) {
+                        $item['pdf'] = '[BASE64_PDF_LENGTH_' . strlen($item['pdf']) . '_BYTES]';
                     }
-
                     return $item;
                 }, $value);
             } elseif ($key === 'gift_card_redeemed' && is_array($value)) {
-                $sanitized[$key] = $this->sanitizeResponseForLog($value);
+                if (isset($value['pdf']) && is_string($value['pdf'])) {
+                    $value['pdf'] = '[BASE64_PDF_LENGTH_' . strlen($value['pdf']) . '_BYTES]';
+                }
+                $sanitized[$key] = $value;
             } elseif (is_array($value)) {
                 $sanitized[$key] = $this->sanitizeResponseForLog($value);
             } else {
@@ -908,5 +656,103 @@ class OdooBookingSyncService
         }
 
         return $sanitized;
+    }
+
+    /**
+     * Build the 6 body variables for the jospa_invoice_pdf_sa WhatsApp template.
+     *
+     * Variable order (must match the approved template):
+     *   1. Customer name
+     *   2. Invoice number  (INV-{id})
+     *   3. Order type label
+     *   4. Order details summary
+     *   5. Branch name
+     *   6. Total amount (formatted)
+     *
+     * @param Invoice $invoice
+     * @param string  $buyerName  Already-resolved buyer display name.
+     * @param array   $data       Resolved Odoo result data array.
+     * @return array<int, string>
+     */
+    private function buildInvoiceTemplateVariables(Invoice $invoice, string $buyerName, array $data): array
+    {
+        // 1. Customer name
+        $customerName = $buyerName !== '' ? $buyerName : 'عميلنا العزيز';
+
+        // 2. Invoice number
+        $invoiceNumber = 'INV-' . $invoice->id;
+
+        // 3. Order type label – detect from invoice data
+        $cartIds = $invoice->cart_ids;
+        $giftIds = $invoice->gift_ids;
+        if (is_string($cartIds)) {
+            $cartIds = json_decode($cartIds, true);
+        }
+        if (is_string($giftIds)) {
+            $giftIds = json_decode($giftIds, true);
+        }
+        $hasBookings  = ! empty($cartIds);
+        $hasGiftCards = ! empty($giftIds);
+
+        if ($hasBookings && $hasGiftCards) {
+            $orderType = 'طلب متنوع';
+        } elseif ($hasGiftCards) {
+            $orderType = 'جيفت كارد';
+        } else {
+            $orderType = 'حجز خدمة';
+        }
+
+        // 4. Order details summary – try to read from Odoo response, otherwise format from invoice
+        $orderDetails = '';
+        // Look for a pre-built summary in the Odoo data
+        foreach (['order_details', 'booking_details', 'details', 'summary'] as $key) {
+            $val = data_get($data, $key);
+            if (is_string($val) && $val !== '') {
+                $orderDetails = $val;
+                break;
+            }
+        }
+
+        if ($orderDetails === '' && filled($invoice->created_at)) {
+            try {
+                $orderDetails = 'تأكيد طلبك بنجاح بتاريخ ' . \Carbon\Carbon::parse($invoice->created_at)->format('Y-m-d');
+            } catch (\Throwable) {
+                $orderDetails = 'تم تأكيد طلبك بنجاح';
+            }
+        }
+
+        if ($orderDetails === '') {
+            $orderDetails = 'تم تأكيد طلبك بنجاح';
+        }
+
+        // Truncate to keep within template variable limit
+        if (mb_strlen($orderDetails) > 250) {
+            $orderDetails = mb_substr($orderDetails, 0, 247) . '...';
+        }
+
+        // 5. Branch – try Odoo data then leave generic
+        $branch = '';
+        foreach (['branch', 'branch_name', 'location', 'center'] as $key) {
+            $val = data_get($data, $key);
+            if (is_string($val) && $val !== '') {
+                $branch = $val;
+                break;
+            }
+        }
+        if ($branch === '') {
+            $branch = 'جو سبا';
+        }
+
+        // 6. Amount
+        $amount = number_format((float) ($invoice->final_total ?? 0), 2, '.', '');
+
+        return [
+            $customerName,
+            $invoiceNumber,
+            $orderType,
+            $orderDetails,
+            $branch,
+            $amount,
+        ];
     }
 }

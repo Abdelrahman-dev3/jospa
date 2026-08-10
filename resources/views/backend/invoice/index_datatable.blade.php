@@ -376,7 +376,7 @@ use App\Models\GiftCard;
 @section('content')
 @php
     $invoiceCount = $invoices->count();
-    $totalRevenue = $invoices->sum('final_total');
+    $totalRevenue = $invoices->sum('display_total');
     $totalDiscount = $invoices->sum('discount_amount');
     $totalTax = $invoices->sum('taxs_service');
 @endphp
@@ -463,7 +463,7 @@ use App\Models\GiftCard;
                             <div class="invoice-meta">{{ $invoice->created_at->format('Y-m-d H:i') }}</div>
                         </div>
                         <div class="invoice-total">
-                            <div class="amount">{{ number_format($invoice->final_total, 2) }} SR</div>
+                            <div class="amount">{{ number_format($invoice->display_total, 2) }} SR</div>
                             <div class="label">{{ __('messages.total') }}</div>
                         </div>
                         <div class="invoice-toggle">
@@ -605,7 +605,7 @@ use App\Models\GiftCard;
                         </div>
                         <div class="summary-row total">
                             <div>{{ __('messages.total') }}</div>
-                            <div>{{ number_format($invoice->final_total, 2) }} SR</div>
+                            <div>{{ number_format($invoice->display_total, 2) }} SR</div>
                         </div>
                     </div>
                 </div>

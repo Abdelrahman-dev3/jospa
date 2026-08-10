@@ -511,6 +511,7 @@ class BookingCartController extends Controller
 
             $this->activateGiftCards($user->id);
             app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+            session()->forget(['finalTotal', 'discountAmount', 'loyaltyDiscount']);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -702,8 +703,8 @@ class BookingCartController extends Controller
     private function hasLegacyPaymentSession(): bool
     {
         return session()->has('finalTotal')
-            || session()->has('discountAmount')
-            || session()->has('loyaltyDiscount');
+            && is_numeric(session('finalTotal'))
+            && (float) session('finalTotal') > 0;
     }
 
     public function addLoyaltyPoints($userId, $paidAmount)

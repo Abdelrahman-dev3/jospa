@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
+use App\Models\GiftCard;
 use App\Models\Invoice;
 use Illuminate\Http\Request;
+use Modules\Booking\Models\BookingService;
 
 class InvoiceController extends Controller
 {
@@ -81,6 +83,9 @@ class InvoiceController extends Controller
         }
 
         $invoices = $query->orderBy('created_at', 'desc')->get();
+        $invoices->each(function (Invoice $invoice) {
+            $invoice->setAttribute('display_total', $this->resolveInvoiceDisplayTotal($invoice));
+        });
 
         return view('backend.invoice.index_datatable', compact('module_action', 'invoices', 'module_title'));
     }
@@ -91,5 +96,69 @@ class InvoiceController extends Controller
         $invoice->delete();
 
         return redirect()->back()->with('success', __('messages.deleted_successfully'));
+    }
+
+    private function resolveInvoiceDisplayTotal(Invoice $invoice): float
+    {
+        $storedTotal = (float) ($invoice->final_total ?? 0);
+        $computedSubtotal = $this->resolveInvoiceLineSubtotal($invoice);
+
+        if ($computedSubtotal <= 0) {
+            return $storedTotal;
+        }
+
+        $computedTotal = max(
+            $computedSubtotal
+            + (float) ($invoice->taxs_service ?? 0)
+            - (float) ($invoice->discount_amount ?? 0),
+            0
+        );
+
+        return max($storedTotal, $computedTotal);
+    }
+
+    private function resolveInvoiceLineSubtotal(Invoice $invoice): float
+    {
+        $bookingIds = $this->normalizeIds($invoice->cart_ids ?? []);
+        $giftIds = $this->normalizeIds($invoice->gift_ids ?? []);
+
+        $bookingSubtotal = empty($bookingIds)
+            ? 0.0
+            : (float) BookingService::query()
+                ->whereIn('booking_id', $bookingIds)
+                ->get()
+                ->sum(fn (BookingService $service) => max(
+                    (float) ($service->service_price ?? 0) - (float) ($service->discount_amount ?? 0),
+                    0
+                ));
+
+        $giftSubtotal = empty($giftIds)
+            ? 0.0
+            : (float) GiftCard::query()
+                ->whereIn('id', $giftIds)
+                ->sum('subtotal');
+
+        $productSubtotal = (float) $invoice->productItems
+            ->sum(fn ($item) => (float) ($item->total_price ?? (((float) ($item->unit_price ?? 0)) * ((int) ($item->qty ?? 1)))));
+
+        return $bookingSubtotal + $giftSubtotal + $productSubtotal;
+    }
+
+    private function normalizeIds(array|string|null $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_filter($value, fn ($item) => $item !== null && $item !== ''));
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter($decoded, fn ($item) => $item !== null && $item !== ''));
+            }
+
+            return array_values(array_filter(explode(',', $value), fn ($item) => trim((string) $item) !== ''));
+        }
+
+        return [];
     }
 }

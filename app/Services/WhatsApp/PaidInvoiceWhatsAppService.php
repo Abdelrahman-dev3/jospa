@@ -186,12 +186,13 @@ class PaidInvoiceWhatsAppService
     private function buildMessage(Invoice $invoice, Collection $bookings, Collection $giftCards): string
     {
         $customerName = $this->resolveCustomerName($invoice);
+        $invoiceTotal = $this->resolveInvoiceTotal($invoice, $bookings, $giftCards);
 
         $lines = [
             'مرحبا ' . $customerName,
             'تم تأكيد عملية الدفع بنجاح.',
             'رقم الفاتورة: INV-' . $invoice->id,
-            'المبلغ المدفوع: ' . $this->formatAmount($invoice->final_total) . ' ر.س',
+            'المبلغ المدفوع: ' . $this->formatAmount($invoiceTotal) . ' ر.س',
         ];
 
         if (filled($invoice->payment_method)) {
@@ -241,13 +242,15 @@ class PaidInvoiceWhatsAppService
 
     private function buildTemplateVariables(Invoice $invoice, Collection $bookings, Collection $giftCards): array
     {
+        $invoiceTotal = $this->resolveInvoiceTotal($invoice, $bookings, $giftCards);
+
         return [
             $this->resolveCustomerName($invoice),
             'INV-' . $invoice->id,
             $this->resolveOrderTypeLabel($invoice, $bookings, $giftCards),
             $this->resolveOrderDetailsSummary($invoice, $bookings, $giftCards),
             $this->resolveBranchLabel($bookings),
-            $this->formatAmount($invoice->final_total),
+            $this->formatAmount($invoiceTotal),
         ];
     }
 
@@ -507,6 +510,49 @@ class PaidInvoiceWhatsAppService
         }
 
         return filled($value) ? trim((string) $value) : $default;
+    }
+
+    private function resolveInvoiceTotal(Invoice $invoice, Collection $bookings, Collection $giftCards): float
+    {
+        $storedTotal = (float) ($invoice->final_total ?? 0);
+        $computedSubtotal = $this->resolveInvoiceSubtotal($invoice, $bookings, $giftCards);
+
+        if ($computedSubtotal <= 0) {
+            return $storedTotal;
+        }
+
+        $computedTotal = max(
+            $computedSubtotal
+            + (float) ($invoice->taxs_service ?? 0)
+            - (float) ($invoice->discount_amount ?? 0),
+            0
+        );
+
+        return max($storedTotal, $computedTotal);
+    }
+
+    private function resolveInvoiceSubtotal(Invoice $invoice, Collection $bookings, Collection $giftCards): float
+    {
+        $bookingSubtotal = (float) $bookings->sum(function (Booking $booking) {
+            return $booking->services->sum(fn ($service) => max(
+                (float) ($service->service_price ?? 0) - (float) ($service->discount_amount ?? 0),
+                0
+            ));
+        });
+
+        $packageSubtotal = (float) $bookings->sum(function (Booking $booking) {
+            return $booking->bookingPackages->sum(fn ($package) => max(
+                (float) ($package->package_price ?? 0),
+                0
+            ));
+        });
+
+        $giftSubtotal = (float) $giftCards->sum(fn (GiftCard $giftCard) => (float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0));
+
+        $productSubtotal = (float) $invoice->productItems
+            ->sum(fn ($item) => (float) ($item->total_price ?? (((float) ($item->unit_price ?? 0)) * ((int) ($item->qty ?? 1)))));
+
+        return $bookingSubtotal + $packageSubtotal + $giftSubtotal + $productSubtotal;
     }
 
     private function formatAmount($value): string

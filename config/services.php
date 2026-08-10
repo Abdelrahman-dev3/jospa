@@ -83,6 +83,9 @@ return [
         'whatsapp_template_language' => env('JAVNA_WHATSAPP_TEMPLATE_LANGUAGE', 'ar'),
         'whatsapp_template_namespace' => env('JAVNA_WHATSAPP_TEMPLATE_NAMESPACE'),
         'whatsapp_template_path' => env('JAVNA_WHATSAPP_TEMPLATE_PATH', '/whatsapp/v1.0/message/template'),
+        // Template that carries the invoice PDF as a document header (jospa_invoice_pdf_sa).
+        // Override via JAVNA_WHATSAPP_INVOICE_PDF_TEMPLATE_NAME in .env.
+        'whatsapp_invoice_pdf_template_name' => env('JAVNA_WHATSAPP_INVOICE_PDF_TEMPLATE_NAME', 'jospa_invoice_pdf_sa'),
     ],
 
 
