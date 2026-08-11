@@ -1501,6 +1501,10 @@ class JavnaWhatsAppService
                 ?? data_get($content, 'templateData.header.type'),
             'template_data_header_media_url_present' => filled(data_get($content, 'TemplateData.Header.MediaUrl'))
                 || filled(data_get($content, 'templateData.header.mediaUrl')),
+            'template_data_header_mime_type' => data_get($content, 'TemplateData.Header.MimeType')
+                ?? data_get($content, 'templateData.header.mimeType'),
+            'template_header_document_mime_type' => data_get($content, 'Template.Components.0.Parameters.0.Document.MimeType')
+                ?? data_get($content, 'template.components.0.parameters.0.document.mime_type'),
             'template_components_body_parameters_count' => $this->countTemplateComponentParameters(
                 data_get($content, 'Template.Components')
             ),
