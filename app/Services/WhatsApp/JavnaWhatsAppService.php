@@ -1241,6 +1241,23 @@ class JavnaWhatsAppService
             ], fn($v) => $v !== null && $v !== ''),
 
             // ── Javna official body-params style with document header ──────────────
+            'javna_official_document_template_header_body_params' => array_filter([
+                'messages' => [[
+                    'from'         => $sender,
+                    'destinations' => [$phone],
+                    'content'      => array_filter([
+                        'templateName'     => $templateName,
+                        'templateLanguage' => $language,
+                        'header'           => $fileUrl ? array_filter([
+                            'headerFormat'     => 'document',
+                            'mediaUrl'         => $fileUrl,
+                            'documentFileName' => $filename,
+                        ], fn($v) => $v !== null && $v !== '') : null,
+                        'bodyParams'       => $parameterValues,
+                    ], fn($v) => $v !== null && $v !== ''),
+                ]],
+            ], fn($v) => $v !== null && $v !== ''),
+
             'javna_document_template_data_header_media_url' => array_filter([
                 'messages' => [[
                     'from'         => $sender,
@@ -1363,30 +1380,29 @@ class JavnaWhatsAppService
             ], fn($v) => $v !== null && $v !== ''),
         ];
 
+        $officialDocumentStyle = 'javna_official_document_template_header_body_params';
+
         if ($preferredStyle === 'javna_official_template_body_params') {
-            $orderedCandidates = [];
-
-            foreach ([
-                'javna_document_template_data_header_media_url',
-                'javna_document_template_data_header_media_url_upper',
-                'javna_official_document_template_body_params_typed_header',
-                'javna_official_document_template_body_params',
-            ] as $style) {
-                if (isset($candidates[$style])) {
-                    $orderedCandidates[$style] = $candidates[$style];
-                }
-            }
-
-            return $orderedCandidates;
+            return [$officialDocumentStyle => $candidates[$officialDocumentStyle]];
         }
 
         $preferredDocumentStyle = $preferredStyle;
+
+        if ($preferredDocumentStyle === 'javna_document_template_data_header_media_url') {
+            return [
+                $officialDocumentStyle => $candidates[$officialDocumentStyle],
+            ];
+        }
+
+        if ($preferredDocumentStyle === '' || $preferredDocumentStyle === 'auto') {
+            return [$officialDocumentStyle => $candidates[$officialDocumentStyle]];
+        }
 
         if ($preferredDocumentStyle !== '' && $preferredDocumentStyle !== 'auto' && isset($candidates[$preferredDocumentStyle])) {
             return [$preferredDocumentStyle => $candidates[$preferredDocumentStyle]];
         }
 
-        return $candidates;
+        return [$officialDocumentStyle => $candidates[$officialDocumentStyle]];
     }
 
     private function templateRequiresDocumentHeader(string $templateName): bool
@@ -1494,6 +1510,9 @@ class JavnaWhatsAppService
             'body_params_count' => is_array(data_get($content, 'bodyParams'))
                 ? count(data_get($content, 'bodyParams'))
                 : null,
+            'header_format' => data_get($content, 'header.headerFormat'),
+            'header_media_url_present' => filled(data_get($content, 'header.mediaUrl')),
+            'header_document_file_name' => data_get($content, 'header.documentFileName'),
             'header_params_count' => is_array(data_get($content, 'headerParams'))
                 ? count(data_get($content, 'headerParams'))
                 : null,

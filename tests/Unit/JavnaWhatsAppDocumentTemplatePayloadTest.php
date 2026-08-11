@@ -12,26 +12,18 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
     {
         $payload = $this->firstDocumentTemplatePayload(['A', 'B', 'C', 'D', 'E', 'F']);
 
-        $this->assertSame('template', data_get($payload, 'messages.0.content.type'));
         $this->assertSame('jospa_invoice_pdf_sa', data_get($payload, 'messages.0.content.templateName'));
         $this->assertSame('ar', data_get($payload, 'messages.0.content.templateLanguage'));
-        $this->assertSame('DOCUMENT', data_get($payload, 'messages.0.content.templateData.header.type'));
-        $this->assertSame('Document.pdf', data_get($payload, 'messages.0.content.templateData.header.filename'));
-        $this->assertSame('application/pdf', data_get($payload, 'messages.0.content.templateData.header.mimeType'));
-        $this->assertSame('document', data_get($payload, 'messages.0.content.template.components.0.parameters.0.type'));
-        $this->assertSame('application/pdf', data_get($payload, 'messages.0.content.template.components.0.parameters.0.document.mime_type'));
+        $this->assertSame('document', data_get($payload, 'messages.0.content.header.headerFormat'));
+        $this->assertSame('https://example.com/document.pdf', data_get($payload, 'messages.0.content.header.mediaUrl'));
+        $this->assertSame('Document.pdf', data_get($payload, 'messages.0.content.header.documentFileName'));
         $this->assertSame(
             6,
-            count(data_get($payload, 'messages.0.content.template.components.1.parameters', []))
+            count(data_get($payload, 'messages.0.content.bodyParams', []))
         );
-        $this->assertSame(
-            6,
-            count(data_get($payload, 'messages.0.content.TemplateData.Body.localizable_params', []))
-        );
-        $this->assertSame(
-            6,
-            count(data_get($payload, 'messages.0.content.templateData.body.localizable_params', []))
-        );
+        $this->assertNull(data_get($payload, 'messages.0.content.template'));
+        $this->assertNull(data_get($payload, 'messages.0.content.templateData'));
+        $this->assertNull(data_get($payload, 'messages.0.content.TemplateData'));
     }
 
     public function test_gift_card_document_template_payload_includes_four_body_params(): void
@@ -40,15 +32,7 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
 
         $this->assertSame(
             4,
-            count(data_get($payload, 'messages.0.content.template.components.1.parameters', []))
-        );
-        $this->assertSame(
-            4,
-            count(data_get($payload, 'messages.0.content.TemplateData.Body.localizable_params', []))
-        );
-        $this->assertSame(
-            4,
-            count(data_get($payload, 'messages.0.content.templateData.body.localizable_params', []))
+            count(data_get($payload, 'messages.0.content.bodyParams', []))
         );
     }
 
@@ -56,24 +40,28 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
     {
         $candidates = $this->documentTemplatePayloadCandidates(['A', 'B', 'C', 'D', 'E', 'F']);
 
-        $this->assertSame('javna_document_template_data_header_media_url', array_key_first($candidates));
+        $this->assertCount(1, $candidates);
+        $this->assertSame('javna_official_document_template_header_body_params', array_key_first($candidates));
         $this->assertArrayNotHasKey('javna_document_template_destinations_content_template_components', $candidates);
+        $this->assertArrayNotHasKey('javna_document_template_data_header_media_url', $candidates);
     }
 
-    public function test_template_data_fallback_payload_keeps_localizable_body_params(): void
+    public function test_old_document_payload_style_is_mapped_to_official_javna_schema(): void
     {
-        $payload = $this->documentTemplatePayload(
-            'javna_document_template_data_header_media_url',
-            ['A', 'B', 'C', 'D', 'E', 'F']
+        $candidates = $this->documentTemplatePayloadCandidates(
+            ['A', 'B', 'C', 'D', 'E', 'F'],
+            'javna_document_template_data_header_media_url'
         );
 
-        $this->assertSame('DOCUMENT', data_get($payload, 'messages.0.content.templateData.header.type'));
+        $this->assertSame(['javna_official_document_template_header_body_params'], array_keys($candidates));
+        $payload = $candidates['javna_official_document_template_header_body_params'];
+
+        $this->assertSame('document', data_get($payload, 'messages.0.content.header.headerFormat'));
         $this->assertSame(
             6,
-            count(data_get($payload, 'messages.0.content.templateData.body.localizable_params', []))
+            count(data_get($payload, 'messages.0.content.bodyParams', []))
         );
-        $this->assertNull(data_get($payload, 'messages.0.content.templateData.body.placeholders'));
-        $this->assertNull(data_get($payload, 'messages.0.content.TemplateData.Body.Placeholders'));
+        $this->assertNull(data_get($payload, 'messages.0.content.templateData'));
     }
 
     private function firstDocumentTemplatePayload(array $variables): array
@@ -83,15 +71,13 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
         return $candidates[array_key_first($candidates)];
     }
 
-    private function documentTemplatePayload(string $style, array $variables): array
-    {
-        return $this->documentTemplatePayloadCandidates($variables)[$style];
-    }
-
-    private function documentTemplatePayloadCandidates(array $variables): array
+    private function documentTemplatePayloadCandidates(
+        array $variables,
+        string $payloadStyle = 'javna_official_template_body_params'
+    ): array
     {
         config([
-            'services.javna.whatsapp_payload_style' => 'javna_official_template_body_params',
+            'services.javna.whatsapp_payload_style' => $payloadStyle,
             'services.javna.whatsapp_sender' => '966920012924',
         ]);
 
