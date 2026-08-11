@@ -49,6 +49,11 @@ class JavnaWhatsAppService
         ));
     }
 
+    public function resolveGiftCardRecipientTemplateName(): string
+    {
+        return trim((string) config('services.javna.whatsapp_gift_card_recipient_template_name', ''));
+    }
+
     public function sendText(string $phone, string $message): bool
     {
         $this->lastAcceptedMessage = null;
@@ -122,6 +127,15 @@ class JavnaWhatsAppService
         $resolvedTemplateName = trim((string) ($templateName ?: config('services.javna.whatsapp_template_name')));
         if ($resolvedTemplateName === '') {
             Log::warning('WhatsApp template skipped because the template name is missing.');
+
+            return false;
+        }
+
+        if ($this->templateRequiresDocumentHeader($resolvedTemplateName)) {
+            Log::error('WhatsApp template skipped because it requires a DOCUMENT header but no document was provided.', [
+                'phone' => $normalizedPhone,
+                'template_name' => $resolvedTemplateName,
+            ]);
 
             return false;
         }
@@ -1091,6 +1105,38 @@ class JavnaWhatsAppService
 
         $candidates = [
             // ── Meta-style payload (most common) ──────────────────────────────────
+            'javna_document_template_to_content_template_components' => array_filter([
+                'messages' => [[
+                    'from' => $sender,
+                    'to' => $phone,
+                    'content' => array_filter([
+                        'type' => 'template',
+                        'template' => [
+                            'name' => $templateName,
+                            'language' => [
+                                'code' => $language,
+                            ],
+                            'components' => array_filter([
+                                $fileUrl ? [
+                                    'type' => 'header',
+                                    'parameters' => [[
+                                        'type' => 'document',
+                                        'document' => array_filter([
+                                            'link' => $fileUrl,
+                                            'filename' => $filename,
+                                        ], fn($v) => $v !== null && $v !== ''),
+                                    ]],
+                                ] : null,
+                                [
+                                    'type' => 'body',
+                                    'parameters' => $textParameters,
+                                ],
+                            ]),
+                        ],
+                    ], fn($v) => $v !== null && $v !== ''),
+                ]],
+            ], fn($v) => $v !== null && $v !== ''),
+
             'meta_document_template' => array_filter([
                 'messaging_product' => 'whatsapp',
                 'recipient_type'    => 'individual',
@@ -1269,6 +1315,7 @@ class JavnaWhatsAppService
 
         if ($preferredStyle === 'javna_official_template_body_params') {
             return array_intersect_key($candidates, array_flip([
+                'javna_document_template_to_content_template_components',
                 'javna_document_template_data_header_media_url',
                 'javna_document_template_data_header_media_url_upper',
                 'javna_official_document_template_body_params_typed_header',
@@ -1283,6 +1330,14 @@ class JavnaWhatsAppService
         }
 
         return $candidates;
+    }
+
+    private function templateRequiresDocumentHeader(string $templateName): bool
+    {
+        return in_array($templateName, array_filter([
+            $this->resolveInvoicePdfTemplateName(),
+            $this->resolveGiftCardPdfTemplateName(),
+        ]), true);
     }
 
     private function normalizeTemplateVariables(array $variables): array

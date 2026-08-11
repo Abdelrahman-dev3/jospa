@@ -549,11 +549,11 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($decryptedPayload) {
-            $message = trim((string) ($decryptedPayload['errorText'] ?? $decryptedPayload['result'] ?? ''));
+            $message = $this->resolveNonCapturedPaymentMessage($decryptedPayload);
 
             return [
                 'ok' => false,
-                'message' => $message !== '' ? $message : 'UrPay returned an unknown payment status.',
+                'message' => $message,
             ];
         }
 
@@ -582,32 +582,18 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             if ($queryPayload) {
                 $request->attributes->set('urpay_decrypted_payload', $queryPayload);
 
-                $result = strtolower(trim((string) ($queryPayload['result'] ?? '')));
-                if ($result !== '') {
-                    if ($this->containsAny($result, ['captured', 'approved', 'authorized', 'authorised', 'paid', 'success'])) {
-                        return [
-                            'ok' => true,
-                            'status' => 'success',
-                        ];
-                    }
-
-                    if ($this->containsAny($result, ['cancel', 'cancelled', 'canceled', 'abort'])) {
-                        return [
-                            'ok' => false,
-                            'status' => 'cancel',
-                            'message' => __('messages.payment_cancelled'),
-                        ];
-                    }
-
-                    if ($this->containsAny($result, ['fail', 'declin', 'denied', 'reject', 'error'])) {
-                        $msg = trim((string) ($queryPayload['errorText'] ?? $queryPayload['result'] ?? ''));
-                        return [
-                            'ok' => false,
-                            'status' => 'failure',
-                            'message' => $msg !== '' ? $msg : __('messages.payment_failed'),
-                        ];
-                    }
+                $queryStatus = $this->resolveHostedCallbackStatus($request);
+                if ($queryStatus !== null) {
+                    return [
+                        'ok' => true,
+                        'status' => $queryStatus,
+                    ];
                 }
+
+                return [
+                    'ok' => false,
+                    'message' => $this->resolveNonCapturedPaymentMessage($queryPayload),
+                ];
             } else {
                 Log::error('UrPay fallback transaction query failed or returned no response.');
             }
@@ -1050,19 +1036,9 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     {
         $payload = $this->getDecryptedResponsePayload($request);
         if ($payload) {
-            $result = strtolower(trim((string) ($payload['result'] ?? '')));
-            if ($result !== '') {
-                if ($this->containsAny($result, ['captured', 'approved', 'authorized', 'authorised', 'paid', 'success'])) {
-                    return 'success';
-                }
-
-                if ($this->containsAny($result, ['cancel', 'cancelled', 'canceled', 'abort'])) {
-                    return 'cancel';
-                }
-
-                if ($this->containsAny($result, ['fail', 'declin', 'denied', 'reject', 'error'])) {
-                    return 'failure';
-                }
+            $payloadStatus = $this->resolveUrPayPayloadStatus($payload);
+            if ($payloadStatus !== null) {
+                return $payloadStatus;
             }
         }
 
@@ -1086,20 +1062,87 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 continue;
             }
 
-            if ($this->containsAny($normalized, ['captured', 'approved', 'authorized', 'authorised', 'paid', 'success'])) {
-                return 'success';
-            }
-
-            if ($this->containsAny($normalized, ['cancel', 'cancelled', 'canceled', 'abort'])) {
+            if ($this->isCancelledResult($normalized)) {
                 return 'cancel';
             }
 
-            if ($this->containsAny($normalized, ['fail', 'declin', 'denied', 'reject', 'error'])) {
+            if ($this->isFailedResult($normalized)) {
                 return 'failure';
             }
         }
 
         return null;
+    }
+
+    private function resolveUrPayPayloadStatus(array $payload): ?string
+    {
+        $result = strtolower(trim((string) ($payload['result'] ?? '')));
+        if ($result === '') {
+            return null;
+        }
+
+        if ($this->isCancelledResult($result)) {
+            return 'cancel';
+        }
+
+        if ($this->isFailedResult($result)) {
+            return 'failure';
+        }
+
+        if ($this->isCapturedResult($result)) {
+            return 'success';
+        }
+
+        return null;
+    }
+
+    private function isCapturedResult(string $result): bool
+    {
+        return $this->containsAny($result, [
+            'captured',
+            'paid',
+            'settled',
+        ]);
+    }
+
+    private function isCancelledResult(string $result): bool
+    {
+        return $this->containsAny($result, ['cancel', 'cancelled', 'canceled', 'abort']);
+    }
+
+    private function isFailedResult(string $result): bool
+    {
+        return $this->containsAny($result, [
+            'not captured',
+            'not-captured',
+            'not_captured',
+            'not approved',
+            'not-approved',
+            'not_approved',
+            'fail',
+            'declin',
+            'denied',
+            'reject',
+            'error',
+            'expired',
+            'timeout',
+            'void',
+        ]);
+    }
+
+    private function resolveNonCapturedPaymentMessage(array $payload): string
+    {
+        $message = trim((string) ($payload['errorText'] ?? $payload['result'] ?? ''));
+
+        if ($message !== '') {
+            if ($this->containsAny(strtolower($message), ['success', 'approved', 'authorized', 'authorised'])) {
+                return 'UrPay did not confirm the payment as captured. Gateway result: ' . $message;
+            }
+
+            return $message;
+        }
+
+        return 'UrPay payment was not confirmed as captured.';
     }
 
     private function resolveCallbackReference(Request $request, ?array $data): ?string

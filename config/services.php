@@ -88,6 +88,9 @@ return [
         'whatsapp_invoice_pdf_template_name' => env('JAVNA_WHATSAPP_INVOICE_PDF_TEMPLATE_NAME', 'jospa_invoice_pdf_sa'),
         // Template that carries the gift card PDF as a document header.
         'whatsapp_gift_card_pdf_template_name' => env('JAVNA_WHATSAPP_GIFT_CARD_PDF_TEMPLATE_NAME', 'jospa_giftcard_pdf_sa'),
+        // Optional body-only gift-card notification template. Do not point this
+        // at the PDF template; PDF templates must be sent with a document header.
+        'whatsapp_gift_card_recipient_template_name' => env('JAVNA_WHATSAPP_GIFT_CARD_RECIPIENT_TEMPLATE_NAME'),
     ],
 
 

@@ -49,27 +49,43 @@ class GiftCardRecipientWhatsAppService
         }
 
         $templateVariables = $this->buildTemplateVariables($giftCard);
+        $templateName = $this->whatsAppService->resolveGiftCardRecipientTemplateName();
+
+        if ($templateName === '') {
+            Log::info('Skipping gift card recipient WhatsApp template because no body-only template is configured.', [
+                'gift_card_id' => $giftCard->id,
+                'pdf_template_name' => $this->whatsAppService->resolveGiftCardPdfTemplateName(),
+            ]);
+
+            return false;
+        }
+
+        if ($templateName === $this->whatsAppService->resolveGiftCardPdfTemplateName()) {
+            Log::error('Skipping gift card recipient WhatsApp template because the configured template requires a DOCUMENT header.', [
+                'gift_card_id' => $giftCard->id,
+                'template_name' => $templateName,
+            ]);
+
+            return false;
+        }
 
         Log::info('Prepared gift card recipient WhatsApp template payload.', [
             'gift_card_id' => $giftCard->id,
-            'template_name' => 'jospa_giftcard_pdf_sa',
+            'template_name' => $templateName,
             'template_variables' => $templateVariables,
         ]);
 
         $sent = $this->whatsAppService->sendTemplate(
             phone: (string) $giftCard->recipient_phone,
             variables: $templateVariables,
-            templateName: 'jospa_giftcard_pdf_sa'
+            templateName: $templateName
         );
-
-        if (! $sent) {
-            $sent = $this->whatsAppService->sendText((string) $giftCard->recipient_phone, $message);
-        }
 
         if (! $sent) {
             Log::error('Gift card recipient WhatsApp send failed.', [
                 'gift_card_id' => $giftCard->id,
                 'phone' => $giftCard->recipient_phone,
+                'template_name' => $templateName,
             ]);
 
             return false;
