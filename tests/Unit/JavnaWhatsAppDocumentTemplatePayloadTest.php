@@ -12,10 +12,25 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
     {
         $payload = $this->firstDocumentTemplatePayload(['A', 'B', 'C', 'D', 'E', 'F']);
 
+        $this->assertSame('template', data_get($payload, 'messages.0.content.type'));
+        $this->assertSame('jospa_invoice_pdf_sa', data_get($payload, 'messages.0.content.templateName'));
+        $this->assertSame('ar', data_get($payload, 'messages.0.content.templateLanguage'));
+        $this->assertSame('DOCUMENT', data_get($payload, 'messages.0.content.templateData.header.type'));
+        $this->assertSame('Document.pdf', data_get($payload, 'messages.0.content.templateData.header.filename'));
+        $this->assertSame('application/pdf', data_get($payload, 'messages.0.content.templateData.header.mimeType'));
         $this->assertSame('document', data_get($payload, 'messages.0.content.template.components.0.parameters.0.type'));
+        $this->assertSame('application/pdf', data_get($payload, 'messages.0.content.template.components.0.parameters.0.document.mime_type'));
         $this->assertSame(
             6,
             count(data_get($payload, 'messages.0.content.template.components.1.parameters', []))
+        );
+        $this->assertSame(
+            6,
+            count(data_get($payload, 'messages.0.content.TemplateData.Body.localizable_params', []))
+        );
+        $this->assertSame(
+            6,
+            count(data_get($payload, 'messages.0.content.templateData.body.localizable_params', []))
         );
     }
 
@@ -27,6 +42,22 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
             4,
             count(data_get($payload, 'messages.0.content.template.components.1.parameters', []))
         );
+        $this->assertSame(
+            4,
+            count(data_get($payload, 'messages.0.content.TemplateData.Body.localizable_params', []))
+        );
+        $this->assertSame(
+            4,
+            count(data_get($payload, 'messages.0.content.templateData.body.localizable_params', []))
+        );
+    }
+
+    public function test_preferred_document_template_payload_skips_nested_meta_template_shape(): void
+    {
+        $candidates = $this->documentTemplatePayloadCandidates(['A', 'B', 'C', 'D', 'E', 'F']);
+
+        $this->assertSame('javna_document_template_data_header_media_url', array_key_first($candidates));
+        $this->assertArrayNotHasKey('javna_document_template_destinations_content_template_components', $candidates);
     }
 
     public function test_template_data_fallback_payload_keeps_localizable_body_params(): void
@@ -41,6 +72,8 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
             6,
             count(data_get($payload, 'messages.0.content.templateData.body.localizable_params', []))
         );
+        $this->assertNull(data_get($payload, 'messages.0.content.templateData.body.placeholders'));
+        $this->assertNull(data_get($payload, 'messages.0.content.TemplateData.Body.Placeholders'));
     }
 
     private function firstDocumentTemplatePayload(array $variables): array
@@ -74,7 +107,7 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
             $variables,
             'https://example.com/document.pdf',
             null,
-            'Document.pdf'
+            'Document'
         );
     }
 }

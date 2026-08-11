@@ -200,6 +200,7 @@ class JavnaWhatsAppService
         $apiUrl = (string) config('services.javna.whatsapp_api_url');
         $apiToken = (string) config('services.javna.whatsapp_api_token');
         $timeout = (int) config('services.javna.whatsapp_timeout', 15);
+        $filename = $this->normalizePdfFilename($filename);
 
         $fileUrl = null;
         $base64Data = null;
@@ -316,6 +317,7 @@ class JavnaWhatsAppService
         $apiUrl           = (string) config('services.javna.whatsapp_api_url');
         $apiToken         = (string) config('services.javna.whatsapp_api_token');
         $timeout          = (int)    config('services.javna.whatsapp_timeout', 15);
+        $filename         = $this->normalizePdfFilename($filename);
 
         // Resolve document: prefer a public URL so the provider can fetch it directly.
         $fileUrl    = null;
@@ -1082,6 +1084,7 @@ class JavnaWhatsAppService
         $sender           = trim((string) config('services.javna.whatsapp_sender', ''));
         $channelId        = trim((string) config('services.javna.whatsapp_channel_id', ''));
         $preferredStyle   = trim((string) config('services.javna.whatsapp_payload_style', 'auto'));
+        $filename         = $this->normalizePdfFilename($filename);
         $parameterValues  = $this->normalizeTemplateVariables($variables);
         $textParameters   = array_map(fn($v) => ['type' => 'text', 'text' => $v], $parameterValues);
         $localizableParameters = array_map(fn($value) => [
@@ -1093,6 +1096,7 @@ class JavnaWhatsAppService
             'document' => array_filter([
                 'link'     => $fileUrl,
                 'filename' => $filename,
+                'mime_type' => 'application/pdf',
                 'id'       => null,         // placeholder – some providers use media_id instead
             ], fn($v) => $v !== null && $v !== ''),
         ]);
@@ -1103,6 +1107,7 @@ class JavnaWhatsAppService
                 'data'     => $base64Data,
                 'filename' => $filename,
                 'link'     => $fileUrl,
+                'mime_type' => 'application/pdf',
             ], fn($v) => $v !== null && $v !== ''),
         ]);
 
@@ -1128,6 +1133,7 @@ class JavnaWhatsAppService
                                         'document' => array_filter([
                                             'link' => $fileUrl,
                                             'filename' => $filename,
+                                            'mime_type' => 'application/pdf',
                                         ], fn($v) => $v !== null && $v !== ''),
                                     ]],
                                 ] : null,
@@ -1159,6 +1165,7 @@ class JavnaWhatsAppService
                                 'document' => array_filter([
                                     'link'     => $fileUrl,
                                     'filename' => $filename,
+                                    'mime_type' => 'application/pdf',
                                 ]),
                             ]],
                         ] : null,
@@ -1190,6 +1197,7 @@ class JavnaWhatsAppService
                                     'data'     => $base64Data,
                                     'filename' => $filename,
                                     'link'     => $fileUrl,
+                                    'mime_type' => 'application/pdf',
                                 ], fn($v) => $v !== null && $v !== ''),
                             ]],
                         ] : null,
@@ -1242,15 +1250,50 @@ class JavnaWhatsAppService
                         'templateName'     => $templateName,
                         'templateLanguage' => $language,
                         'language'         => $language,
+                        'template'         => [
+                            'name'       => $templateName,
+                            'language'   => ['code' => $language],
+                            'components' => array_filter([
+                                $fileUrl ? [
+                                    'type'       => 'header',
+                                    'parameters' => [[
+                                        'type'     => 'document',
+                                        'document' => array_filter([
+                                            'link'     => $fileUrl,
+                                            'filename' => $filename,
+                                            'mime_type' => 'application/pdf',
+                                        ], fn($v) => $v !== null && $v !== ''),
+                                    ]],
+                                ] : null,
+                                [
+                                    'type'       => 'body',
+                                    'parameters' => $textParameters,
+                                ],
+                            ]),
+                        ],
                         'templateData'     => array_filter([
                             'header' => $fileUrl ? array_filter([
                                 'type'     => 'DOCUMENT',
                                 'mediaUrl' => $fileUrl,
                                 'filename' => $filename,
+                                'mimeType' => 'application/pdf',
                             ], fn($v) => $v !== null && $v !== '') : null,
+                            'Body' => [
+                                'localizable_params' => $localizableParameters,
+                            ],
                             'body' => [
                                 'localizable_params' => $localizableParameters,
-                                'placeholders' => $parameterValues,
+                            ],
+                        ], fn($v) => ! empty($v)),
+                        'TemplateData'     => array_filter([
+                            'Header' => $fileUrl ? array_filter([
+                                'Type'     => 'DOCUMENT',
+                                'MediaUrl' => $fileUrl,
+                                'Filename' => $filename,
+                                'MimeType' => 'application/pdf',
+                            ], fn($v) => $v !== null && $v !== '') : null,
+                            'Body' => [
+                                'localizable_params' => $localizableParameters,
                             ],
                         ], fn($v) => ! empty($v)),
                     ], fn($v) => $v !== null && $v !== ''),
@@ -1270,6 +1313,7 @@ class JavnaWhatsAppService
                                 'Type'     => 'DOCUMENT',
                                 'MediaUrl' => $fileUrl,
                                 'Filename' => $filename,
+                                'MimeType' => 'application/pdf',
                             ], fn($v) => $v !== null && $v !== '') : null,
                             'Body' => [
                                 'localizable_params' => $localizableParameters,
@@ -1320,13 +1364,20 @@ class JavnaWhatsAppService
         ];
 
         if ($preferredStyle === 'javna_official_template_body_params') {
-            return array_intersect_key($candidates, array_flip([
-                'javna_document_template_destinations_content_template_components',
-                'javna_document_template_data_header_media_url_upper',
+            $orderedCandidates = [];
+
+            foreach ([
                 'javna_document_template_data_header_media_url',
+                'javna_document_template_data_header_media_url_upper',
                 'javna_official_document_template_body_params_typed_header',
                 'javna_official_document_template_body_params',
-            ]));
+            ] as $style) {
+                if (isset($candidates[$style])) {
+                    $orderedCandidates[$style] = $candidates[$style];
+                }
+            }
+
+            return $orderedCandidates;
         }
 
         $preferredDocumentStyle = $preferredStyle;
@@ -1353,6 +1404,18 @@ class JavnaWhatsAppService
 
             return $normalizedValue !== '' ? $normalizedValue : '-';
         }, $variables));
+    }
+
+    private function normalizePdfFilename(string $filename): string
+    {
+        $normalizedFilename = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', trim($filename));
+        $normalizedFilename = is_string($normalizedFilename) && $normalizedFilename !== ''
+            ? $normalizedFilename
+            : 'document.pdf';
+
+        return str_ends_with(strtolower($normalizedFilename), '.pdf')
+            ? $normalizedFilename
+            : $normalizedFilename . '.pdf';
     }
 
     private function deliverPayloadCandidates(
@@ -1438,12 +1501,12 @@ class JavnaWhatsAppService
                 ?? data_get($content, 'templateData.header.type'),
             'template_data_header_media_url_present' => filled(data_get($content, 'TemplateData.Header.MediaUrl'))
                 || filled(data_get($content, 'templateData.header.mediaUrl')),
-            'template_components_body_parameters_count' => is_array(data_get($content, 'Template.Components.0.Parameters'))
-                ? count(data_get($content, 'Template.Components.0.Parameters'))
-                : null,
-            'template_lower_components_body_parameters_count' => is_array(data_get($content, 'template.components.0.parameters'))
-                ? count(data_get($content, 'template.components.0.parameters'))
-                : null,
+            'template_components_body_parameters_count' => $this->countTemplateComponentParameters(
+                data_get($content, 'Template.Components')
+            ),
+            'template_lower_components_body_parameters_count' => $this->countTemplateComponentParameters(
+                data_get($content, 'template.components')
+            ),
             'template_data_body_placeholders_count' => is_array(data_get($content, 'TemplateData.Body.Placeholders'))
                 ? count(data_get($content, 'TemplateData.Body.Placeholders'))
                 : null,
@@ -1457,6 +1520,30 @@ class JavnaWhatsAppService
                 ? count(data_get($content, 'templateData.body.placeholders'))
                 : null,
         ];
+    }
+
+    private function countTemplateComponentParameters(mixed $components): ?int
+    {
+        if (! is_array($components)) {
+            return null;
+        }
+
+        foreach ($components as $component) {
+            if (! is_array($component)) {
+                continue;
+            }
+
+            $type = strtolower((string) ($component['type'] ?? $component['Type'] ?? ''));
+            if ($type !== 'body') {
+                continue;
+            }
+
+            $parameters = $component['parameters'] ?? $component['Parameters'] ?? null;
+
+            return is_array($parameters) ? count($parameters) : 0;
+        }
+
+        return null;
     }
 
     private function resolveTransportModes(string $style): array
@@ -1538,10 +1625,7 @@ class JavnaWhatsAppService
                 return null;
             }
 
-            $sanitizedFilename = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $filename);
-            if (! str_ends_with(strtolower($sanitizedFilename), '.pdf')) {
-                $sanitizedFilename .= '.pdf';
-            }
+            $sanitizedFilename = $this->normalizePdfFilename($filename);
 
             $directory = public_path('media/pdfs');
             if (! is_dir($directory)) {
@@ -1571,6 +1655,7 @@ class JavnaWhatsAppService
     ): array {
         $sender = trim((string) config('services.javna.whatsapp_sender', ''));
         $channelId = trim((string) config('services.javna.whatsapp_channel_id', ''));
+        $filename = $this->normalizePdfFilename($filename);
 
         return [
             'javna_document_content_media_url' => array_filter([
@@ -1579,6 +1664,7 @@ class JavnaWhatsAppService
                 'content' => array_filter([
                     'MediaUrl' => $fileUrl,
                     'FileName' => $filename,
+                    'ContentType' => 'application/pdf',
                     'Caption' => $caption,
                 ], fn($value) => $value !== null && $value !== ''),
                 'channelId' => $channelId !== '' ? $channelId : null,
@@ -1589,6 +1675,7 @@ class JavnaWhatsAppService
                 'Content' => array_filter([
                     'MediaUrl' => $fileUrl,
                     'FileName' => $filename,
+                    'ContentType' => 'application/pdf',
                     'Caption' => $caption,
                 ], fn($value) => $value !== null && $value !== ''),
                 'ChannelId' => $channelId !== '' ? $channelId : null,
@@ -1601,6 +1688,7 @@ class JavnaWhatsAppService
                     'Document' => array_filter([
                         'Url' => $fileUrl,
                         'Filename' => $filename,
+                        'MimeType' => 'application/pdf',
                         'Caption' => $caption,
                         'Data' => $base64Data,
                     ]),
@@ -1613,6 +1701,7 @@ class JavnaWhatsAppService
                 'MediaUrl' => $fileUrl,
                 'MediaType' => 'document',
                 'FileName' => $filename,
+                'ContentType' => 'application/pdf',
                 'Caption' => $caption,
                 'ChannelId' => $channelId !== '' ? $channelId : null,
             ], fn($value) => $value !== null && $value !== ''),
@@ -1624,6 +1713,7 @@ class JavnaWhatsAppService
                 'document' => array_filter([
                     'link' => $fileUrl,
                     'filename' => $filename,
+                    'mime_type' => 'application/pdf',
                     'caption' => $caption,
                 ]),
                 'from' => $sender !== '' ? $sender : null,
@@ -1634,6 +1724,7 @@ class JavnaWhatsAppService
                 'type' => 'document',
                 'url' => $fileUrl,
                 'filename' => $filename,
+                'mime_type' => 'application/pdf',
                 'caption' => $caption,
                 'sender' => $sender !== '' ? $sender : null,
                 'channelId' => $channelId !== '' ? $channelId : null,
@@ -1645,6 +1736,7 @@ class JavnaWhatsAppService
                     'type' => 'document',
                     'url' => $fileUrl,
                     'filename' => $filename,
+                    'mime_type' => 'application/pdf',
                     'caption' => $caption,
                 ]),
                 'channelId' => $channelId !== '' ? $channelId : null,
