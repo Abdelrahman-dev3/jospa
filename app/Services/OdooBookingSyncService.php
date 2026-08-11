@@ -712,18 +712,40 @@ class OdooBookingSyncService
                     }
                     $giftCaption .= "\nمرفق لكم بطاقة الإهداء الخاصة بكم.";
 
-                    $sentGift = $whatsAppService->sendDocument(
-                        phone: (string) $targetPhone,
-                        fileUrlOrBase64: (string) $giftPdfBase64,
-                        filename: $giftCardFilename,
-                        caption: $giftCaption
+                    $giftTemplateName = $whatsAppService->resolveGiftCardPdfTemplateName();
+                    $giftTemplateVariables = $this->buildGiftCardPdfTemplateVariables(
+                        $matchingGiftCard,
+                        $senderName,
+                        $code,
+                        $personalMessage
                     );
+
+                    $sentGift = $giftTemplateName !== ''
+                        ? $whatsAppService->sendTemplateWithDocument(
+                            phone: (string) $targetPhone,
+                            fileUrlOrBase64: (string) $giftPdfBase64,
+                            filename: $giftCardFilename,
+                            variables: $giftTemplateVariables,
+                            templateName: $giftTemplateName,
+                            fallbackToPlainDocument: false,
+                        )
+                        : false;
+
+                    if (! $sentGift) {
+                        Log::warning('Gift card PDF WhatsApp template send failed or is not configured.', [
+                            'invoice_id' => $invoice->id,
+                            'code' => $code,
+                            'template_name' => $giftTemplateName,
+                            'target_phone' => $targetPhone,
+                        ]);
+                    }
 
                     Log::info('Gift card PDF WhatsApp sent from Odoo response.', [
                         'invoice_id' => $invoice->id,
                         'code' => $code,
                         'recipient_name' => $recipientName,
                         'target_phone' => $targetPhone,
+                        'template_name' => $giftTemplateName,
                         'sent' => $sentGift,
                     ]);
                 }
@@ -739,18 +761,40 @@ class OdooBookingSyncService
                 $redeemedFilename = "Redeemed_GiftCard_" . preg_replace('/[^a-zA-Z0-9_-]/', '_', $redeemedCode) . ".pdf";
                 $redeemedCaption = "مرحباً {$buyerName}، تم استخدام بطاقة الهدايا ({$redeemedCode}) بنجاح.\nالرصيد المتبقي في البطاقة: {$remainingBalance} ر.س.\nمرفق لكم تفاصيل البطاقة والمبلغ المتبقي.";
 
-                $sentRedeemed = $whatsAppService->sendDocument(
-                    phone: (string) $buyerPhone,
-                    fileUrlOrBase64: (string) $redeemedPdfBase64,
-                    filename: $redeemedFilename,
-                    caption: $redeemedCaption
-                );
+                $redeemedTemplateName = $whatsAppService->resolveGiftCardPdfTemplateName();
+                $redeemedTemplateVariables = [
+                    $buyerName,
+                    (string) $buyerPhone,
+                    (string) $redeemedCode,
+                    'Remaining balance: ' . number_format((float) $remainingBalance, 2, '.', ''),
+                ];
+
+                $sentRedeemed = $redeemedTemplateName !== ''
+                    ? $whatsAppService->sendTemplateWithDocument(
+                        phone: (string) $buyerPhone,
+                        fileUrlOrBase64: (string) $redeemedPdfBase64,
+                        filename: $redeemedFilename,
+                        variables: $redeemedTemplateVariables,
+                        templateName: $redeemedTemplateName,
+                        fallbackToPlainDocument: false,
+                    )
+                    : false;
+
+                if (! $sentRedeemed) {
+                    Log::warning('Redeemed gift card PDF WhatsApp template send failed or is not configured.', [
+                        'invoice_id' => $invoice->id,
+                        'code' => $redeemedCode,
+                        'template_name' => $redeemedTemplateName,
+                        'buyer_phone' => $buyerPhone,
+                    ]);
+                }
 
                 Log::info('Redeemed gift card PDF WhatsApp sent from Odoo response.', [
                     'invoice_id' => $invoice->id,
                     'code' => $redeemedCode,
                     'remaining_balance' => $remainingBalance,
                     'buyer_phone' => $buyerPhone,
+                    'template_name' => $redeemedTemplateName,
                     'sent' => $sentRedeemed,
                 ]);
             }
@@ -793,6 +837,23 @@ class OdooBookingSyncService
         }
 
         return $sanitized;
+    }
+
+    private function buildGiftCardPdfTemplateVariables(?GiftCard $giftCard, string $senderName, ?string $code, string $personalMessage): array
+    {
+        return [
+            $this->fallbackTemplateValue($giftCard?->sender_name ?? $senderName, $senderName !== '' ? $senderName : '-'),
+            $this->fallbackTemplateValue($giftCard?->sender_phone ?? null, '-'),
+            $this->fallbackTemplateValue($code ?: $giftCard?->ref, '-'),
+            $personalMessage !== '' ? $personalMessage : '-',
+        ];
+    }
+
+    private function fallbackTemplateValue(mixed $value, string $fallback): string
+    {
+        $normalizedValue = trim((string) $value);
+
+        return $normalizedValue !== '' ? $normalizedValue : $fallback;
     }
 
     /**

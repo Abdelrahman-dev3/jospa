@@ -41,6 +41,14 @@ class JavnaWhatsAppService
         ));
     }
 
+    public function resolveGiftCardPdfTemplateName(): string
+    {
+        return trim((string) config(
+            'services.javna.whatsapp_gift_card_pdf_template_name',
+            'jospa_giftcard_pdf_sa'
+        ));
+    }
+
     public function sendText(string $phone, string $message): bool
     {
         $this->lastAcceptedMessage = null;
@@ -252,6 +260,7 @@ class JavnaWhatsAppService
      * @param array       $variables        Body template variables (ordered list of strings).
      * @param string|null $templateName     Override the template name (default: resolveInvoicePdfTemplateName()).
      * @param string|null $language         Template language code (default: JAVNA_WHATSAPP_TEMPLATE_LANGUAGE or 'ar').
+     * @param bool        $fallbackToPlainDocument Send a non-template document if the template fails.
      */
     public function sendTemplateWithDocument(
         string $phone,
@@ -259,7 +268,8 @@ class JavnaWhatsAppService
         string $filename = 'Invoice.pdf',
         array $variables = [],
         ?string $templateName = null,
-        ?string $language = null
+        ?string $language = null,
+        bool $fallbackToPlainDocument = true
     ): bool {
         $this->lastAcceptedMessage = null;
 
@@ -347,7 +357,7 @@ class JavnaWhatsAppService
 
         // Fallback: if the template send failed but we have a public URL, try sending
         // the PDF as a plain document message so the customer still receives the file.
-        if (! $sent && $fileUrl !== null) {
+        if ($fallbackToPlainDocument && ! $sent && $fileUrl !== null) {
             Log::info('Document-template send failed – falling back to plain sendDocument.', [
                 'phone'    => $normalizedPhone,
                 'filename' => $filename,
