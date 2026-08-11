@@ -1084,6 +1084,9 @@ class JavnaWhatsAppService
         $preferredStyle   = trim((string) config('services.javna.whatsapp_payload_style', 'auto'));
         $parameterValues  = $this->normalizeTemplateVariables($variables);
         $textParameters   = array_map(fn($v) => ['type' => 'text', 'text' => $v], $parameterValues);
+        $localizableParameters = array_map(fn($value) => [
+            'default' => $value,
+        ], $parameterValues);
 
         $headerDocument = array_filter([
             'type'     => 'document',
@@ -1245,6 +1248,7 @@ class JavnaWhatsAppService
                                 'filename' => $filename,
                             ], fn($v) => $v !== null && $v !== '') : null,
                             'body' => [
+                                'localizable_params' => $localizableParameters,
                                 'placeholders' => $parameterValues,
                             ],
                         ], fn($v) => ! empty($v)),
@@ -1267,6 +1271,7 @@ class JavnaWhatsAppService
                                 'Filename' => $filename,
                             ], fn($v) => $v !== null && $v !== '') : null,
                             'Body' => [
+                                'localizable_params' => $localizableParameters,
                                 'Placeholders' => $parameterValues,
                             ],
                         ], fn($v) => ! empty($v)),
@@ -1315,7 +1320,6 @@ class JavnaWhatsAppService
 
         if ($preferredStyle === 'javna_official_template_body_params') {
             return array_intersect_key($candidates, array_flip([
-                'javna_document_template_to_content_template_components',
                 'javna_document_template_data_header_media_url',
                 'javna_document_template_data_header_media_url_upper',
                 'javna_official_document_template_body_params_typed_header',
@@ -1443,6 +1447,9 @@ class JavnaWhatsAppService
                 : null,
             'template_data_body_localizable_params_count' => is_array(data_get($content, 'TemplateData.Body.localizable_params'))
                 ? count(data_get($content, 'TemplateData.Body.localizable_params'))
+                : null,
+            'template_data_lower_body_localizable_params_count' => is_array(data_get($content, 'templateData.body.localizable_params'))
+                ? count(data_get($content, 'templateData.body.localizable_params'))
                 : null,
             'template_data_lower_body_placeholders_count' => is_array(data_get($content, 'templateData.body.placeholders'))
                 ? count(data_get($content, 'templateData.body.placeholders'))
