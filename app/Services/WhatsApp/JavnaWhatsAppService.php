@@ -1183,6 +1183,71 @@ class JavnaWhatsAppService
             ], fn ($v) => $v !== null && $v !== ''),
 
             // ── Javna official body-params style with document header ──────────────
+            'javna_document_template_data_header_media_url' => array_filter([
+                'messages' => [[
+                    'from'         => $sender,
+                    'destinations' => [$phone],
+                    'content'      => array_filter([
+                        'type'             => 'template',
+                        'templateName'     => $templateName,
+                        'templateLanguage' => $language,
+                        'language'         => $language,
+                        'templateData'     => array_filter([
+                            'header' => $fileUrl ? array_filter([
+                                'type'     => 'DOCUMENT',
+                                'mediaUrl' => $fileUrl,
+                                'filename' => $filename,
+                            ], fn ($v) => $v !== null && $v !== '') : null,
+                            'body' => [
+                                'placeholders' => $parameterValues,
+                            ],
+                        ], fn ($v) => ! empty($v)),
+                    ], fn ($v) => $v !== null && $v !== ''),
+                ]],
+            ], fn ($v) => $v !== null && $v !== ''),
+
+            'javna_document_template_data_header_media_url_upper' => array_filter([
+                'Messages' => [[
+                    'From'         => $sender,
+                    'Destinations' => [$phone],
+                    'Content'      => array_filter([
+                        'Type'             => 'template',
+                        'TemplateName'     => $templateName,
+                        'TemplateLanguage' => $language,
+                        'TemplateData'     => array_filter([
+                            'Header' => $fileUrl ? array_filter([
+                                'Type'     => 'DOCUMENT',
+                                'MediaUrl' => $fileUrl,
+                                'Filename' => $filename,
+                            ], fn ($v) => $v !== null && $v !== '') : null,
+                            'Body' => [
+                                'Placeholders' => $parameterValues,
+                            ],
+                        ], fn ($v) => ! empty($v)),
+                    ], fn ($v) => $v !== null && $v !== ''),
+                ]],
+            ], fn ($v) => $v !== null && $v !== ''),
+
+            'javna_official_document_template_body_params_typed_header' => array_filter([
+                'messages' => [[
+                    'from'         => $sender,
+                    'destinations' => [$phone],
+                    'content'      => array_filter([
+                        'templateName'     => $templateName,
+                        'templateLanguage' => $language,
+                        'headerParams'     => $fileUrl ? [[
+                            'type'     => 'document',
+                            'document' => array_filter([
+                                'link'     => $fileUrl,
+                                'url'      => $fileUrl,
+                                'filename' => $filename,
+                            ], fn ($v) => $v !== null && $v !== ''),
+                        ]] : null,
+                        'bodyParams' => $parameterValues,
+                    ], fn ($v) => $v !== null && $v !== ''),
+                ]],
+            ], fn ($v) => $v !== null && $v !== ''),
+
             'javna_official_document_template_body_params' => array_filter([
                 'messages' => [[
                     'from'         => $sender,
@@ -1202,10 +1267,16 @@ class JavnaWhatsAppService
             ], fn ($v) => $v !== null && $v !== ''),
         ];
 
-        $preferredDocumentStyle = match ($preferredStyle) {
-            'javna_official_template_body_params' => 'javna_official_document_template_body_params',
-            default => $preferredStyle,
-        };
+        if ($preferredStyle === 'javna_official_template_body_params') {
+            return array_intersect_key($candidates, array_flip([
+                'javna_document_template_data_header_media_url',
+                'javna_document_template_data_header_media_url_upper',
+                'javna_official_document_template_body_params_typed_header',
+                'javna_official_document_template_body_params',
+            ]));
+        }
+
+        $preferredDocumentStyle = $preferredStyle;
 
         if ($preferredDocumentStyle !== '' && $preferredDocumentStyle !== 'auto' && isset($candidates[$preferredDocumentStyle])) {
             return [$preferredDocumentStyle => $candidates[$preferredDocumentStyle]];
@@ -1299,6 +1370,13 @@ class JavnaWhatsAppService
             'body_params_count' => is_array(data_get($content, 'bodyParams'))
                 ? count(data_get($content, 'bodyParams'))
                 : null,
+            'header_params_count' => is_array(data_get($content, 'headerParams'))
+                ? count(data_get($content, 'headerParams'))
+                : null,
+            'template_data_header_type' => data_get($content, 'TemplateData.Header.Type')
+                ?? data_get($content, 'templateData.header.type'),
+            'template_data_header_media_url_present' => filled(data_get($content, 'TemplateData.Header.MediaUrl'))
+                || filled(data_get($content, 'templateData.header.mediaUrl')),
             'template_components_body_parameters_count' => is_array(data_get($content, 'Template.Components.0.Parameters'))
                 ? count(data_get($content, 'Template.Components.0.Parameters'))
                 : null,
