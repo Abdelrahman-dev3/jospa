@@ -34,14 +34,14 @@ class GiftCardActivationService
         return $this->activateCollection($giftCards);
     }
 
-    public function sendNotifications(Collection $giftCards): void
+    public function sendNotifications(Collection $giftCards, bool $sendWhatsApp = true, bool $sendSms = true): void
     {
         foreach ($giftCards as $giftCard) {
-            $this->sendNotificationsForGiftCard($giftCard);
+            $this->sendNotificationsForGiftCard($giftCard, $sendWhatsApp, $sendSms);
         }
     }
 
-    public function sendNotificationsForIds(array $giftIds): void
+    public function sendNotificationsForIds(array $giftIds, bool $sendWhatsApp = true, bool $sendSms = true): void
     {
         if (empty($giftIds)) {
             return;
@@ -49,7 +49,7 @@ class GiftCardActivationService
 
         $giftCards = GiftCard::whereIn('id', $giftIds)->get();
 
-        $this->sendNotifications($giftCards);
+        $this->sendNotifications($giftCards, $sendWhatsApp, $sendSms);
     }
 
     private function activateCollection(Collection $giftCards): Collection
@@ -71,23 +71,27 @@ class GiftCardActivationService
         });
     }
 
-    private function sendNotificationsForGiftCard(GiftCard $giftCard): void
+    private function sendNotificationsForGiftCard(GiftCard $giftCard, bool $sendWhatsApp = true, bool $sendSms = true): void
     {
         if ($this->shouldNotifyRecipient($giftCard) && filled($giftCard->recipient_phone)) {
-            $this->smsService->sendGift(
-                $giftCard->recipient_phone,
-                [
-                    'sender_name' => $giftCard->sender_name,
-                    'sender_phone' => $giftCard->sender_phone,
-                    'recipient_name' => $giftCard->recipient_name,
-                    'recipient_phone' => $giftCard->recipient_phone,
-                    'gift_message' => $giftCard->message,
-                    'ref' => $giftCard->ref,
-                ],
-                'recipient'
-            );
+            if ($sendSms) {
+                $this->smsService->sendGift(
+                    $giftCard->recipient_phone,
+                    [
+                        'sender_name' => $giftCard->sender_name,
+                        'sender_phone' => $giftCard->sender_phone,
+                        'recipient_name' => $giftCard->recipient_name,
+                        'recipient_phone' => $giftCard->recipient_phone,
+                        'gift_message' => $giftCard->message,
+                        'ref' => $giftCard->ref,
+                    ],
+                    'recipient'
+                );
+            }
 
-            $this->giftCardRecipientWhatsAppService->send($giftCard);
+            if ($sendWhatsApp) {
+                $this->giftCardRecipientWhatsAppService->send($giftCard);
+            }
         }
     }
 

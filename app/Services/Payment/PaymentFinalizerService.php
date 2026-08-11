@@ -112,15 +112,16 @@ class PaymentFinalizerService
             }
         });
 
+        $odooSynced = false;
         if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
-            app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+            $odooSynced = app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
         }
 
         if (! empty($giftIds)) {
-            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds);
+            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds, ! $odooSynced);
         }
 
-        if ($invoiceId > 0) {
+        if ($invoiceId > 0 && ! $odooSynced) {
             try {
                 app(PaidInvoiceWhatsAppService::class)->sendForInvoice($invoiceId);
             } catch (\Throwable $exception) {
@@ -129,6 +130,10 @@ class PaymentFinalizerService
                     'message' => $exception->getMessage(),
                 ]);
             }
+        } elseif ($invoiceId > 0) {
+            \Log::info('Skipping generic paid invoice WhatsApp because Odoo PDF delivery already handled the invoice.', [
+                'invoice_id' => $invoiceId,
+            ]);
         }
 
         return $invoiceId;

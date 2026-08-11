@@ -1192,8 +1192,13 @@ class JavnaWhatsAppService
             ], fn ($v) => $v !== null && $v !== ''),
         ];
 
-        if ($preferredStyle !== '' && $preferredStyle !== 'auto' && isset($candidates[$preferredStyle])) {
-            return [$preferredStyle => $candidates[$preferredStyle]];
+        $preferredDocumentStyle = match ($preferredStyle) {
+            'javna_official_template_body_params' => 'javna_official_document_template_body_params',
+            default => $preferredStyle,
+        };
+
+        if ($preferredDocumentStyle !== '' && $preferredDocumentStyle !== 'auto' && isset($candidates[$preferredDocumentStyle])) {
+            return [$preferredDocumentStyle => $candidates[$preferredDocumentStyle]];
         }
 
         return $candidates;
