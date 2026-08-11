@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Modules\Package\Models\Package;
@@ -122,22 +123,21 @@ class OdooBookingSyncService
                 // Odoo returns JSON-RPC format: { "result": { ... } }
                 // Resolve the actual result data so we can inspect PDF fields.
                 $resultData = $this->resolveOdooResultData(is_array($body) ? $body : []);
+                $invoiceDocument = $this->extractInvoiceDocument($resultData);
+                $giftCardsCreated = $this->extractGiftCardsCreated($resultData);
+                $giftCardRedeemed = $this->extractGiftCardRedeemed($resultData);
 
                 Log::info('Odoo booking sync response received.', [
                     'invoice_id'              => $invoiceId,
                     'status'                  => $response->status(),
-                    'has_invoice_pdf'         => filled(data_get($resultData, 'invoice_pdf')),
-                    'invoice_pdf_bytes'       => is_string(data_get($resultData, 'invoice_pdf')) ? strlen(data_get($resultData, 'invoice_pdf')) : 0,
-                    'gift_cards_created_count'=> is_array(data_get($resultData, 'gift_cards_created')) ? count(data_get($resultData, 'gift_cards_created')) : 0,
-                    'has_gift_card_redeemed'  => filled(data_get($resultData, 'gift_card_redeemed')),
+                    'has_invoice_pdf'         => filled($invoiceDocument),
+                    'invoice_pdf_bytes'       => is_string($invoiceDocument) ? strlen($invoiceDocument) : 0,
+                    'gift_cards_created_count'=> count($giftCardsCreated),
+                    'has_gift_card_redeemed'  => filled($giftCardRedeemed),
                     'response_body'           => $this->sanitizeResponseForLog($body),
                 ]);
 
-                if (is_array($body) && (
-                    (isset($body['status']) && ($body['status'] === false || $body['status'] === 'failed' || $body['status'] === 'error'))
-                    || (isset($body['valid']) && $body['valid'] === false)
-                    || (! empty($body['error']))
-                )) {
+                if (is_array($body) && $this->odooResponseWasRejected($body, $resultData)) {
                     $errorMsg = $this->extractErrorMessage($response);
                     Log::error('Odoo booking sync rejected by Odoo response.', [
                         'invoice_id' => $invoiceId,
@@ -428,23 +428,20 @@ class OdooBookingSyncService
     {
         $body = $response->json();
         if (is_array($body)) {
-            if (! empty($body['message']) && is_string($body['message'])) {
-                return $body['message'];
-            }
-            if (! empty($body['error']) && is_string($body['error'])) {
-                return $body['error'];
-            }
-            if (! empty($body['reason']) && is_string($body['reason'])) {
-                return $body['reason'];
-            }
-            if (! empty($body['detail']) && is_string($body['detail'])) {
-                return $body['detail'];
-            }
-            if (isset($body['error']['message']) && is_string($body['error']['message'])) {
-                return $body['error']['message'];
-            }
-            if (isset($body['error']['data']['message']) && is_string($body['error']['data']['message'])) {
-                return $body['error']['data']['message'];
+            foreach ([$body, $this->resolveOdooResultData($body)] as $candidate) {
+                foreach (['message', 'error', 'reason', 'detail'] as $key) {
+                    $value = data_get($candidate, $key);
+                    if (is_string($value) && trim($value) !== '') {
+                        return $value;
+                    }
+                }
+
+                foreach (['error.message', 'error.data.message'] as $key) {
+                    $value = data_get($candidate, $key);
+                    if (is_string($value) && trim($value) !== '') {
+                        return $value;
+                    }
+                }
             }
         }
 
@@ -454,6 +451,135 @@ class OdooBookingSyncService
         }
 
         return 'Failed to synchronize invoice with Odoo.';
+    }
+
+    private function odooResponseWasRejected(array $responseBody, array $resultData): bool
+    {
+        foreach ([$responseBody, $resultData] as $candidate) {
+            if (array_key_exists('status', $candidate)) {
+                $status = $candidate['status'];
+                if ($status === false || in_array(strtolower((string) $status), ['failed', 'error'], true)) {
+                    return true;
+                }
+            }
+
+            if (array_key_exists('success', $candidate) && $candidate['success'] === false) {
+                return true;
+            }
+
+            if (array_key_exists('valid', $candidate) && $candidate['valid'] === false) {
+                return true;
+            }
+
+            if (! empty($candidate['error'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveOdooResultData(array $responseBody): array
+    {
+        foreach (['result', 'data'] as $key) {
+            $candidate = $this->decodeOdooArrayValue(data_get($responseBody, $key));
+            if ($candidate === null) {
+                continue;
+            }
+
+            $nestedData = $this->decodeOdooArrayValue(data_get($candidate, 'data'));
+
+            return $nestedData === null
+                ? $candidate
+                : array_replace($candidate, $nestedData);
+        }
+
+        return $responseBody;
+    }
+
+    private function extractInvoiceDocument(array $data): ?string
+    {
+        foreach ([
+            'invoice_pdf',
+            'invoice_pdf_base64',
+            'invoice_document',
+            'invoice_document_base64',
+            'invoice_pdf_url',
+            'invoice_url',
+            'invoice.pdf',
+            'invoice.pdf_base64',
+            'invoice.document',
+            'invoice.document_base64',
+            'invoice.url',
+            'pdf',
+        ] as $key) {
+            $value = data_get($data, $key);
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    private function extractGiftCardsCreated(array $data): array
+    {
+        foreach ([
+            'gift_cards_created',
+            'gift_cards',
+            'created_gift_cards',
+            'gift_card_created',
+        ] as $key) {
+            $giftCards = $this->decodeOdooArrayValue(data_get($data, $key));
+            if ($giftCards !== null) {
+                return $this->normalizeOdooList($giftCards);
+            }
+        }
+
+        return [];
+    }
+
+    private function extractGiftCardRedeemed(array $data): ?array
+    {
+        foreach ([
+            'gift_card_redeemed',
+            'redeemed_gift_card',
+            'gift_card_used',
+        ] as $key) {
+            $giftCard = $this->decodeOdooArrayValue(data_get($data, $key));
+            if ($giftCard !== null) {
+                return $giftCard;
+            }
+        }
+
+        return null;
+    }
+
+    private function decodeOdooArrayValue(mixed $value): ?array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function normalizeOdooList(array $value): array
+    {
+        if ($value === []) {
+            return [];
+        }
+
+        return array_keys($value) === range(0, count($value) - 1)
+            ? $value
+            : [$value];
     }
 
     /**
@@ -521,7 +647,7 @@ class OdooBookingSyncService
             }
 
             // 2. Send Gift Card PDFs to Recipients (المهدي اليه)
-            $giftCardsCreated = $responseBody['gift_cards_created'] ?? [];
+            $giftCardsCreated = $this->extractGiftCardsCreated($data);
             if (is_array($giftCardsCreated) && ! empty($giftCardsCreated)) {
                 $giftIds = $invoice->gift_ids;
                 if (is_string($giftIds)) {
@@ -604,7 +730,7 @@ class OdooBookingSyncService
             }
 
             // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
-            $giftCardRedeemed = $responseBody['gift_card_redeemed'] ?? null;
+            $giftCardRedeemed = $this->extractGiftCardRedeemed($data);
             if (is_array($giftCardRedeemed) && filled($giftCardRedeemed['pdf'] ?? null) && filled($buyerPhone)) {
                 $redeemedPdfBase64 = $giftCardRedeemed['pdf'];
                 $redeemedCode = $giftCardRedeemed['code'] ?? 'GC';
