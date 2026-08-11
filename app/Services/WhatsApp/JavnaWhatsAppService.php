@@ -1108,9 +1108,10 @@ class JavnaWhatsAppService
 
         $candidates = [
             // ── Meta-style payload (most common) ──────────────────────────────────
-            'javna_document_template_to_content_template_components' => array_filter([
+            'javna_document_template_destinations_content_template_components' => array_filter([
                 'messages' => [[
                     'from' => $sender,
+                    'destinations' => [$phone],
                     'to' => $phone,
                     'content' => array_filter([
                         'type' => 'template',
@@ -1320,8 +1321,9 @@ class JavnaWhatsAppService
 
         if ($preferredStyle === 'javna_official_template_body_params') {
             return array_intersect_key($candidates, array_flip([
-                'javna_document_template_data_header_media_url',
+                'javna_document_template_destinations_content_template_components',
                 'javna_document_template_data_header_media_url_upper',
+                'javna_document_template_data_header_media_url',
                 'javna_official_document_template_body_params_typed_header',
                 'javna_official_document_template_body_params',
             ]));

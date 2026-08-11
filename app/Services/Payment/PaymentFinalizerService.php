@@ -112,15 +112,16 @@ class PaymentFinalizerService
             }
         });
 
+        $odooSynced = false;
         if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
-            app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+            $odooSynced = app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
         }
 
         if (! empty($giftIds)) {
-            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds);
+            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds, sendWhatsApp: ! $odooSynced);
         }
 
-        if ($invoiceId > 0) {
+        if ($invoiceId > 0 && ! $odooSynced) {
             try {
                 app(PaidInvoiceWhatsAppService::class)->sendForInvoice($invoiceId);
             } catch (\Throwable $exception) {
