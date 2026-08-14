@@ -47,13 +47,43 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
         }
         $orders = $orderQuery->get();
 
-        $bookingQuery = BookingTransaction::with(['booking.services', 'booking.products', 'booking.bookingPackages'])
-            ->where('payment_status', 1);
+        $bookingQuery = Booking::query()
+            ->with([
+                'bookingService',
+                'services',
+                'products',
+                'bookingPackages',
+                'bookingTransaction',
+                'transactions',
+                'userCouponRedeem',
+            ])
+            ->where(function ($q) {
+                $q->where('status', 'completed')
+                    ->orWhere('payment_status', 1)
+                    ->orWhere('payment_status', '1')
+                    ->orWhere('payment_status', 'paid')
+                    ->orWhereHas('transactions', function ($tq) {
+                        $tq->whereIn('payment_status', [1, '1', 'paid']);
+                    });
+            });
+
         if ($startDate) {
-            $bookingQuery->whereDate('created_at', '>=', $startDate->toDateString());
+            $bookingQuery->where(function ($q) use ($startDate) {
+                $q->whereDate('start_date_time', '>=', $startDate->toDateString())
+                    ->orWhere(function ($sub) use ($startDate) {
+                        $sub->whereNull('start_date_time')
+                            ->whereDate('created_at', '>=', $startDate->toDateString());
+                    });
+            });
         }
         if ($endDate) {
-            $bookingQuery->whereDate('created_at', '<=', $endDate->toDateString());
+            $bookingQuery->where(function ($q) use ($endDate) {
+                $q->whereDate('start_date_time', '<=', $endDate->toDateString())
+                    ->orWhere(function ($sub) use ($endDate) {
+                        $sub->whereNull('start_date_time')
+                            ->whereDate('created_at', '<=', $endDate->toDateString());
+                    });
+            });
         }
         $bookings = $bookingQuery->get();
 
@@ -106,8 +136,13 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
             $periodMap[$dateStr]['coupons_value'] += $coupons;
         }
 
-        foreach ($bookings as $tx) {
-            $dateStr = optional($tx->created_at)->format('Y-m-d');
+        foreach ($bookings as $booking) {
+            $dateObj = $booking->start_date_time ?? $booking->created_at;
+            $dateStr = $dateObj ? Carbon::parse($dateObj)->format('Y-m-d') : null;
+            if (! $dateStr) {
+                continue;
+            }
+
             if (! isset($periodMap[$dateStr])) {
                 $periodMap[$dateStr] = [
                     'date' => $dateStr,
@@ -120,28 +155,40 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                 ];
             }
 
-            $booking = $tx->booking;
-            $services = $booking ? (($booking->bookingService && $booking->bookingService->count() > 0) ? $booking->bookingService : $booking->services) : null;
-            $serviceAmt = $services ? $services->sum('service_price') : 0;
-            $productAmt = $booking && $booking->products ? $booking->products->sum(function ($p) {
+            $services = ($booking->bookingService && $booking->bookingService->count() > 0)
+                ? $booking->bookingService
+                : $booking->services;
+
+            $serviceAmt = $services ? (float) $services->sum('service_price') : 0.0;
+            $productAmt = $booking->products ? (float) $booking->products->sum(function ($p) {
                 $price = $p->discounted_price && $p->discounted_price > 0 ? $p->discounted_price : $p->product_price;
                 return $price * ($p->product_qty ?? 1);
-            }) : 0;
-            $pkgAmt = $booking && $booking->bookingPackages ? $booking->bookingPackages->sum('package_price') : 0;
+            }) : 0.0;
+            $pkgAmt = $booking->bookingPackages ? (float) $booking->bookingPackages->sum('package_price') : 0.0;
 
             $itemsCount = ($services ? $services->count() : 0)
-                + ($booking && $booking->products ? $booking->products->sum('product_qty') : 0)
-                + ($booking && $booking->bookingPackages ? $booking->bookingPackages->count() : 0);
+                + ($booking->products ? $booking->products->sum('product_qty') : 0)
+                + ($booking->bookingPackages ? $booking->bookingPackages->count() : 0);
+
+            $couponDiscount = 0.0;
+            if ($booking->userCouponRedeem && $booking->userCouponRedeem->discount > 0) {
+                $couponDiscount = (float) $booking->userCouponRedeem->discount;
+            } elseif ($services && $services->sum('discount_amount') > 0) {
+                $couponDiscount = (float) $services->sum('discount_amount');
+            } elseif ($booking->bookingTransaction && $booking->bookingTransaction->discount_amount > 0) {
+                $couponDiscount = (float) $booking->bookingTransaction->discount_amount;
+            } elseif ($booking->transactions && $booking->transactions->sum('discount_amount') > 0) {
+                $couponDiscount = (float) $booking->transactions->sum('discount_amount');
+            }
 
             $gross = $serviceAmt + $productAmt + $pkgAmt;
-            $discount = (float) ($tx->discount_amount ?? 0);
-            $net = max(0, $gross - $discount);
+            $net = max(0, $gross - $couponDiscount);
 
             $periodMap[$dateStr]['orders_count'] += 1;
             $periodMap[$dateStr]['items_count'] += $itemsCount;
             $periodMap[$dateStr]['gross_sales'] += $gross;
             $periodMap[$dateStr]['net_sales'] += $net;
-            $periodMap[$dateStr]['coupons_value'] += $discount;
+            $periodMap[$dateStr]['coupons_value'] += $couponDiscount;
         }
 
         ksort($periodMap);
