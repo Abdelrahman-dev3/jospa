@@ -104,8 +104,8 @@ class ReportsController extends Controller
         }
         $orders = $orderQuery->get();
 
-        $bookingQuery = BookingTransaction::with(['booking.services', 'booking.products', 'booking.bookingPackages'])
-            ->where('payment_status', 1);
+        $bookingQuery = BookingTransaction::with(['booking.bookingService', 'booking.services', 'booking.products', 'booking.bookingPackages'])
+            ->whereIn('payment_status', [1, '1', 'paid']);
         if ($startDate) {
             $bookingQuery->whereDate('created_at', '>=', $startDate->toDateString());
         }
@@ -181,14 +181,15 @@ class ReportsController extends Controller
             }
 
             $booking = $tx->booking;
-            $serviceAmt = $booking && $booking->services ? $booking->services->sum('service_price') : 0;
+            $services = $booking ? (($booking->bookingService && $booking->bookingService->count() > 0) ? $booking->bookingService : $booking->services) : null;
+            $serviceAmt = $services ? $services->sum('service_price') : 0;
             $productAmt = $booking && $booking->products ? $booking->products->sum(function ($p) {
                 $price = $p->discounted_price && $p->discounted_price > 0 ? $p->discounted_price : $p->product_price;
                 return $price * ($p->product_qty ?? 1);
             }) : 0;
             $pkgAmt = $booking && $booking->bookingPackages ? $booking->bookingPackages->sum('package_price') : 0;
 
-            $itemsCount = ($booking && $booking->services ? $booking->services->count() : 0)
+            $itemsCount = ($services ? $services->count() : 0)
                 + ($booking && $booking->products ? $booking->products->sum('product_qty') : 0)
                 + ($booking && $booking->bookingPackages ? $booking->bookingPackages->count() : 0);
 
@@ -456,7 +457,15 @@ class ReportsController extends Controller
         $end = null;
 
         if (is_string($range)) {
-            $range = explode(' to ', $range);
+            if (str_contains($range, ' to ')) {
+                $range = explode(' to ', $range);
+            } elseif (str_contains($range, ' - ')) {
+                $range = explode(' - ', $range);
+            } elseif (str_contains($range, ',')) {
+                $range = explode(',', $range);
+            } else {
+                $range = [$range];
+            }
         }
 
         if (is_array($range) && isset($range[0]) && $range[0] !== '') {
@@ -466,6 +475,8 @@ class ReportsController extends Controller
         if (is_array($range) && isset($range[1]) && $range[1] !== '') {
             $parsedEnd = $this->parseReportDate($range[1]);
             $end = $parsedEnd ? $parsedEnd->endOfDay() : null;
+        } elseif ($start) {
+            $end = $start->copy()->endOfDay();
         }
 
         return [$start, $end];

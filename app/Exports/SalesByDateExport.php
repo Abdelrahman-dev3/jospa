@@ -121,14 +121,15 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
             }
 
             $booking = $tx->booking;
-            $serviceAmt = $booking && $booking->services ? $booking->services->sum('service_price') : 0;
+            $services = $booking ? (($booking->bookingService && $booking->bookingService->count() > 0) ? $booking->bookingService : $booking->services) : null;
+            $serviceAmt = $services ? $services->sum('service_price') : 0;
             $productAmt = $booking && $booking->products ? $booking->products->sum(function ($p) {
                 $price = $p->discounted_price && $p->discounted_price > 0 ? $p->discounted_price : $p->product_price;
                 return $price * ($p->product_qty ?? 1);
             }) : 0;
             $pkgAmt = $booking && $booking->bookingPackages ? $booking->bookingPackages->sum('package_price') : 0;
 
-            $itemsCount = ($booking && $booking->services ? $booking->services->count() : 0)
+            $itemsCount = ($services ? $services->count() : 0)
                 + ($booking && $booking->products ? $booking->products->sum('product_qty') : 0)
                 + ($booking && $booking->bookingPackages ? $booking->bookingPackages->count() : 0);
 
