@@ -281,10 +281,9 @@
                     <label class="filter-label"><i class="fa fa-credit-card me-1 text-dark"></i> {{ __('report.filter_payment_method') }}</label>
                     <select id="filter_payment_method" class="form-control form-control-sm select2" data-placeholder="{{ __('report.all_payment_methods') }}">
                         <option value=""></option>
-                        <option value="urpay">UrPay</option>
-                        <option value="card">بطاقة بنكية / مدى / Visa / MasterCard</option>
                         <option value="cash">{{ __('report.payment_cash') }}</option>
-                        <option value="stcpay">STC Pay</option>
+                        <option value="card">بطاقة بنكية / مدى / Visa / MasterCard</option>
+                        <option value="urpay">UrPay</option>
                         <option value="wallet">{{ __('report.payment_wallet') }}</option>
                         <option value="tabby">Tabby</option>
                         <option value="tamara">Tamara</option>

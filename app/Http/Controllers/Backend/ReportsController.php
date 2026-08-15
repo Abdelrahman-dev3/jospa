@@ -125,7 +125,6 @@ class ReportsController extends Controller
                 'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
                 'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
                 'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
-                'stcpay' => ['stcpay', 'stc_pay', 'STCPay', 'STC_Pay', 'STCPAY', 'stc'],
                 'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
                 'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
                 'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
@@ -141,27 +140,17 @@ class ReportsController extends Controller
                 })->get(['cart_ids', 'gift_ids', 'product_ids']);
 
                 foreach ($invoices as $inv) {
-                    $rawC = $inv->getRawOriginal('cart_ids') ?? $inv->cart_ids;
-                    if (is_array($rawC)) {
-                        foreach ($rawC as $cid) {
+                    $cIds = $inv->cart_ids;
+                    if (is_array($cIds)) {
+                        foreach ($cIds as $cid) {
                             if (is_numeric($cid)) {
                                 $matchedBookingIds[] = (int) $cid;
-                            } elseif (is_array($cid) && isset($cid['id'])) {
-                                $matchedBookingIds[] = (int) $cid['id'];
                             }
                         }
-                    } elseif (is_string($rawC)) {
-                        $dec = json_decode($rawC, true);
+                    } elseif (is_string($cIds)) {
+                        $dec = json_decode($cIds, true);
                         if (is_array($dec)) {
                             foreach ($dec as $cid) {
-                                if (is_numeric($cid)) {
-                                    $matchedBookingIds[] = (int) $cid;
-                                } elseif (is_array($cid) && isset($cid['id'])) {
-                                    $matchedBookingIds[] = (int) $cid['id'];
-                                }
-                            }
-                        } else {
-                            foreach (explode(',', str_replace(['[', ']', '"', "'", ' '], '', $rawC)) as $cid) {
                                 if (is_numeric($cid)) {
                                     $matchedBookingIds[] = (int) $cid;
                                 }
@@ -169,15 +158,15 @@ class ReportsController extends Controller
                         }
                     }
 
-                    $rawG = $inv->getRawOriginal('gift_ids') ?? $inv->gift_ids;
-                    if (is_array($rawG)) {
-                        foreach ($rawG as $gid) {
+                    $gIds = $inv->gift_ids;
+                    if (is_array($gIds)) {
+                        foreach ($gIds as $gid) {
                             if (is_numeric($gid)) {
                                 $matchedGiftIds[] = (int) $gid;
                             }
                         }
-                    } elseif (is_string($rawG)) {
-                        $dec = json_decode($rawG, true);
+                    } elseif (is_string($gIds)) {
+                        $dec = json_decode($gIds, true);
                         if (is_array($dec)) {
                             foreach ($dec as $gid) {
                                 if (is_numeric($gid)) {
@@ -187,15 +176,15 @@ class ReportsController extends Controller
                         }
                     }
 
-                    $rawP = $inv->getRawOriginal('product_ids') ?? $inv->product_ids;
-                    if (is_array($rawP)) {
-                        foreach ($rawP as $pid) {
+                    $pIds = $inv->product_ids;
+                    if (is_array($pIds)) {
+                        foreach ($pIds as $pid) {
                             if (is_numeric($pid)) {
                                 $matchedOrderIds[] = (int) $pid;
                             }
                         }
-                    } elseif (is_string($rawP)) {
-                        $dec = json_decode($rawP, true);
+                    } elseif (is_string($pIds)) {
+                        $dec = json_decode($pIds, true);
                         if (is_array($dec)) {
                             foreach ($dec as $pid) {
                                 if (is_numeric($pid)) {
@@ -203,20 +192,6 @@ class ReportsController extends Controller
                                 }
                             }
                         }
-                    }
-                }
-            } catch (\Throwable $e) {
-            }
-
-            try {
-                $txBids = BookingTransaction::where(function ($tq) use ($aliases, $paymentMethod) {
-                    $tq->whereIn('transaction_type', $aliases)
-                        ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
-                })->pluck('booking_id')->toArray();
-
-                foreach ($txBids as $tbId) {
-                    if (is_numeric($tbId)) {
-                        $matchedBookingIds[] = (int) $tbId;
                     }
                 }
             } catch (\Throwable $e) {
@@ -232,17 +207,17 @@ class ReportsController extends Controller
                     })->get(['cart_ids', 'gift_ids']);
 
                     foreach ($attempts as $att) {
-                        $rawC = $att->getRawOriginal('cart_ids') ?? $att->cart_ids;
-                        if (is_array($rawC)) {
-                            foreach ($rawC as $cid) {
+                        $cIds = $att->cart_ids;
+                        if (is_array($cIds)) {
+                            foreach ($cIds as $cid) {
                                 if (is_numeric($cid)) {
                                     $matchedBookingIds[] = (int) $cid;
                                 }
                             }
                         }
-                        $rawG = $att->getRawOriginal('gift_ids') ?? $att->gift_ids;
-                        if (is_array($rawG)) {
-                            foreach ($rawG as $gid) {
+                        $gIds = $att->gift_ids;
+                        if (is_array($gIds)) {
+                            foreach ($gIds as $gid) {
                                 if (is_numeric($gid)) {
                                     $matchedGiftIds[] = (int) $gid;
                                 }
@@ -310,18 +285,15 @@ class ReportsController extends Controller
             if ($bookingStatus) {
                 $bookingQuery->where('status', $bookingStatus);
             } else {
-                $bookingQuery->where(function ($q) use ($matchedBookingIds) {
-                    $q->whereIn('status', ['completed', 'confirmed', 'check_in'])
+                $bookingQuery->where(function ($q) {
+                    $q->where('status', 'completed')
                         ->orWhere('payment_status', 1)
                         ->orWhere('payment_status', '1')
                         ->orWhere('payment_status', 'paid')
                         ->orWhereHas('transactions', function ($tq) {
                             $tq->whereIn('payment_status', [1, '1', 'paid']);
                         });
-                    if (! empty($matchedBookingIds)) {
-                        $q->orWhereIn('id', $matchedBookingIds);
-                    }
-                })->whereNotIn('status', ['cancelled', 'failed', 'refunded']);
+                });
             }
 
             if ($startDate) {
@@ -371,15 +343,15 @@ class ReportsController extends Controller
 
             if ($paymentMethod) {
                 $bookingQuery->where(function ($q) use ($aliases, $paymentMethod, $matchedBookingIds) {
-                    if (! empty($matchedBookingIds)) {
-                        $q->whereIn('id', $matchedBookingIds);
-                    }
-                    $q->orWhereIn('payment_type', $aliases)
+                    $q->whereIn('payment_type', $aliases)
                         ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%')
                         ->orWhereHas('transactions', function ($tq) use ($aliases, $paymentMethod) {
                             $tq->whereIn('transaction_type', $aliases)
                                 ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
                         });
+                    if (! empty($matchedBookingIds)) {
+                        $q->orWhereIn('id', $matchedBookingIds);
+                    }
                 });
             }
 
