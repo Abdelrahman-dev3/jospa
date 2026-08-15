@@ -62,6 +62,7 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                 'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
                 'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
                 'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
+                'stcpay' => ['stcpay', 'stc_pay', 'STCPay', 'STC_Pay', 'STCPAY', 'stc'],
                 'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
                 'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
                 'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
@@ -77,17 +78,27 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                 })->get(['cart_ids', 'gift_ids', 'product_ids']);
 
                 foreach ($invoices as $inv) {
-                    $cIds = $inv->cart_ids;
-                    if (is_array($cIds)) {
-                        foreach ($cIds as $cid) {
+                    $rawC = $inv->getRawOriginal('cart_ids') ?? $inv->cart_ids;
+                    if (is_array($rawC)) {
+                        foreach ($rawC as $cid) {
                             if (is_numeric($cid)) {
                                 $matchedBookingIds[] = (int) $cid;
+                            } elseif (is_array($cid) && isset($cid['id'])) {
+                                $matchedBookingIds[] = (int) $cid['id'];
                             }
                         }
-                    } elseif (is_string($cIds)) {
-                        $dec = json_decode($cIds, true);
+                    } elseif (is_string($rawC)) {
+                        $dec = json_decode($rawC, true);
                         if (is_array($dec)) {
                             foreach ($dec as $cid) {
+                                if (is_numeric($cid)) {
+                                    $matchedBookingIds[] = (int) $cid;
+                                } elseif (is_array($cid) && isset($cid['id'])) {
+                                    $matchedBookingIds[] = (int) $cid['id'];
+                                }
+                            }
+                        } else {
+                            foreach (explode(',', str_replace(['[', ']', '"', "'", ' '], '', $rawC)) as $cid) {
                                 if (is_numeric($cid)) {
                                     $matchedBookingIds[] = (int) $cid;
                                 }
@@ -95,15 +106,15 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                         }
                     }
 
-                    $gIds = $inv->gift_ids;
-                    if (is_array($gIds)) {
-                        foreach ($gIds as $gid) {
+                    $rawG = $inv->getRawOriginal('gift_ids') ?? $inv->gift_ids;
+                    if (is_array($rawG)) {
+                        foreach ($rawG as $gid) {
                             if (is_numeric($gid)) {
                                 $matchedGiftIds[] = (int) $gid;
                             }
                         }
-                    } elseif (is_string($gIds)) {
-                        $dec = json_decode($gIds, true);
+                    } elseif (is_string($rawG)) {
+                        $dec = json_decode($rawG, true);
                         if (is_array($dec)) {
                             foreach ($dec as $gid) {
                                 if (is_numeric($gid)) {
@@ -113,15 +124,15 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                         }
                     }
 
-                    $pIds = $inv->product_ids;
-                    if (is_array($pIds)) {
-                        foreach ($pIds as $pid) {
+                    $rawP = $inv->getRawOriginal('product_ids') ?? $inv->product_ids;
+                    if (is_array($rawP)) {
+                        foreach ($rawP as $pid) {
                             if (is_numeric($pid)) {
                                 $matchedOrderIds[] = (int) $pid;
                             }
                         }
-                    } elseif (is_string($pIds)) {
-                        $dec = json_decode($pIds, true);
+                    } elseif (is_string($rawP)) {
+                        $dec = json_decode($rawP, true);
                         if (is_array($dec)) {
                             foreach ($dec as $pid) {
                                 if (is_numeric($pid)) {
@@ -129,6 +140,20 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                                 }
                             }
                         }
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $txBids = BookingTransaction::where(function ($tq) use ($aliases, $paymentMethod) {
+                    $tq->whereIn('transaction_type', $aliases)
+                        ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
+                })->pluck('booking_id')->toArray();
+
+                foreach ($txBids as $tbId) {
+                    if (is_numeric($tbId)) {
+                        $matchedBookingIds[] = (int) $tbId;
                     }
                 }
             } catch (\Throwable $e) {
@@ -144,17 +169,17 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                     })->get(['cart_ids', 'gift_ids']);
 
                     foreach ($attempts as $att) {
-                        $cIds = $att->cart_ids;
-                        if (is_array($cIds)) {
-                            foreach ($cIds as $cid) {
+                        $rawC = $att->getRawOriginal('cart_ids') ?? $att->cart_ids;
+                        if (is_array($rawC)) {
+                            foreach ($rawC as $cid) {
                                 if (is_numeric($cid)) {
                                     $matchedBookingIds[] = (int) $cid;
                                 }
                             }
                         }
-                        $gIds = $att->gift_ids;
-                        if (is_array($gIds)) {
-                            foreach ($gIds as $gid) {
+                        $rawG = $att->getRawOriginal('gift_ids') ?? $att->gift_ids;
+                        if (is_array($rawG)) {
+                            foreach ($rawG as $gid) {
                                 if (is_numeric($gid)) {
                                     $matchedGiftIds[] = (int) $gid;
                                 }
@@ -222,15 +247,18 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
             if ($bookingStatus) {
                 $bookingQuery->where('status', $bookingStatus);
             } else {
-                $bookingQuery->where(function ($q) {
-                    $q->where('status', 'completed')
+                $bookingQuery->where(function ($q) use ($matchedBookingIds) {
+                    $q->whereIn('status', ['completed', 'confirmed', 'check_in'])
                         ->orWhere('payment_status', 1)
                         ->orWhere('payment_status', '1')
                         ->orWhere('payment_status', 'paid')
                         ->orWhereHas('transactions', function ($tq) {
                             $tq->whereIn('payment_status', [1, '1', 'paid']);
                         });
-                });
+                    if (! empty($matchedBookingIds)) {
+                        $q->orWhereIn('id', $matchedBookingIds);
+                    }
+                })->whereNotIn('status', ['cancelled', 'failed', 'refunded']);
             }
 
             if ($startDate) {
@@ -280,15 +308,15 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
 
             if ($paymentMethod) {
                 $bookingQuery->where(function ($q) use ($aliases, $paymentMethod, $matchedBookingIds) {
-                    $q->whereIn('payment_type', $aliases)
+                    if (! empty($matchedBookingIds)) {
+                        $q->whereIn('id', $matchedBookingIds);
+                    }
+                    $q->orWhereIn('payment_type', $aliases)
                         ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%')
                         ->orWhereHas('transactions', function ($tq) use ($aliases, $paymentMethod) {
                             $tq->whereIn('transaction_type', $aliases)
                                 ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
                         });
-                    if (! empty($matchedBookingIds)) {
-                        $q->orWhereIn('id', $matchedBookingIds);
-                    }
                 });
             }
 
