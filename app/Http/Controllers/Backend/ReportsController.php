@@ -310,7 +310,18 @@ class ReportsController extends Controller
             if ($bookingStatus) {
                 $bookingQuery->where('status', $bookingStatus);
             } else {
-                $bookingQuery->where('status', 'completed');
+                $bookingQuery->where(function ($q) use ($matchedBookingIds) {
+                    $q->whereIn('status', ['completed', 'confirmed', 'check_in'])
+                        ->orWhere('payment_status', 1)
+                        ->orWhere('payment_status', '1')
+                        ->orWhere('payment_status', 'paid')
+                        ->orWhereHas('transactions', function ($tq) {
+                            $tq->whereIn('payment_status', [1, '1', 'paid']);
+                        });
+                    if (! empty($matchedBookingIds)) {
+                        $q->orWhereIn('id', $matchedBookingIds);
+                    }
+                })->whereNotIn('status', ['cancelled', 'failed', 'refunded']);
             }
 
             if ($startDate) {
