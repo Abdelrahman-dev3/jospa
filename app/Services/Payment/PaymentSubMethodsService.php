@@ -76,20 +76,69 @@ class PaymentSubMethodsService
 
             // Gift Card
             if ($isGiftCode && $final > 0) {
-                $gift = GiftCard::where('ref', $request->gift_code)
-                    ->where('payment_status', 1)
-                    ->lockForUpdate()
-                    ->first();
-                if (!$gift) {
+                $code = $request->gift_code;
+
+                $checkUrl = (string) config('services.odoo.giftcard_check_url');
+                if (empty($checkUrl)) {
+                    $bookingCreateUrl = (string) config('services.odoo.booking_create_url');
+                    $checkUrl = str_replace('/order/create', '/giftcard/check', $bookingCreateUrl);
+                    $checkUrl = str_replace('/odoo_create_booking', '/giftcard/check', $checkUrl);
+                }
+        
+                $apiKey = (string) config('services.odoo.api_key');
+                $db = (string) config('services.odoo.db');
+                $login = (string) config('services.odoo.login');
+                $password = (string) config('services.odoo.password');
+        
+                $headers = [
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ];
+        
+                if ($apiKey !== '') {
+                    $headers['api-key'] = $apiKey;
+                } else {
+                    $headers['db'] = $db;
+                    $headers['login'] = $login;
+                    $headers['password'] = $password;
+                }
+        
+                $payload = [
+                    'data' => [
+                        'code' => $code
+                    ]
+                ];
+        
+                $giftBalance = 0;
+                $giftValid = false;
+
+                try {
+                    $response = \Illuminate\Support\Facades\Http::timeout((int) config('services.odoo.timeout', 15))
+                        ->withHeaders($headers)
+                        ->post($checkUrl, $payload);
+        
+                    if ($response->successful()) {
+                        $body = $response->json();
+                        if (isset($body['valid']) && $body['valid'] === true) {
+                            $giftValid = true;
+                            $giftBalance = (float) ($body['balance'] ?? 0);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Odoo giftcard check failed during checkout', [
+                        'code' => $code,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+
+                if (!$giftValid || $giftBalance <= 0) {
                     $giftError = true;
                     return;
                 }
 
-                $usedGift = min($gift->balance, $final);
-                if ($commit) {
-                    $gift->balance -= $usedGift;
-                    $gift->save();
-                }
+                $usedGift = min($giftBalance, $final);
+                // Note: we do not deduct the balance locally here. 
+                // Odoo will deduct the balance when the order is successfully created in OdooBookingSyncService.
                 $final -= $usedGift;
             }
         });

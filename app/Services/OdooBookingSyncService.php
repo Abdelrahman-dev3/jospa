@@ -216,7 +216,7 @@ class OdooBookingSyncService
         $paymentDate = optional($invoice->created_at)->toDateString() ?? now()->toDateString();
         $transactionReference = $transaction->external_transaction_id ?? ('INV-' . $invoice->id);
 
-        return [
+        $payload = [
             'id' => $invoice->id,
             'user_id' => (int) $invoice->user_id,
             'coupon_code' => $invoice->coupon_code,
@@ -237,6 +237,15 @@ class OdooBookingSyncService
             'booking_details' => $this->buildBookingDetails($invoice, $bookings),
             'gift_card_details' => $this->buildGiftCardDetails($invoice, $giftCards, $paymentDate),
         ];
+
+        if ($invoice->gift_code && $invoice->gift_amount > 0) {
+            $payload['gift_card'] = [
+                'code' => $invoice->gift_code,
+                'amount' => (float) $invoice->gift_amount,
+            ];
+        }
+
+        return $payload;
     }
 
     private function buildBookingDetails(Invoice $invoice, $bookings): array
