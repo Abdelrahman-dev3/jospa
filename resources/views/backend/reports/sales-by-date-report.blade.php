@@ -102,8 +102,8 @@
 
 <div class="woo-reports-wrapper card">
     <!-- Header Notice Banner -->
-    <div class="alert alert-warning mb-0 rounded-0 border-0 fs-13 py-2 px-3">
-        <strong>WooCommerce Reports:</strong> {{ __('report.title_sales_report') }}
+    <div class="alert alert-info mb-0 rounded-0 border-0 fs-13 py-2 px-3">
+        <strong>{{ __('report.title_sales_report') }}</strong>
     </div>
 
     <!-- Main Navigation Tabs -->
