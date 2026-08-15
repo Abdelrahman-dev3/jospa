@@ -413,7 +413,7 @@
             allowClear: true,
             placeholder: "{{ __('report.search_customer_placeholder') }}",
             ajax: {
-                url: "{{ route('backend.search-datalist') }}",
+                url: "{{ route('backend.get_search_data') }}",
                 dataType: 'json',
                 delay: 250,
                 data: function (params) {
