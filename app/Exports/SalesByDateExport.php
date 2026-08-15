@@ -2,11 +2,15 @@
 
 namespace App\Exports;
 
+use App\Models\GiftCard;
+use App\Models\Invoice;
+use App\Models\PaymentAttempt;
 use Carbon\Carbon;
 use Currency;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingTransaction;
 use Modules\Product\Models\OrderGroup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -50,6 +54,121 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
         $serviceType = $this->filters['service_type'] ?? null;
         $couponFilter = $this->filters['has_coupon'] ?? null;
 
+        $aliases = [];
+        $allPaymentBookingIds = [];
+        $allPaymentGiftIds = [];
+
+        if ($paymentMethod) {
+            $aliases = match (strtolower(trim($paymentMethod))) {
+                'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
+                'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
+                'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
+                'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
+                'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
+                'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
+                'stripe' => ['stripe', 'Stripe', 'STRIPE', 'card', 'Card'],
+                'razorpay' => ['razorpay', 'Razorpay', 'RAZORPAY'],
+                default => [$paymentMethod, strtolower($paymentMethod), ucfirst($paymentMethod), strtoupper($paymentMethod)],
+            };
+
+            try {
+                $invoices = Invoice::query()->where(function ($iq) use ($aliases, $paymentMethod) {
+                    $iq->whereIn('payment_method', $aliases)
+                        ->orWhere('payment_method', 'LIKE', '%'.$paymentMethod.'%');
+                })->get(['cart_ids', 'gift_ids']);
+
+                foreach ($invoices as $inv) {
+                    $cIds = $inv->cart_ids;
+                    if (is_array($cIds)) {
+                        foreach ($cIds as $cid) {
+                            if (is_numeric($cid)) {
+                                $allPaymentBookingIds[] = (int) $cid;
+                            }
+                        }
+                    } elseif (is_string($cIds)) {
+                        $decoded = json_decode($cIds, true);
+                        if (is_array($decoded)) {
+                            foreach ($decoded as $cid) {
+                                if (is_numeric($cid)) {
+                                    $allPaymentBookingIds[] = (int) $cid;
+                                }
+                            }
+                        }
+                    }
+
+                    $gIds = $inv->gift_ids;
+                    if (is_array($gIds)) {
+                        foreach ($gIds as $gid) {
+                            if (is_numeric($gid)) {
+                                $allPaymentGiftIds[] = (int) $gid;
+                            }
+                        }
+                    } elseif (is_string($gIds)) {
+                        $decoded = json_decode($gIds, true);
+                        if (is_array($decoded)) {
+                            foreach ($decoded as $gid) {
+                                if (is_numeric($gid)) {
+                                    $allPaymentGiftIds[] = (int) $gid;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $attempts = PaymentAttempt::query()->where(function ($aq) use ($aliases, $paymentMethod) {
+                    $aq->whereIn('gateway', $aliases)
+                        ->orWhere('gateway', 'LIKE', '%'.$paymentMethod.'%')
+                        ->orWhereIn('payment_method', $aliases)
+                        ->orWhere('payment_method', 'LIKE', '%'.$paymentMethod.'%');
+                })->get(['cart_ids', 'gift_ids']);
+
+                foreach ($attempts as $att) {
+                    $cIds = $att->cart_ids;
+                    if (is_array($cIds)) {
+                        foreach ($cIds as $cid) {
+                            if (is_numeric($cid)) {
+                                $allPaymentBookingIds[] = (int) $cid;
+                            }
+                        }
+                    } elseif (is_string($cIds)) {
+                        $decoded = json_decode($cIds, true);
+                        if (is_array($decoded)) {
+                            foreach ($decoded as $cid) {
+                                if (is_numeric($cid)) {
+                                    $allPaymentBookingIds[] = (int) $cid;
+                                }
+                            }
+                        }
+                    }
+
+                    $gIds = $att->gift_ids;
+                    if (is_array($gIds)) {
+                        foreach ($gIds as $gid) {
+                            if (is_numeric($gid)) {
+                                $allPaymentGiftIds[] = (int) $gid;
+                            }
+                        }
+                    } elseif (is_string($gIds)) {
+                        $decoded = json_decode($gIds, true);
+                        if (is_array($decoded)) {
+                            foreach ($decoded as $gid) {
+                                if (is_numeric($gid)) {
+                                    $allPaymentGiftIds[] = (int) $gid;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
+            $allPaymentBookingIds = array_unique(array_filter($allPaymentBookingIds));
+            $allPaymentGiftIds = array_unique(array_filter($allPaymentGiftIds));
+        }
+
         $orders = collect();
         if (! $branchId && ! $employeeId && ! $serviceId && ! $categoryId && (! $serviceType || $serviceType === 'all')) {
             $orderQuery = OrderGroup::query()->with('order.orderItems');
@@ -63,7 +182,10 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                 $orderQuery->where('user_id', $customerId);
             }
             if ($paymentMethod) {
-                $orderQuery->where('payment_type', $paymentMethod);
+                $orderQuery->where(function ($q) use ($aliases, $paymentMethod) {
+                    $q->whereIn('payment_type', $aliases)
+                        ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%');
+                });
             }
             if ($couponFilter === 'yes') {
                 $orderQuery->where(function ($q) {
@@ -153,23 +275,17 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
             }
 
             if ($paymentMethod) {
-                $aliases = match (strtolower($paymentMethod)) {
-                    'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
-                    'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
-                    'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
-                    'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
-                    'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
-                    'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
-                    default => [$paymentMethod, strtolower($paymentMethod), ucfirst($paymentMethod), strtoupper($paymentMethod)],
-                };
-
-                $bookingQuery->where(function ($q) use ($aliases, $paymentMethod) {
+                $bookingQuery->where(function ($q) use ($aliases, $paymentMethod, $allPaymentBookingIds) {
                     $q->whereIn('payment_type', $aliases)
                         ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%')
                         ->orWhereHas('transactions', function ($tq) use ($aliases, $paymentMethod) {
                             $tq->whereIn('transaction_type', $aliases)
                                 ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
                         });
+
+                    if (! empty($allPaymentBookingIds)) {
+                        $q->orWhereIn('id', $allPaymentBookingIds);
+                    }
                 });
             }
 
@@ -217,18 +333,13 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                 $giftQuery->whereJsonContains('requested_services', (string) $serviceId);
             }
             if ($paymentMethod) {
-                $aliases = match (strtolower($paymentMethod)) {
-                    'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
-                    'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
-                    'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
-                    'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
-                    'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
-                    'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
-                    default => [$paymentMethod, strtolower($paymentMethod), ucfirst($paymentMethod), strtoupper($paymentMethod)],
-                };
-                $giftQuery->where(function ($q) use ($aliases, $paymentMethod) {
+                $giftQuery->where(function ($q) use ($aliases, $paymentMethod, $allPaymentGiftIds) {
                     $q->whereIn('payment_type', $aliases)
                         ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%');
+
+                    if (! empty($allPaymentGiftIds)) {
+                        $q->orWhereIn('id', $allPaymentGiftIds);
+                    }
                 });
             }
             if ($couponFilter === 'yes') {
