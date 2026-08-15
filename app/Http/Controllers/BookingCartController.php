@@ -485,6 +485,21 @@ class BookingCartController extends Controller
             $loyaltyDiscount = session('loyaltyDiscount', 0);
             $finalTotal = session('finalTotal', 0);
 
+            $expectedCharge = (float) max(0, $finalTotal - $loyaltyDiscount);
+            $chargedAmount = (float) ($charge['amount'] ?? 0);
+
+            if ($expectedCharge > 0 && ($chargedAmount <= 0 || abs($expectedCharge - $chargedAmount) > 0.01)) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Paid amount does not match expected amount.',
+                        'expected' => $expectedCharge,
+                        'paid' => $chargedAmount,
+                    ], 422);
+                }
+                return view('frontend.payment-status.failed')->with('error', 'Paid amount does not match expected amount.');
+            }
+
             $cartIds = Booking::where('user_id', $user->id)
                 ->unpaid()
                 ->pluck('id')
@@ -539,7 +554,7 @@ class BookingCartController extends Controller
             $clientDiscount = (float) $clientDiscountRaw;
         }
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal('cart', $couponCode, $paymentMethod);
+        $totalData = $calculator->calculateTotal('cart', $couponCode, $paymentMethod, $user->id);
 
         if (isset($totalData['error'])) {
             if ($request->expectsJson()) {
@@ -548,19 +563,11 @@ class BookingCartController extends Controller
             return view('frontend.payment-status.failed')->with('error', $totalData['error']);
         }
         
-        if ($clientDiscount !== null) {
-            $expectedDiscount = (float) $totalData['discountAmount'];
-            if (abs($clientDiscount - $expectedDiscount) > 0.01) {
-                if ($request->expectsJson()) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'Discount amount mismatch.',
-                        'expected' => $expectedDiscount,
-                        'provided' => $clientDiscount,
-                    ], 422);
-                }
-                return view('frontend.payment-status.failed')->with('error', 'Discount amount mismatch.');
+        if ($clientDiscount !== null && ! $this->isClientDiscountMatching($clientDiscount, $totalData['discountAmount'])) {
+            if ($request->expectsJson()) {
+                return response()->json(['status' => false, 'message' => 'Discount amount mismatch.'], 422);
             }
+            return view('frontend.payment-status.failed')->with('error', 'Discount amount mismatch.');
         }
 
         $subMethodService = app(PaymentSubMethodsService::class);
@@ -576,7 +583,7 @@ class BookingCartController extends Controller
         $expectedCharge = (float) $subResult['remaining_amount'];
         $chargedAmount = (float) ($charge['amount'] ?? 0);
 
-        if ($expectedCharge > 0 && $chargedAmount > 0 && abs($expectedCharge - $chargedAmount) > 0.01) {
+        if ($expectedCharge > 0 && ($chargedAmount <= 0 || abs($expectedCharge - $chargedAmount) > 0.01)) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'status' => false,

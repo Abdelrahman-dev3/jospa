@@ -203,14 +203,8 @@ class CardPaymentStrategy extends BasePaymentStrategy
             $data = $this->resolvePaymentData($merchantTransactionId);
             $brand = $this->normalizeHyperpayBrand($data['hyperpay_brand'] ?? $fallbackBrand ?? 'VISA');
 
-            // Try to get payment result from callback parameters first
-            // Hyperpay sends result directly in the callback for synchronous payments
-            $payment = $this->extractPaymentFromCallback($request);
-
-            // If no payment data in callback, fall back to API call
-            if (! $payment) {
-                $payment = $this->fetchPaymentStatusWithFallback($hyperpay, $resourcePath, $brand, $merchantTransactionId ?: 'unknown', $request->all());
-            }
+            // Always verify payment status directly with Hyperpay API server-to-server
+            $payment = $this->fetchPaymentStatusWithFallback($hyperpay, $resourcePath, $brand, $merchantTransactionId ?: 'unknown', $request->all());
 
             $resultCode = (string) data_get($payment, 'result.code', '');
 
@@ -413,30 +407,6 @@ class CardPaymentStrategy extends BasePaymentStrategy
             now()->addMinutes(30),
             $params
         );
-    }
-
-    private function extractPaymentFromCallback(Request $request): ?array
-    {
-        // Hyperpay sends payment result directly in callback for synchronous payments
-        // Check if we have the necessary payment result parameters
-        $resultCode = $request->get('result_code');
-        $resultDescription = $request->get('result_description');
-        $amount = $request->get('amount');
-        $id = $request->get('id');
-
-        if (! $resultCode || ! $resultDescription) {
-            return null;
-        }
-
-        return [
-            'result' => [
-                'code' => $resultCode,
-                'description' => $resultDescription,
-            ],
-            'amount' => $amount,
-            'id' => $id,
-            'merchantTransactionId' => $request->get('merchantTransactionId'),
-        ];
     }
 
     private function buildCustomerData(): array

@@ -301,17 +301,6 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
                 return $this->respondFailure($request, 'User not found.', 404);
             }
 
-            if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
-                $this->markPaymentAttemptPaid($this->resolveAttemptId($request, $data), [
-                    'gateway_transaction_id' => $checkoutId,
-                    'gateway_checkout_id' => $checkoutId,
-                    'gateway_response' => $checkout,
-                    'callback_payload' => $request->all(),
-                ]);
-                session()->forget('tamara_payment');
-                return $this->respondSuccess($request, 'Payment already finalized.');
-            }
-
             $subMethodService = app(PaymentSubMethodsService::class);
             $fakeRequest = new Request((array) ($data['submethods'] ?? []));
             $subResult = $subMethodService->apply($payerUserId, $fakeRequest, $data['final_before_sub']);
@@ -326,6 +315,43 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
                 session()->forget('tamara_payment');
                 return $this->respondFailure($request, $subResult['error'], 422);
             }
+
+            $expectedAmount = (float) ($data['amount'] ?? ($subResult['remaining_amount'] ?? 0));
+            $paidAmount = (float) (data_get($checkout, 'total_amount.amount') ?? data_get($checkout, 'amount') ?? 0);
+
+            if ($expectedAmount > 0 && ($paidAmount <= 0 || abs($expectedAmount - $paidAmount) > 0.01)) {
+                $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), app()->getLocale() === 'ar'
+                    ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                    : 'Paid amount does not match expected amount.', [
+                    'gateway_order_id' => $tamaraOrderId,
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $checkout,
+                    'callback_payload' => $request->all(),
+                    'expected_amount' => $expectedAmount,
+                    'paid_amount' => $paidAmount,
+                ]);
+                session()->forget('tamara_payment');
+
+                return $this->respondFailure(
+                    $request,
+                    app()->getLocale() === 'ar'
+                        ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                        : 'Paid amount does not match expected amount.',
+                    422
+                );
+            }
+
+            if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                $this->markPaymentAttemptPaid($this->resolveAttemptId($request, $data), [
+                    'gateway_transaction_id' => $checkoutId,
+                    'gateway_checkout_id' => $checkoutId,
+                    'gateway_response' => $checkout,
+                    'callback_payload' => $request->all(),
+                ]);
+                session()->forget('tamara_payment');
+                return $this->respondSuccess($request, 'Payment already finalized.');
+            }
+
             $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
                 'attempt_id' => $data['attempt_id'] ?? null,
                 'transaction_id' => $checkoutId,
@@ -361,16 +387,6 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             return $this->respondFailure($request, 'Discount amount mismatch.', 422);
         }
 
-        if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
-            $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
-                'gateway_transaction_id' => $checkoutId,
-                'gateway_checkout_id' => $checkoutId,
-                'gateway_response' => $checkout,
-                'callback_payload' => $request->all(),
-            ]);
-            return $this->respondSuccess($request, 'Payment already finalized.');
-        }
-
         $subMethodService = app(PaymentSubMethodsService::class);
         $fakeRequest = new Request([
             'wallet' => $context['wallet'],
@@ -388,6 +404,42 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             ]);
             return $this->respondFailure($request, $subResult['error'], 422);
         }
+
+        $expectedAmount = (float) ($subResult['remaining_amount'] ?? 0);
+        $paidAmount = (float) (data_get($checkout, 'total_amount.amount') ?? data_get($checkout, 'amount') ?? 0);
+
+        if ($expectedAmount > 0 && ($paidAmount <= 0 || abs($expectedAmount - $paidAmount) > 0.01)) {
+            $this->markPaymentAttemptFailed($context['attempt_id'] ?? null, app()->getLocale() === 'ar'
+                ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                : 'Paid amount does not match expected amount.', [
+                'gateway_order_id' => $tamaraOrderId,
+                'gateway_transaction_id' => $checkoutId,
+                'gateway_checkout_id' => $checkoutId,
+                'gateway_response' => $checkout,
+                'callback_payload' => $request->all(),
+                'expected_amount' => $expectedAmount,
+                'paid_amount' => $paidAmount,
+            ]);
+
+            return $this->respondFailure(
+                $request,
+                app()->getLocale() === 'ar'
+                    ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                    : 'Paid amount does not match expected amount.',
+                422
+            );
+        }
+
+        if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
+            $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
+                'gateway_transaction_id' => $checkoutId,
+                'gateway_checkout_id' => $checkoutId,
+                'gateway_response' => $checkout,
+                'callback_payload' => $request->all(),
+            ]);
+            return $this->respondSuccess($request, 'Payment already finalized.');
+        }
+
         $this->commitFinalizedPayment($user->id, $fakeRequest, [
             'final_before_sub' => $totalData['total'],
             'tax' => $totalData['tax'],
