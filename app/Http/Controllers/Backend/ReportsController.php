@@ -284,15 +284,33 @@ class ReportsController extends Controller
                 : json_decode($gift->requested_services ?? '[]', true);
             $giftItemsCount = is_array($servicesList) && count($servicesList) > 0 ? count($servicesList) : 1;
 
-            $giftGross = (float) ($gift->subtotal ?? 0);
-            if ($giftGross <= 0) {
-                $giftGross = (float) ($gift->balance ?? 0);
+            $giftShipping = (float) ($gift->options_amount ?? 0);
+            $giftSubtotal = (float) ($gift->subtotal ?? 0);
+            if ($giftSubtotal <= 0) {
+                $giftSubtotal = (float) ($gift->balance ?? 0);
             }
+
+            $giftCoupons = is_array($gift->coupons) ? $gift->coupons : (json_decode($gift->coupons ?? '[]', true) ?? []);
+            $giftDiscount = 0.0;
+            if (is_array($giftCoupons)) {
+                foreach ($giftCoupons as $gc) {
+                    if (is_array($gc) && isset($gc['price'])) {
+                        $giftDiscount += (float) $gc['price'];
+                    } elseif (is_numeric($gc)) {
+                        $giftDiscount += (float) $gc;
+                    }
+                }
+            }
+
+            $giftGross = $giftSubtotal + $giftShipping;
+            $giftNet = max(0, $giftGross - $giftDiscount);
 
             $periodMap[$dateStr]['orders_count'] += 1;
             $periodMap[$dateStr]['items_count'] += $giftItemsCount;
             $periodMap[$dateStr]['gross_sales'] += $giftGross;
-            $periodMap[$dateStr]['net_sales'] += $giftGross;
+            $periodMap[$dateStr]['net_sales'] += $giftNet;
+            $periodMap[$dateStr]['shipping_cost'] += $giftShipping;
+            $periodMap[$dateStr]['coupons_value'] += $giftDiscount;
         }
 
         ksort($periodMap);
