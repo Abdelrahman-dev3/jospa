@@ -45,13 +45,8 @@
     }
     .woo-filter-bar {
         background: #fff;
-        padding: 12px 15px;
+        padding: 14px 18px;
         border-bottom: 1px solid #e5e5e5;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
     }
     .woo-presets-group .btn-preset {
         background: #f7f7f7;
@@ -67,6 +62,19 @@
         background: #0073aa;
         border-color: #0073aa;
         color: #fff;
+    }
+    .filter-section-box {
+        background: #fbfbfb;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 12px;
+    }
+    .filter-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 4px;
     }
     .woo-summary-card {
         border-left: 4px solid #0073aa;
@@ -97,6 +105,15 @@
         border-radius: 4px;
         padding: 15px;
         min-height: 380px;
+    }
+    .select2-container--default .select2-selection--single {
+        height: 34px !important;
+        padding: 2px 5px !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 4px !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 32px !important;
     }
 </style>
 
@@ -130,25 +147,154 @@
 
     <!-- Date Preset & Filter Bar -->
     <div class="woo-filter-bar">
-        <div class="d-flex align-items-center flex-wrap gap-2">
-            <div class="woo-presets-group d-flex gap-1" id="preset-buttons">
-                <button type="button" class="btn btn-preset" data-preset="this_year">{{ __('report.year_preset') }}</button>
-                <button type="button" class="btn btn-preset" data-preset="last_month">{{ __('report.last_month_preset') }}</button>
-                <button type="button" class="btn btn-preset active" data-preset="this_month">{{ __('report.this_month_preset') }}</button>
-                <button type="button" class="btn btn-preset" data-preset="last_7_days">{{ __('report.last_7_days_preset') }}</button>
+        <div class="d-flex align-items-center flex-wrap justify-content-between gap-2">
+            <!-- Left: Preset Buttons & Custom Date Range -->
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <div class="woo-presets-group d-flex gap-1" id="preset-buttons">
+                    <button type="button" class="btn btn-preset" data-preset="this_year">{{ __('report.year_preset') }}</button>
+                    <button type="button" class="btn btn-preset" data-preset="last_month">{{ __('report.last_month_preset') }}</button>
+                    <button type="button" class="btn btn-preset active" data-preset="this_month">{{ __('report.this_month_preset') }}</button>
+                    <button type="button" class="btn btn-preset" data-preset="last_7_days">{{ __('report.last_7_days_preset') }}</button>
+                </div>
+
+                <div class="d-flex align-items-center gap-1 ms-1">
+                    <span class="fs-13 text-muted">{{ __('report.custom_date_preset') }}:</span>
+                    <input type="text" id="custom_date_range" class="form-control form-control-sm" style="width: 200px;" placeholder="yyyy-mm-dd - yyyy-mm-dd" readonly />
+                </div>
             </div>
 
-            <div class="d-flex align-items-center gap-1 ms-2">
-                <span class="fs-13 text-muted">{{ __('report.custom_date_preset') }}:</span>
-                <input type="text" id="custom_date_range" class="form-control form-control-sm" style="width: 210px;" placeholder="yyyy-mm-dd - yyyy-mm-dd" readonly />
-                <button type="button" id="btn-apply-custom" class="btn btn-sm btn-primary">{{ __('report.apply_filter') }}</button>
+            <!-- Right: Export CSV & Toggle Advanced Filters -->
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-toggle-filters">
+                    <i class="fa fa-filter me-1"></i> {{ __('report.advanced_filters') }}
+                </button>
+                <a href="#" id="btn-export-csv" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa fa-download me-1"></i> {{ __('report.export_csv') }}
+                </a>
             </div>
         </div>
 
-        <div>
-            <a href="#" id="btn-export-csv" class="btn btn-sm btn-outline-secondary">
-                <i class="fa fa-download me-1"></i> {{ __('report.export_csv') }}
-            </a>
+        <!-- Advanced Filter Options Container -->
+        <div class="filter-section-box" id="advanced-filter-panel">
+            <div class="row g-2">
+                <!-- Branch Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-building me-1 text-primary"></i> {{ __('report.filter_branch') }}</label>
+                    <select id="filter_branch_id" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_branches') }}</option>
+                        @if(isset($branches))
+                            @foreach($branches as $branch)
+                                <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-layer-group me-1 text-info"></i> {{ __('report.filter_category') }}</label>
+                    <select id="filter_category_id" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_categories') }}</option>
+                        @if(isset($categories))
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Service Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-spa me-1 text-success"></i> {{ __('report.filter_service') }}</label>
+                    <select id="filter_service_id" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_services') }}</option>
+                        @if(isset($services))
+                            @foreach($services as $service)
+                                <option value="{{ $service->id }}">{{ $service->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Employee / Staff Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-user-tie me-1 text-warning"></i> {{ __('report.filter_employee') }}</label>
+                    <select id="filter_employee_id" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_employees') }}</option>
+                        @if(isset($employees))
+                            @foreach($employees as $employee)
+                                <option value="{{ $employee->id }}">{{ $employee->first_name }} {{ $employee->last_name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+
+                <!-- Customer Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-user me-1 text-secondary"></i> {{ __('report.filter_customer') }}</label>
+                    <select id="filter_customer_id" class="form-control form-control-sm select2-ajax" data-placeholder="{{ __('report.search_customer_placeholder') }}">
+                        <option value="">{{ __('report.all_customers') }}</option>
+                    </select>
+                </div>
+
+                <!-- Payment Method Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-credit-card me-1 text-dark"></i> {{ __('report.filter_payment_method') }}</label>
+                    <select id="filter_payment_method" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_payment_methods') }}</option>
+                        <option value="cash">{{ __('report.payment_cash') }}</option>
+                        <option value="urpay">UrPay</option>
+                        <option value="card">Card / مدى</option>
+                        <option value="wallet">{{ __('report.payment_wallet') }}</option>
+                        <option value="tabby">Tabby</option>
+                        <option value="tamara">Tamara</option>
+                    </select>
+                </div>
+
+                <!-- Booking Status Filter -->
+                <div class="col-md-2 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-info-circle me-1 text-primary"></i> {{ __('report.filter_status') }}</label>
+                    <select id="filter_booking_status" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_statuses') }}</option>
+                        <option value="completed">{{ __('report.status_completed') }}</option>
+                        <option value="pending">{{ __('report.status_pending') }}</option>
+                        <option value="confirmed">{{ __('report.status_confirmed') }}</option>
+                        <option value="cancelled">{{ __('report.status_cancelled') }}</option>
+                    </select>
+                </div>
+
+                <!-- Service Type Filter -->
+                <div class="col-md-2 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-tags me-1 text-danger"></i> {{ __('report.filter_service_type') }}</label>
+                    <select id="filter_service_type" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_service_types') }}</option>
+                        <option value="salon">{{ __('report.type_salon') }}</option>
+                        <option value="home">{{ __('report.type_home') }}</option>
+                        <option value="gift_card">{{ __('report.type_gift_card') }}</option>
+                        <option value="package">{{ __('report.type_package') }}</option>
+                    </select>
+                </div>
+
+                <!-- Coupon Filter -->
+                <div class="col-md-2 col-sm-6">
+                    <label class="filter-label"><i class="fa fa-ticket me-1 text-success"></i> {{ __('report.filter_coupon') }}</label>
+                    <select id="filter_has_coupon" class="form-control form-control-sm select2">
+                        <option value="">{{ __('report.all_coupon_options') }}</option>
+                        <option value="yes">{{ __('report.coupon_applied_only') }}</option>
+                        <option value="no">{{ __('report.no_coupon_only') }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                <button type="button" id="btn-reset-filters" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa fa-redo me-1"></i> {{ __('report.btn_reset_filters') }}
+                </button>
+                <button type="button" id="btn-apply-filters" class="btn btn-sm btn-primary px-3">
+                    <i class="fa fa-search me-1"></i> {{ __('report.btn_apply_filters') }}
+                </button>
+            </div>
         </div>
     </div>
 
@@ -224,11 +370,13 @@
 @push('after-styles')
 <link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 @endpush
 
 @push('after-scripts')
 <script src="{{ asset('vendor/datatable/datatables.min.js') }}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script type="text/javascript">
     let currentPreset = 'this_month';
@@ -237,15 +385,51 @@
     let salesDataTable = null;
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Flatpickr
         if (typeof flatpickr !== 'undefined') {
             flatpickr('#custom_date_range', {
                 mode: 'range',
                 dateFormat: 'Y-m-d',
                 onChange: function(selectedDates, dateStr) {
                     currentDateRange = dateStr;
+                    if (dateStr) {
+                        document.querySelectorAll('#preset-buttons .btn-preset').forEach(b => b.classList.remove('active'));
+                        currentPreset = 'custom';
+                        loadSalesData();
+                    }
                 }
             });
         }
+
+        // Initialize Select2 dropdowns
+        $('.select2').select2({
+            width: '100%',
+            allowClear: true
+        });
+
+        // Initialize Customer Select2 with AJAX search
+        $('#filter_customer_id').select2({
+            width: '100%',
+            allowClear: true,
+            placeholder: "{{ __('report.search_customer_placeholder') }}",
+            ajax: {
+                url: "{{ route('backend.search-datalist') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        type: 'customers',
+                        q: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.results || []
+                    };
+                },
+                cache: true
+            }
+        });
 
         initSalesChart();
         loadSalesData();
@@ -262,27 +446,55 @@
             });
         });
 
-        // Apply custom date range click handler
-        document.getElementById('btn-apply-custom').addEventListener('click', function() {
-            const val = document.getElementById('custom_date_range').value;
-            if (val) {
-                document.querySelectorAll('#preset-buttons .btn-preset').forEach(b => b.classList.remove('active'));
-                currentPreset = 'custom';
-                currentDateRange = val;
-                loadSalesData();
-            }
+        // Apply filters button handler
+        document.getElementById('btn-apply-filters').addEventListener('click', function() {
+            loadSalesData();
+        });
+
+        // Reset filters button handler
+        document.getElementById('btn-reset-filters').addEventListener('click', function() {
+            $('#filter_branch_id').val('').trigger('change');
+            $('#filter_category_id').val('').trigger('change');
+            $('#filter_service_id').val('').trigger('change');
+            $('#filter_employee_id').val('').trigger('change');
+            $('#filter_customer_id').val(null).trigger('change');
+            $('#filter_payment_method').val('').trigger('change');
+            $('#filter_booking_status').val('').trigger('change');
+            $('#filter_service_type').val('').trigger('change');
+            $('#filter_has_coupon').val('').trigger('change');
+            loadSalesData();
+        });
+
+        // Toggle advanced filters panel
+        document.getElementById('btn-toggle-filters').addEventListener('click', function() {
+            $('#advanced-filter-panel').slideToggle(200);
         });
 
         // Export CSV button handler
         document.getElementById('btn-export-csv').addEventListener('click', function(e) {
             e.preventDefault();
-            let exportUrl = "{{ route('backend.reports.sales-by-date.export') }}?preset=" + currentPreset;
-            if (currentDateRange) {
-                exportUrl += "&date_range=" + encodeURIComponent(currentDateRange);
-            }
+            let filterParams = getFilterParams();
+            let queryStr = $.param(filterParams);
+            let exportUrl = "{{ route('backend.reports.sales-by-date.export') }}?" + queryStr;
             window.location.href = exportUrl;
         });
     });
+
+    function getFilterParams() {
+        return {
+            preset: currentPreset,
+            date_range: currentDateRange,
+            branch_id: $('#filter_branch_id').val() || '',
+            category_id: $('#filter_category_id').val() || '',
+            service_id: $('#filter_service_id').val() || '',
+            employee_id: $('#filter_employee_id').val() || '',
+            customer_id: $('#filter_customer_id').val() || '',
+            payment_method: $('#filter_payment_method').val() || '',
+            booking_status: $('#filter_booking_status').val() || '',
+            service_type: $('#filter_service_type').val() || '',
+            has_coupon: $('#filter_has_coupon').val() || ''
+        };
+    }
 
     function initSalesChart() {
         const options = {
@@ -323,13 +535,12 @@
     }
 
     function loadSalesData() {
+        const payload = getFilterParams();
+
         $.ajax({
             url: "{{ route('backend.reports.sales-by-date.index_data') }}",
             type: 'GET',
-            data: {
-                preset: currentPreset,
-                date_range: currentDateRange
-            },
+            data: payload,
             success: function(response) {
                 if (response.summary) {
                     $('#val-gross-sales').text(response.summary.gross_sales_formatted);
