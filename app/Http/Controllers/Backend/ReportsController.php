@@ -219,10 +219,22 @@ class ReportsController extends Controller
             }
 
             if ($paymentMethod) {
-                $bookingQuery->where(function ($q) use ($paymentMethod) {
-                    $q->where('payment_type', $paymentMethod)
-                        ->orWhereHas('transactions', function ($tq) use ($paymentMethod) {
-                            $tq->where('transaction_type', $paymentMethod);
+                $aliases = match (strtolower($paymentMethod)) {
+                    'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
+                    'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
+                    'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
+                    'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
+                    'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
+                    'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
+                    default => [$paymentMethod, strtolower($paymentMethod), ucfirst($paymentMethod), strtoupper($paymentMethod)],
+                };
+
+                $bookingQuery->where(function ($q) use ($aliases, $paymentMethod) {
+                    $q->whereIn('payment_type', $aliases)
+                        ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%')
+                        ->orWhereHas('transactions', function ($tq) use ($aliases, $paymentMethod) {
+                            $tq->whereIn('transaction_type', $aliases)
+                                ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
                         });
                 });
             }
@@ -271,7 +283,19 @@ class ReportsController extends Controller
                 $giftQuery->whereJsonContains('requested_services', (string) $serviceId);
             }
             if ($paymentMethod) {
-                $giftQuery->where('payment_type', $paymentMethod);
+                $aliases = match (strtolower($paymentMethod)) {
+                    'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
+                    'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
+                    'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
+                    'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
+                    'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
+                    'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
+                    default => [$paymentMethod, strtolower($paymentMethod), ucfirst($paymentMethod), strtoupper($paymentMethod)],
+                };
+                $giftQuery->where(function ($q) use ($aliases, $paymentMethod) {
+                    $q->whereIn('payment_type', $aliases)
+                        ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%');
+                });
             }
             if ($couponFilter === 'yes') {
                 $giftQuery->whereNotNull('coupons');
