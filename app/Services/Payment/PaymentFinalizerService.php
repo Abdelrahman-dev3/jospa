@@ -25,7 +25,6 @@ use Modules\Product\Models\Product;
 use App\Models\GiftCard;
 use Illuminate\Support\Facades\DB;
 use App\Models\Setting;
-use Illuminate\Support\Str;
 use App\Services\GiftCardActivationService;
 
 class PaymentFinalizerService
@@ -105,7 +104,7 @@ class PaymentFinalizerService
             
                 foreach ($giftCards as $gift) {
                     $gift->update([
-                        'ref' => 'GC-' . now()->format('YmdHis') . '-' . strtoupper(Str::random(6)),
+                        'ref' => $gift->ref ?: GiftCard::generateUniqueReference(),
                         'balance' => $gift->subtotal,
                     ]);
                 }

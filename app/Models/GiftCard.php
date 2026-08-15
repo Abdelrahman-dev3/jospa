@@ -30,6 +30,28 @@ class GiftCard extends Model
         'requested_services' => 'array',
         'package_ids' => 'array',
     ];
+
+    public static function generateUniqueReference(): string
+    {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $reference = sprintf(
+                '%04d-%04d-%d%s%d%s',
+                random_int(0, 9999),
+                random_int(0, 9999),
+                random_int(0, 9),
+                chr(random_int(97, 122)),
+                random_int(0, 9),
+                chr(random_int(97, 122))
+            );
+
+            if (! static::where('ref', $reference)->exists()) {
+                return $reference;
+            }
+        }
+
+        throw new \RuntimeException('Unable to generate a unique gift card reference.');
+    }
+
 public function getCouponsAttribute($value)
 {
     return json_decode($value, true) ?? [];

@@ -16,7 +16,6 @@ use Carbon\Carbon;
 use App\Models\GiftCard;
 use App\Services\GiftCardActivationService;
 use App\Services\OdooBookingSyncService;
-use Illuminate\Support\Str;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\Cart;
 use App\Services\Payment\PaymentCalculatorService;
@@ -819,7 +818,7 @@ class BookingCartController extends Controller
             $balance = 0;
     
             if (in_array($giftCard->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true)) {
-                $ref = 'REF-' . strtoupper(Str::random(8));
+                $ref = GiftCard::generateUniqueReference();
                 $balance = $giftCard->subtotal;
             }
     

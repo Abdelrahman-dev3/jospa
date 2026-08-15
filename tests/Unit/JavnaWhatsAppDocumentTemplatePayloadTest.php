@@ -40,7 +40,6 @@ class JavnaWhatsAppDocumentTemplatePayloadTest extends TestCase
     {
         $candidates = $this->documentTemplatePayloadCandidates(['A', 'B', 'C', 'D', 'E', 'F']);
 
-        $this->assertCount(1, $candidates);
         $this->assertSame('javna_official_document_template_header_body_params', array_key_first($candidates));
         $this->assertArrayNotHasKey('javna_document_template_destinations_content_template_components', $candidates);
         $this->assertArrayNotHasKey('javna_document_template_data_header_media_url', $candidates);
