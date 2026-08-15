@@ -87,6 +87,15 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
         }
         $bookings = $bookingQuery->get();
 
+        $giftQuery = GiftCard::query()->where('payment_status', 1);
+        if ($startDate) {
+            $giftQuery->whereDate('created_at', '>=', $startDate->toDateString());
+        }
+        if ($endDate) {
+            $giftQuery->whereDate('created_at', '<=', $endDate->toDateString());
+        }
+        $giftCards = $giftQuery->get();
+
         $periodMap = [];
         if ($startDate && $endDate) {
             $cursor = clone $startDate;
@@ -189,6 +198,40 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
             $periodMap[$dateStr]['gross_sales'] += $gross;
             $periodMap[$dateStr]['net_sales'] += $net;
             $periodMap[$dateStr]['coupons_value'] += $couponDiscount;
+        }
+
+        foreach ($giftCards as $gift) {
+            $dateStr = optional($gift->created_at)->format('Y-m-d');
+            if (! $dateStr) {
+                continue;
+            }
+
+            if (! isset($periodMap[$dateStr])) {
+                $periodMap[$dateStr] = [
+                    'date' => $dateStr,
+                    'orders_count' => 0,
+                    'items_count' => 0,
+                    'gross_sales' => 0.0,
+                    'net_sales' => 0.0,
+                    'shipping_cost' => 0.0,
+                    'coupons_value' => 0.0,
+                ];
+            }
+
+            $servicesList = is_array($gift->requested_services)
+                ? $gift->requested_services
+                : json_decode($gift->requested_services ?? '[]', true);
+            $giftItemsCount = is_array($servicesList) && count($servicesList) > 0 ? count($servicesList) : 1;
+
+            $giftGross = (float) ($gift->subtotal ?? 0);
+            if ($giftGross <= 0) {
+                $giftGross = (float) ($gift->balance ?? 0);
+            }
+
+            $periodMap[$dateStr]['orders_count'] += 1;
+            $periodMap[$dateStr]['items_count'] += $giftItemsCount;
+            $periodMap[$dateStr]['gross_sales'] += $giftGross;
+            $periodMap[$dateStr]['net_sales'] += $giftGross;
         }
 
         ksort($periodMap);
