@@ -532,6 +532,90 @@ class OdooBookingSyncService
         return null;
     }
 
+    private function extractGiftCardDocument(array $giftItem): ?string
+    {
+        foreach ([
+            'pdf',
+            'pdf_base64',
+            'pdf_url',
+            'gift_card_pdf',
+            'gift_card_pdf_base64',
+            'gift_card_pdf_url',
+            'giftcard_pdf',
+            'giftcard_pdf_base64',
+            'giftcard_pdf_url',
+            'document',
+            'document_base64',
+            'document_url',
+        ] as $key) {
+            $value = data_get($giftItem, $key);
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    private function resolvePublicPdfUrl(string $fileUrlOrBase64, string $filename): ?string
+    {
+        $fileUrlOrBase64 = trim($fileUrlOrBase64);
+
+        if ($fileUrlOrBase64 === '') {
+            return null;
+        }
+
+        if (str_starts_with($fileUrlOrBase64, 'http://') || str_starts_with($fileUrlOrBase64, 'https://')) {
+            return $fileUrlOrBase64;
+        }
+
+        $base64Data = preg_replace('#^data:application/[^;]+;base64,#i', '', $fileUrlOrBase64);
+        $base64Data = str_replace([' ', "\r", "\n"], '', (string) $base64Data);
+
+        return $this->saveBase64PdfToPublicStorage($base64Data, $filename);
+    }
+
+    private function saveBase64PdfToPublicStorage(string $base64Data, string $filename): ?string
+    {
+        try {
+            $decoded = base64_decode($base64Data, true);
+            if ($decoded === false) {
+                return null;
+            }
+
+            $sanitizedFilename = $this->normalizePdfFilename($filename);
+            $directory = public_path('media/pdfs');
+
+            if (! is_dir($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            file_put_contents($directory . '/' . $sanitizedFilename, $decoded);
+
+            return url('media/pdfs/' . $sanitizedFilename);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to save Odoo gift card PDF to public storage.', [
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function normalizePdfFilename(string $filename): string
+    {
+        $normalizedFilename = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', trim($filename));
+        $normalizedFilename = is_string($normalizedFilename) && $normalizedFilename !== ''
+            ? $normalizedFilename
+            : 'gift-card.pdf';
+
+        return str_ends_with(strtolower($normalizedFilename), '.pdf')
+            ? $normalizedFilename
+            : $normalizedFilename . '.pdf';
+    }
+
     private function extractGiftCardsCreated(array $data): array
     {
         foreach ([
@@ -671,12 +755,12 @@ class OdooBookingSyncService
                         continue;
                     }
 
-                    $giftPdfBase64 = $giftItem['pdf'] ?? null;
+                    $giftDocument = $this->extractGiftCardDocument($giftItem);
                     $code = $giftItem['code'] ?? null;
                     $amount = $giftItem['amount'] ?? 0;
                     $isGift = ! empty($giftItem['is_gift']);
 
-                    if (blank($giftPdfBase64)) {
+                    if (blank($giftDocument)) {
                         Log::warning('Gift card created PDF is missing in Odoo response.', [
                             'invoice_id' => $invoice->id,
                             'index' => $index,
@@ -714,6 +798,36 @@ class OdooBookingSyncService
                     }
 
                     $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : ($index + 1)) . ".pdf";
+                    $giftPdfUrl = $this->resolvePublicPdfUrl((string) $giftDocument, $giftCardFilename);
+
+                    if ($matchingGiftCard && filled($giftPdfUrl)) {
+                        try {
+                            $matchingGiftCard->forceFill([
+                                'pdf_url' => $giftPdfUrl,
+                            ])->save();
+                            $matchingGiftCard->pdf_url = $giftPdfUrl;
+
+                            Log::info('Gift card PDF URL saved from Odoo response.', [
+                                'invoice_id' => $invoice->id,
+                                'gift_card_id' => $matchingGiftCard->id,
+                                'code' => $code,
+                                'pdf_url' => $giftPdfUrl,
+                            ]);
+                        } catch (\Throwable $e) {
+                            Log::warning('Gift card PDF URL could not be saved for SMS delivery.', [
+                                'invoice_id' => $invoice->id,
+                                'gift_card_id' => $matchingGiftCard->id,
+                                'code' => $code,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    } elseif (blank($giftPdfUrl)) {
+                        Log::warning('Gift card PDF URL could not be resolved for SMS delivery.', [
+                            'invoice_id' => $invoice->id,
+                            'gift_card_id' => $matchingGiftCard?->id,
+                            'code' => $code,
+                        ]);
+                    }
 
                     $giftCaption = "مرحباً {$recipientName}، لقد تلقيت بطاقة إهداء من {$senderName} من جو سبا (JO SPA)!";
                     if ($personalMessage !== '') {
@@ -732,7 +846,7 @@ class OdooBookingSyncService
                     $sentGift = $giftTemplateName !== ''
                         ? $whatsAppService->sendTemplateWithDocument(
                             phone: (string) $targetPhone,
-                            fileUrlOrBase64: (string) $giftPdfBase64,
+                            fileUrlOrBase64: (string) ($giftPdfUrl ?: $giftDocument),
                             filename: $giftCardFilename,
                             variables: $giftTemplateVariables,
                             templateName: $giftTemplateName,

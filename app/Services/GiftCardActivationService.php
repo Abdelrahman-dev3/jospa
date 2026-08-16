@@ -72,6 +72,8 @@ class GiftCardActivationService
 
     private function sendNotificationsForGiftCard(GiftCard $giftCard, bool $sendWhatsApp = true, bool $sendSms = true): void
     {
+        $giftCard = $giftCard->fresh() ?: $giftCard;
+
         if ($this->shouldNotifyRecipient($giftCard) && filled($giftCard->recipient_phone)) {
             if ($sendSms) {
                 $this->smsService->sendGift(
@@ -83,6 +85,8 @@ class GiftCardActivationService
                         'recipient_phone' => $giftCard->recipient_phone,
                         'gift_message' => $giftCard->message,
                         'ref' => $giftCard->ref,
+                        'pdf_url' => $giftCard->pdf_url,
+                        'gift_pdf_url' => $giftCard->pdf_url,
                     ],
                     'recipient'
                 );

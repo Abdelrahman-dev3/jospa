@@ -101,6 +101,8 @@ class TaqnyatSmsService
             'recipient_name' => '',
             'recipient_phone' => '',
             'ref' => $ref,
+            'pdf_url' => '',
+            'gift_pdf_url' => '',
             'gift_message' => '',
             'gift_message_line' => '',
         ];
@@ -214,6 +216,7 @@ class TaqnyatSmsService
         $recipientName = trim((string) ($variables['recipient_name'] ?? ''));
         $recipientPhone = trim((string) ($variables['recipient_phone'] ?? ''));
         $reference = trim((string) ($variables['ref'] ?? ''));
+        $pdfUrl = trim((string) ($variables['gift_pdf_url'] ?? $variables['pdf_url'] ?? ''));
         $giftMessage = $this->sanitizeGiftMessage($variables['gift_message'] ?? '');
 
         $lines = [];
@@ -231,6 +234,10 @@ class TaqnyatSmsService
 
         if ($reference !== '') {
             $lines[] = "الرقم المرجعي للحصول على الهدية من الموقع: {$reference}";
+        }
+
+        if ($pdfUrl !== '') {
+            $lines[] = "رابط بطاقة الهدية: {$pdfUrl}";
         }
 
         if ($giftMessage !== '') {

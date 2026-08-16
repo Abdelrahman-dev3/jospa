@@ -11,6 +11,7 @@ class GiftCard extends Model
     protected $fillable = [
         'ref',
         'balance',
+        'pdf_url',
         'delivery_method',
         'sender_name',
         'recipient_name',
