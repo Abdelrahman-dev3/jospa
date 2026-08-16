@@ -43,25 +43,36 @@ class SearchController extends Controller
 
         switch ($type) {
             case 'employees':
-                // Need To Add Role Base
-                $items = User::role('employee')->select('id', \DB::raw("CONCAT(first_name,' ',last_name) AS text"));
-                if ($keyword != '') {
-                    $items->where(\DB::raw("CONCAT(first_name, ' ', last_name)"), 'LIKE', '%'.$keyword.'%');
-                }
-                $items = $items->limit(50)->get();
-                break;
-            case 'customers':
-                $items = User::role('user')->select(
+                $items = User::role('employee')->select(
                     'id',
-                    \DB::raw("TRIM(CONCAT(first_name,' ',last_name, IF(mobile IS NOT NULL AND mobile != '', CONCAT(' - ', mobile), ''))) AS text")
+                    \DB::raw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''), IF(mobile IS NOT NULL AND mobile != '', CONCAT(' - ', mobile), ''))) AS text")
                 );
-                if ($keyword != '') {
+                if (!empty($keyword) && $keyword !== 'undefined') {
                     $items->where(function ($query) use ($keyword) {
-                        $query->where(\DB::raw("CONCAT(first_name, ' ', last_name)"), 'LIKE', '%'.$keyword.'%')
+                        $query->where(\DB::raw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))"), 'LIKE', '%'.$keyword.'%')
                             ->orWhere('mobile', 'LIKE', '%'.$keyword.'%');
                     });
                 }
                 $items = $items->limit(50)->get();
+                break;
+            case 'customers':
+                $items = User::where(function ($q) {
+                    $q->whereHas('roles', function ($rq) {
+                        $rq->whereIn('name', ['user', 'customer', 'client']);
+                    })->orWhereDoesntHave('roles');
+                })->select(
+                    'id',
+                    \DB::raw("TRIM(CONCAT(COALESCE(first_name,''),' ',COALESCE(last_name,''), IF(mobile IS NOT NULL AND mobile != '', CONCAT(' - ', mobile), IF(email IS NOT NULL AND email != '', CONCAT(' - ', email), '')))) AS text")
+                );
+                if (!empty($keyword) && $keyword !== 'undefined') {
+                    $items->where(function ($query) use ($keyword) {
+                        $query->where(\DB::raw("CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))"), 'LIKE', '%'.$keyword.'%')
+                            ->orWhere('mobile', 'LIKE', '%'.$keyword.'%')
+                            ->orWhere('email', 'LIKE', '%'.$keyword.'%')
+                            ->orWhere('id', $keyword);
+                    });
+                }
+                $items = $items->orderBy('id', 'desc')->limit(50)->get();
                 break;
             case 'services':
                 $items = Service::select('id', 'name as text');

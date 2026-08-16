@@ -178,19 +178,6 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         if ($data) {
-            if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
-                $this->markPaymentAttemptPaid($this->resolveAttemptId($request, $data), [
-                    'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
-                    'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
-                    'merchant_reference' => $data['invoice_reference'] ?? null,
-                    'callback_payload' => $request->all(),
-                    'gateway_response' => $this->getDecryptedResponsePayload($request),
-                ]);
-                session()->forget('urpay_payment');
-
-                return $this->respondSuccess($request, 'Payment already finalized.');
-            }
-
             $subMethodService = app(PaymentSubMethodsService::class);
             $fakeRequest = new Request([
                 'wallet' => $data['submethods']['wallet'] ?? false,
@@ -204,12 +191,52 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 return $this->respondFailure($request, $subResult['error'], 422);
             }
 
+            $expectedAmount = (float) ($data['amount'] ?? $subResult['remaining_amount'] ?? 0);
+            $decryptedPayload = $this->getDecryptedResponsePayload($request);
+            $paidAmount = $this->resolveUrPayPaidAmount($decryptedPayload);
+
+            if ($expectedAmount > 0 && ($paidAmount <= 0 || abs($expectedAmount - $paidAmount) > 0.01)) {
+                $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), app()->getLocale() === 'ar'
+                    ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                    : 'Paid amount does not match expected amount.', [
+                    'merchant_reference' => $data['invoice_reference'] ?? null,
+                    'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                    'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                    'gateway_response' => $decryptedPayload,
+                    'callback_payload' => $request->all(),
+                    'expected_amount' => $expectedAmount,
+                    'paid_amount' => $paidAmount,
+                ]);
+                session()->forget('urpay_payment');
+
+                return $this->respondFailure(
+                    $request,
+                    app()->getLocale() === 'ar'
+                        ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                        : 'Paid amount does not match expected amount.',
+                    422
+                );
+            }
+
+            if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                $this->markPaymentAttemptPaid($this->resolveAttemptId($request, $data), [
+                    'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),
+                    'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
+                    'merchant_reference' => $data['invoice_reference'] ?? null,
+                    'callback_payload' => $request->all(),
+                    'gateway_response' => $decryptedPayload,
+                ]);
+                session()->forget('urpay_payment');
+
+                return $this->respondSuccess($request, 'Payment already finalized.');
+            }
+
             $invoiceId = $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult, [
                 'attempt_id' => $data['attempt_id'] ?? null,
                 'transaction_id' => $this->resolveUrPayTransactionId($request, $data),
                 'merchant_reference' => $data['invoice_reference'] ?? null,
                 'checkout_id' => $this->resolveUrPayCheckoutId($request, $data),
-                'gateway_response' => $this->getDecryptedResponsePayload($request),
+                'gateway_response' => $decryptedPayload,
                 'callback_payload' => $request->all(),
             ]);
             session()->forget('urpay_payment');
@@ -240,16 +267,6 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             return $this->respondFailure($request, 'Discount amount mismatch.', 422);
         }
 
-        if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
-            $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
-                'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, null),
-                'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, null),
-                'callback_payload' => $request->all(),
-                'gateway_response' => $this->getDecryptedResponsePayload($request),
-            ]);
-            return $this->respondSuccess($request, 'Payment already finalized.');
-        }
-
         $subMethodService = app(PaymentSubMethodsService::class);
         $fakeRequest = new Request([
             'wallet' => $context['wallet'],
@@ -259,6 +276,42 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {
             return $this->respondFailure($request, $subResult['error'], 422);
+        }
+
+        $expectedAmount = (float) ($subResult['remaining_amount'] ?? 0);
+        $decryptedPayload = $this->getDecryptedResponsePayload($request);
+        $paidAmount = $this->resolveUrPayPaidAmount($decryptedPayload);
+
+        if ($expectedAmount > 0 && ($paidAmount <= 0 || abs($expectedAmount - $paidAmount) > 0.01)) {
+            $this->markPaymentAttemptFailed($context['attempt_id'] ?? null, app()->getLocale() === 'ar'
+                ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                : 'Paid amount does not match expected amount.', [
+                'merchant_reference' => $request->get('udf1'),
+                'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, null),
+                'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, null),
+                'gateway_response' => $decryptedPayload,
+                'callback_payload' => $request->all(),
+                'expected_amount' => $expectedAmount,
+                'paid_amount' => $paidAmount,
+            ]);
+
+            return $this->respondFailure(
+                $request,
+                app()->getLocale() === 'ar'
+                    ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                    : 'Paid amount does not match expected amount.',
+                422
+            );
+        }
+
+        if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
+            $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
+                'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, null),
+                'gateway_checkout_id' => $this->resolveUrPayCheckoutId($request, null),
+                'callback_payload' => $request->all(),
+                'gateway_response' => $decryptedPayload,
+            ]);
+            return $this->respondSuccess($request, 'Payment already finalized.');
         }
 
         $invoiceId = $this->commitFinalizedPayment($user->id, $fakeRequest, [
@@ -280,7 +333,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'transaction_id' => $this->resolveUrPayTransactionId($request, null),
             'merchant_reference' => $request->get('udf1'),
             'checkout_id' => $this->resolveUrPayCheckoutId($request, null),
-            'gateway_response' => $this->getDecryptedResponsePayload($request),
+            'gateway_response' => $decryptedPayload,
             'callback_payload' => $request->all(),
         ]);
 
@@ -932,6 +985,18 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             $payload = json_decode(urldecode($unpadded), true);
         }
 
+        if (! is_array($payload) && (str_contains($unpadded, '=') || str_contains($unpadded, '&'))) {
+            parse_str($unpadded, $parsedQuery);
+            if (is_array($parsedQuery) && ! empty($parsedQuery)) {
+                $payload = $parsedQuery;
+            } else {
+                parse_str(urldecode($unpadded), $parsedQueryDecoded);
+                if (is_array($parsedQueryDecoded) && ! empty($parsedQueryDecoded)) {
+                    $payload = $parsedQueryDecoded;
+                }
+            }
+        }
+
         if (! is_array($payload)) {
             return null;
         }
@@ -941,6 +1006,26 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         return is_array($payload) ? $payload : null;
+    }
+
+    private function resolveUrPayPaidAmount(?array $payload): float
+    {
+        if (! is_array($payload)) {
+            return 0.0;
+        }
+
+        $raw = $payload['amt']
+            ?? $payload['amount']
+            ?? $payload['Amt']
+            ?? $payload['Amount']
+            ?? data_get($payload, 'payment.amount')
+            ?? null;
+
+        if ($raw !== null && is_numeric(str_replace(',', '', (string) $raw))) {
+            return (float) str_replace(',', '', (string) $raw);
+        }
+
+        return 0.0;
     }
 
     private function getDecryptedResponsePayload(Request $request): ?array
@@ -1076,7 +1161,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     private function resolveUrPayPayloadStatus(array $payload): ?string
     {
-        $result = strtolower(trim((string) ($payload['result'] ?? '')));
+        $result = strtolower(trim((string) ($payload['result'] ?? $payload['Result'] ?? '')));
         if ($result === '') {
             return null;
         }
@@ -1100,6 +1185,9 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
     {
         return $this->containsAny($result, [
             'captured',
+            'approved',
+            'success',
+            'successful',
             'paid',
             'settled',
         ]);
@@ -1119,6 +1207,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'not approved',
             'not-approved',
             'not_approved',
+            'unsuccessful',
             'fail',
             'declin',
             'denied',

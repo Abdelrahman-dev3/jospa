@@ -2,11 +2,14 @@
 
 namespace App\Exports;
 
+use App\Models\GiftCard;
+use App\Models\Invoice;
 use Carbon\Carbon;
 use Currency;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingTransaction;
 use Modules\Product\Models\OrderGroup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -15,11 +18,13 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
 {
     public array $columns;
     public array $dateRange;
+    public array $filters;
 
-    public function __construct(array $columns, array $dateRange)
+    public function __construct(array $columns, array $dateRange, array $filters = [])
     {
         $this->columns = $columns;
         $this->dateRange = $dateRange;
+        $this->filters = $filters;
     }
 
     public function headings(): array
@@ -38,63 +43,312 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
         $startDate = $this->dateRange[0] ?? null;
         $endDate = $this->dateRange[1] ?? null;
 
-        $orderQuery = OrderGroup::query()->with('order.orderItems');
-        if ($startDate) {
-            $orderQuery->whereDate('created_at', '>=', $startDate->toDateString());
-        }
-        if ($endDate) {
-            $orderQuery->whereDate('created_at', '<=', $endDate->toDateString());
-        }
-        $orders = $orderQuery->get();
+        $branchId = $this->filters['branch_id'] ?? null;
+        $categoryId = $this->filters['category_id'] ?? null;
+        $serviceId = $this->filters['service_id'] ?? null;
+        $employeeId = $this->filters['employee_id'] ?? null;
+        $customerId = $this->filters['customer_id'] ?? null;
+        $paymentMethod = $this->filters['payment_method'] ?? null;
+        $bookingStatus = $this->filters['booking_status'] ?? null;
+        $serviceType = $this->filters['service_type'] ?? null;
+        $couponFilter = $this->filters['has_coupon'] ?? null;
 
-        $bookingQuery = Booking::query()
-            ->with([
-                'bookingService',
-                'services',
-                'products',
-                'bookingPackages',
-                'bookingTransaction',
-                'transactions',
-                'userCouponRedeem',
-            ])
-            ->where(function ($q) {
-                $q->where('status', 'completed')
-                    ->orWhere('payment_status', 1)
-                    ->orWhere('payment_status', '1')
-                    ->orWhere('payment_status', 'paid')
-                    ->orWhereHas('transactions', function ($tq) {
-                        $tq->whereIn('payment_status', [1, '1', 'paid']);
-                    });
-            });
+        $matchedBookingIds = [];
+        $matchedGiftIds = [];
+        $matchedOrderIds = [];
 
-        if ($startDate) {
-            $bookingQuery->where(function ($q) use ($startDate) {
-                $q->whereDate('start_date_time', '>=', $startDate->toDateString())
-                    ->orWhere(function ($sub) use ($startDate) {
-                        $sub->whereNull('start_date_time')
-                            ->whereDate('created_at', '>=', $startDate->toDateString());
-                    });
-            });
-        }
-        if ($endDate) {
-            $bookingQuery->where(function ($q) use ($endDate) {
-                $q->whereDate('start_date_time', '<=', $endDate->toDateString())
-                    ->orWhere(function ($sub) use ($endDate) {
-                        $sub->whereNull('start_date_time')
-                            ->whereDate('created_at', '<=', $endDate->toDateString());
-                    });
-            });
-        }
-        $bookings = $bookingQuery->get();
+        if ($paymentMethod) {
+            $aliases = match (strtolower($paymentMethod)) {
+                'cash' => ['cash', 'Cash', 'CASH', 'hand_cash', 'نقدي', 'كاش'],
+                'urpay' => ['urpay', 'UrPay', 'URPAY', 'ur_pay', 'Ur_Pay', 'ur-pay'],
+                'card' => ['card', 'Card', 'CARD', 'credit', 'Credit', 'debit', 'Debit', 'mada', 'Mada', 'MADA', 'visa', 'Visa', 'mastercard', 'Mastercard', 'stripe', 'pos', 'bank', 'مدى', 'بطاقة'],
+                'wallet' => ['wallet', 'Wallet', 'WALLET', 'محفظة'],
+                'tabby' => ['tabby', 'Tabby', 'TABBY', 'تابي'],
+                'tamara' => ['tamara', 'Tamara', 'TAMARA', 'تمارا'],
+                'stripe' => ['stripe', 'Stripe', 'STRIPE'],
+                'razorpay' => ['razorpay', 'Razorpay', 'RAZORPAY'],
+                default => [$paymentMethod, strtolower($paymentMethod), ucfirst($paymentMethod), strtoupper($paymentMethod)],
+            };
 
-        $giftQuery = GiftCard::query()->where('payment_status', 1);
-        if ($startDate) {
-            $giftQuery->whereDate('created_at', '>=', $startDate->toDateString());
+            try {
+                $invoices = Invoice::query()->where(function ($iq) use ($aliases, $paymentMethod) {
+                    $iq->whereIn('payment_method', $aliases)
+                        ->orWhere('payment_method', 'LIKE', '%'.$paymentMethod.'%');
+                })->get(['cart_ids', 'gift_ids', 'product_ids']);
+
+                foreach ($invoices as $inv) {
+                    $cIds = $inv->cart_ids;
+                    if (is_array($cIds)) {
+                        foreach ($cIds as $cid) {
+                            if (is_numeric($cid)) {
+                                $matchedBookingIds[] = (int) $cid;
+                            }
+                        }
+                    } elseif (is_string($cIds)) {
+                        $dec = json_decode($cIds, true);
+                        if (is_array($dec)) {
+                            foreach ($dec as $cid) {
+                                if (is_numeric($cid)) {
+                                    $matchedBookingIds[] = (int) $cid;
+                                }
+                            }
+                        }
+                    }
+
+                    $gIds = $inv->gift_ids;
+                    if (is_array($gIds)) {
+                        foreach ($gIds as $gid) {
+                            if (is_numeric($gid)) {
+                                $matchedGiftIds[] = (int) $gid;
+                            }
+                        }
+                    } elseif (is_string($gIds)) {
+                        $dec = json_decode($gIds, true);
+                        if (is_array($dec)) {
+                            foreach ($dec as $gid) {
+                                if (is_numeric($gid)) {
+                                    $matchedGiftIds[] = (int) $gid;
+                                }
+                            }
+                        }
+                    }
+
+                    $pIds = $inv->product_ids;
+                    if (is_array($pIds)) {
+                        foreach ($pIds as $pid) {
+                            if (is_numeric($pid)) {
+                                $matchedOrderIds[] = (int) $pid;
+                            }
+                        }
+                    } elseif (is_string($pIds)) {
+                        $dec = json_decode($pIds, true);
+                        if (is_array($dec)) {
+                            foreach ($dec as $pid) {
+                                if (is_numeric($pid)) {
+                                    $matchedOrderIds[] = (int) $pid;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                if (class_exists(\App\Models\PaymentAttempt::class)) {
+                    $attempts = \App\Models\PaymentAttempt::query()->where(function ($aq) use ($aliases, $paymentMethod) {
+                        $aq->whereIn('gateway', $aliases)
+                            ->orWhere('gateway', 'LIKE', '%'.$paymentMethod.'%')
+                            ->orWhereIn('payment_method', $aliases)
+                            ->orWhere('payment_method', 'LIKE', '%'.$paymentMethod.'%');
+                    })->get(['cart_ids', 'gift_ids']);
+
+                    foreach ($attempts as $att) {
+                        $cIds = $att->cart_ids;
+                        if (is_array($cIds)) {
+                            foreach ($cIds as $cid) {
+                                if (is_numeric($cid)) {
+                                    $matchedBookingIds[] = (int) $cid;
+                                }
+                            }
+                        }
+                        $gIds = $att->gift_ids;
+                        if (is_array($gIds)) {
+                            foreach ($gIds as $gid) {
+                                if (is_numeric($gid)) {
+                                    $matchedGiftIds[] = (int) $gid;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
+            $matchedBookingIds = array_values(array_unique(array_filter($matchedBookingIds)));
+            $matchedGiftIds = array_values(array_unique(array_filter($matchedGiftIds)));
+            $matchedOrderIds = array_values(array_unique(array_filter($matchedOrderIds)));
         }
-        if ($endDate) {
-            $giftQuery->whereDate('created_at', '<=', $endDate->toDateString());
+
+        $orders = collect();
+        if (! $branchId && ! $employeeId && ! $serviceId && ! $categoryId && (! $serviceType || $serviceType === 'all')) {
+            $orderQuery = OrderGroup::query()->with('order.orderItems');
+            if ($startDate) {
+                $orderQuery->whereDate('created_at', '>=', $startDate->toDateString());
+            }
+            if ($endDate) {
+                $orderQuery->whereDate('created_at', '<=', $endDate->toDateString());
+            }
+            if ($customerId) {
+                $orderQuery->where('user_id', $customerId);
+            }
+            if ($paymentMethod) {
+                $orderQuery->where(function ($q) use ($aliases, $paymentMethod, $matchedOrderIds) {
+                    $q->whereIn('payment_type', $aliases)
+                        ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%');
+                    if (! empty($matchedOrderIds)) {
+                        $q->orWhereIn('id', $matchedOrderIds);
+                    }
+                });
+            }
+            if ($couponFilter === 'yes') {
+                $orderQuery->where(function ($q) {
+                    $q->where('total_coupon_discount_amount', '>', 0)
+                        ->orWhere('total_discount_amount', '>', 0);
+                });
+            } elseif ($couponFilter === 'no') {
+                $orderQuery->where(function ($q) {
+                    $q->whereNull('total_coupon_discount_amount')->orWhere('total_coupon_discount_amount', 0);
+                })->where(function ($q) {
+                    $q->whereNull('total_discount_amount')->orWhere('total_discount_amount', 0);
+                });
+            }
+            $orders = $orderQuery->get();
         }
-        $giftCards = $giftQuery->get();
+
+        $bookings = collect();
+        if (! $serviceType || in_array($serviceType, ['all', 'salon', 'home', 'package'])) {
+            $bookingQuery = Booking::query()
+                ->with([
+                    'bookingService.service',
+                    'services',
+                    'products',
+                    'bookingPackages',
+                    'bookingTransaction',
+                    'transactions',
+                    'userCouponRedeem',
+                ]);
+
+            if ($bookingStatus) {
+                $bookingQuery->where('status', $bookingStatus);
+            } else {
+                $bookingQuery->where(function ($q) {
+                    $q->where('status', 'completed')
+                        ->orWhere('payment_status', 1)
+                        ->orWhere('payment_status', '1')
+                        ->orWhere('payment_status', 'paid')
+                        ->orWhereHas('transactions', function ($tq) {
+                            $tq->whereIn('payment_status', [1, '1', 'paid']);
+                        });
+                });
+            }
+
+            if ($startDate) {
+                $bookingQuery->where(function ($q) use ($startDate) {
+                    $q->whereDate('start_date_time', '>=', $startDate->toDateString())
+                        ->orWhere(function ($sub) use ($startDate) {
+                            $sub->whereNull('start_date_time')
+                                ->whereDate('created_at', '>=', $startDate->toDateString());
+                        });
+                });
+            }
+            if ($endDate) {
+                $bookingQuery->where(function ($q) use ($endDate) {
+                    $q->whereDate('start_date_time', '<=', $endDate->toDateString())
+                        ->orWhere(function ($sub) use ($endDate) {
+                            $sub->whereNull('start_date_time')
+                                ->whereDate('created_at', '<=', $endDate->toDateString());
+                        });
+                });
+            }
+
+            if ($branchId) {
+                $bookingQuery->where('branch_id', $branchId);
+            }
+
+            if ($customerId) {
+                $bookingQuery->where('user_id', $customerId);
+            }
+
+            if ($employeeId) {
+                $bookingQuery->whereHas('bookingService', function ($q) use ($employeeId) {
+                    $q->where('employee_id', $employeeId);
+                });
+            }
+
+            if ($serviceId) {
+                $bookingQuery->whereHas('bookingService', function ($q) use ($serviceId) {
+                    $q->where('service_id', $serviceId);
+                });
+            }
+
+            if ($categoryId) {
+                $bookingQuery->whereHas('bookingService.service', function ($q) use ($categoryId) {
+                    $q->where('category_id', $categoryId);
+                });
+            }
+
+            if ($paymentMethod) {
+                $bookingQuery->where(function ($q) use ($aliases, $paymentMethod, $matchedBookingIds) {
+                    $q->whereIn('payment_type', $aliases)
+                        ->orWhere('payment_type', 'LIKE', '%'.$paymentMethod.'%')
+                        ->orWhereHas('transactions', function ($tq) use ($aliases, $paymentMethod) {
+                            $tq->whereIn('transaction_type', $aliases)
+                                ->orWhere('transaction_type', 'LIKE', '%'.$paymentMethod.'%');
+                        });
+                    if (! empty($matchedBookingIds)) {
+                        $q->orWhereIn('id', $matchedBookingIds);
+                    }
+                });
+            }
+
+            if ($serviceType === 'salon') {
+                $bookingQuery->where(function ($q) {
+                    $q->where('booking_type', 'salon')->orWhereNull('booking_type');
+                });
+            } elseif ($serviceType === 'home') {
+                $bookingQuery->where('booking_type', 'home');
+            } elseif ($serviceType === 'package') {
+                $bookingQuery->whereHas('bookingPackages');
+            }
+
+            if ($couponFilter === 'yes') {
+                $bookingQuery->where(function ($q) {
+                    $q->whereHas('userCouponRedeem')
+                        ->orWhereHas('bookingService', fn ($s) => $s->whereNotNull('coupon_code')->orWhere('discount_amount', '>', 0))
+                        ->orWhereHas('transactions', fn ($t) => $t->where('discount_amount', '>', 0));
+                });
+            } elseif ($couponFilter === 'no') {
+                $bookingQuery->whereDoesntHave('userCouponRedeem')
+                    ->where(function ($q) {
+                        $q->whereDoesntHave('bookingService', function ($s) {
+                            $s->whereNotNull('coupon_code')->orWhere('discount_amount', '>', 0);
+                        });
+                    });
+            }
+
+            $bookings = $bookingQuery->get();
+        }
+
+        $giftCards = collect();
+        if (! $branchId && ! $employeeId && ! $categoryId && (! $serviceType || in_array($serviceType, ['all', 'gift_card']))) {
+            $giftQuery = GiftCard::query()->where('payment_status', 1);
+            if ($startDate) {
+                $giftQuery->whereDate('created_at', '>=', $startDate->toDateString());
+            }
+            if ($endDate) {
+                $giftQuery->whereDate('created_at', '<=', $endDate->toDateString());
+            }
+            if ($customerId) {
+                $giftQuery->where('user_id', $customerId);
+            }
+            if ($serviceId) {
+                $giftQuery->whereJsonContains('requested_services', (string) $serviceId);
+            }
+            if ($paymentMethod) {
+                if (! empty($matchedGiftIds)) {
+                    $giftQuery->whereIn('id', $matchedGiftIds);
+                } else {
+                    $giftQuery->whereRaw('1 = 0');
+                }
+            }
+            if ($couponFilter === 'yes') {
+                $giftQuery->whereNotNull('coupons');
+            } elseif ($couponFilter === 'no') {
+                $giftQuery->whereNull('coupons');
+            }
+            $giftCards = $giftQuery->get();
+        }
 
         $periodMap = [];
         if ($startDate && $endDate) {
@@ -168,16 +422,26 @@ class SalesByDateExport implements FromCollection, WithHeadings, WithStyles
                 ? $booking->bookingService
                 : $booking->services;
 
+            if ($serviceId) {
+                $services = $services ? $services->where('service_id', $serviceId) : null;
+            }
+            if ($employeeId) {
+                $services = $services ? $services->where('employee_id', $employeeId) : null;
+            }
+            if ($categoryId) {
+                $services = $services ? $services->filter(fn ($s) => optional($s->service)->category_id == $categoryId) : null;
+            }
+
             $serviceAmt = $services ? (float) $services->sum('service_price') : 0.0;
-            $productAmt = $booking->products ? (float) $booking->products->sum(function ($p) {
+            $productAmt = (! $serviceId && ! $categoryId && ! $employeeId && $booking->products) ? (float) $booking->products->sum(function ($p) {
                 $price = $p->discounted_price && $p->discounted_price > 0 ? $p->discounted_price : $p->product_price;
                 return $price * ($p->product_qty ?? 1);
             }) : 0.0;
-            $pkgAmt = $booking->bookingPackages ? (float) $booking->bookingPackages->sum('package_price') : 0.0;
+            $pkgAmt = (! $serviceId && ! $categoryId && ! $employeeId && $booking->bookingPackages) ? (float) $booking->bookingPackages->sum('package_price') : 0.0;
 
             $itemsCount = ($services ? $services->count() : 0)
-                + ($booking->products ? $booking->products->sum('product_qty') : 0)
-                + ($booking->bookingPackages ? $booking->bookingPackages->count() : 0);
+                + ((! $serviceId && ! $categoryId && ! $employeeId && $booking->products) ? $booking->products->sum('product_qty') : 0)
+                + ((! $serviceId && ! $categoryId && ! $employeeId && $booking->bookingPackages) ? $booking->bookingPackages->count() : 0);
 
             $couponDiscount = 0.0;
             if ($booking->userCouponRedeem && $booking->userCouponRedeem->discount > 0) {

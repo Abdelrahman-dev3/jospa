@@ -472,16 +472,6 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                         return $this->respondFailure($request, 'User not found.', 404);
                     }
 
-                    if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
-                        $this->markPaymentAttemptPaid($attemptId, [
-                            'gateway_transaction_id' => $checkoutId,
-                            'gateway_checkout_id' => $checkoutId,
-                            'gateway_response' => $charge,
-                            'callback_payload' => $request->all(),
-                        ]);
-                        session()->forget('tabby_payment');
-                        return $this->respondSuccess($request, 'Payment already finalized.');
-                    }
                     try {
                         $fakeRequest = new Request([
                             'wallet'    => $data['submethods']['wallet'] ?? false,
@@ -499,6 +489,43 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                             session()->forget('tabby_payment');
                             return $this->respondFailure($request, $subResult['error'], 422);
                         }
+
+                        $expectedAmount = (float) ($data['amount'] ?? ($subResult['remaining_amount'] ?? 0));
+                        $paidAmount = (float) (data_get($charge, 'amount') ?? data_get($charge, 'payment.amount') ?? 0);
+
+                        if ($expectedAmount > 0 && ($paidAmount <= 0 || abs($expectedAmount - $paidAmount) > 0.01)) {
+                            $this->markPaymentAttemptFailed($attemptId, app()->getLocale() === 'ar'
+                                ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                                : 'Paid amount does not match expected amount.', [
+                                'gateway_transaction_id' => $checkoutId,
+                                'gateway_checkout_id' => $checkoutId,
+                                'gateway_response' => $charge,
+                                'callback_payload' => $request->all(),
+                                'expected_amount' => $expectedAmount,
+                                'paid_amount' => $paidAmount,
+                            ]);
+                            session()->forget('tabby_payment');
+
+                            return $this->respondFailure(
+                                $request,
+                                app()->getLocale() === 'ar'
+                                    ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                                    : 'Paid amount does not match expected amount.',
+                                422
+                            );
+                        }
+
+                        if ($this->isAlreadyFinalized($data['cart_ids'] ?? [], $data['gift_ids'] ?? [])) {
+                            $this->markPaymentAttemptPaid($attemptId, [
+                                'gateway_transaction_id' => $checkoutId,
+                                'gateway_checkout_id' => $checkoutId,
+                                'gateway_response' => $charge,
+                                'callback_payload' => $request->all(),
+                            ]);
+                            session()->forget('tabby_payment');
+                            return $this->respondSuccess($request, 'Payment already finalized.');
+                        }
+
                         $invoiceId = $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
                             'attempt_id' => $attemptId,
                             'transaction_id' => $checkoutId,
@@ -545,16 +572,6 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                     return $this->respondFailure($request, 'Discount amount mismatch.', 422);
                 }
 
-                if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
-                    $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
-                        'gateway_transaction_id' => $checkoutId,
-                        'gateway_checkout_id' => $checkoutId,
-                        'gateway_response' => $charge,
-                        'callback_payload' => $request->all(),
-                    ]);
-                    return $this->respondSuccess($request, 'Payment already finalized.');
-                }
-
                 $fakeRequest = new Request([
                     'wallet'    => $context['wallet'],
                     'loyalty'   => $context['loyalty'],
@@ -570,6 +587,41 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                     ]);
                     return $this->respondFailure($request, $subResult['error'], 422);
                 }
+
+                $expectedAmount = (float) ($subResult['remaining_amount'] ?? 0);
+                $paidAmount = (float) (data_get($charge, 'amount') ?? data_get($charge, 'payment.amount') ?? 0);
+
+                if ($expectedAmount > 0 && ($paidAmount <= 0 || abs($expectedAmount - $paidAmount) > 0.01)) {
+                    $this->markPaymentAttemptFailed($context['attempt_id'] ?? null, app()->getLocale() === 'ar'
+                        ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                        : 'Paid amount does not match expected amount.', [
+                        'gateway_transaction_id' => $checkoutId,
+                        'gateway_checkout_id' => $checkoutId,
+                        'gateway_response' => $charge,
+                        'callback_payload' => $request->all(),
+                        'expected_amount' => $expectedAmount,
+                        'paid_amount' => $paidAmount,
+                    ]);
+
+                    return $this->respondFailure(
+                        $request,
+                        app()->getLocale() === 'ar'
+                            ? 'قيمة الدفع لا تطابق المبلغ المتوقع.'
+                            : 'Paid amount does not match expected amount.',
+                        422
+                    );
+                }
+
+                if ($this->isAlreadyFinalized($totalData['cart_ids'] ?? [], $totalData['gift_ids'] ?? [])) {
+                    $this->markPaymentAttemptPaid($context['attempt_id'] ?? null, [
+                        'gateway_transaction_id' => $checkoutId,
+                        'gateway_checkout_id' => $checkoutId,
+                        'gateway_response' => $charge,
+                        'callback_payload' => $request->all(),
+                    ]);
+                    return $this->respondSuccess($request, 'Payment already finalized.');
+                }
+
                 $invoiceId = $this->commitFinalizedPayment($user->id, $fakeRequest, [
                     'final_before_sub' => $totalData['total'],
                     'tax' => $totalData['tax'],
