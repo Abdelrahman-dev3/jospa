@@ -526,7 +526,7 @@ class BookingCartController extends Controller
             $giftCardActivationService = app(GiftCardActivationService::class);
             $activatedGiftCards = $giftCardActivationService->activatePendingForUser((int) $user->id);
             $odooSynced = app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
-            $giftCardActivationService->sendNotifications($activatedGiftCards, sendWhatsApp: ! $odooSynced);
+            $giftCardActivationService->sendNotifications($activatedGiftCards, sendWhatsApp: ! $odooSynced, sendSms: ! $odooSynced);
             session()->forget(['finalTotal', 'discountAmount', 'loyaltyDiscount']);
 
             if ($request->expectsJson()) {

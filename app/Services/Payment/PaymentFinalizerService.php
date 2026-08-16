@@ -117,7 +117,7 @@ class PaymentFinalizerService
         }
 
         if (! empty($giftIds)) {
-            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds, sendWhatsApp: ! $odooSynced);
+            app(GiftCardActivationService::class)->sendNotificationsForIds($giftIds, sendWhatsApp: ! $odooSynced, sendSms: ! $odooSynced);
         }
 
         if ($invoiceId > 0 && ! $odooSynced) {

@@ -538,6 +538,15 @@ class OdooBookingSyncService
             'pdf',
             'pdf_base64',
             'pdf_url',
+            'url',
+            'file_url',
+            'download_url',
+            'attachment',
+            'attachment_url',
+            'pdf_file',
+            'card_pdf',
+            'card_pdf_base64',
+            'card_pdf_url',
             'gift_card_pdf',
             'gift_card_pdf_base64',
             'gift_card_pdf_url',
@@ -621,16 +630,67 @@ class OdooBookingSyncService
         foreach ([
             'gift_cards_created',
             'gift_cards',
+            'giftcards',
+            'created_gifts',
+            'created_gift_cards',
+            'giftcards_created',
+            'gift_card_pdfs',
+            'gift_cards_data',
             'created_gift_cards',
             'gift_card_created',
         ] as $key) {
             $giftCards = $this->decodeOdooArrayValue(data_get($data, $key));
             if ($giftCards !== null) {
-                return $this->normalizeOdooList($giftCards);
+                $giftCards = $this->normalizeOdooList($giftCards);
+
+                if ($this->giftCardListHasDocument($giftCards)) {
+                    return $giftCards;
+                }
             }
         }
 
-        return [];
+        return $this->findGiftCardDocumentsRecursively($data);
+    }
+
+    private function giftCardListHasDocument(array $giftCards): bool
+    {
+        foreach ($giftCards as $giftCard) {
+            if (is_array($giftCard) && $this->extractGiftCardDocument($giftCard) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function findGiftCardDocumentsRecursively(array $data, array $path = []): array
+    {
+        $items = [];
+
+        foreach ($data as $key => $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+
+            $nextPath = array_merge($path, [(string) $key]);
+            $pathText = strtolower(implode('.', $nextPath));
+
+            if (str_contains($pathText, 'redeem') || str_contains($pathText, 'used')) {
+                continue;
+            }
+
+            if (
+                str_contains($pathText, 'gift')
+                && $this->extractGiftCardDocument($value) !== null
+                && ! filled(data_get($value, 'invoice_pdf'))
+            ) {
+                $items[] = $value;
+            }
+
+            $items = array_merge($items, $this->findGiftCardDocumentsRecursively($value, $nextPath));
+        }
+
+        return $items;
     }
 
     private function extractGiftCardRedeemed(array $data): ?array
@@ -781,22 +841,6 @@ class OdooBookingSyncService
                         $matchingGiftCard = $localGiftCards->values()->get($index) ?? $localGiftCards->first();
                     }
 
-                    $recipientPhone = $matchingGiftCard?->recipient_phone;
-                    $recipientName = $matchingGiftCard?->recipient_name ?? 'عزيزنا/عزيزتنا';
-                    $senderName = $matchingGiftCard?->sender_name ?? $buyerName;
-                    $personalMessage = trim((string) ($matchingGiftCard?->message ?? ''));
-
-                    // Send to Recipient (المهدي اليه) phone, fallback to sender/buyer phone if recipient phone not set
-                    $targetPhone = filled($recipientPhone) ? $recipientPhone : ($matchingGiftCard?->sender_phone ?: $buyerPhone);
-
-                    if (blank($targetPhone)) {
-                        Log::warning('Gift card PDF WhatsApp skipped: target phone number missing.', [
-                            'invoice_id' => $invoice->id,
-                            'code' => $code,
-                        ]);
-                        continue;
-                    }
-
                     $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : ($index + 1)) . ".pdf";
                     $giftPdfUrl = $this->resolvePublicPdfUrl((string) $giftDocument, $giftCardFilename);
 
@@ -826,6 +870,49 @@ class OdooBookingSyncService
                             'invoice_id' => $invoice->id,
                             'gift_card_id' => $matchingGiftCard?->id,
                             'code' => $code,
+                        ]);
+                    }
+
+                    $recipientPhone = $matchingGiftCard?->recipient_phone;
+                    $recipientName = $matchingGiftCard?->recipient_name ?? 'عزيزنا/عزيزتنا';
+                    $senderName = $matchingGiftCard?->sender_name ?? $buyerName;
+                    $personalMessage = trim((string) ($matchingGiftCard?->message ?? ''));
+
+                    // Send to Recipient (المهدي اليه) phone, fallback to sender/buyer phone if recipient phone not set
+                    $targetPhone = filled($recipientPhone) ? $recipientPhone : ($matchingGiftCard?->sender_phone ?: $buyerPhone);
+
+                    if (blank($targetPhone)) {
+                        Log::warning('Gift card PDF delivery skipped: target phone number missing.', [
+                            'invoice_id' => $invoice->id,
+                            'code' => $code,
+                            'gift_card_id' => $matchingGiftCard?->id,
+                        ]);
+                        continue;
+                    }
+
+                    if (filled($giftPdfUrl)) {
+                        $sentSms = app(TaqnyatSmsService::class)->sendGift(
+                            (string) $targetPhone,
+                            [
+                                'sender_name' => $senderName,
+                                'sender_phone' => $matchingGiftCard?->sender_phone ?: $buyerPhone,
+                                'recipient_name' => $recipientName,
+                                'recipient_phone' => $targetPhone,
+                                'gift_message' => $personalMessage,
+                                'ref' => $code ?: $matchingGiftCard?->ref,
+                                'pdf_url' => $giftPdfUrl,
+                                'gift_pdf_url' => $giftPdfUrl,
+                            ],
+                            'recipient'
+                        );
+
+                        Log::info('Gift card PDF SMS sent from Odoo response.', [
+                            'invoice_id' => $invoice->id,
+                            'gift_card_id' => $matchingGiftCard?->id,
+                            'code' => $code,
+                            'target_phone' => $targetPhone,
+                            'pdf_url' => $giftPdfUrl,
+                            'sent' => (bool) $sentSms,
                         ]);
                     }
 
