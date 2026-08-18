@@ -21,5 +21,6 @@ Route::group(['prefix' => 'app', 'middleware' => 'auth'], function () {
     Route::get('wallet-history-data', [WalletController::class, 'walletHistoryData'])->name('wallet.history-data');
 });
 
-Route::get('add/balance-to-wallet', [WalletController::class, 'addbalance'])->name('wallet.addbalance');
-Route::get('/add/balance/callback', [WalletController::class, 'callback'])->name('addbalance.callback');
+Route::get('add/balance-to-wallet', [WalletController::class, 'addbalance'])->middleware('auth')->name('wallet.addbalance');
+Route::get('/add/balance/hyperpay/checkout', [WalletController::class, 'hyperpayCheckout'])->name('wallet.hyperpay.checkout');
+Route::match(['get', 'post'], '/add/balance/callback', [WalletController::class, 'callback'])->name('addbalance.callback');

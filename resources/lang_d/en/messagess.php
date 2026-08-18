@@ -150,4 +150,6 @@ return [
     'privacy_consent_text' => 'By using the Jospa website and its services, you agree to the terms outlined in this Privacy Policy.',
     'privacy_back_to_top' => 'Back to top',
     'gift_card_coupon_not_allowed' => 'Discount codes cannot be used when paying with a gift card.',
+    'coupon_disabled_by_gift_card' => 'Discount code is disabled because you are paying with a gift card. They cannot be used together.',
+    'gift_card_disabled_by_coupon' => 'Gift card payment is disabled because a discount code is applied. They cannot be used together.',
 ];

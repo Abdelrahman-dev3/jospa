@@ -161,6 +161,17 @@
       gap:8px;
       margin:18px 0;
     }
+    .payment-disable-reason{
+      display:none;
+      margin:12px 0 8px;
+      padding:8px 10px;
+      border:1px solid #f0d8ad;
+      border-radius:6px;
+      background:#fff7e8;
+      color:#8a5a16;
+      font-size:13px;
+      line-height:1.5;
+    }
     .coupon-input .form-control , .gift-input .form-control{
       border-radius:8px;
     }
@@ -962,6 +973,9 @@
                             {{ __('messagess.SR') }}
                         </div>
                     </div>
+                    <div class="payment-disable-reason" id="couponDisableReason">
+                        {{ __('messagess.coupon_disabled_by_gift_card') }}
+                    </div>
                     <div class="coupon-input">
                         <input class="form-control" id="invoiceCouponInput" name="invoiceCopon" placeholder="{{ __('messagess.coupon_code') }}">
                         <button class="apply-btn" type="button" id="applyCoupon">{{ __('messagess.apply') }}</button>
@@ -998,6 +1012,9 @@
                         </div>
                     </div>
 
+                    <div class="payment-disable-reason" id="giftDisableReason">
+                        {{ __('messagess.gift_card_disabled_by_coupon') }}
+                    </div>
                     <div class="gift-input">
                         <input class="form-control" name="gift_code" placeholder="{{ __('messagess.gift_code') }}">
                         <button class="apply-btn" type="button" id="gift_code">{{ __('messagess.apply') }}</button>
@@ -1068,6 +1085,12 @@
         };
         let appliedGiftAmount = 0;
         const giftCouponNotAllowedMessage = @json(__('messagess.gift_card_coupon_not_allowed'));
+        const setPaymentDisableReason = (elementId, visible) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.style.display = visible ? 'block' : 'none';
+            }
+        };
         appendGatewayDiscountBadges();
         
         const showComingSoonNotification = () => {
@@ -1299,6 +1322,7 @@
             const appliedGiftCode = appliedGiftAmount > 0 ? (giftInput?.value.trim() || '') : '';
 
             if (appliedGiftCode) {
+                setPaymentDisableReason('couponDisableReason', true);
                 toastr.error(giftCouponNotAllowedMessage);
                 return;
             }
@@ -1334,6 +1358,8 @@
                         giftButton.disabled = true;
                         giftButton.classList.add('disabled');
                     }
+                    setPaymentDisableReason('giftDisableReason', true);
+                    setPaymentDisableReason('couponDisableReason', false);
                         
                     document.querySelector('.inv-m').style.display = 'flex';
                     
@@ -1352,6 +1378,7 @@
             const couponInput = document.getElementById('invoiceCouponInput');
 
             if (couponState.applied || (couponInput?.value.trim() && document.querySelector('#applyCoupon')?.disabled)) {
+                setPaymentDisableReason('giftDisableReason', true);
                 toastr.error(giftCouponNotAllowedMessage);
                 return;
             }
@@ -1382,6 +1409,8 @@
                             couponButton.disabled = true;
                             couponButton.classList.add('disabled');
                         }
+                        setPaymentDisableReason('couponDisableReason', true);
+                        setPaymentDisableReason('giftDisableReason', false);
             
                         updateTotal();
                     } else {
