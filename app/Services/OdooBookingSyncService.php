@@ -314,7 +314,6 @@ class OdooBookingSyncService
         $packages = Package::whereIn('id', $packageIds)->get()->keyBy('id');
 
         return $giftCards->map(function ($giftCard) use ($invoice, $paymentDate, $services, $packages) {
-            $localReference = $this->ensureGiftCardReferenceForOdoo($giftCard);
             $user = $giftCard->user ?? $invoice->user;
             $requestedServiceIds = collect((array) $giftCard->requested_services)->filter()->values();
             $requestedPackageIds = collect((array) $giftCard->package_ids)->filter()->values();
@@ -323,11 +322,7 @@ class OdooBookingSyncService
                 'id' => $giftCard->id,
                 'invoice_id' => $invoice->id,
                 'user_id' => (int) $giftCard->user_id,
-                'ref' => $localReference,
-                'code' => $localReference,
-                'gift_card_code' => $localReference,
-                'reference' => $localReference,
-                'external_ref' => $localReference,
+                'ref' => $giftCard->ref,
                 'buyer_name' => $user?->first_name . ' ' . $user?->last_name,
                 'buyer_email' => $user?->email,
                 'buyer_phone' => $user?->mobile,
@@ -397,34 +392,6 @@ class OdooBookingSyncService
             'traditional', 'center_pickup', 'استلام من المركز' => 'Center Pickup',
             default => ucfirst((string) $deliveryMethod),
         };
-    }
-
-    private function ensureGiftCardReferenceForOdoo(GiftCard $giftCard): ?string
-    {
-        $reference = trim((string) $giftCard->ref);
-        if ($reference !== '') {
-            return $reference;
-        }
-
-        if ($this->normalizeDeliveryMethod($giftCard->delivery_method) !== 'Electronic Card') {
-            return null;
-        }
-
-        $reference = GiftCard::generateUniqueReference();
-        $balance = (float) ($giftCard->balance ?? 0);
-        if ($balance <= 0) {
-            $balance = (float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0);
-        }
-
-        $giftCard->forceFill([
-            'ref' => $reference,
-            'balance' => $balance,
-        ])->save();
-
-        $giftCard->ref = $reference;
-        $giftCard->balance = $balance;
-
-        return $reference;
     }
 
     private function resolveName($value): ?string
@@ -594,27 +561,6 @@ class OdooBookingSyncService
 
             if (is_string($value) && trim($value) !== '') {
                 return trim($value);
-            }
-        }
-
-        return null;
-    }
-
-    private function extractGiftCardCode(array $giftItem): ?string
-    {
-        foreach ([
-            'code',
-            'ref',
-            'gift_card_code',
-            'giftcard_code',
-            'reference',
-            'external_ref',
-            'barcode',
-        ] as $key) {
-            $value = data_get($giftItem, $key);
-
-            if ((is_string($value) || is_numeric($value)) && trim((string) $value) !== '') {
-                return trim((string) $value);
             }
         }
 
@@ -880,13 +826,6 @@ class OdooBookingSyncService
             if (! empty($giftIds) && is_array($giftCardsCreated ?? null) && ! empty($giftCardsCreated)) {
 
                 $localGiftCards = GiftCard::whereIn('id', $giftIds)->get()->keyBy('id');
-                $localGiftRefs = $localGiftCards
-                    ->pluck('ref')
-                    ->map(fn ($ref) => trim((string) $ref))
-                    ->filter()
-                    ->values()
-                    ->all();
-                $processedGiftCardIds = [];
 
                 foreach ($giftCardsCreated as $index => $giftItem) {
                     if (! is_array($giftItem)) {
@@ -894,7 +833,7 @@ class OdooBookingSyncService
                     }
 
                     $giftDocument = $this->extractGiftCardDocument($giftItem);
-                    $odooCode = $this->extractGiftCardCode($giftItem);
+                    $code = $giftItem['code'] ?? null;
                     $amount = $giftItem['amount'] ?? 0;
                     $isGift = ! empty($giftItem['is_gift']);
 
@@ -902,69 +841,33 @@ class OdooBookingSyncService
                         Log::warning('Gift card created PDF is missing in Odoo response.', [
                             'invoice_id' => $invoice->id,
                             'index' => $index,
-                            'odoo_code' => $odooCode,
+                            'code' => $code,
                         ]);
                         continue;
                     }
 
                     // Match local GiftCard record
                     $matchingGiftCard = null;
-                    if ($odooCode !== null) {
-                        $matchedByCode = $localGiftCards->first(fn ($g) => strcasecmp(trim((string) $g->ref), $odooCode) === 0);
-                        if ($matchedByCode) {
-                            if (in_array((int) $matchedByCode->id, $processedGiftCardIds, true)) {
-                                Log::warning('Duplicate Odoo gift card item skipped for already processed local gift card.', [
-                                    'invoice_id' => $invoice->id,
-                                    'gift_card_id' => $matchedByCode->id,
-                                    'local_ref' => $matchedByCode->ref,
-                                    'odoo_code' => $odooCode,
-                                    'index' => $index,
-                                ]);
-                                continue;
-                            }
-
-                            $matchingGiftCard = $matchedByCode;
-                        } elseif ($localGiftRefs !== []) {
-                            Log::warning('Odoo gift card item skipped because its code does not match any local gift card reference.', [
-                                'invoice_id' => $invoice->id,
-                                'index' => $index,
-                                'odoo_code' => $odooCode,
-                                'local_refs' => $localGiftRefs,
-                            ]);
-                            continue;
-                        }
+                    if ($code !== null) {
+                        $matchingGiftCard = $localGiftCards->first(fn ($g) => $g->ref === $code);
                     }
                     if (! $matchingGiftCard && isset($giftIds[$index])) {
-                        $candidateGiftCard = $localGiftCards->get($giftIds[$index]);
-                        if ($candidateGiftCard && ! in_array((int) $candidateGiftCard->id, $processedGiftCardIds, true)) {
-                            $matchingGiftCard = $candidateGiftCard;
-                        }
+                        $matchingGiftCard = $localGiftCards->get($giftIds[$index]);
                     }
                     if (! $matchingGiftCard && $localGiftCards->isNotEmpty()) {
-                        $matchingGiftCard = $localGiftCards->first(fn ($g) => ! in_array((int) $g->id, $processedGiftCardIds, true));
+                        $matchingGiftCard = $localGiftCards->values()->get($index) ?? $localGiftCards->first();
                     }
 
                     if (! $matchingGiftCard) {
-                        Log::warning('Gift card PDF delivery skipped: extra or duplicate Odoo gift card item has no unprocessed local match.', [
+                        Log::warning('Gift card PDF delivery skipped: no matching local gift card for Odoo item.', [
                             'invoice_id' => $invoice->id,
                             'index' => $index,
-                            'odoo_code' => $odooCode,
+                            'code' => $code,
                         ]);
                         continue;
                     }
 
-                    $localGiftCode = trim((string) $matchingGiftCard->ref);
-                    if ($localGiftCode === '') {
-                        $localGiftCode = GiftCard::generateUniqueReference();
-                        $matchingGiftCard->forceFill([
-                            'ref' => $localGiftCode,
-                        ])->save();
-                        $matchingGiftCard->ref = $localGiftCode;
-                    }
-
-                    $processedGiftCardIds[] = (int) $matchingGiftCard->id;
-                    $safeGiftCode = preg_replace('/[^a-zA-Z0-9_-]/', '_', $localGiftCode) ?: ($index + 1);
-                    $giftCardFilename = "GiftCard_" . $safeGiftCode . ".pdf";
+                    $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : ($index + 1)) . ".pdf";
                     $giftPdfUrl = $this->resolvePublicPdfUrl((string) $giftDocument, $giftCardFilename);
 
                     if ($matchingGiftCard && filled($giftPdfUrl)) {
@@ -977,16 +880,14 @@ class OdooBookingSyncService
                             Log::info('Gift card PDF URL saved from Odoo response.', [
                                 'invoice_id' => $invoice->id,
                                 'gift_card_id' => $matchingGiftCard->id,
-                                'local_ref' => $localGiftCode,
-                                'odoo_code' => $odooCode,
+                                'code' => $code,
                                 'pdf_url' => $giftPdfUrl,
                             ]);
                         } catch (\Throwable $e) {
                             Log::warning('Gift card PDF URL could not be saved for SMS delivery.', [
                                 'invoice_id' => $invoice->id,
                                 'gift_card_id' => $matchingGiftCard->id,
-                                'local_ref' => $localGiftCode,
-                                'odoo_code' => $odooCode,
+                                'code' => $code,
                                 'error' => $e->getMessage(),
                             ]);
                         }
@@ -994,8 +895,7 @@ class OdooBookingSyncService
                         Log::warning('Gift card PDF URL could not be resolved for SMS delivery.', [
                             'invoice_id' => $invoice->id,
                             'gift_card_id' => $matchingGiftCard?->id,
-                            'local_ref' => $localGiftCode,
-                            'odoo_code' => $odooCode,
+                            'code' => $code,
                         ]);
                     }
 
@@ -1010,8 +910,7 @@ class OdooBookingSyncService
                     if (blank($targetPhone)) {
                         Log::warning('Gift card PDF delivery skipped: target phone number missing.', [
                             'invoice_id' => $invoice->id,
-                            'local_ref' => $localGiftCode,
-                            'odoo_code' => $odooCode,
+                            'code' => $code,
                             'gift_card_id' => $matchingGiftCard?->id,
                         ]);
                         continue;
@@ -1026,7 +925,7 @@ class OdooBookingSyncService
                                 'recipient_name' => $recipientName,
                                 'recipient_phone' => $targetPhone,
                                 'gift_message' => $personalMessage,
-                                'ref' => $localGiftCode,
+                                'ref' => $code ?: $matchingGiftCard?->ref,
                                 'pdf_url' => $giftPdfUrl,
                                 'gift_pdf_url' => $giftPdfUrl,
                             ],
@@ -1036,8 +935,7 @@ class OdooBookingSyncService
                         Log::info('Gift card PDF SMS sent from Odoo response.', [
                             'invoice_id' => $invoice->id,
                             'gift_card_id' => $matchingGiftCard?->id,
-                            'local_ref' => $localGiftCode,
-                            'odoo_code' => $odooCode,
+                            'code' => $code,
                             'target_phone' => $targetPhone,
                             'pdf_url' => $giftPdfUrl,
                             'sent' => (bool) $sentSms,
@@ -1054,7 +952,7 @@ class OdooBookingSyncService
                     $giftTemplateVariables = $this->buildGiftCardPdfTemplateVariables(
                         $matchingGiftCard,
                         $senderName,
-                        $localGiftCode,
+                        $code,
                         $personalMessage
                     );
 
@@ -1072,8 +970,7 @@ class OdooBookingSyncService
                     if (! $sentGift) {
                         Log::warning('Gift card PDF WhatsApp template send failed or is not configured.', [
                             'invoice_id' => $invoice->id,
-                            'local_ref' => $localGiftCode,
-                            'odoo_code' => $odooCode,
+                            'code' => $code,
                             'template_name' => $giftTemplateName,
                             'target_phone' => $targetPhone,
                         ]);
@@ -1081,8 +978,7 @@ class OdooBookingSyncService
 
                     Log::info('Gift card PDF WhatsApp sent from Odoo response.', [
                         'invoice_id' => $invoice->id,
-                        'local_ref' => $localGiftCode,
-                        'odoo_code' => $odooCode,
+                        'code' => $code,
                         'recipient_name' => $recipientName,
                         'target_phone' => $targetPhone,
                         'template_name' => $giftTemplateName,
