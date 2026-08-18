@@ -795,7 +795,8 @@
                     });
                 });
             }
-            fetch(`/api/available/${date}/${staffId}?Increasing=${encodeURIComponent(increasing)}`)
+            const branchId = selectedData.branch || 0;
+            fetch(`/api/available/${date}/${staffId}?Increasing=${encodeURIComponent(increasing)}&branch_id=${encodeURIComponent(branchId)}&service_id=${encodeURIComponent(subserve || 0)}`)
                 .then(response => response.json())
                 .then(data => {
 
@@ -1391,6 +1392,14 @@
             })
             .then(response => response.json())
             .then(data => {
+                if (data.success === false && data.need_login !== true) {
+                    createNotify({
+                        title: currentLang === 'ar' ? 'تعذر إكمال الحجز' : 'Booking unavailable',
+                        desc: data.message || (currentLang === 'ar' ? 'يرجى اختيار موعد آخر.' : 'Please choose another time.')
+                    });
+                    return;
+                }
+
                 document.querySelectorAll('.dis-btn').forEach(btn => {
                     btn.disabled = true;
                     btn.style.opacity = '0.6';

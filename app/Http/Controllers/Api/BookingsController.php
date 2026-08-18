@@ -16,6 +16,8 @@ use App\Models\StaffWorkingHour;
 use App\Models\Branch;
 use Modules\World\Models\State;
 use Modules\Holiday\Models\Holiday;
+use Modules\Employee\Models\BranchEmployee;
+use Modules\Service\Models\Service;
 
 class BookingsController extends Controller
 {
@@ -155,10 +157,18 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     }
 
     $dayName = strtolower($dateObj->format('l'));
-    $serve_book_min = (int) $request->query('Increasing', 30);
+    $serviceId = (int) $request->query('service_id', 0);
+    $serviceDuration = (int) (Service::whereKey($serviceId)->value('duration_min') ?? 0);
+    $serve_book_min = $serviceDuration > 0 ? $serviceDuration : (int) $request->query('Increasing', 30);
     $min_minutes = max(1, $serve_book_min);
 
-    $branchId = optional($user->branch)->branch_id;
+    $requestedBranchId = (int) $request->query('branch_id', 0);
+    $branchId = $this->resolveEmployeeBranchId($staffId, $requestedBranchId);
+
+    if ($requestedBranchId > 0 && $branchId <= 0) {
+        return response()->json([]);
+    }
+
     if (StaffLeavePeriod::where('staff_id', $staffId)
         ->whereDate('start_date', '<=', $date)
         ->whereDate('end_date', '>=', $date)
@@ -170,7 +180,7 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         return response()->json([]);
     }
 
-    $workingConfig = $this->resolveWorkingConfig($user, $staffId, $dayName);
+    $workingConfig = $this->resolveWorkingConfig($staffId, $dayName, $branchId);
     if (!$workingConfig) {
         return response()->json([]);
     }
@@ -189,7 +199,21 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     return response()->json($availableTimes);
 }
 
-    private function resolveWorkingConfig(User $user, int $staffId, string $dayName): ?array
+    private function resolveEmployeeBranchId(int $staffId, int $branchId = 0): int
+    {
+        $query = BranchEmployee::where('employee_id', $staffId);
+
+        if ($branchId > 0) {
+            return $query->where('branch_id', $branchId)->exists() ? $branchId : 0;
+        }
+
+        return (int) ($query
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->value('branch_id') ?? 0);
+    }
+
+    private function resolveWorkingConfig(int $staffId, string $dayName, int $branchId = 0): ?array
     {
         $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)
             ->where('day_of_week', $dayName)
@@ -208,18 +232,30 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
             );
         }
 
-        $branchId = optional($user->branch)->branch_id;
-        $shiftId = optional($user->shift)->shift_id;
         if (!$branchId) {
             return null;
         }
 
-        $workingHours = BussinessHour::where('branch_id', $branchId)
+        $branchEmployee = BranchEmployee::where('employee_id', $staffId)
+            ->where('branch_id', $branchId)
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->first();
+
+        if (! $branchEmployee) {
+            return null;
+        }
+
+        $workingHoursQuery = BussinessHour::where('branch_id', $branchId)
             ->where('day', $dayName)
             ->where('is_holiday', 0)
-            ->where('shift_id', $shiftId)
-            ->orderBy('id', 'desc')
-            ->first();
+            ->orderBy('id', 'desc');
+
+        if ($branchEmployee->shift_id) {
+            $workingHoursQuery->where('shift_id', $branchEmployee->shift_id);
+        }
+
+        $workingHours = $workingHoursQuery->first();
 
         if (!$workingHours) {
             return null;
@@ -255,6 +291,10 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
     private function parseTime(string $time): Carbon
     {
         $time = trim($time);
+        if ($time === '') {
+            throw new \InvalidArgumentException('Time value is empty.');
+        }
+
         $format = substr_count($time, ':') === 2 ? 'H:i:s' : 'H:i';
 
         return Carbon::createFromFormat($format, $time);

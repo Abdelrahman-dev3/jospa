@@ -16,8 +16,14 @@ use Carbon\Carbon;
 use App\Models\GiftCard;
 use App\Services\GiftCardActivationService;
 use App\Services\OdooBookingSyncService;
+use App\Models\StaffLeavePeriod;
+use App\Models\StaffWorkingHour;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\Cart;
+use Modules\BussinessHour\Models\BussinessHour;
+use Modules\Employee\Models\BranchEmployee;
+use Modules\Holiday\Models\Holiday;
+use Modules\Service\Models\Service;
 use App\Services\Payment\PaymentCalculatorService;
 use App\Services\Payment\PaymentFinalizerService;
 use App\Services\Payment\PaymentSubMethodsService;
@@ -149,6 +155,13 @@ class BookingCartController extends Controller
                         ], 409);
                     }
 
+                    if (! $this->employeeCanWorkSlot($slotData, (int) ($data['branch'] ?? 0))) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'الوقت المختار خارج مواعيد عمل الموظف، يرجى اختيار موعد آخر.'
+                        ], 422);
+                    }
+
                     $pendingSlots[] = [
                         'staff_id' => $slotData['staff_id'],
                         'start_date_time' => $slotData['start_date_time']->copy(),
@@ -166,7 +179,7 @@ class BookingCartController extends Controller
                                 $subId = $sub['id'];
                                 $dateVal = $sub['date'];
                                 $timeVal = $sub['time'];
-                                $duration = $sub['duration'];
+                                $duration = $this->resolveServiceDuration((int) $subId, (int) ($sub['duration'] ?? 0));
                                 $price = $sub['price'];
                                 $staffId = $sub['staffId'];
                                 $startDateTime = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $dateVal . ' ' . $timeVal);
@@ -194,7 +207,7 @@ class BookingCartController extends Controller
                                 $bookingService->service_id       = $subId;
                                 $bookingService->employee_id      = $staffId;
                                 $bookingService->start_date_time  = $startDateTime;
-                                $bookingService->service_price    = \Modules\Service\Models\Service::find($subId)->default_price ?? 0;
+                                $bookingService->service_price    = Service::find($subId)->default_price ?? 0;
                                 $bookingService->duration_min     = $duration;
                                 $bookingService->sequance         = 1;
                                 $bookingService->created_by       = $user->id;
@@ -226,7 +239,7 @@ class BookingCartController extends Controller
         $staffId = (int) ($sub['staffId'] ?? 0);
         $date = $sub['date'] ?? null;
         $time = $sub['time'] ?? null;
-        $duration = max(1, (int) ($sub['duration'] ?? 0));
+        $duration = $this->resolveServiceDuration($serviceId, (int) ($sub['duration'] ?? 0));
 
         if (!$serviceId || !$staffId || !$date || !$time) {
             return null;
@@ -244,6 +257,189 @@ class BookingCartController extends Controller
             'start_date_time' => $startDateTime,
             'duration' => $duration,
         ];
+    }
+
+    private function resolveServiceDuration(int $serviceId, int $fallbackDuration = 0): int
+    {
+        $serviceDuration = (int) (Service::whereKey($serviceId)->value('duration_min') ?? 0);
+
+        return max(1, $serviceDuration > 0 ? $serviceDuration : $fallbackDuration);
+    }
+
+    private function employeeCanWorkSlot(array $slotData, int $branchId): bool
+    {
+        $staffId = (int) ($slotData['staff_id'] ?? 0);
+        $start = $slotData['start_date_time'] ?? null;
+        $duration = max(1, (int) ($slotData['duration'] ?? 0));
+
+        if (! $start instanceof Carbon || $staffId <= 0) {
+            return false;
+        }
+
+        $end = $start->copy()->addMinutes($duration);
+        $date = $start->toDateString();
+        $dayName = strtolower($start->format('l'));
+
+        $effectiveBranchId = $this->resolveEmployeeBranchId($staffId, $branchId);
+        if ($branchId > 0 && $effectiveBranchId <= 0) {
+            return false;
+        }
+
+        if ($effectiveBranchId > 0 && Holiday::where('branch_id', $effectiveBranchId)->whereDate('date', $date)->exists()) {
+            return false;
+        }
+
+        if (StaffLeavePeriod::where('staff_id', $staffId)
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->exists()) {
+            return false;
+        }
+
+        $workingConfig = $this->resolveEmployeeWorkingConfig($staffId, $effectiveBranchId, $dayName);
+        if (! $workingConfig) {
+            return false;
+        }
+
+        $workStart = Carbon::parse($date . ' ' . $workingConfig['start_time']);
+        $workEnd = Carbon::parse($date . ' ' . $workingConfig['end_time']);
+
+        if ($workEnd->lte($workStart) || $start->lt($workStart) || $end->gt($workEnd)) {
+            return false;
+        }
+
+        foreach ($workingConfig['breaks'] as $break) {
+            $breakStartValue = $break['start_break'] ?? $break['start'] ?? $break['from'] ?? null;
+            $breakEndValue = $break['end_break'] ?? $break['end'] ?? $break['to'] ?? null;
+
+            if (! $breakStartValue || ! $breakEndValue) {
+                continue;
+            }
+
+            try {
+                $breakStart = Carbon::parse($date . ' ' . $this->normalizeTime($breakStartValue));
+                $breakEnd = Carbon::parse($date . ' ' . $this->normalizeTime($breakEndValue));
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            if ($breakEnd->lte($breakStart)) {
+                continue;
+            }
+
+            if ($start->lt($breakEnd) && $end->gt($breakStart)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function resolveEmployeeBranchId(int $staffId, int $branchId = 0): int
+    {
+        $query = BranchEmployee::where('employee_id', $staffId);
+
+        if ($branchId > 0) {
+            return $query->where('branch_id', $branchId)->exists() ? $branchId : 0;
+        }
+
+        return (int) ($query
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->value('branch_id') ?? 0);
+    }
+
+    private function resolveEmployeeWorkingConfig(int $staffId, int $branchId, string $dayName): ?array
+    {
+        $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)
+            ->where('day_of_week', $dayName)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($staffWorkingHours) {
+            if ($staffWorkingHours->is_holiday) {
+                return null;
+            }
+
+            return $this->makeWorkingConfig(
+                $staffWorkingHours->start_time,
+                $staffWorkingHours->end_time,
+                $staffWorkingHours->breaks
+            );
+        }
+
+        if ($branchId <= 0) {
+            return null;
+        }
+
+        $branchEmployee = BranchEmployee::where('employee_id', $staffId)
+            ->where('branch_id', $branchId)
+            ->orderByDesc('is_primary')
+            ->orderBy('id')
+            ->first();
+
+        if (! $branchEmployee) {
+            return null;
+        }
+
+        $workingHoursQuery = BussinessHour::where('branch_id', $branchId)
+            ->where('day', $dayName)
+            ->where('is_holiday', 0)
+            ->orderBy('id', 'desc');
+
+        if ($branchEmployee->shift_id) {
+            $workingHoursQuery->where('shift_id', $branchEmployee->shift_id);
+        }
+
+        $workingHours = $workingHoursQuery->first();
+        if (! $workingHours) {
+            return null;
+        }
+
+        return $this->makeWorkingConfig(
+            $workingHours->start_time,
+            $workingHours->end_time,
+            $workingHours->breaks
+        );
+    }
+
+    private function makeWorkingConfig(?string $startTime, ?string $endTime, $breaks): ?array
+    {
+        try {
+            $start = $this->normalizeTime($startTime);
+            $end = $this->normalizeTime($endTime);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (Carbon::parse($end)->lte(Carbon::parse($start))) {
+            return null;
+        }
+
+        return [
+            'start_time' => $start,
+            'end_time' => $end,
+            'breaks' => $this->normalizeBreaks($breaks),
+        ];
+    }
+
+    private function normalizeTime(?string $time): string
+    {
+        $time = trim((string) $time);
+        if ($time === '') {
+            throw new \InvalidArgumentException('Time value is empty.');
+        }
+
+        return Carbon::parse($time)->format('H:i:s');
+    }
+
+    private function normalizeBreaks($breaks): array
+    {
+        if (is_string($breaks)) {
+            $breaks = json_decode($breaks, true);
+        }
+
+        return is_array($breaks) ? $breaks : [];
     }
 
     private function hasSlotConflict(int $staffId, Carbon $startDateTime, int $duration): bool
