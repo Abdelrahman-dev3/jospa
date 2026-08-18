@@ -183,6 +183,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 'wallet' => $data['submethods']['wallet'] ?? false,
                 'loyalty' => $data['submethods']['loyalty'] ?? false,
                 'gift_code' => $data['submethods']['gift_code'] ?? null,
+                'invoiceCopon' => $data['couponCode'] ?? null,
             ]);
             $subResult = $subMethodService->apply($data['user_id'], $fakeRequest, $data['final_before_sub']);
             if (isset($subResult['error'])) {
@@ -272,6 +273,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
             'wallet' => $context['wallet'],
             'loyalty' => $context['loyalty'],
             'gift_code' => $context['gift_code'],
+            'invoiceCopon' => $context['couponCode'] ?? null,
         ]);
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {

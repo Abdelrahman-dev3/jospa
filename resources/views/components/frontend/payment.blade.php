@@ -1067,6 +1067,7 @@
             amount: 0,
         };
         let appliedGiftAmount = 0;
+        const giftCouponNotAllowedMessage = @json(__('messagess.gift_card_coupon_not_allowed'));
         appendGatewayDiscountBadges();
         
         const showComingSoonNotification = () => {
@@ -1294,13 +1295,20 @@
             const button = this;
             const input = document.getElementById('invoiceCouponInput');
             const couponCode = input.value.trim();
+            const giftInput = document.querySelector('input[name="gift_code"]');
+            const appliedGiftCode = appliedGiftAmount > 0 ? (giftInput?.value.trim() || '') : '';
+
+            if (appliedGiftCode) {
+                toastr.error(giftCouponNotAllowedMessage);
+                return;
+            }
         
             if (!couponCode) {
                 toastr.error("{{ __('messagess.enter_coupon_code') }}");
                 return;
             }
         
-            fetch(`/api/validate-invoice-coupon?coupon_code=${encodeURIComponent(couponCode)}`)
+            fetch(`/api/validate-invoice-coupon?coupon_code=${encodeURIComponent(couponCode)}&gift_code=${encodeURIComponent(appliedGiftCode)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.valid) {
@@ -1315,12 +1323,23 @@
         
                     button.disabled = true;
                     button.classList.add('disabled');
+                    input.readOnly = true;
+
+                    if (giftInput) {
+                        giftInput.value = '';
+                        giftInput.disabled = true;
+                    }
+                    const giftButton = document.querySelector('#gift_code');
+                    if (giftButton) {
+                        giftButton.disabled = true;
+                        giftButton.classList.add('disabled');
+                    }
                         
                     document.querySelector('.inv-m').style.display = 'flex';
                     
                     updateTotal();
                 } else {
-                    toastr.error("{{ __('messagess.invalid_coupon') }}");
+                    toastr.error(data.message || "{{ __('messagess.invalid_coupon') }}");
                 }
             })
             .catch(() => { toastr.error("{{ __('messagess.error_occurred') }}"); });
@@ -1330,6 +1349,12 @@
             const button = this;
             const input = button.previousElementSibling; 
             const giftCode = input.value.trim();
+            const couponInput = document.getElementById('invoiceCouponInput');
+
+            if (couponState.applied || (couponInput?.value.trim() && document.querySelector('#applyCoupon')?.disabled)) {
+                toastr.error(giftCouponNotAllowedMessage);
+                return;
+            }
         
             if (!giftCode) {
                 toastr.error("{{ __('messagess.enter_coupon_code') }}");
@@ -1346,6 +1371,17 @@
             
                         button.disabled = true;
                         button.classList.add('disabled');
+                        input.readOnly = true;
+
+                        if (couponInput) {
+                            couponInput.value = '';
+                            couponInput.disabled = true;
+                        }
+                        const couponButton = document.querySelector('#applyCoupon');
+                        if (couponButton) {
+                            couponButton.disabled = true;
+                            couponButton.classList.add('disabled');
+                        }
             
                         updateTotal();
                     } else {

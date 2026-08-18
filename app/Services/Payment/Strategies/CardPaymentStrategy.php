@@ -317,6 +317,7 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 'wallet' => data_get($data, 'submethods.wallet', false),
                 'loyalty' => data_get($data, 'submethods.loyalty', false),
                 'gift_code' => data_get($data, 'submethods.gift_code'),
+                'invoiceCopon' => $data['couponCode'] ?? null,
             ]);
 
             $this->commitFinalizedPayment(

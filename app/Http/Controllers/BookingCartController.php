@@ -716,6 +716,13 @@ class BookingCartController extends Controller
             $this->addLoyaltyPoints($user->id, $charge['amount']);
             $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
             $giftCode = $request->get('gift_code');
+            if (filled($giftCode) && filled($couponCode)) {
+                $message = __('messagess.gift_card_coupon_not_allowed');
+                if ($request->expectsJson()) {
+                    return response()->json(['status' => false, 'message' => $message], 422);
+                }
+                return view('frontend.payment-status.failed')->with('error', $message);
+            }
             $invoiceId = $this->storeInvoice($user->id, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids, $couponCode, $giftCode, 'card');
             $this->paymentSuccess($cartIds, 'card', $tapId, $invoiceId);
 

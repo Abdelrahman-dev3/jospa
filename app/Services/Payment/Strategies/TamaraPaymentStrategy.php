@@ -392,6 +392,7 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
             'wallet' => $context['wallet'],
             'loyalty' => $context['loyalty'],
             'gift_code' => $context['gift_code'],
+            'invoiceCopon' => $context['couponCode'] ?? null,
         ]);
         $subResult = $subMethodService->apply($user->id, $fakeRequest, $totalData['total']);
         if (isset($subResult['error'])) {

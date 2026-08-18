@@ -77,6 +77,11 @@ abstract class BasePaymentStrategy
         $finalizer = app(PaymentFinalizerService::class);
         $subMethodService = app(PaymentSubMethodsService::class);
         $attemptService = app(PaymentAttemptService::class);
+
+        if (filled($request->get('gift_code')) && trim((string) ($paymentData['couponCode'] ?? '')) !== '') {
+            throw new \InvalidArgumentException(__('messagess.gift_card_coupon_not_allowed'));
+        }
+
         $subPayments = array_merge($subResult, [
             'gift_code' => $request->get('gift_code'),
             'coupon_discount_amount' => $paymentData['couponDiscountAmount'] ?? 0,

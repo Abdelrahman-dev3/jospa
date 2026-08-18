@@ -149,4 +149,5 @@ return [
     'privacy_consent_title' => 'Your Consent',
     'privacy_consent_text' => 'By using the Jospa website and its services, you agree to the terms outlined in this Privacy Policy.',
     'privacy_back_to_top' => 'Back to top',
+    'gift_card_coupon_not_allowed' => 'Discount codes cannot be used when paying with a gift card.',
 ];

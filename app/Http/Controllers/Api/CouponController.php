@@ -71,6 +71,14 @@ class CouponController extends Controller
     public function validateInvoiceCoupon(Request $request)
     {
         $couponCode = $request->query('coupon_code');
+        $giftCode = trim((string) $request->query('gift_code', ''));
+
+        if ($giftCode !== '') {
+            return response()->json([
+                'valid' => false,
+                'message' => __('messagess.gift_card_coupon_not_allowed'),
+            ], 422);
+        }
 
         $coupon = Coupon::query()
             ->where('coupon_code', $couponCode)
