@@ -320,6 +320,27 @@ class CardPaymentStrategy extends BasePaymentStrategy
                 'invoiceCopon' => $data['couponCode'] ?? null,
             ]);
 
+            // Safety net: if cart_ids were lost from cache (cache expired before callback),
+            // recover them directly from DB WITHOUT calling cleanupExpiredBookings.
+            // This prevents a "paid but booking not saved" scenario when the cache TTL
+            // is shorter than the user's payment session.
+            if (empty($data['cart_ids'] ?? [])) {
+                $userId = (int) ($data['user_id'] ?? 0);
+                if ($userId > 0) {
+                    $data['cart_ids'] = \Modules\Booking\Models\Booking::where('user_id', $userId)
+                        ->where('status', 'pending')
+                        ->whereDoesntHave('transactions', fn ($q) => $q->where('payment_status', 1))
+                        ->pluck('id')
+                        ->toArray();
+
+                    \Log::warning('Hyperpay callback: cart_ids were missing from cache, recovered from DB.', [
+                        'merchant_reference' => $merchantTransactionId,
+                        'user_id' => $userId,
+                        'recovered_cart_ids' => $data['cart_ids'],
+                    ]);
+                }
+            }
+
             $this->commitFinalizedPayment(
                 (int) $data['user_id'],
                 $fakeRequest,

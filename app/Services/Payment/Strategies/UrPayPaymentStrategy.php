@@ -232,6 +232,24 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 return $this->respondSuccess($request, 'Payment already finalized.');
             }
 
+            // Safety net: if cart_ids were lost from session, recover from DB
+            // WITHOUT calling cleanupExpiredBookings.
+            if (empty($data['cart_ids'] ?? [])) {
+                $recoverUserId = (int) ($data['user_id'] ?? 0);
+                if ($recoverUserId > 0) {
+                    $data['cart_ids'] = \Modules\Booking\Models\Booking::where('user_id', $recoverUserId)
+                        ->where('status', 'pending')
+                        ->whereDoesntHave('transactions', fn ($q) => $q->where('payment_status', 1))
+                        ->pluck('id')
+                        ->toArray();
+
+                    \Illuminate\Support\Facades\Log::warning('UrPay callback: cart_ids were missing from session, recovered from DB.', [
+                        'user_id' => $recoverUserId,
+                        'recovered_cart_ids' => $data['cart_ids'],
+                    ]);
+                }
+            }
+
             $invoiceId = $this->commitFinalizedPayment($data['user_id'], $fakeRequest, $data, $subResult, [
                 'attempt_id' => $data['attempt_id'] ?? null,
                 'transaction_id' => $this->resolveUrPayTransactionId($request, $data),

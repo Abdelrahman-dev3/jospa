@@ -527,6 +527,21 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
                             return $this->respondSuccess($request, 'Payment already finalized.');
                         }
 
+                        // Safety net: if cart_ids were lost from session or cache,
+                        // recover them directly from DB WITHOUT calling cleanupExpiredBookings.
+                        if (empty($data['cart_ids'] ?? [])) {
+                            $data['cart_ids'] = \Modules\Booking\Models\Booking::where('user_id', $payerUserId)
+                                ->where('status', 'pending')
+                                ->whereDoesntHave('transactions', fn ($q) => $q->where('payment_status', 1))
+                                ->pluck('id')
+                                ->toArray();
+
+                            \Log::warning('Tabby callback: cart_ids were missing from session, recovered from DB.', [
+                                'user_id' => $payerUserId,
+                                'recovered_cart_ids' => $data['cart_ids'],
+                            ]);
+                        }
+
                         $invoiceId = $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
                             'attempt_id' => $attemptId,
                             'transaction_id' => $checkoutId,

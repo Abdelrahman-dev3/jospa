@@ -352,6 +352,20 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
                 return $this->respondSuccess($request, 'Payment already finalized.');
             }
 
+            // Safety net: if cart_ids were lost from session, recover from DB
+            if (empty($data['cart_ids'] ?? [])) {
+                $data['cart_ids'] = \Modules\Booking\Models\Booking::where('user_id', $payerUserId)
+                    ->where('status', 'pending')
+                    ->whereDoesntHave('transactions', fn ($q) => $q->where('payment_status', 1))
+                    ->pluck('id')
+                    ->toArray();
+
+                \Illuminate\Support\Facades\Log::warning('Tamara callback: cart_ids were missing from session, recovered from DB.', [
+                    'user_id' => $payerUserId,
+                    'recovered_cart_ids' => $data['cart_ids'],
+                ]);
+            }
+
             $this->commitFinalizedPayment($payerUserId, $fakeRequest, $data, $subResult, [
                 'attempt_id' => $data['attempt_id'] ?? null,
                 'transaction_id' => $checkoutId,

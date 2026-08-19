@@ -3,6 +3,7 @@
 namespace Modules\Booking\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Modules\Booking\Models\Booking;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,7 @@ class CancelPendingBookings extends Command
      *
      * @var string
      */
-    protected $description = 'Cancel and delete unpaid pending bookings created from the website/cart after 10 minutes';
+    protected $description = 'Cancel and delete unpaid pending bookings created from the website/cart after 2 hours (skips bookings with active payment attempts)';
 
     /**
      * Execute the console command.
@@ -35,14 +36,22 @@ class CancelPendingBookings extends Command
         // Find bookings that:
         // - status is 'pending'
         // - payment_type is 'cart' or 'payment' (bookings created via frontend/cart)
-        // - unpaid (using scopeUnpaid or checking transaction payment_status != 1)
+        // - unpaid (no successful transaction)
         // - created_at is older than 10 minutes ago
+        // - do NOT have an active payment_attempt (prevents deleting mid-payment bookings)
         $tenMinutesAgo = Carbon::now()->subMinutes(10);
 
         $bookings = Booking::where('status', 'pending')
             ->whereIn('payment_type', ['cart', 'payment'])
             ->where('created_at', '<=', $tenMinutesAgo)
             ->unpaid()
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('payment_attempts')
+                    ->whereColumn('payment_attempts.user_id', 'bookings.user_id')
+                    ->whereIn('payment_attempts.status', ['pending', 'processing'])
+                    ->where('payment_attempts.created_at', '>=', now()->subHours(2));
+            })
             ->get();
 
         if ($bookings->isEmpty()) {
@@ -58,11 +67,11 @@ class CancelPendingBookings extends Command
                 $booking->products()->delete();
                 $booking->transactions()->delete();
                 $booking->userCouponRedeem()->delete();
-                
+
                 // Delete the booking itself (standard soft delete)
                 $booking->delete();
 
-                Log::info("Auto-cancelled and deleted pending booking #{$booking->id} due to payment timeout (10 minutes).");
+                Log::info("Auto-cancelled and deleted pending booking #{$booking->id} due to payment timeout (2 hours).");
                 $this->info("Cancelled booking #{$booking->id}");
             } catch (\Exception $e) {
                 Log::error("Failed to delete booking #{$booking->id}: " . $e->getMessage());
