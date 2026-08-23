@@ -187,11 +187,25 @@ class Booking extends BaseModel
     public static function cleanupExpiredBookings()
     {
         try {
+            // 10 minutes: bookings that were created but never paid within this window
+            // are considered abandoned. This runs ONLY when creating a new booking,
+            // never during payment gateway callbacks — see getUserIncompleteBookings().
             $tenMinutesAgo = \Carbon\Carbon::now()->subMinutes(10);
+
             $expiredBookings = static::where('status', 'pending')
                 ->whereIn('payment_type', ['cart', 'payment'])
                 ->where('created_at', '<=', $tenMinutesAgo)
                 ->unpaid()
+                // Safety guard: never delete a booking whose user has an active
+                // payment_attempt in the last 10 minutes. Handles edge cases where
+                // the explicit call site guard below is bypassed.
+                ->whereNotExists(function ($query) {
+                    $query->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('payment_attempts')
+                        ->whereColumn('payment_attempts.user_id', 'bookings.user_id')
+                        ->whereIn('payment_attempts.status', ['pending', 'processing'])
+                        ->where('payment_attempts.created_at', '>=', now()->subHours(2));
+                })
                 ->get();
 
             foreach ($expiredBookings as $booking) {
@@ -213,7 +227,12 @@ class Booking extends BaseModel
     }
 
     public static function getUserIncompleteBookings(int $userId,?string $paymentType = null,array $relations = ['service.service', 'service.employee']): Collection {
-        static::cleanupExpiredBookings();
+        // NOTE: cleanupExpiredBookings() is intentionally NOT called here.
+        // This method is used by PaymentCalculatorService during payment gateway
+        // callbacks. Running cleanup at that point causes a race condition where
+        // a pending booking that is > 10 minutes old gets deleted just before
+        // it is confirmed — resulting in payment being captured with no booking saved.
+        // Cleanup is triggered only from BookingCartController::store() (new booking creation).
 
         return static::userBaseQuery($userId, $relations)
             ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
