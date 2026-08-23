@@ -356,5 +356,12 @@ class Booking extends BaseModel
         return $this->hasMany(BookingPackageService::class, 'booking_id', 'id');
     }
 
-
+    protected static function booted()
+    {
+        static::updated(function ($booking) {
+            if ($booking->isDirty('status') && $booking->status === 'check_out') {
+                \App\Jobs\SendPostServiceEvaluationWhatsAppJob::dispatch($booking->id)->delay(now()->addMinutes(10));
+            }
+        });
+    }
 }
