@@ -47,13 +47,11 @@ class SendNewBookingWhatsAppJob implements ShouldQueue
 
         // Pass variables expected by the template. Update the template name and variables as needed.
         $variables = [
-            $booking->user->first_name ?? $booking->user->full_name ?? 'العميل',
+            $booking->user->first_name ?? $booking->user->full_name ?? 'عزيزي العميل',
             $bookingDate,
             $bookingTime
         ];
 
-        // Replace 'jospa_appointment_confirmation' with the actual template name in Javna if different
-        // If you don't use templates and just want to send text, you can use sendText() instead
         $templateName = 'jospa_appointment_confirmation';
         
         $isSent = $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
