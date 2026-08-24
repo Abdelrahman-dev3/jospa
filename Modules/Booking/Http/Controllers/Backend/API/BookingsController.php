@@ -202,6 +202,8 @@ class BookingsController extends Controller
             $messageTemplate = 'New booking #[[booking_id]] has been booked.';
             $notify_message = str_replace('[[booking_id]]', $booking->id, $messageTemplate);
             $this->sendNotificationOnBookingUpdate($type,$notify_message,$booking);
+            
+            \App\Jobs\SendNewBookingWhatsAppJob::dispatch($booking->id);
 
         } catch (\Exception $e) {
             \Log::error($e->getMessage());
