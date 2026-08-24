@@ -37,6 +37,11 @@ class SendNewBookingWhatsAppJob implements ShouldQueue
         $booking = Booking::with('user')->find($this->bookingId);
 
         if (!$booking || !$booking->user || empty($booking->user->mobile)) {
+            \Illuminate\Support\Facades\Log::warning("WhatsApp Job: Missing booking, user, or mobile.", [
+                'booking_id' => $this->bookingId,
+                'user' => $booking->user->id ?? null,
+                'mobile' => $booking->user->mobile ?? null,
+            ]);
             return;
         }
 

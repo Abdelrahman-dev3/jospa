@@ -198,13 +198,16 @@ class BookingsController extends Controller
 
         $message = 'New ' . Str::singular($this->module_title) . ' Added';
         try {
+            \App\Jobs\SendNewBookingWhatsAppJob::dispatch($booking->id);
+        } catch (\Exception $e) {
+            \Log::error("Failed to dispatch WhatsApp job: " . $e->getMessage());
+        }
+
+        try {
             $type = 'new_booking';
             $messageTemplate = 'New booking #[[booking_id]] has been booked.';
             $notify_message = str_replace('[[booking_id]]', $booking->id, $messageTemplate);
             $this->sendNotificationOnBookingUpdate($type,$notify_message,$booking);
-            
-            \App\Jobs\SendNewBookingWhatsAppJob::dispatch($booking->id);
-
         } catch (\Exception $e) {
             \Log::error($e->getMessage());
         }
