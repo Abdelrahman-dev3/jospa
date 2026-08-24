@@ -56,6 +56,20 @@ class SendNewBookingWhatsAppJob implements ShouldQueue
         // If you don't use templates and just want to send text, you can use sendText() instead
         $templateName = 'jospa_appointment_confirmation';
         
-        $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
+        $isSent = $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
+
+        if ($isSent) {
+            \Illuminate\Support\Facades\Log::info("WhatsApp booking notification sent successfully.", [
+                'booking_id' => $this->bookingId,
+                'phone' => $phone,
+                'template' => $templateName
+            ]);
+        } else {
+            \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp booking notification.", [
+                'booking_id' => $this->bookingId,
+                'phone' => $phone,
+                'template' => $templateName
+            ]);
+        }
     }
 }

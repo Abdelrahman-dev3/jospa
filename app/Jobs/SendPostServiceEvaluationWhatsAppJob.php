@@ -49,6 +49,20 @@ class SendPostServiceEvaluationWhatsAppJob implements ShouldQueue
         // The template name exactly as requested by user
         $templateName = 'Post_service _evaluation';
         
-        $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
+        $isSent = $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
+
+        if ($isSent) {
+            \Illuminate\Support\Facades\Log::info("WhatsApp post-service evaluation notification sent successfully.", [
+                'booking_id' => $this->bookingId,
+                'phone' => $phone,
+                'template' => $templateName
+            ]);
+        } else {
+            \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp post-service evaluation notification.", [
+                'booking_id' => $this->bookingId,
+                'phone' => $phone,
+                'template' => $templateName
+            ]);
+        }
     }
 }
