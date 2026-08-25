@@ -54,15 +54,15 @@
     let allItems = [];
 
     function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
+        if (str === null || str === undefined) return '';
         const div = document.createElement('div');
-        div.textContent = str;
+        div.textContent = String(str);
         return div.innerHTML;
     }
 
     function renderItem(n) {
         return `
-            <a href="${n.url}" class="np-item ${!n.read_at ? 'unread' : ''}">
+            <a href="${n.url || '#'}" class="np-item ${!n.read_at ? 'unread' : ''}">
                 <div class="np-icon nd-icon-${n.icon || 'default'}">${ICON_MAP[n.icon] || ICON_MAP.default}</div>
                 <div class="np-content">
                     <div class="np-title">${escapeHtml(n.title)}</div>
@@ -81,7 +81,7 @@
             items = allItems.filter(n => !n.read_at);
         }
 
-        if (items.length === 0) {
+        if (!items || items.length === 0) {
             container.innerHTML = `
                 <div class="np-empty">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -103,17 +103,23 @@
         .then(r => r.json())
         .then(data => {
             if (data.status) {
+                var items = data.data;
+                if (items && !Array.isArray(items)) {
+                    items = Object.values(items);
+                }
                 if (append) {
-                    allItems = allItems.concat(data.data);
+                    allItems = allItems.concat(items);
                 } else {
-                    allItems = data.data;
+                    allItems = items;
                 }
                 currentPage = data.pagination.current_page;
                 lastPage = data.pagination.last_page;
                 renderList();
 
                 const loadMore = document.getElementById('npLoadMore');
-                loadMore.style.display = currentPage < lastPage ? 'block' : 'none';
+                if (loadMore) {
+                    loadMore.style.display = currentPage < lastPage ? 'block' : 'none';
+                }
             }
         })
         .catch(() => {});

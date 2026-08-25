@@ -385,25 +385,30 @@
     }
 
     function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
+        if (str === null || str === undefined) return '';
         const div = document.createElement('div');
-        div.textContent = str;
+        div.textContent = String(str);
         return div.innerHTML;
     }
 
     function fetchNotifications() {
-        fetch('{{ route('notifications.index') }}?per_page=8', {
+        fetch('{{ route("notifications.index") }}?per_page=8', {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            console.log('Notifications response:', data);
             if (data.status) {
                 updateBadges(data.unread_count || 0);
-                renderNotifList(data.data, 'notifListDesktop');
-                renderNotifList(data.data, 'notifListMobile');
+                var items = data.data;
+                if (items && !Array.isArray(items)) {
+                    items = Object.values(items);
+                }
+                renderNotifList(items, 'notifListDesktop');
+                renderNotifList(items, 'notifListMobile');
             }
         })
-        .catch(() => {});
+        .catch(function(err) { console.error('Fetch notifications error:', err); });
     }
 
     function fetchUnreadCount() {

@@ -17,30 +17,67 @@ class UserNotificationController extends Controller
 
         $notifications = $user->notifications()
             ->orderBy('created_at', 'desc')
-            ->where('type', 'App\\Notifications\\UserAccountNotification')
             ->paginate($perPage);
 
-        $items = $notifications->map(function ($notification) {
-            $data = $notification->data;
+        $items = $notifications->getCollection()->map(function ($notification) {
+            $raw = $notification->data;
+            if (is_string($raw)) {
+                $raw = json_decode($raw, true) ?? [];
+            }
+            if (!is_array($raw)) {
+                $raw = [];
+            }
+
+            $inner = (isset($raw['data']) && is_array($raw['data'])) ? $raw['data'] : [];
+
+            $title = $raw['title']
+                ?? $raw['subject']
+                ?? $inner['subject']
+                ?? $inner['title']
+                ?? $inner['type']
+                ?? __('notifications.notifications');
+
+            $message = $raw['message']
+                ?? $inner['message']
+                ?? $inner['notification_message']
+                ?? $raw['notification_message']
+                ?? '';
+
+            if (!empty($message)) {
+                $message = trim(strip_tags($message));
+            }
+
+            $icon = $raw['icon']
+                ?? $inner['icon']
+                ?? 'default';
+
+            $url = $raw['url']
+                ?? $inner['url']
+                ?? $inner['link']
+                ?? $raw['link']
+                ?? route('profile.my_bookings');
+
+            $type = $raw['type']
+                ?? $inner['type']
+                ?? 'default';
+
             return [
                 'id' => $notification->id,
-                'type' => $data['type'] ?? 'default',
-                'title' => $data['title'] ?? '',
-                'message' => $data['message'] ?? '',
-                'url' => $data['url'] ?? '/',
-                'icon' => $data['icon'] ?? 'default',
+                'type' => (string) $type,
+                'title' => (string) $title,
+                'message' => (string) $message,
+                'url' => (string) $url,
+                'icon' => (string) $icon,
                 'read_at' => $notification->read_at,
                 'created_at' => $notification->created_at->toIso8601String(),
                 'time_ago' => $this->timeAgo($notification->created_at),
             ];
-        });
+        })->values();
 
         return response()->json([
             'status' => true,
-            'data' => $items,
-            'unread_count' => $user->unreadNotifications()
-                ->where('type', 'App\\Notifications\\UserAccountNotification')
-                ->count(),
+            'data' => array_values($items->toArray()),
+            'unread_count' => $user->unreadNotifications()->count(),
             'pagination' => [
                 'current_page' => $notifications->currentPage(),
                 'last_page' => $notifications->lastPage(),
@@ -54,9 +91,7 @@ class UserNotificationController extends Controller
      */
     public function unreadCount(): JsonResponse
     {
-        $count = auth()->user()->unreadNotifications()
-            ->where('type', 'App\\Notifications\\UserAccountNotification')
-            ->count();
+        $count = auth()->user()->unreadNotifications()->count();
 
         return response()->json([
             'status' => true,
@@ -69,9 +104,7 @@ class UserNotificationController extends Controller
      */
     public function markAllRead(): JsonResponse
     {
-        auth()->user()->unreadNotifications()
-            ->where('type', 'App\\Notifications\\UserAccountNotification')
-            ->update(['read_at' => now()]);
+        auth()->user()->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json([
             'status' => true,
