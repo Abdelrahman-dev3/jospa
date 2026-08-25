@@ -2,6 +2,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ asset('pages-css/second-navbar.css') }}">
 <link rel="stylesheet" href="{{ asset('pages-css/notifications-dropdown.css') }}">
 <style>
@@ -344,9 +345,23 @@
 <script>
 (function() {
     const ICON_MAP = {
-        booking: '📋', wallet: '💰', loyalty: '⭐', gift: '🎁',
-        package: '📦', coupon: '🏷️', welcome: '👋', default: '🔔'
+        booking: '<i class="fa-solid fa-calendar-check"></i>',
+        wallet: '<i class="fa-solid fa-wallet"></i>',
+        loyalty: '<i class="fa-solid fa-star"></i>',
+        gift: '<i class="fa-solid fa-gift"></i>',
+        package: '<i class="fa-solid fa-box-open"></i>',
+        coupon: '<i class="fa-solid fa-ticket"></i>',
+        welcome: '<i class="fa-solid fa-user-check"></i>',
+        default: '<i class="fa-solid fa-bell"></i>'
     };
+
+    function getNotificationIconHtml(icon) {
+        if (!icon) return ICON_MAP.default;
+        if (typeof icon === 'string' && (icon.includes('fa-') || icon.includes('bi-') || icon.includes('mdi-'))) {
+            return `<i class="${icon}"></i>`;
+        }
+        return ICON_MAP[icon] || ICON_MAP.default;
+    }
 
     function updateBadges(count) {
         document.querySelectorAll('.badge-count').forEach(el => {
@@ -374,7 +389,7 @@
         container.innerHTML = items.slice(0, 8).map(n => `
             <a href="${n.url || '#'}" class="nd-item ${!n.read_at ? 'unread' : ''}"
                onclick="markNotifRead(event, '${n.id}')">
-                <div class="nd-icon nd-icon-${n.icon || 'default'}">${ICON_MAP[n.icon] || ICON_MAP.default}</div>
+                <div class="nd-icon nd-icon-${n.icon || 'default'}">${getNotificationIconHtml(n.icon)}</div>
                 <div class="nd-content">
                     <div class="nd-title">${escapeHtml(n.title)}</div>
                     <div class="nd-message">${escapeHtml(n.message)}</div>
