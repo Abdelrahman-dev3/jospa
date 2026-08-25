@@ -32,6 +32,7 @@ use App\Models\User;
 use App\Models\Setting;
 use Modules\Promotion\Models\Coupon;
 use Modules\Promotion\Models\UserCouponRedeem;
+use App\Services\UserNotificationService;
 
 
 
@@ -929,6 +930,12 @@ class BookingCartController extends Controller
         $loyalty = LoyaltyPoint::firstOrNew(['user_id' => $userId]);
         $loyalty->points = ($loyalty->points ?? 0) + $pointsToAdd;
         $loyalty->save();
+
+        // Notify user about loyalty points
+        $user = User::find($userId);
+        if ($user) {
+            app(UserNotificationService::class)->notifyLoyaltyPointsAdded($user, (int) $pointsToAdd);
+        }
     }
 
     private function storeInvoice($userId, $discountAmount, $loyaltyDiscount, $finalTotal, $cartIds, $gift_ids = null, $couponCode = null, $giftCode = null, $paymentMethod = null)

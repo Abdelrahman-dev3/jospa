@@ -26,6 +26,7 @@ use App\Models\GiftCard;
 use Illuminate\Support\Facades\DB;
 use App\Models\Setting;
 use App\Services\GiftCardActivationService;
+use App\Services\UserNotificationService;
 
 class PaymentFinalizerService
 {
@@ -131,6 +132,9 @@ class PaymentFinalizerService
             }
         }
 
+        // Send user account notifications
+        $this->sendUserAccountNotifications($userId, $cartIds, $giftIds, $couponCode, $subPayments);
+
         return $invoiceId;
     }
 
@@ -190,6 +194,56 @@ class PaymentFinalizerService
             'balance_after' => $loyalty->points,
             'source' => 'اضافة نقاط ولاء بناءا علي المبلغ الاجمالي :' . $paidAmount ,
         ]);
+
+        // Notify user about loyalty points
+        $user = User::find($userId);
+        if ($user) {
+            app(UserNotificationService::class)->notifyLoyaltyPointsAdded($user, (int) $pointsToAdd);
+        }
+    }
+
+    /**
+     * Send user account notifications after successful payment.
+     */
+    private function sendUserAccountNotifications(int $userId, array $cartIds, array $giftIds, string $couponCode, array $subPayments = []): void
+    {
+        $user = User::find($userId);
+        if (! $user) {
+            return;
+        }
+
+        $notifier = app(UserNotificationService::class);
+
+        // Notify for each paid booking
+        if (! empty($cartIds)) {
+            $bookings = Booking::whereIn('id', $cartIds)->get();
+            foreach ($bookings as $booking) {
+                $notifier->notifyBookingPaid($user, $booking);
+            }
+
+            // Check if any bookings contain packages
+            $packageBookings = BookingPackages::whereIn('booking_id', $cartIds)->get();
+            foreach ($packageBookings as $pkg) {
+                $notifier->notifyPackagePurchased($user, $pkg->name ?? __('notifications.package_purchased_title'));
+            }
+        }
+
+        // Notify for gift card purchases
+        if (! empty($giftIds)) {
+            $notifier->notifyGiftCardPurchased($user, count($giftIds));
+        }
+
+        // Notify for coupon usage
+        $couponDiscount = (float) ($subPayments['coupon_discount_amount'] ?? 0);
+        if (! empty($couponCode) && $couponDiscount > 0) {
+            $notifier->notifyCouponApplied($user, $couponDiscount);
+        }
+
+        // Notify for wallet debit
+        $walletUsed = (float) ($subPayments['used_wallet'] ?? 0);
+        if ($walletUsed > 0) {
+            $notifier->notifyWalletDebit($user, $walletUsed);
+        }
     }
 
     /**

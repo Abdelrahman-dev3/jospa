@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Currency;
 use carbon\Carbon;
+use App\Services\UserNotificationService;
 
 class WalletController extends Controller
 {
@@ -306,6 +307,9 @@ class WalletController extends Controller
         });
 
         $this->clearWalletPaymentState($merchantTransactionId);
+
+        // Send wallet top-up notification
+        app(UserNotificationService::class)->notifyWalletTopUp($user, $amount);
 
         return view('frontend.payment-status.captured');
     }

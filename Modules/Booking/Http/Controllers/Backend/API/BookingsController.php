@@ -10,6 +10,7 @@ use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
 use Modules\Booking\Trait\BookingTrait;
 use Modules\Booking\Trait\PaymentTrait;
+use App\Services\UserNotificationService;
 use Modules\Booking\Transformers\BookingDetailResource;
 use Modules\Booking\Transformers\BookingPackageDetailResource;
 use Modules\Booking\Transformers\BookingListResource;
@@ -280,6 +281,11 @@ class BookingsController extends Controller
                 $this->sendNotificationOnBookingUpdate($notify_type,'',$booking);
             } catch (\Exception $e) {
                 \Log::error($e->getMessage());
+            }
+
+            // Send user account notification for status change
+            if ($booking->user) {
+                app(UserNotificationService::class)->notifyBookingStatusChanged($booking->user, $booking, $status);
             }
         }
 

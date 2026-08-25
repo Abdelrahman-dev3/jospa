@@ -18,6 +18,7 @@ use Illuminate\View\View;
 use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
 use Modules\Service\Models\Service;
+use App\Services\UserNotificationService;
 
 class PhoneAuthController extends Controller
 {
@@ -282,6 +283,7 @@ class PhoneAuthController extends Controller
     {
         $displayName = trim($username) !== '' ? $username : $phone;
         $user = User::whereMobileMatches($phone)->first() ?? new User();
+        $isNewUser = !$user->exists;
 
         $user->fill([
             'username' => $user->username ?: $displayName,
@@ -292,6 +294,11 @@ class PhoneAuthController extends Controller
         ]);
 
         $user->save();
+
+        // Send welcome notification for new users
+        if ($isNewUser) {
+            app(UserNotificationService::class)->notifyWelcome($user);
+        }
 
         return $user;
     }
