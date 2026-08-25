@@ -30,31 +30,38 @@ class UserNotificationController extends Controller
 
             $inner = (isset($raw['data']) && is_array($raw['data'])) ? $raw['data'] : [];
 
-            $title = $raw['title']
-                ?? $raw['subject']
-                ?? $inner['subject']
-                ?? $inner['title']
-                ?? $inner['type']
+            $title = (!empty($raw['title']) ? $raw['title'] : null)
+                ?? (!empty($raw['subject']) ? $raw['subject'] : null)
+                ?? (!empty($raw['heading']) ? $raw['heading'] : null)
+                ?? (!empty($inner['subject']) ? $inner['subject'] : null)
+                ?? (!empty($inner['title']) ? $inner['title'] : null)
+                ?? (!empty($inner['type']) ? $inner['type'] : null)
                 ?? __('notifications.notifications');
 
-            $message = $raw['message']
-                ?? $inner['message']
-                ?? $inner['notification_message']
-                ?? $raw['notification_message']
+            $message = (!empty($raw['message']) ? $raw['message'] : null)
+                ?? (!empty($raw['text']) ? $raw['text'] : null)
+                ?? (!empty($raw['body']) ? $raw['body'] : null)
+                ?? (!empty($raw['description']) ? $raw['description'] : null)
+                ?? (!empty($inner['message']) ? $inner['message'] : null)
+                ?? (!empty($inner['text']) ? $inner['text'] : null)
+                ?? (!empty($inner['body']) ? $inner['body'] : null)
+                ?? (!empty($inner['notification_message']) ? $inner['notification_message'] : null)
+                ?? (!empty($raw['notification_message']) ? $raw['notification_message'] : null)
                 ?? '';
 
             if (!empty($message)) {
                 $message = trim(strip_tags($message));
             }
 
-            $icon = $raw['icon']
-                ?? $inner['icon']
+            $icon = (!empty($raw['icon']) ? $raw['icon'] : null)
+                ?? (!empty($inner['icon']) ? $inner['icon'] : null)
                 ?? 'default';
 
-            $url = $raw['url']
-                ?? $inner['url']
-                ?? $inner['link']
-                ?? $raw['link']
+            $url = (!empty($raw['url_frontend']) ? $raw['url_frontend'] : null)
+                ?? (!empty($raw['url']) ? $raw['url'] : null)
+                ?? (!empty($inner['url']) ? $inner['url'] : null)
+                ?? (!empty($inner['link']) ? $inner['link'] : null)
+                ?? (!empty($raw['link']) ? $raw['link'] : null)
                 ?? route('profile.my_bookings');
 
             $type = $raw['type']
