@@ -458,7 +458,7 @@
     };
 
     window.markNotifRead = function(id) {
-        fetch('/api/user/notifications/' + id + '/mark-read', {
+        fetch('/account/api/notifications/' + id + '/mark-read', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',

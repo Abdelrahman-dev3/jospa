@@ -127,12 +127,12 @@
             Route::put('/profile/{id}/update', 'update')->name('profile.update');
         });
 
-        Route::middleware(['auth:web,sanctum'])->controller(UserNotificationController::class)->group(function () { 
+        Route::middleware(['auth:web,sanctum'])->controller(UserNotificationController::class)->group(function () {
             Route::get('/notifications', 'page')->name('notifications.page');
-            Route::get('/api/user/notifications', 'index')->name('notifications.index');
-            Route::get('/api/user/notifications/unread-count', 'unreadCount')->name('notifications.unread-count');
-            Route::post('/api/user/notifications/mark-all-read', 'markAllRead')->name('notifications.mark-all-read');
-            Route::post('/api/user/notifications/{id}/mark-read', 'markRead')->name('notifications.mark-read');
+            Route::get('/account/api/notifications', 'index')->name('notifications.index');
+            Route::get('/account/api/notifications/unread-count', 'unreadCount')->name('notifications.unread-count');
+            Route::post('/account/api/notifications/mark-all-read', 'markAllRead')->name('notifications.mark-all-read');
+            Route::post('/account/api/notifications/{id}/mark-read', 'markRead')->name('notifications.mark-read');
         });
 
         Route::controller(PhoneAuthController::class)->group(function () {
