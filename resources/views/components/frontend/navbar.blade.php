@@ -372,8 +372,8 @@
         }
 
         container.innerHTML = items.slice(0, 8).map(n => `
-            <a href="${n.url}" class="nd-item ${!n.read_at ? 'unread' : ''}"
-               onclick="markNotifRead('${n.id}')">
+            <a href="${n.url || '#'}" class="nd-item ${!n.read_at ? 'unread' : ''}"
+               onclick="markNotifRead(event, '${n.id}')">
                 <div class="nd-icon nd-icon-${n.icon || 'default'}">${ICON_MAP[n.icon] || ICON_MAP.default}</div>
                 <div class="nd-content">
                     <div class="nd-title">${escapeHtml(n.title)}</div>
@@ -423,6 +423,10 @@
     }
 
     window.toggleNotifDropdown = function(e) {
+        if (e.target.closest('.notification-dropdown')) {
+            return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
         const bell = e.currentTarget;
@@ -457,7 +461,10 @@
         .catch(() => {});
     };
 
-    window.markNotifRead = function(id) {
+    window.markNotifRead = function(e, id) {
+        if (e && e.stopPropagation) {
+            e.stopPropagation();
+        }
         fetch('/account/api/notifications/' + id + '/mark-read', {
             method: 'POST',
             headers: {
