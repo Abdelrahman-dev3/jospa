@@ -235,8 +235,7 @@ class Booking extends BaseModel
         // Cleanup is triggered only from BookingCartController::store() (new booking creation).
 
         return static::userBaseQuery($userId, $relations)
-            ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType))
-            ->unpaid()
+            ->when($paymentType, fn (Builder $query) => $query->where('payment_type', $paymentType)->unpaid())
             ->whereNotIn('status', ['completed', 'cancelled', 'canceled'])
             ->get();
     }

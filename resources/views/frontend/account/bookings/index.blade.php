@@ -33,12 +33,13 @@
       <div class="order-summary p-3">
         <table class="table align-middle">
           <thead>
-            <tr style="background-color: red;">
+            <tr>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('messagess.product') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('messagess.price') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('messages.branch') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('profile.date') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('profile.time') }}</th>
+                <th style="padding:16px 20px;font-weight:bold;">{{ __('messages.status') }}</th>
                 <th style="padding:16px 20px;"></th>
             </tr> 
           </thead>
@@ -49,7 +50,7 @@
                   <td class="d-flex align-items-center gap-2">
                     <div class="product-img"><i class="bi bi-person"></i></div>
                     <div class="text-start">
-                      <strong>{{ $service->service_name }} <i class="bi bi-chevron-left"></i> <i class="bi bi-chevron-left" style="margin: 0 -9px;"></i> <i class="bi bi-chevron-left"></i> {{ $service->service_name }}</strong><br>
+                      <strong>{{ $service->service_name }}</strong><br>
                       <small class="text-muted">{{ __('messagess.employee') }}: {{ $service->employee->full_name ?? '-' }}</small>
                     </div>
                   </td>
@@ -65,6 +66,19 @@
                   </td>
                   <td>
                     {{ \Carbon\Carbon::parse($booking->start_date_time)->format('H:i') }}
+                  </td>
+                  <td>
+                    @if($booking->status == 'confirmed')
+                        <span class="badge bg-success" style="font-size: 13px; padding: 6px 12px;">{{ __('notifications.status_confirmed') }}</span>
+                    @elseif($booking->status == 'pending')
+                        <span class="badge bg-warning text-dark" style="font-size: 13px; padding: 6px 12px;">{{ __('messages.pending') ?? 'قيد الانتظار' }}</span>
+                    @elseif($booking->status == 'check_in')
+                        <span class="badge bg-info" style="font-size: 13px; padding: 6px 12px;">{{ __('notifications.status_check_in') }}</span>
+                    @elseif($booking->status == 'checkout')
+                        <span class="badge bg-secondary" style="font-size: 13px; padding: 6px 12px;">{{ __('notifications.status_checkout') }}</span>
+                    @else
+                        <span class="badge bg-primary" style="font-size: 13px; padding: 6px 12px;">{{ $booking->status }}</span>
+                    @endif
                   </td>
                   <td style="color: #FF473E; font-weight: bold; cursor: pointer;" data-booking-id="{{$booking->id}}" data-bs-toggle="modal" data-bs-target="#cancelModal">
                       {{ __('messagess.cancellation_of_reservation') }}
