@@ -26,8 +26,15 @@
 }
 
 @keyframes badgePulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
 }
 
 .notification-bell .badge-count:empty,
@@ -68,6 +75,7 @@
         opacity: 0;
         transform: translateX(-50%) translateY(-8px);
     }
+
     to {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
@@ -79,6 +87,7 @@
         opacity: 0;
         transform: translateX(50%) translateY(-8px);
     }
+
     to {
         opacity: 1;
         transform: translateX(50%) translateY(0);
@@ -188,14 +197,45 @@
     font-size: 18px;
 }
 
-.nd-icon.nd-icon-booking { background: linear-gradient(135deg, #e8f4fd, #d0e8f7); color: #2980b9; }
-.nd-icon.nd-icon-wallet { background: linear-gradient(135deg, #e8fdf0, #d0f7e0); color: #27ae60; }
-.nd-icon.nd-icon-loyalty { background: linear-gradient(135deg, #fdf8e8, #f7eed0); color: #f39c12; }
-.nd-icon.nd-icon-gift { background: linear-gradient(135deg, #fde8f4, #f7d0e8); color: #e74c3c; }
-.nd-icon.nd-icon-package { background: linear-gradient(135deg, #f0e8fd, #e0d0f7); color: #8e44ad; }
-.nd-icon.nd-icon-coupon { background: linear-gradient(135deg, #e8fdfa, #d0f7f0); color: #16a085; }
-.nd-icon.nd-icon-welcome { background: linear-gradient(135deg, #fdf3e8, #f7e4d0); color: #BF9456; }
-.nd-icon.nd-icon-default { background: linear-gradient(135deg, #f0f0f0, #e5e5e5); color: #666; }
+.nd-icon.nd-icon-booking {
+    background: linear-gradient(135deg, #e8f4fd, #d0e8f7);
+    color: #2980b9;
+}
+
+.nd-icon.nd-icon-wallet {
+    background: linear-gradient(135deg, #e8fdf0, #d0f7e0);
+    color: #27ae60;
+}
+
+.nd-icon.nd-icon-loyalty {
+    background: linear-gradient(135deg, #fdf8e8, #f7eed0);
+    color: #f39c12;
+}
+
+.nd-icon.nd-icon-gift {
+    background: linear-gradient(135deg, #fde8f4, #f7d0e8);
+    color: #e74c3c;
+}
+
+.nd-icon.nd-icon-package {
+    background: linear-gradient(135deg, #f0e8fd, #e0d0f7);
+    color: #8e44ad;
+}
+
+.nd-icon.nd-icon-coupon {
+    background: linear-gradient(135deg, #e8fdfa, #d0f7f0);
+    color: #16a085;
+}
+
+.nd-icon.nd-icon-welcome {
+    background: linear-gradient(135deg, #fdf3e8, #f7e4d0);
+    color: #BF9456;
+}
+
+.nd-icon.nd-icon-default {
+    background: linear-gradient(135deg, #f0f0f0, #e5e5e5);
+    color: #666;
+}
 
 /* Content */
 .notification-dropdown .nd-content {

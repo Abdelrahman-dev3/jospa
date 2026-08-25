@@ -30,13 +30,13 @@ class UserNotificationController extends Controller
 
             $inner = (isset($raw['data']) && is_array($raw['data'])) ? $raw['data'] : [];
 
-            $title = (!empty($raw['title']) ? $raw['title'] : null)
-                ?? (!empty($raw['subject']) ? $raw['subject'] : null)
-                ?? (!empty($raw['heading']) ? $raw['heading'] : null)
-                ?? (!empty($inner['subject']) ? $inner['subject'] : null)
-                ?? (!empty($inner['title']) ? $inner['title'] : null)
-                ?? (!empty($inner['type']) ? $inner['type'] : null)
-                ?? __('notifications.notifications');
+            $title = (!empty($raw['title']) ? $raw['title'] : null) 
+                ?? (!empty($raw['subject']) ? $raw['subject'] : null) 
+                ?? (!empty($raw['heading']) ? $raw['heading'] : null) 
+                ?? (!empty($inner['subject']) ? $inner['subject'] : null) 
+                ?? (!empty($inner['title']) ? $inner['title'] : null) 
+                ?? (!empty($inner['type']) ? $inner['type'] : null) 
+                ?? __('notifications.notifications'); 
 
             $message = (!empty($raw['message']) ? $raw['message'] : null)
                 ?? (!empty($raw['text']) ? $raw['text'] : null)
