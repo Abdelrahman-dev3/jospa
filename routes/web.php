@@ -127,7 +127,7 @@
             Route::put('/profile/{id}/update', 'update')->name('profile.update');
         });
 
-        Route::middleware(['auth:web,sanctum'])->controller(UserNotificationController::class)->group(function () {
+        Route::middleware(['auth:web,sanctum'])->controller(UserNotificationController::class)->group(function () { 
             Route::get('/notifications', 'page')->name('notifications.page');
             Route::get('/api/user/notifications', 'index')->name('notifications.index');
             Route::get('/api/user/notifications/unread-count', 'unreadCount')->name('notifications.unread-count');
