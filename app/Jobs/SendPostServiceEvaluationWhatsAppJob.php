@@ -35,7 +35,7 @@ class SendPostServiceEvaluationWhatsAppJob implements ShouldQueue
     {
         $booking = Booking::with('user')->find($this->bookingId);
 
-        if (!$booking || !$booking->user || empty($booking->user->mobile)) {
+        if (!$booking || !$booking->user || empty($booking->user->mobile) || $booking->status === 'cancelled') {
             return;
         }
 

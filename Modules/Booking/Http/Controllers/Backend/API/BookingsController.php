@@ -264,6 +264,11 @@ class BookingsController extends Controller
         switch ($status) {
             case 'check_in':
                 $notify_type = 'check_in_booking';
+                try {
+                    \App\Jobs\SendPostServiceEvaluationWhatsAppJob::dispatch($booking->id)->delay(now()->addMinutes(10));
+                } catch (\Throwable $e) {
+                    \Log::error("Failed to dispatch WhatsApp check_in evaluation job: " . $e->getMessage());
+                }
                 break;
             case 'checkout':
                 $notify_type = 'checkout_booking';
