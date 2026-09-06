@@ -19,11 +19,12 @@ use Modules\Booking\Models\Booking;
 use Modules\Booking\Models\BookingService;
 use Modules\Service\Models\Service;
 use App\Services\UserNotificationService;
+use Illuminate\Support\Facades\Log;
 
 class PhoneAuthController extends Controller
 {
     private const OTP_TTL_MINUTES = 5;
-    private const REGISTER_DAILY_SMS_LIMIT = 3;
+    private const REGISTER_DAILY_SMS_LIMIT = 300;
     private const REGISTER_PHONE_SESSION_KEY = 'auth.register.mobile';
     private const REGISTER_USERNAME_SESSION_KEY = 'auth.register.username';
     private const LOGIN_PHONE_SESSION_KEY = 'auth.login.mobile';
@@ -494,10 +495,23 @@ class PhoneAuthController extends Controller
         }
 
         try {
-            app(TaqnyatSmsService::class)->sendSms($phone, __('messagess.otp_sms', ['code' => $otp]));
+            $sent = app(TaqnyatSmsService::class)->sendSms($phone, __('messagess.otp_sms', ['code' => $otp]));
+
+            if ($sent === false) {
+                Log::warning('PhoneAuthController: sendSms returned false for OTP.', [
+                    'phone' => $phone,
+                ]);
+                Cache::forget($cacheKey);
+
+                return false;
+            }
 
             return true;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::error('PhoneAuthController: Exception while sending OTP SMS.', [
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+            ]);
             Cache::forget($cacheKey);
 
             return false;

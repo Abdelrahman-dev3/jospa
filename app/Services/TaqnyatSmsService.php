@@ -21,10 +21,16 @@ class TaqnyatSmsService
     public function sendSms($recipients, $message, $sender = 'JO SPA')
     {
         if (! setting('is_taqnyat_sms')) {
+            Log::warning('Taqnyat SMS: is_taqnyat_sms setting is disabled. SMS not sent.', [
+                'recipients' => $recipients,
+            ]);
             return false;
         }
 
         if (empty($this->apiKey)) {
+            Log::warning('Taqnyat SMS: API key is empty. SMS not sent.', [
+                'recipients' => $recipients,
+            ]);
             return false;
         }
 
@@ -40,16 +46,26 @@ class TaqnyatSmsService
             ]);
 
             if ($response->successful()) {
+                Log::info('Taqnyat SMS: Message sent successfully.', [
+                    'recipients' => $recipients,
+                    'response' => $response->json(),
+                ]);
                 return $response->json();
             }
 
             Log::error('Taqnyat SMS Failed', [
                 'status' => $response->status(),
                 'body' => $response->body(),
+                'recipients' => $recipients,
             ]);
 
             return false;
         } catch (\Exception $e) {
+            Log::error('Taqnyat SMS: Exception thrown while sending SMS.', [
+                'recipients' => $recipients,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return false;
         }
     }
