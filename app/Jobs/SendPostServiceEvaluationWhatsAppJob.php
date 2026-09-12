@@ -47,7 +47,7 @@ class SendPostServiceEvaluationWhatsAppJob implements ShouldQueue
         ];
 
         // The template name exactly as requested by user
-        $templateName = 'Post_service _evaluation';
+        $templateName = config('services.javna.whatsapp_evaluation_template_name', 'Post_service _evaluation');
         
         $isSent = $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
 

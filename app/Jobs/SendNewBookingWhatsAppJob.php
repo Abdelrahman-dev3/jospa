@@ -57,7 +57,7 @@ class SendNewBookingWhatsAppJob implements ShouldQueue
             $bookingTime
         ];
 
-        $templateName = 'jospa_appointment_confirmation';
+        $templateName = config('services.javna.whatsapp_booking_confirmation_template_name', 'jospa_appointment_confirmation');
         
         $isSent = $whatsAppService->sendTemplate($phone, $variables, $templateName, 'ar');
 

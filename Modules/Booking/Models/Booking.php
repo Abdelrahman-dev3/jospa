@@ -377,8 +377,12 @@ class Booking extends BaseModel
     protected static function booted()
     {
         static::updated(function ($booking) {
-            if ($booking->isDirty('status') && $booking->status === 'check_out') {
-                \App\Jobs\SendPostServiceEvaluationWhatsAppJob::dispatch($booking->id)->delay(now()->addMinutes(10));
+            if ($booking->isDirty('status') && in_array($booking->status, ['checkout', 'check_out'])) {
+                try {
+                    \App\Jobs\SendPostServiceEvaluationWhatsAppJob::dispatch($booking->id)->delay(now()->addMinutes(10));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to dispatch WhatsApp checkout evaluation job: " . $e->getMessage());
+                }
             }
         });
     }

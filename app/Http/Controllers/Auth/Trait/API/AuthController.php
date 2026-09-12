@@ -10,6 +10,7 @@ use App\Http\Resources\RegisterResource;
 use App\Http\Resources\SocialLoginResource;
 use App\Models\User;
 use App\Services\TaqnyatSmsService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Auth;
 use Hash;
@@ -28,6 +29,8 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
+        Log::info('API login method called', $request->all());
+
         $validator = Validator::make($request->all(), [
             'mobile' => ['required', 'string', 'max:20'],
         ]);
@@ -167,11 +170,12 @@ class AuthController extends Controller
     }
     public function sendRegisterOtp(Request $request)
     {
+        Log::info('API sendRegisterOtp method called', $request->all());
+
         $validator = Validator::make($request->all(), [
             'username' => ['required', 'string', 'max:191', 'unique:users,username'],
             'mobile' => ['required', 'string', 'max:20'],
         ]);
-
         if ($validator->fails()) {
             return $this->sendError(
                 $validator->errors()->first(),

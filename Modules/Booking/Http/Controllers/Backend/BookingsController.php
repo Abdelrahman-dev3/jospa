@@ -1086,6 +1086,12 @@ public function index_list(Request $request)
                 $message = __('messages.create_form', ['form' => __('booking.singular_title')]);
 
                 try {
+                    \App\Jobs\SendNewBookingWhatsAppJob::dispatch($booking->id);
+                } catch (\Throwable $e) {
+                    \Log::error("Failed to dispatch WhatsApp job: " . $e->getMessage());
+                }
+
+                try {
                     $type = 'new_booking';
                     $messageTemplate = 'New booking #[[booking_id]] has been booked.';
                     $notify_message = str_replace('[[booking_id]]', $booking->id, $messageTemplate);

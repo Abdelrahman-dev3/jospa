@@ -192,6 +192,12 @@ class HomeBookingsController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        try {
+            \App\Jobs\SendNewBookingWhatsAppJob::dispatch($booking->id);
+        } catch (\Throwable $e) {
+            \Log::error("Failed to dispatch WhatsApp job for home booking: " . $e->getMessage());
+        }
+
         return response()->json([
             'status' => true,
             'message' => 'تم إنشاء الحجز المنزلي بنجاح.',
