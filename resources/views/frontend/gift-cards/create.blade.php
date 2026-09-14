@@ -279,7 +279,11 @@
 
             if (isElectronicCard && totalSelections < 1) {
                 errors.push("{{ __('messages.gift_card_selection_required') }}");
-            } else if (!isElectronicCard && allData.requested_services.length < 1) {
+            } else if (
+                !isElectronicCard &&
+                allData.requested_services.length < 1 &&
+                allData.coupons.length < 1
+            ) {
                 errors.push("{{ __('messages.gift_card_service_required') }}");
             }
 
