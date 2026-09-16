@@ -78,7 +78,11 @@ class Occasion extends Model
             ? $this->occasion_date->format('Y-m-d')
             : ($customDate ?: Carbon::now()->format('Y-m-d'));
 
-        $appName = setting('app_name') ?: config('app.name', 'JO SPA');
+        try {
+            $appName = setting('app_name') ?: config('app.name', 'JO SPA');
+        } catch (\Throwable $e) {
+            $appName = config('app.name', 'JO SPA');
+        }
 
         $variables = [
             'name' => $firstName !== '' ? $firstName : 'عميلنا العزيز',
@@ -101,7 +105,11 @@ class Occasion extends Model
      */
     public static function previewMessage(string $template, ?string $occasionName = null, ?string $date = null): string
     {
-        $appName = setting('app_name') ?: config('app.name', 'JO SPA');
+        try {
+            $appName = setting('app_name') ?: config('app.name', 'JO SPA');
+        } catch (\Throwable $e) {
+            $appName = config('app.name', 'JO SPA');
+        }
         $sampleDate = $date ?: Carbon::now()->format('Y-m-d');
         $sampleOccasion = $occasionName ?: 'المناسبة السعيدة';
 

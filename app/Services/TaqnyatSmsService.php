@@ -14,14 +14,23 @@ class TaqnyatSmsService
 
     public function __construct()
     {
-        $this->apiKey = setting('taqnyat_api_key') ?: env('TAQNYAT_API_KEY');
-        $this->sender = setting('taqnyat_sender') ?: env('TAQNYAT_SENDER_NAME', 'JO SPA');
+        try {
+            $this->apiKey = setting('taqnyat_api_key') ?: env('TAQNYAT_API_KEY');
+            $this->sender = setting('taqnyat_sender') ?: env('TAQNYAT_SENDER_NAME', 'JO SPA');
+        } catch (\Throwable $e) {
+            $this->apiKey = env('TAQNYAT_API_KEY');
+            $this->sender = env('TAQNYAT_SENDER_NAME', 'JO SPA');
+        }
     }
 
     public function sendSms($recipients, $message, $sender = null)
     {
         $sender = $sender ?: ($this->sender ?: 'JO SPA');
-        $settingEnabled = setting('is_taqnyat_sms');
+        try {
+            $settingEnabled = setting('is_taqnyat_sms');
+        } catch (\Throwable $e) {
+            $settingEnabled = null;
+        }
         $isEnabled = $settingEnabled !== null ? (bool) $settingEnabled : (!empty($this->apiKey));
 
         if (! $isEnabled) {
