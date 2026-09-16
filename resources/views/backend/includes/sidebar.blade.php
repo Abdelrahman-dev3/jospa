@@ -59,6 +59,15 @@
                 </li>
                 @endhasPermission
 
+                @if(auth()->user() && (auth()->user()->hasRole('admin') || auth()->user()->can('view_occasions')))
+                <li class="nav-item {{ request()->routeIs('app.occasions*') ? 'active' : '' }}">
+                    <a href="{{ route('app.occasions.index') }}" class="nav-link {{ request()->routeIs('app.occasions*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <span class="item-name">{{ __('messagess.occasions_management') }}</span>
+                    </a>
+                </li>
+                @endif
+
                 @hasPermission('view_loyalty')
                 <li class="nav-item {{ request()->routeIs('app.loyalty') ? 'active' : '' }}">
                     <a href="{{ route('app.loyalty') }}" class="nav-link {{ request()->routeIs('app.loyalty') ? 'active' : '' }}">

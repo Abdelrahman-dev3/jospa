@@ -147,5 +147,10 @@ return [
             'module_name' => 'Sms',
             'is_custom_permission' => 0,
         ],
+        [
+            'module_name' => 'Occasions',
+            'more_permission' => ['sms'],
+            'is_custom_permission' => 0,
+        ],
     ],
 ];

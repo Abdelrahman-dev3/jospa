@@ -96,7 +96,7 @@ class GiftCardController extends Controller
                 return;
             }
 
-            if (count($selectedServices) < 1) {
+            if (count($selectedServices) < 1 && empty($this->sanitizeFilledSelections($data['coupons'] ?? []))) {
                 $validator->errors()->add('requested_services', __('messages.gift_card_service_required'));
             }
         })->validate();
