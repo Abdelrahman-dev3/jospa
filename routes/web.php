@@ -441,6 +441,8 @@
             Route::post('/send-test-sms', 'sendTestSms')->name('send-test-sms');
             Route::post('/preview', 'preview')->name('preview');
             Route::get('/{id}/logs', 'logs')->name('logs')->whereNumber('id');
+            Route::post('/birthday-settings', 'updateBirthdaySettings')->name('birthday-settings');
+            Route::post('/send-today-birthdays', 'sendTodayBirthdays')->name('send-today-birthdays');
         });
     });
 

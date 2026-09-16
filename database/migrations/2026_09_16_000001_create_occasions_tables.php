@@ -37,7 +37,7 @@ return new class extends Migration
         if (! Schema::hasTable('occasion_sms_logs')) {
             Schema::create('occasion_sms_logs', function (Blueprint $table) {
                 $table->id();
-                $table->unsignedBigInteger('occasion_id')->index();
+                $table->unsignedBigInteger('occasion_id')->nullable()->index();
                 $table->unsignedBigInteger('user_id')->nullable()->index();
                 $table->string('customer_name')->nullable();
                 $table->string('phone');

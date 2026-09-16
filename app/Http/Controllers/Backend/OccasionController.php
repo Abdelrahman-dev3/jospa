@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Setting;
 
 class OccasionController extends Controller
 {
@@ -76,6 +77,36 @@ class OccasionController extends Controller
             ->limit(100)
             ->get(['id', 'first_name', 'last_name', 'mobile']);
 
+        // Birthday KPI & Settings
+        $today = Carbon::today();
+        $todayBirthdaysCount = User::role('user')
+            ->active()
+            ->whereNotNull('date_of_birth')
+            ->whereNotNull('mobile')
+            ->where('mobile', '!=', '')
+            ->whereMonth('date_of_birth', $today->month)
+            ->whereDay('date_of_birth', $today->day)
+            ->count();
+
+        $monthBirthdaysCount = User::role('user')
+            ->active()
+            ->whereNotNull('date_of_birth')
+            ->whereNotNull('mobile')
+            ->where('mobile', '!=', '')
+            ->whereMonth('date_of_birth', $today->month)
+            ->count();
+
+        $totalCustomersWithDob = User::role('user')
+            ->active()
+            ->whereNotNull('date_of_birth')
+            ->whereNotNull('mobile')
+            ->where('mobile', '!=', '')
+            ->count();
+
+        $birthdayAutoEnabled = setting('birthday_sms_enabled', '1') == '1';
+        $defaultBirthdayTemplate = 'عزيزتنا {name}، يسر فريق {app_name} أن يتمنى لكِ عيد ميلاد سعيد وكل عام وأنتِ بألف خير! بمناسبة يومكِ المميز، يسعدنا أن نهديكِ تجربة استرخاء لا تُنسى في فرعنا.';
+        $birthdayTemplate = setting('birthday_sms_template') ?: $defaultBirthdayTemplate;
+
         return view('backend.occasions.index_datatable', compact(
             'module_action',
             'module_title',
@@ -84,7 +115,12 @@ class OccasionController extends Controller
             'totalSentSms',
             'totalCustomersWithMobile',
             'monthOccasions',
-            'recentCustomers'
+            'recentCustomers',
+            'todayBirthdaysCount',
+            'monthBirthdaysCount',
+            'totalCustomersWithDob',
+            'birthdayAutoEnabled',
+            'birthdayTemplate'
         ));
     }
 
@@ -97,7 +133,7 @@ class OccasionController extends Controller
             'name' => 'required|string|max:191',
             'description' => 'nullable|string',
             'occasion_date' => 'nullable|date',
-            'target_type' => 'required|in:all,specific',
+            'target_type' => 'required|in:all,specific,birthday',
             'user_id' => 'required_if:target_type,specific|nullable|exists:users,id',
             'message_template' => 'required|string|max:1000',
             'send_now' => 'nullable|boolean',
@@ -158,7 +194,7 @@ class OccasionController extends Controller
             'name' => 'required|string|max:191',
             'description' => 'nullable|string',
             'occasion_date' => 'nullable|date',
-            'target_type' => 'required|in:all,specific',
+            'target_type' => 'required|in:all,specific,birthday',
             'user_id' => 'required_if:target_type,specific|nullable|exists:users,id',
             'message_template' => 'required|string|max:1000',
             'send_now' => 'nullable|boolean',
@@ -346,6 +382,16 @@ class OccasionController extends Controller
                     $recipients[] = $user;
                 }
             }
+        } elseif ($occasion->target_type === 'birthday' || $occasion->target_type === 'birthday_automation') {
+            $targetDate = $occasion->occasion_date ? Carbon::parse($occasion->occasion_date) : Carbon::today();
+            $recipients = User::role('user')
+                ->active()
+                ->whereNotNull('date_of_birth')
+                ->whereNotNull('mobile')
+                ->where('mobile', '!=', '')
+                ->whereMonth('date_of_birth', $targetDate->month)
+                ->whereDay('date_of_birth', $targetDate->day)
+                ->get();
         } else {
             // Target all active customers with valid phone numbers
             $recipients = User::role('user')
@@ -443,5 +489,176 @@ class OccasionController extends Controller
             'failed' => $failedCount,
             'status' => $finalStatus,
         ];
+    }
+
+    /**
+     * Update Birthday SMS Settings.
+     */
+    public function updateBirthdaySettings(Request $request)
+    {
+        $request->validate([
+            'birthday_sms_template' => 'required|string|max:1000',
+        ], [
+            'birthday_sms_template.required' => 'يرجى كتابة نص رسالة التهنئة بعيد الميلاد',
+        ]);
+
+        try {
+            Setting::add('birthday_sms_enabled', $request->has('birthday_sms_enabled') ? '1' : '0');
+            Setting::add('birthday_sms_template', trim($request->birthday_sms_template));
+            
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'تم حفظ إعدادات رسائل أعياد الميلاد بنجاح.',
+                ]);
+            }
+
+            return redirect()->route('app.occasions.index')->with('success', 'تم حفظ إعدادات رسائل أعياد الميلاد بنجاح.');
+        } catch (\Exception $e) {
+            Log::error('Birthday settings update error: ' . $e->getMessage());
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'حدث خطأ أثناء حفظ الإعدادات: ' . $e->getMessage(),
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ الإعدادات: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Trigger sending birthday SMS to today's birthday customers immediately.
+     */
+    public function sendTodayBirthdays(Request $request)
+    {
+        $today = Carbon::today();
+
+        $customers = User::role('user')
+            ->active()
+            ->whereNotNull('date_of_birth')
+            ->whereNotNull('mobile')
+            ->where('mobile', '!=', '')
+            ->whereMonth('date_of_birth', $today->month)
+            ->whereDay('date_of_birth', $today->day)
+            ->get();
+
+        if ($customers->isEmpty()) {
+            $msg = 'لا يوجد أي عملاء يحتفلون بعيد ميلادهم اليوم (' . $today->format('d/m') . ').';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => false, 'message' => $msg]);
+            }
+            return redirect()->back()->with('info', $msg);
+        }
+
+        $defaultTemplate = 'عزيزتنا {name}، يسر فريق {app_name} أن يتمنى لكِ عيد ميلاد سعيد وكل عام وأنتِ بألف خير! بمناسبة يومكِ المميز، يسعدنا أن نهديكِ تجربة استرخاء لا تُنسى في فرعنا.';
+        $template = setting('birthday_sms_template') ?: $defaultTemplate;
+
+        $birthdayOccasion = Occasion::firstOrCreate(
+            ['target_type' => 'birthday_automation'],
+            [
+                'name' => 'تهنئة أعياد ميلاد العملاء التلقائية',
+                'description' => 'حملة رسائل التهنئة لعملاء المركز في أعياد ميلادهم',
+                'target_type' => 'birthday_automation',
+                'message_template' => $template,
+                'status' => 'sent',
+            ]
+        );
+
+        if ($birthdayOccasion->message_template !== $template) {
+            $birthdayOccasion->update(['message_template' => $template]);
+        }
+
+        $sentCount = 0;
+        $failedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($customers as $customer) {
+            $alreadySent = OccasionSmsLog::where('user_id', $customer->id)
+                ->where('status', 'sent')
+                ->whereYear('created_at', $today->year)
+                ->where(function ($q) use ($birthdayOccasion) {
+                    $q->where('occasion_id', $birthdayOccasion->id)
+                      ->orWhere('message', 'LIKE', '%عيد ميلاد%');
+                })
+                ->exists();
+
+            if ($alreadySent && ! $request->boolean('force')) {
+                $skippedCount++;
+                continue;
+            }
+
+            $rawPhone = (string) $customer->mobile;
+            $normalizedPhone = $this->smsService->validatePhoneNumber($rawPhone);
+
+            if (! $normalizedPhone) {
+                $failedCount++;
+                OccasionSmsLog::create([
+                    'occasion_id' => $birthdayOccasion->id,
+                    'user_id' => $customer->id,
+                    'customer_name' => $customer->full_name,
+                    'phone' => $rawPhone,
+                    'message' => $birthdayOccasion->replaceVariablesForUser($customer),
+                    'status' => 'failed',
+                    'response_data' => 'رقم الجوال غير صالح لتنسيق المملكة العربية السعودية',
+                ]);
+                continue;
+            }
+
+            $message = $birthdayOccasion->replaceVariablesForUser($customer);
+
+            try {
+                $response = $this->smsService->sendSms($normalizedPhone, $message);
+                if ($response !== false) {
+                    $sentCount++;
+                    OccasionSmsLog::create([
+                        'occasion_id' => $birthdayOccasion->id,
+                        'user_id' => $customer->id,
+                        'customer_name' => $customer->full_name,
+                        'phone' => $normalizedPhone,
+                        'message' => $message,
+                        'status' => 'sent',
+                        'response_data' => is_array($response) ? json_encode($response, JSON_UNESCAPED_UNICODE) : (string) $response,
+                    ]);
+                } else {
+                    $failedCount++;
+                    OccasionSmsLog::create([
+                        'occasion_id' => $birthdayOccasion->id,
+                        'user_id' => $customer->id,
+                        'customer_name' => $customer->full_name,
+                        'phone' => $normalizedPhone,
+                        'message' => $message,
+                        'status' => 'failed',
+                        'response_data' => 'استجابة غير ناجحة من بوابة Taqnyat SMS',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $failedCount++;
+                Log::error("Birthday manual send failed: " . $e->getMessage());
+            }
+        }
+
+        $birthdayOccasion->increment('sent_count', $sentCount);
+        $birthdayOccasion->increment('failed_count', $failedCount);
+        $birthdayOccasion->update(['sent_at' => Carbon::now()]);
+
+        $msg = "تمت عملية إرسال تهاني أعياد الميلاد بنجاح: تم إرسال {$sentCount} رسالة.";
+        if ($skippedCount > 0) {
+            $msg .= " (تم تخطي {$skippedCount} عميل تم إرسال التهنئة لهم مسبقاً هذا العام).";
+        }
+        if ($failedCount > 0) {
+            $msg .= " وفشل إرسال {$failedCount} رسالة.";
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => true,
+                'message' => $msg,
+                'sent' => $sentCount,
+                'failed' => $failedCount,
+                'skipped' => $skippedCount,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
     }
 }

@@ -5,7 +5,56 @@
 @endsection
 
 @push('after-styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
+    /* Select2 Modal Customization */
+    .select2-container {
+        width: 100% !important;
+    }
+    .select2-container--default .select2-selection--single {
+        height: 48px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: normal;
+        color: #2b3674;
+        font-weight: 500;
+        padding-left: 0;
+        padding-right: 0;
+        width: 100%;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 46px;
+        top: 1px;
+    }
+    .select2-dropdown {
+        border: 2px solid #CF9233;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        z-index: 99999 !important;
+        overflow: hidden;
+    }
+    .select2-container--default .select2-search--dropdown {
+        padding: 8px;
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 12px;
+        outline: none;
+    }
+    .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+        border-color: #CF9233;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #CF9233;
+    }
+
     .occasion-card {
         border-radius: 14px;
         border: none;
@@ -219,6 +268,99 @@
                 <div class="kpi-icon-wrap" style="background: rgba(13, 202, 240, 0.12); color: #0dcaf0;">
                     <i class="fa-solid fa-champagne-glasses"></i>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Birthday Campaign Center --}}
+    <div class="card occasion-card mb-4 border-0" style="background: linear-gradient(145deg, #202635 0%, #2b3674 100%);">
+        <div class="card-body p-4 text-white position-relative overflow-hidden">
+            <div class="row align-items-center position-relative" style="z-index: 2;">
+                <div class="col-lg-6">
+                    <h4 class="fw-bold text-warning mb-2"><i class="fa-solid fa-cake-candles me-2"></i> حملة أعياد ميلاد العملاء</h4>
+                    <p class="mb-3" style="opacity: 0.9;">أرسل تهاني أعياد الميلاد لعملائك لتعزيز ولائهم وزيادة المبيعات. يقوم النظام بجدولة وإرسال الرسائل تلقائياً.</p>
+                    
+                    <div class="d-flex flex-wrap gap-3 mb-3">
+                        <div class="bg-white bg-opacity-10 rounded p-2 px-3">
+                            <span class="d-block small text-light">أعياد ميلاد اليوم</span>
+                            <span class="fw-bold fs-5 text-warning">{{ $todayBirthdaysCount }} <small class="fw-normal fs-6">عميل</small></span>
+                        </div>
+                        <div class="bg-white bg-opacity-10 rounded p-2 px-3">
+                            <span class="d-block small text-light">أعياد ميلاد الشهر</span>
+                            <span class="fw-bold fs-5">{{ $monthBirthdaysCount }} <small class="fw-normal fs-6">عميل</small></span>
+                        </div>
+                        <div class="bg-white bg-opacity-10 rounded p-2 px-3">
+                            <span class="d-block small text-light">مسجل لهم تاريخ ميلاد</span>
+                            <span class="fw-bold fs-5">{{ $totalCustomersWithDob }} <small class="fw-normal fs-6">عميل</small></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-lg-end mt-4 mt-lg-0">
+                    <div class="d-flex flex-column align-items-lg-end gap-2">
+                        @if($todayBirthdaysCount > 0)
+                            <form action="{{ route('app.occasions.send-today-birthdays') }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من رغبتك في إرسال تهنئة أعياد الميلاد لعملاء اليوم الآن؟');">
+                                @csrf
+                                <button type="submit" class="btn btn-warning fw-bold px-4 rounded-pill shadow-sm">
+                                    <i class="fa-solid fa-paper-plane me-1"></i> إرسال تهنئة لعملاء اليوم الآن
+                                </button>
+                            </form>
+                        @else
+                            <button type="button" class="btn btn-secondary fw-bold px-4 rounded-pill shadow-sm" disabled>
+                                <i class="fa-solid fa-paper-plane me-1"></i> إرسال تهنئة لعملاء اليوم الآن (لا يوجد)
+                            </button>
+                        @endif
+                        
+                        <button type="button" class="btn btn-outline-light rounded-pill px-4" data-bs-toggle="collapse" data-bs-target="#birthdaySettingsCollapse">
+                            <i class="fa-solid fa-gear me-1"></i> إعدادات رسالة عيد الميلاد التلقائية
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <i class="fa-solid fa-gift position-absolute text-white" style="font-size: 15rem; opacity: 0.05; bottom: -20px; left: -20px; transform: rotate(-15deg); z-index: 1;"></i>
+        </div>
+        
+        {{-- Birthday Settings Collapse --}}
+        <div class="collapse bg-white" id="birthdaySettingsCollapse">
+            <div class="card-body p-4 border-top">
+                <form action="{{ route('app.occasions.birthday-settings') }}" method="POST">
+                    @csrf
+                    <div class="row g-4">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold text-dark mb-3">تخصيص حملة أعياد الميلاد</h5>
+                            
+                            <div class="form-check form-switch mb-3 custom-switch-lg">
+                                <input class="form-check-input" style="width: 3rem; height: 1.5rem;" type="checkbox" name="birthday_sms_enabled" id="birthday_sms_enabled" value="1" {{ $birthdayAutoEnabled ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold mt-1 ms-2" for="birthday_sms_enabled">
+                                    تفعيل الإرسال التلقائي اليومي
+                                    <span class="d-block small text-muted fw-normal">سيقوم النظام بإرسال الرسالة يومياً في الساعة 10:00 صباحاً للعملاء الذين يصادف عيد ميلادهم اليوم.</span>
+                                </label>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label fw-bold text-dark">نص رسالة عيد الميلاد</label>
+                                <div class="mb-2 p-2 bg-light rounded border">
+                                    <span class="variable-chip" onclick="insertVariableToBirthday('{name}')"><i class="fa fa-plus"></i> اسم العميل</span>
+                                    <span class="variable-chip" onclick="insertVariableToBirthday('{full_name}')"><i class="fa fa-plus"></i> الاسم الكامل</span>
+                                    <span class="variable-chip" onclick="insertVariableToBirthday('{app_name}')"><i class="fa fa-plus"></i> اسم المركز</span>
+                                </div>
+                                <textarea name="birthday_sms_template" id="birthday_message_template" class="form-control" rows="4" required>{{ $birthdayTemplate }}</textarea>
+                                <small class="text-muted mt-1 d-block"><i class="fa-solid fa-circle-info text-primary me-1"></i> تجنب تغيير المتغيرات بين الأقواس المعقوفة.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="w-100 p-3 bg-light border rounded text-center">
+                                <h6 class="fw-bold mb-3 text-muted">إجراءات الإعدادات</h6>
+                                <button type="submit" class="btn btn-gold w-100 mb-2 rounded-pill">
+                                    <i class="fa fa-save me-1"></i> حفظ التغييرات
+                                </button>
+                                <button type="button" class="btn btn-outline-dark w-100 rounded-pill" data-bs-toggle="modal" data-bs-target="#testSmsModal" onclick="prepareTestSmsForBirthday()">
+                                    <i class="fa fa-vial me-1"></i> تجربة إرسال للرسالة
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -446,20 +588,25 @@
                             <div class="mb-3">
                                 <label class="form-label fw-bold required">الفئة المستهدفة <span class="text-danger">*</span></label>
                                 <div class="row g-2 target-pill-wrap">
-                                    <div class="col-6">
+                                    <div class="col-4">
                                         <input type="radio" name="target_type" id="target_all" value="all" checked onchange="toggleTargetFields()">
-                                        <label for="target_all">
+                                        <label for="target_all" class="h-100 d-flex flex-column justify-content-center">
                                             <i class="fa-solid fa-users d-block mb-1 fs-5"></i>
                                             جميع العملاء
-                                            <span class="d-block small text-muted">({{ $totalCustomersWithMobile }} عميل متاح)</span>
                                         </label>
                                     </div>
-                                    <div class="col-6">
+                                    <div class="col-4">
                                         <input type="radio" name="target_type" id="target_specific" value="specific" onchange="toggleTargetFields()">
-                                        <label for="target_specific">
+                                        <label for="target_specific" class="h-100 d-flex flex-column justify-content-center">
                                             <i class="fa-solid fa-user-check d-block mb-1 fs-5"></i>
                                             عميل محدد
-                                            <span class="d-block small text-muted">اختيار عميل مخصص</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="radio" name="target_type" id="target_birthday" value="birthday" onchange="toggleTargetFields()">
+                                        <label for="target_birthday" class="h-100 d-flex flex-column justify-content-center">
+                                            <i class="fa-solid fa-cake-candles d-block mb-1 fs-5 text-warning"></i>
+                                            أعياد الميلاد
                                         </label>
                                     </div>
                                 </div>
@@ -467,16 +614,31 @@
 
                             {{-- Specific Customer Select Dropdown --}}
                             <div class="mb-3" id="specificCustomerWrap" style="display: none;">
-                                <label class="form-label fw-bold required">اختر العميل المستهدف <span class="text-danger">*</span></label>
-                                <select name="user_id" id="occ_user_id" class="form-select select2">
-                                    <option value="">-- ابحث بالاسم أو رقم الجوال --</option>
+                                <label class="form-label fw-bold required">
+                                    <i class="fa-solid fa-user-tag text-warning me-1"></i> اختر العميل المستهدف <span class="text-danger">*</span>
+                                </label>
+                                <select name="user_id" id="occ_user_id" class="form-select select2-customer-ajax" style="width: 100%;">
+                                    <option value="">-- اكتب للبحث بالاسم، رقم الجوال أو البريد الإلكتروني --</option>
                                     @foreach($recentCustomers as $customer)
-                                        <option value="{{ $customer->id }}">
+                                        <option value="{{ $customer->id }}" data-name="{{ $customer->first_name }} {{ $customer->last_name }}" data-mobile="{{ $customer->mobile }}">
                                             {{ $customer->first_name }} {{ $customer->last_name }} ({{ $customer->mobile }})
                                         </option>
                                     @endforeach
                                 </select>
-                                <small class="text-muted">اختر العميل الذي ترغب بإرسال الرسالة المخصصة له.</small>
+                                <div id="selectedCustomerBadge" class="mt-2 p-2 rounded bg-light border d-none">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="small fw-bold text-success">
+                                            <i class="fa-solid fa-circle-check me-1"></i> تم اختيار: <span id="selectedCustName"></span>
+                                            (<span id="selectedCustMobile"></span>)
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-link text-danger p-0 text-decoration-none" onclick="clearSelectedCustomer()">
+                                            <i class="fa fa-times me-1"></i> تغيير / إلغاء
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fa-solid fa-magnifying-glass me-1 text-primary"></i> يمكنك البحث المباشر في جميع العملاء بكتابة الاسم أو رقم الجوال.
+                                </small>
                             </div>
 
                             {{-- Message Content & Dynamic Variables --}}
@@ -634,9 +796,30 @@
 @endsection
 
 @push('after-scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     const APP_NAME = "{{ setting('app_name') ?: config('app.name', 'JO SPA') }}";
     const BASE_OCCASIONS_URL = "{{ url('app/occasions') }}";
+
+    function insertVariableToBirthday(variableText) {
+        const textarea = document.getElementById('birthday_message_template');
+        if (!textarea) return;
+
+        const startPos = textarea.selectionStart;
+        const endPos = textarea.selectionEnd;
+        const currentVal = textarea.value;
+
+        textarea.value = currentVal.substring(0, startPos) + variableText + currentVal.substring(endPos, currentVal.length);
+        textarea.focus();
+        textarea.selectionStart = startPos + variableText.length;
+        textarea.selectionEnd = startPos + variableText.length;
+    }
+
+    function prepareTestSmsForBirthday() {
+        const template = document.getElementById('birthday_message_template').value;
+        document.getElementById('test_message_template').value = template;
+        document.getElementById('test_occasion_name').value = 'تهنئة عيد ميلاد';
+    }
 
     function insertVariable(variableText) {
         const textarea = document.getElementById('occ_message');
@@ -654,12 +837,115 @@
         updateLivePreview();
     }
 
+    function initCustomerSelect2() {
+        if (typeof $.fn.select2 === 'undefined') {
+            return;
+        }
+
+        const $select = $('#occ_user_id');
+        if (!$select.length) return;
+
+        if ($select.hasClass('select2-hidden-accessible')) {
+            $select.select2('destroy');
+        }
+
+        $select.select2({
+            dropdownParent: $('#occasionModal'),
+            width: '100%',
+            allowClear: true,
+            placeholder: '-- ابحث بالاسم، رقم الجوال أو البريد --',
+            dir: "{{ language_direction() == 'rtl' ? 'rtl' : 'ltr' }}",
+            language: {
+                noResults: function() { return 'لا توجد نتائج مطابقة'; },
+                searching: function() { return 'جاري البحث في قاعدة بيانات العملاء...'; },
+                inputTooShort: function() { return 'أدخل حرفاً للبحث...'; }
+            },
+            ajax: {
+                url: "{{ route('backend.get_search_data') }}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        type: 'customers',
+                        q: params.term ? params.term.trim() : ''
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.results || []
+                    };
+                },
+                cache: true
+            }
+        });
+
+        // Trigger updates on change
+        $select.off('select2:select').on('select2:select', function (e) {
+            const data = e.params.data;
+            showSelectedCustomerBadge(data.text);
+            updateLivePreview();
+        });
+
+        $select.off('select2:clear').on('select2:clear', function () {
+            hideSelectedCustomerBadge();
+            updateLivePreview();
+        });
+
+        $select.off('change').on('change', function() {
+            const text = $select.find('option:selected').text();
+            if ($select.val()) {
+                showSelectedCustomerBadge(text);
+            } else {
+                hideSelectedCustomerBadge();
+            }
+            updateLivePreview();
+        });
+    }
+
+    function showSelectedCustomerBadge(text) {
+        if (!text || text.includes('--')) return;
+        const badge = document.getElementById('selectedCustomerBadge');
+        const nameSpan = document.getElementById('selectedCustName');
+        const mobileSpan = document.getElementById('selectedCustMobile');
+
+        let name = text;
+        let mobile = '';
+        if (text.includes('-')) {
+            const parts = text.split('-');
+            name = parts[0].trim();
+            mobile = parts.slice(1).join('-').trim();
+        } else if (text.includes('(')) {
+            const parts = text.split('(');
+            name = parts[0].trim();
+            mobile = parts[1].replace(')', '').trim();
+        }
+
+        if (nameSpan) nameSpan.innerText = name;
+        if (mobileSpan) mobileSpan.innerText = mobile;
+        if (badge) badge.classList.remove('d-none');
+    }
+
+    function hideSelectedCustomerBadge() {
+        const badge = document.getElementById('selectedCustomerBadge');
+        if (badge) badge.classList.add('d-none');
+    }
+
+    function clearSelectedCustomer() {
+        $('#occ_user_id').val(null).trigger('change');
+        hideSelectedCustomerBadge();
+        updateLivePreview();
+    }
+
     function toggleTargetFields() {
         const isSpecific = document.getElementById('target_specific').checked;
         const wrap = document.getElementById('specificCustomerWrap');
         if (wrap) {
             wrap.style.display = isSpecific ? 'block' : 'none';
         }
+        if (isSpecific) {
+            setTimeout(initCustomerSelect2, 100);
+        }
+        updateLivePreview();
     }
 
     function updateLivePreview() {
@@ -675,7 +961,6 @@
 
         // Character counter
         const charLen = rawText.length;
-        // Arabic SMS part threshold: 70 chars, English 160
         const isArabic = /[\u0600-\u06FF]/.test(rawText);
         const limitPerPart = isArabic ? 70 : 160;
         const parts = charLen > 0 ? Math.ceil(charLen / limitPerPart) : 1;
@@ -684,13 +969,36 @@
             counter.innerText = `${charLen} حرف | ${parts} رسالة SMS`;
         }
 
-        // Live variable replacement with mock data
+        // Live variable replacement with mock data or selected customer
+        let custName = 'سارة';
+        let custFullName = 'سارة أحمد';
+        let custPhone = '0501234567';
+
+        const isSpecific = document.getElementById('target_specific') && document.getElementById('target_specific').checked;
+        if (isSpecific) {
+            const selectedOpt = $('#occ_user_id').find('option:selected');
+            if (selectedOpt.length && selectedOpt.val()) {
+                const optText = selectedOpt.text();
+                if (optText.includes('-')) {
+                    const parts = optText.split('-');
+                    custFullName = parts[0].trim();
+                    custName = custFullName.split(' ')[0] || custFullName;
+                    custPhone = parts.slice(1).join('-').trim();
+                } else if (optText.includes('(')) {
+                    const parts = optText.split('(');
+                    custFullName = parts[0].trim();
+                    custName = custFullName.split(' ')[0] || custFullName;
+                    custPhone = parts[1].replace(')', '').trim();
+                }
+            }
+        }
+
         let replaced = rawText;
-        replaced = replaced.replaceAll('{name}', 'سارة').replaceAll('[[name]]', 'سارة');
-        replaced = replaced.replaceAll('{full_name}', 'سارة أحمد').replaceAll('[[full_name]]', 'سارة أحمد');
+        replaced = replaced.replaceAll('{name}', custName).replaceAll('[[name]]', custName);
+        replaced = replaced.replaceAll('{full_name}', custFullName).replaceAll('[[full_name]]', custFullName);
         replaced = replaced.replaceAll('{occasion_name}', occName).replaceAll('[[occasion_name]]', occName);
         replaced = replaced.replaceAll('{date}', occDate).replaceAll('[[date]]', occDate);
-        replaced = replaced.replaceAll('{phone}', '0501234567').replaceAll('[[phone]]', '0501234567');
+        replaced = replaced.replaceAll('{phone}', custPhone).replaceAll('[[phone]]', custPhone);
         replaced = replaced.replaceAll('{app_name}', APP_NAME).replaceAll('[[app_name]]', APP_NAME);
 
         if (previewBubble) {
@@ -708,6 +1016,7 @@
         form.reset();
 
         document.getElementById('target_all').checked = true;
+        clearSelectedCustomer();
         toggleTargetFields();
         updateLivePreview();
     }
@@ -731,14 +1040,31 @@
                     document.getElementById('occ_date').value = occ.occasion_date ? occ.occasion_date.substring(0, 10) : '';
                     document.getElementById('occ_message').value = occ.message_template || '';
 
-                    if (occ.target_type === 'specific') {
+                    if (occ.target_type === 'specific' && occ.user_id) {
                         document.getElementById('target_specific').checked = true;
-                        document.getElementById('occ_user_id').value = occ.user_id || '';
+                        toggleTargetFields();
+
+                        const custName = occ.target_user ? (occ.target_user.first_name + ' ' + (occ.target_user.last_name || '')).trim() : 'عميل #' + occ.user_id;
+                        const custMobile = occ.target_user ? (occ.target_user.mobile || '') : '';
+                        const custLabel = custName + (custMobile ? ' (' + custMobile + ')' : '');
+
+                        if ($('#occ_user_id').find("option[value='" + occ.user_id + "']").length) {
+                            $('#occ_user_id').val(occ.user_id).trigger('change');
+                        } else {
+                            const newOption = new Option(custLabel, occ.user_id, true, true);
+                            $('#occ_user_id').append(newOption).trigger('change');
+                        }
+                        showSelectedCustomerBadge(custLabel);
+                    } else if (occ.target_type === 'birthday') {
+                        document.getElementById('target_birthday').checked = true;
+                        clearSelectedCustomer();
+                        toggleTargetFields();
                     } else {
                         document.getElementById('target_all').checked = true;
+                        clearSelectedCustomer();
+                        toggleTargetFields();
                     }
 
-                    toggleTargetFields();
                     updateLivePreview();
 
                     const modal = new bootstrap.Modal(document.getElementById('occasionModal'));
@@ -866,6 +1192,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         toggleTargetFields();
         updateLivePreview();
+
+        $('#occasionModal').on('shown.bs.modal', function () {
+            if (document.getElementById('target_specific').checked) {
+                initCustomerSelect2();
+            }
+        });
     });
 </script>
 @endpush
