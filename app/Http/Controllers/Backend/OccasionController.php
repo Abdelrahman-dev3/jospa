@@ -137,6 +137,7 @@ class OccasionController extends Controller
             'user_id' => 'required_if:target_type,specific|nullable|exists:users,id',
             'message_template' => 'required|string|max:1000',
             'send_now' => 'nullable|boolean',
+            'is_recurring' => 'nullable|boolean',
         ], [
             'name.required' => 'اسم المناسبة مطلوب',
             'target_type.required' => 'نوع الاستهداف مطلوب',
@@ -153,9 +154,10 @@ class OccasionController extends Controller
             'message_template' => $validated['message_template'],
             'status' => 'draft',
             'created_by' => Auth::id(),
+            'is_recurring' => $request->boolean('is_recurring'),
         ]);
 
-        if ($request->boolean('send_now')) {
+        if ($request->boolean('send_now') && ! $request->boolean('is_recurring')) {
             $sendResult = $this->dispatchOccasionSms($occasion);
 
             $msg = 'تم حفظ المناسبة بنجاح. ';
@@ -198,6 +200,7 @@ class OccasionController extends Controller
             'user_id' => 'required_if:target_type,specific|nullable|exists:users,id',
             'message_template' => 'required|string|max:1000',
             'send_now' => 'nullable|boolean',
+            'is_recurring' => 'nullable|boolean',
         ]);
 
         $occasion->update([
@@ -207,9 +210,10 @@ class OccasionController extends Controller
             'target_type' => $validated['target_type'],
             'user_id' => $validated['target_type'] === 'specific' ? $validated['user_id'] : null,
             'message_template' => $validated['message_template'],
+            'is_recurring' => $request->boolean('is_recurring'),
         ]);
 
-        if ($request->boolean('send_now')) {
+        if ($request->boolean('send_now') && ! $request->boolean('is_recurring')) {
             $sendResult = $this->dispatchOccasionSms($occasion);
 
             $msg = 'تم تحديث المناسبة وإرسال الرسائل: ';

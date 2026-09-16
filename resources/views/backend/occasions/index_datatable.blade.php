@@ -577,6 +577,12 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">تاريخ المناسبة</label>
                                     <input type="date" name="occasion_date" id="occ_date" class="form-control" value="{{ date('Y-m-d') }}">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" name="is_recurring" id="occ_is_recurring" value="1">
+                                        <label class="form-check-label small fw-bold text-primary" for="occ_is_recurring">
+                                            تتكرر سنوياً (إرسال تلقائي في نفس اليوم والشهر)
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">ملاحظات / وصف داخلي</label>
@@ -1038,6 +1044,7 @@
                     document.getElementById('occ_name').value = occ.name || '';
                     document.getElementById('occ_desc').value = occ.description || '';
                     document.getElementById('occ_date').value = occ.occasion_date ? occ.occasion_date.substring(0, 10) : '';
+                    document.getElementById('occ_is_recurring').checked = occ.is_recurring ? true : false;
                     document.getElementById('occ_message').value = occ.message_template || '';
 
                     if (occ.target_type === 'specific' && occ.user_id) {

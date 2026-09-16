@@ -24,11 +24,13 @@ class Occasion extends Model
         'sent_count',
         'failed_count',
         'created_by',
+        'is_recurring',
     ];
 
     protected $casts = [
         'occasion_date' => 'date',
         'sent_at' => 'datetime',
+        'is_recurring' => 'boolean',
         'total_recipients' => 'integer',
         'sent_count' => 'integer',
         'failed_count' => 'integer',

@@ -22,6 +22,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('queue:work --tries=3 --stop-when-empty')->withoutOverlapping();
         $schedule->command('booking:cancel-pending')->everyMinute()->withoutOverlapping();
         $schedule->command('occasions:send-birthdays')->dailyAt('10:00')->withoutOverlapping();
+        $schedule->command('occasions:send-recurring')->dailyAt('10:00')->withoutOverlapping();
     }
 
     /**
