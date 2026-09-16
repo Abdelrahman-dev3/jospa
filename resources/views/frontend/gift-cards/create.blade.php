@@ -84,6 +84,45 @@
                         </div>
                     </div>
 
+                    <!-- Privacy Options Section -->
+                    <div class="section privacy-section">
+                        <h3 class="section-title fw-bold"><i class="fa-solid fa-shield-halved"></i> خيارات الخصوصية</h3>
+                        <div class="row px-3">
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="show_sender_name" id="show_sender_name" value="1" {{ old('show_sender_name', true) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="show_sender_name">
+                                        إظهار اسم المرسل
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="show_recipient_name" id="show_recipient_name" value="1" {{ old('show_recipient_name', true) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="show_recipient_name">
+                                        إظهار اسم المستلم
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="show_sender_phone" id="show_sender_phone" value="1" {{ old('show_sender_phone', false) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="show_sender_phone">
+                                        إظهار رقم المرسل
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="show_recipient_phone" id="show_recipient_phone" value="1" {{ old('show_recipient_phone', false) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="show_recipient_phone">
+                                        إظهار رقم المستلم
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Services Selection -->
                     <div class="services-container">
                         <h3 class="section-title fw-bold"><i class="fa-solid fa-wand-magic-sparkles"></i> {{ __('messagess.service_selection') }}</h3>

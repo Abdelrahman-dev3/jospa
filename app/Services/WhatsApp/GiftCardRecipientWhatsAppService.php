@@ -103,9 +103,12 @@ class GiftCardRecipientWhatsAppService
     {
         $personalMessage = trim((string) $giftCard->message);
 
+        $senderName = $giftCard->show_sender_name ? $giftCard->sender_name : 'أحد محبيك';
+        $senderPhone = $giftCard->show_sender_phone ? $giftCard->sender_phone : '-';
+
         return [
-            $this->fallbackTemplateValue($giftCard->sender_name, 'مرسل الهدية'),
-            $this->fallbackTemplateValue($giftCard->sender_phone, '-'),
+            $this->fallbackTemplateValue($senderName, 'مرسل الهدية'),
+            $this->fallbackTemplateValue($senderPhone, '-'),
             $this->fallbackTemplateValue($giftCard->ref, '-'),
             $personalMessage !== '' ? $personalMessage : 'نتمنى لك تجربة جميلة.',
         ];
@@ -120,8 +123,8 @@ class GiftCardRecipientWhatsAppService
 
     private function buildMessage(GiftCard $giftCard): string
     {
-        $senderName = trim((string) $giftCard->sender_name);
-        $senderPhone = trim((string) $giftCard->sender_phone);
+        $senderName = $giftCard->show_sender_name ? trim((string) $giftCard->sender_name) : '';
+        $senderPhone = $giftCard->show_sender_phone ? trim((string) $giftCard->sender_phone) : '';
         $personalMessage = trim((string) $giftCard->message);
         $reference = trim((string) $giftCard->ref);
         $amount = $this->formatAmount((float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0));
@@ -132,7 +135,7 @@ class GiftCardRecipientWhatsAppService
             $lines = [
                 $senderName !== ''
                     ? "لقد تلقيت من {$senderName} بطاقة إهداء من {$appName} بقيمة {$amount} ر.س."
-                    : "لقد تلقيت بطاقة إهداء من {$appName} بقيمة {$amount} ر.س.",
+                    : "لقد تلقيت بطاقة إهداء من صديق عبر {$appName} بقيمة {$amount} ر.س.",
             ];
 
             if ($senderPhone !== '') {
@@ -149,7 +152,7 @@ class GiftCardRecipientWhatsAppService
             $lines = [
                 $senderName !== ''
                     ? "لقد أرسل لك {$senderName} هدية من {$appName}."
-                    : "لقد أرسلنا لك هدية من {$appName}.",
+                    : "لقد أرسل لك أحد محبيك هدية من {$appName}.",
             ];
 
             if ($senderPhone !== '') {

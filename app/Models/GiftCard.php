@@ -25,6 +25,10 @@ class GiftCard extends Model
         'subtotal',
         'coupons',
         'payment_status',
+        'show_sender_name',
+        'show_recipient_name',
+        'show_sender_phone',
+        'show_recipient_phone',
     ];
 
     protected $casts = [

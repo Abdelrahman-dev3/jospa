@@ -85,6 +85,10 @@ class GiftCardController extends Controller
             'package_ids.*' => 'integer|exists:packages,id',
             'coupons' => 'nullable|array',
             'optional_services' => 'nullable|string|max:100',
+            'show_sender_name' => 'nullable|boolean',
+            'show_recipient_name' => 'nullable|boolean',
+            'show_sender_phone' => 'nullable|boolean',
+            'show_recipient_phone' => 'nullable|boolean',
         ])->after(function ($validator) use ($data, $isElectronicDelivery) {
             $selectedServices = $this->sanitizeIntegerSelections($data['requested_services'] ?? []);
 
@@ -181,6 +185,10 @@ class GiftCardController extends Controller
             'package_ids'       => json_encode($selectedPackageIds),
             'coupons'           => $coupons_data,
             'subtotal'          => $total,
+            'show_sender_name'  => $data['show_sender_name'] ?? true,
+            'show_recipient_name' => $data['show_recipient_name'] ?? true,
+            'show_sender_phone' => $data['show_sender_phone'] ?? false,
+            'show_recipient_phone' => $data['show_recipient_phone'] ?? false,
         ]);
 
         if ($request->session()->has('temp_gift_booking')) {
