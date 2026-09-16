@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jospa Mobile - تجربة الدفع الإلكتروني الفاخرة</title>
+  <!-- خط تجوال و كايرو من جوجل -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Lemonada:wght@600;700&display=swap" rel="stylesheet">
+  <!-- أيقونات FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --gold: #BF9456;
+      --gold-light: #DFC293;
+      --gold-dark: #9A6F32;
+      --gold-glow: rgba(191, 148, 86, 0.25);
+      --bg-dark: #121417;
+      --surface-dark: #1A1E24;
+      --surface-card: #232830;
+      --surface-hover: #2D333D;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-gold: rgba(191, 148, 86, 0.4);
+      --text-main: #FFFFFF;
+      --text-muted: #9EABB8;
+      --green: #10B981;
+      --green-glow: rgba(16, 185, 129, 0.2);
+      --red: #EF4444;
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --font: 'Tajawal', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #0B0D0F;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Container */
+    .showcase-wrapper {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      max-width: 1200px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .info-pane {
+      max-width: 480px;
+      flex: 1;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(191, 148, 86, 0.12);
+      border: 1px solid var(--border-gold);
+      border-radius: 50px;
+      color: var(--gold-light);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .info-pane h1 {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      line-height: 1.3;
+      background: linear-gradient(135deg, #FFFFFF 60%, var(--gold-light) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .info-pane p {
+      color: var(--text-muted);
+      line-height: 1.8;
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: #E2E8F0;
+    }
+
+    .feature-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold-glow);
+      color: var(--gold-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    /* iPhone Frame */
+    .iphone-frame {
+      width: 390px;
+      height: 820px;
+      background: #000;
+      border-radius: 50px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 10px #2A2E35, 0 0 0 12px #1E2228, 0 0 50px rgba(191, 148, 86, 0.15);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 3px solid #3E444F;
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 115px;
+      height: 28px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 99;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+
+    .camera-lens {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #0D1627;
+      border: 1px solid #1A2740;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 48px;
+      padding: 14px 28px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #FFF;
+      z-index: 10;
+    }
+
+    .status-icons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    /* App Header */
+    .app-header {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .header-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .header-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--gold);
+    }
+
+    .app-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #FFF;
+    }
+
+    /* App Scrollable Content */
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px 100px;
+      scrollbar-width: none;
+    }
+
+    .app-content::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Summary Card */
+    .booking-summary-banner {
+      background: linear-gradient(135deg, rgba(191, 148, 86, 0.15) 0%, rgba(35, 40, 48, 0.95) 100%);
+      border: 1px solid var(--border-gold);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .booking-summary-banner::after {
+      content: '';
+      position: absolute;
+      left: -20px;
+      bottom: -20px;
+      width: 100px;
+      height: 100px;
+      background: radial-gradient(circle, var(--gold-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .banner-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .banner-type {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gold-light);
+      background: rgba(191, 148, 86, 0.2);
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    .banner-price {
+      text-align: left;
+    }
+
+    .price-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .price-main {
+      font-size: 22px;
+      font-weight: 800;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .price-sar {
+      font-size: 12px;
+      color: var(--gold-light);
+    }
+
+    .banner-service {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .banner-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .banner-meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .banner-meta i {
+      color: var(--gold);
+    }
+
+    /* Sub-methods (Wallet & Loyalty) */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #E2E8F0;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title i {
+      color: var(--gold);
+    }
+
+    .sub-options-box {
+      background: var(--surface-dark);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 4px 14px;
+      margin-bottom: 20px;
+    }
+
+    .sub-option-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .sub-option-row:last-child {
+      border-bottom: none;
+    }
+
+    .sub-opt-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sub-opt-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--surface-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold-light);
+      font-size: 14px;
+    }
+
+    .sub-opt-text h4 {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .sub-opt-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Custom Switch */
+    .custom-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .custom-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #333942;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .switch-slider {
+      background-color: var(--gold);
+    }
+
+    input:checked + .switch-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Coupon Input */
+    .coupon-wrap {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .coupon-input {
+      flex: 1;
+      background: var(--surface-dark);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: #FFF;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .coupon-input:focus {
+      border-color: var(--gold);
+    }
+
+    .coupon-btn {
+      background: var(--surface-hover);
+      border: 1px solid var(--border-subtle);
+      color: var(--gold-light);
+      padding: 0 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .coupon-btn:hover {
+      background: var(--gold);
+      color: #000;
+    }
+
+    /* Payment Gateways List */
+    .gateways-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .gateway-card {
+      background: var(--surface-dark);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .gateway-card:hover {
+      border-color: rgba(191, 148, 86, 0.4);
+      background: var(--surface-hover);
+    }
+
+    .gateway-card.active {
+      border-color: var(--gold);
+      background: rgba(191, 148, 86, 0.08);
+      box-shadow: 0 4px 20px var(--gold-glow);
+    }
+
+    .gateway-card.active::before {
+      content: '';
+      position: absolute;
+      right: -1.5px;
+      top: 14px;
+      bottom: 14px;
+      width: 4px;
+      background: var(--gold);
+      border-radius: 4px 0 0 4px;
+    }
+
+    .gateway-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .radio-circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid #5A6472;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .gateway-card.active .radio-circle {
+      border-color: var(--gold);
+    }
+
+    .radio-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all 0.2s;
+    }
+
+    .gateway-card.active .radio-dot {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .gateway-details h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gateway-details p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .gateway-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-pill {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #111418;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-weight: 700;
+      color: #FFF;
+    }
+
+    .badge-installments {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .brand-logo-img {
+      height: 18px;
+      object-fit: contain;
+    }
+
+    /* Bottom Checkout Action */
+    .checkout-footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(18, 20, 23, 0.94);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border-subtle);
+      padding: 16px 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 20;
+    }
+
+    .checkout-total-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .checkout-total-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .checkout-total-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #FFF;
+    }
+
+    .pay-submit-btn {
+      flex: 1;
+      height: 52px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      border: none;
+      border-radius: var(--radius-md);
+      color: #FFF;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 6px 25px rgba(191, 148, 86, 0.35);
+      transition: all 0.25s;
+    }
+
+    .pay-submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(191, 148, 86, 0.5);
+    }
+
+    .pay-submit-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Modal / Overlay (Simulation of WebView or Success) */
+    .modal-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(11, 13, 15, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .loader-ring {
+      width: 60px;
+      height: 60px;
+      border: 4px solid var(--border-subtle);
+      border-top: 4px solid var(--gold);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .success-icon-wrap {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: var(--green-glow);
+      border: 2px solid var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--green);
+      font-size: 32px;
+      margin-bottom: 20px;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .success-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #FFF;
+      margin-bottom: 8px;
+    }
+
+    .success-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .close-modal-btn {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      color: #FFF;
+      padding: 12px 28px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .close-modal-btn:hover {
+      border-color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="showcase-wrapper">
+    <!-- Information Panel -->
+    <div class="info-pane">
+      <div class="brand-badge">
+        <i class="fa-solid fa-gem"></i> تجربة مستخدم فاخرة لموبايل جوسبا
+      </div>
+      <h1>واجهة الدفع الإلكتروني الذكية على تطبيقات الموبايل</h1>
+      <p>
+        صُممت هذه الشاشة لتوفير تجربة دفع استثنائية وسلسة تليق بعملاء جوسبا (Jospa)، وتدعم كافة بوابات الدفع الرسمية مع إمكانية التقسيط والخصم برصيد المحفظة ونقاط الولاء بضغطة زر واحدة.
+      </p>
+
+      <ul class="feature-list">
+        <li class="feature-item">
+          <div class="feature-icon"><i class="fa-solid fa-credit-card"></i></div>
+          <span>دعم شامل: أبل باي، مدى، فيزا، تمارا، تابي، يورباي، وSTC Pay.</span>
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon"><i class="fa-solid fa-coins"></i></div>
+          <span>تطبيق فوري لنقاط الولاء ورصيد المحفظة وخصمها من الإجمالي.</span>
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+          <span>تشفير كامل وحماية مصرفية معتمدة عبر معالجات الدفع المباشرة.</span>
+        </li>
+        <li class="feature-item">
+          <div class="feature-icon"><i class="fa-solid fa-mobile-screen"></i></div>
+          <span>تجربة تفاعلية حية داخل إطار الهاتف (جرب النقر والاختيار الآن!).</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- iPhone Mockup Frame -->
+    <div class="iphone-frame">
+      <!-- Dynamic Island -->
+      <div class="dynamic-island">
+        <div class="camera-lens"></div>
+        <div style="width: 8px; height: 8px; border-radius: 50%; background: #07150C;"></div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>09:41</span>
+        <div class="status-icons">
+          <i class="fa-solid fa-signal"></i>
+          <i class="fa-solid fa-wifi"></i>
+          <i class="fa-solid fa-battery-full"></i>
+        </div>
+      </div>
+
+      <!-- App Header -->
+      <div class="app-header">
+        <div class="header-btn" onclick="alert('الرجوع للسلة')"><i class="fa-solid fa-arrow-right"></i></div>
+        <div class="app-title">إتمام الحجز والدفع</div>
+        <div class="header-btn"><i class="fa-solid fa-shield"></i></div>
+      </div>
+
+      <!-- Scrollable App Content -->
+      <div class="app-content">
+        <!-- Summary Banner -->
+        <div class="booking-summary-banner">
+          <div class="banner-top">
+            <span class="banner-type"><i class="fa-solid fa-house"></i> خدمة منزلية</span>
+            <div class="banner-price">
+              <div class="price-sub">إجمالي الحجز</div>
+              <div class="price-main"><span id="displayTotal">250</span> <span class="price-sar">ر.س</span></div>
+            </div>
+          </div>
+          <div class="banner-service">مساج استرخائي منزلي (60 دقيقة)</div>
+          <div class="banner-meta">
+            <span><i class="fa-regular fa-calendar"></i> 2026-09-20</span>
+            <span><i class="fa-regular fa-clock"></i> 04:00 م</span>
+            <span><i class="fa-solid fa-user-nurse"></i> أخصائية: أمل</span>
+          </div>
+        </div>
+
+        <!-- Sub-methods (Wallet & Loyalty) -->
+        <div class="section-title"><i class="fa-solid fa-wallet"></i> الخصم من الرصيد والنقاط</div>
+        <div class="sub-options-box">
+          <div class="sub-option-row">
+            <div class="sub-opt-info">
+              <div class="sub-opt-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+              <div class="sub-opt-text">
+                <h4>استخدام المحفظة</h4>
+                <p>الرصيد المتاح: 50 ر.س</p>
+              </div>
+            </div>
+            <label class="custom-switch">
+              <input type="checkbox" id="walletSwitch" onchange="calculateTotal()">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+
+          <div class="sub-option-row">
+            <div class="sub-opt-info">
+              <div class="sub-opt-icon"><i class="fa-solid fa-star"></i></div>
+              <div class="sub-opt-text">
+                <h4>نقاط الولاء</h4>
+                <p>300 نقطة (تعادل 30 ر.س)</p>
+              </div>
+            </div>
+            <label class="custom-switch">
+              <input type="checkbox" id="loyaltySwitch" onchange="calculateTotal()">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Coupon Field -->
+        <div class="coupon-wrap">
+          <input type="text" class="coupon-input" id="couponInput" placeholder="أدخل كود الخصم (مثال: JOSPA10)">
+          <button class="coupon-btn" onclick="applyCoupon()">تطبيق</button>
+        </div>
+
+        <!-- Payment Methods Selection -->
+        <div class="section-title"><i class="fa-solid fa-credit-card"></i> اختر طريقة الدفع</div>
+        <div class="gateways-grid">
+
+          <!-- Apple Pay -->
+          <div class="gateway-card active" onclick="selectGateway(this, 'applepay_urpay', 'Apple Pay')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3><i class="fa-brands fa-apple" style="font-size: 17px;"></i> Apple Pay</h3>
+                <p>الدفع الفوري بلمسة واحدة</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill"><i class="fa-brands fa-apple"></i> Pay</span>
+            </div>
+          </div>
+
+          <!-- Tamara -->
+          <div class="gateway-card" onclick="selectGateway(this, 'tamara', 'تمارا')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3>تمارا (Tamara)</h3>
+                <p>قسّط فاتورتك على 4 دفعات ميسرة</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill badge-installments">4 دفعات</span>
+            </div>
+          </div>
+
+          <!-- Tabby -->
+          <div class="gateway-card" onclick="selectGateway(this, 'tabby', 'تابي')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3>تابي (Tabby)</h3>
+                <p>قسّط على 4 دفعات بدون أي فوائد</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill badge-installments">4 دفعات</span>
+            </div>
+          </div>
+
+          <!-- MADA -->
+          <div class="gateway-card" onclick="selectGateway(this, 'card_mada', 'بطاقة مدى')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3>بطاقة مدى (MADA)</h3>
+                <p>خصم مباشر من حسابك البنكي</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill" style="color:#00B4D8;">mada</span>
+            </div>
+          </div>
+
+          <!-- Visa / Mastercard -->
+          <div class="gateway-card" onclick="selectGateway(this, 'card_visa', 'فيزا / ماستركارد')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3>فيزا وماستركارد</h3>
+                <p>البطاقات الائتمانية المحلية والدولية</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill" style="color:#FFB703;">VISA</span>
+              <span class="brand-pill" style="color:#FF006E;">Master</span>
+            </div>
+          </div>
+
+          <!-- STC Pay -->
+          <div class="gateway-card" onclick="selectGateway(this, 'stcpay', 'STC Pay')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3>STC Pay</h3>
+                <p>الدفع عبر محفظة إس تي سي باي</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill" style="color:#A78BFA;">STC Pay</span>
+            </div>
+          </div>
+
+          <!-- UrPay -->
+          <div class="gateway-card" onclick="selectGateway(this, 'urpay', 'محفظة UrPay')">
+            <div class="gateway-left">
+              <div class="radio-circle"><div class="radio-dot"></div></div>
+              <div class="gateway-details">
+                <h3>UrPay</h3>
+                <p>الدفع عبر محفظة الراجحي الرقمية</p>
+              </div>
+            </div>
+            <div class="gateway-badges">
+              <span class="brand-pill" style="color:#60A5FA;">UrPay</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Checkout Footer -->
+      <div class="checkout-footer">
+        <div class="checkout-total-col">
+          <span class="checkout-total-label">المبلغ المطلوب:</span>
+          <span class="checkout-total-value"><span id="footerTotal">250</span> ر.س</span>
+        </div>
+        <button class="pay-submit-btn" onclick="startPayment()">
+          <span id="btnText">الدفع عبر Apple Pay</span>
+          <i class="fa-solid fa-lock" style="font-size: 13px;"></i>
+        </button>
+      </div>
+
+      <!-- Processing & Success Modal -->
+      <div class="modal-overlay" id="checkoutModal">
+        <div id="loadingView">
+          <div class="loader-ring"></div>
+          <p style="font-size: 15px; font-weight: 700; color: #FFF; text-align: center;">جارِ تحضير جلسة الدفع الآمنة...</p>
+          <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px;">الاتصال ببوابة <span id="targetGatewayName" style="color:var(--gold);">Apple Pay</span></p>
+        </div>
+
+        <div id="successView" style="display: none; text-align: center;">
+          <div class="success-icon-wrap"><i class="fa-solid fa-check"></i></div>
+          <div class="success-title">تم تأكيد الحجز بنجاح!</div>
+          <div class="success-desc">
+            رقم الفاتورة: <strong>#INV-92841</strong><br>
+            تم إرسال تفاصيل الموعد ورسالة التأكيد إلى واتساب على رقمك <strong>0501234567</strong>.
+          </div>
+          <button class="close-modal-btn" onclick="resetDemo()">العودة للرئيسية</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let baseAmount = 250;
+    let couponDiscount = 0;
+    let currentGateway = 'applepay_urpay';
+    let currentGatewayLabel = 'Apple Pay';
+
+    function selectGateway(cardEl, code, label) {
+      document.querySelectorAll('.gateway-card').forEach(el => el.classList.remove('active'));
+      cardEl.classList.add('active');
+      currentGateway = code;
+      currentGatewayLabel = label;
+      document.getElementById('btnText').textContent = `الدفع عبر ${label}`;
+    }
+
+    function calculateTotal() {
+      let finalAmount = baseAmount;
+      const useWallet = document.getElementById('walletSwitch').checked;
+      const useLoyalty = document.getElementById('loyaltySwitch').checked;
+
+      if (useWallet) {
+        finalAmount -= 50;
+      }
+      if (useLoyalty) {
+        finalAmount -= 30;
+      }
+      finalAmount -= couponDiscount;
+
+      if (finalAmount < 0) finalAmount = 0;
+
+      document.getElementById('displayTotal').textContent = finalAmount;
+      document.getElementById('footerTotal').textContent = finalAmount;
+    }
+
+    function applyCoupon() {
+      const code = document.getElementById('couponInput').value.trim();
+      if (code.toUpperCase() === 'JOSPA10') {
+        couponDiscount = 25;
+        calculateTotal();
+        alert('✅ تم تطبيق كود الخصم بنجاح: خصم 25 ر.س');
+      } else if (code === '') {
+        couponDiscount = 0;
+        calculateTotal();
+      } else {
+        alert('❌ كود الخصم غير صالح');
+      }
+    }
+
+    function startPayment() {
+      const modal = document.getElementById('checkoutModal');
+      const loading = document.getElementById('loadingView');
+      const success = document.getElementById('successView');
+      document.getElementById('targetGatewayName').textContent = currentGatewayLabel;
+
+      loading.style.display = 'block';
+      success.style.display = 'none';
+      modal.classList.add('show');
+
+      // محاكاة تحويل البنك والـ Callback
+      setTimeout(() => {
+        loading.style.display = 'none';
+        success.style.display = 'block';
+      }, 2200);
+    }
+
+    function resetDemo() {
+      document.getElementById('checkoutModal').classList.remove('show');
+    }
+  </script>
+</body>
+</html>

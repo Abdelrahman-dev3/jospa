@@ -4,7 +4,7 @@
         LoyaltyController,ModuleController,offersController,ReportsController,
         RejectController,TermsAndConditionsController,TextController,
         BackendController,BackupController,BranchController,NotificationsController,
-        SettingController,UserController,UsersController
+        SettingController,UserController,UsersController,OccasionController
     };
 
     use App\Http\Controllers\{
@@ -429,6 +429,18 @@
         Route::controller(TextController::class)->group(function () {
             Route::get('/app/text', 'index')->name('app.text');
             Route::post('/app/Text/store', 'store')->name('app.Text');
+        });
+
+        Route::controller(OccasionController::class)->prefix('app/occasions')->as('app.occasions.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{id}', 'show')->name('show')->whereNumber('id');
+            Route::put('/{id}', 'update')->name('update')->whereNumber('id');
+            Route::delete('/{id}', 'destroy')->name('destroy')->whereNumber('id');
+            Route::post('/{id}/send-sms', 'sendSms')->name('send-sms')->whereNumber('id');
+            Route::post('/send-test-sms', 'sendTestSms')->name('send-test-sms');
+            Route::post('/preview', 'preview')->name('preview');
+            Route::get('/{id}/logs', 'logs')->name('logs')->whereNumber('id');
         });
     });
 

@@ -14,13 +14,17 @@ class TaqnyatSmsService
 
     public function __construct()
     {
-        $this->apiKey = setting('taqnyat_api_key');
-        $this->sender = setting('taqnyat_sender');
+        $this->apiKey = setting('taqnyat_api_key') ?: env('TAQNYAT_API_KEY');
+        $this->sender = setting('taqnyat_sender') ?: env('TAQNYAT_SENDER_NAME', 'JO SPA');
     }
 
-    public function sendSms($recipients, $message, $sender = 'JO SPA')
+    public function sendSms($recipients, $message, $sender = null)
     {
-        if (! setting('is_taqnyat_sms')) {
+        $sender = $sender ?: ($this->sender ?: 'JO SPA');
+        $settingEnabled = setting('is_taqnyat_sms');
+        $isEnabled = $settingEnabled !== null ? (bool) $settingEnabled : (!empty($this->apiKey));
+
+        if (! $isEnabled) {
             Log::warning('Taqnyat SMS: is_taqnyat_sms setting is disabled. SMS not sent.', [
                 'recipients' => $recipients,
             ]);
