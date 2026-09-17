@@ -47,6 +47,13 @@ class TaqnyatSmsService
             return false;
         }
 
+        // Ensure sender is a valid short alphanumeric string, not a template text.
+        // Some users mistakenly save the SMS template in the 'taqnyat_sender' setting.
+        $finalSender = $sender ?: $this->sender;
+        if (mb_strlen($finalSender) > 15 || preg_match('/[\x{0600}-\x{06FF}]/u', $finalSender)) {
+            $finalSender = env('TAQNYAT_SENDER_NAME', 'JO SPA');
+        }
+
         try {
             $response = Http::withHeaders([
                 'Authorization' => "Bearer {$this->apiKey}",
@@ -55,7 +62,7 @@ class TaqnyatSmsService
             ])->post("{$this->baseUrl}/messages", [
                 'recipients' => is_array($recipients) ? $recipients : [$recipients],
                 'body' => $message,
-                'sender' => $sender ?: $this->sender,
+                'sender' => $finalSender,
             ]);
 
             if ($response->successful()) {
