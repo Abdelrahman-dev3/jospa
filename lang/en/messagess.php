@@ -728,4 +728,7 @@ return [
     'dynamic_variables' => 'Available Variables',
     'live_preview' => 'Live Message Preview',
     'sms_delivery_logs' => 'SMS Delivery Logs',
+        'gift_card_coupon_not_allowed' => 'Discount codes cannot be used when paying with a gift card.',
+    'coupon_disabled_by_gift_card' => 'Discount code is disabled because you are paying with a gift card. They cannot be used together.',
+    'gift_card_disabled_by_coupon' => 'Gift card payment is disabled because a discount code is applied. They cannot be used together.',
 ];
