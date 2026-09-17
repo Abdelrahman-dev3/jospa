@@ -79,7 +79,7 @@ class OccasionController extends Controller
 
         // Birthday KPI & Settings
         $today = Carbon::today();
-        $todayBirthdaysCount = User::role('user')
+        $todayBirthdaysCount = User::isCustomer()
             ->active()
             ->whereNotNull('date_of_birth')
             ->whereNotNull('mobile')
@@ -88,7 +88,7 @@ class OccasionController extends Controller
             ->whereDay('date_of_birth', $today->day)
             ->count();
 
-        $monthBirthdaysCount = User::role('user')
+        $monthBirthdaysCount = User::isCustomer()
             ->active()
             ->whereNotNull('date_of_birth')
             ->whereNotNull('mobile')
@@ -96,7 +96,7 @@ class OccasionController extends Controller
             ->whereMonth('date_of_birth', $today->month)
             ->count();
 
-        $totalCustomersWithDob = User::role('user')
+        $totalCustomersWithDob = User::isCustomer()
             ->active()
             ->whereNotNull('date_of_birth')
             ->whereNotNull('mobile')

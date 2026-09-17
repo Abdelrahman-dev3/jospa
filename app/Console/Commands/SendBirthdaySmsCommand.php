@@ -41,7 +41,7 @@ class SendBirthdaySmsCommand extends Command
         $this->info("Checking birthdays for: {$today->format('m-d')}");
 
         // Find active customers with valid mobile and birthday today
-        $customers = User::role('user')
+        $customers = User::isCustomer()
             ->active()
             ->whereNotNull('date_of_birth')
             ->whereNotNull('mobile')

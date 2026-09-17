@@ -54,7 +54,7 @@ class SendRecurringOccasionsCommand extends Command
                     ->where('mobile', '!=', '')
                     ->get();
             } elseif ($occasion->target_type === 'birthday') {
-                $customers = User::role('user')
+                $customers = User::isCustomer()
                     ->active()
                     ->whereNotNull('date_of_birth')
                     ->whereNotNull('mobile')
@@ -63,7 +63,7 @@ class SendRecurringOccasionsCommand extends Command
                     ->whereDay('date_of_birth', $today->day)
                     ->get();
             } else {
-                $customers = User::role('user')
+                $customers = User::isCustomer()
                     ->active()
                     ->whereNotNull('mobile')
                     ->where('mobile', '!=', '')

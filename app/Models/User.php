@@ -157,6 +157,13 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         return $query->where('status', 1)->where('is_banned', 0);
     }
 
+    public function scopeIsCustomer($query)
+    {
+        return $query->where(function ($q) {
+            $q->role('user')->orWhereDoesntHave('roles');
+        });
+    }
+
     public function booking()
     {
         return $this->hasMany(Booking::class, 'user_id', 'id');
