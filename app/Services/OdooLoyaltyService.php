@@ -103,6 +103,16 @@ class OdooLoyaltyService
             $body = $response->json() ?? [];
 
             if ($response->successful()) {
+                Log::info('Odoo loyalty adjust request successful.', [
+                    'phone'          => $phone,
+                    'operation'      => $operation,
+                    'points'         => $points,
+                    'reference'      => $reference,
+                    'duplicate'      => (bool) ($body['duplicate'] ?? false),
+                    'balance_before' => isset($body['balance_before']) ? (float) $body['balance_before'] : null,
+                    'balance_after'  => isset($body['balance_after']) ? (float) $body['balance_after'] : null,
+                ]);
+
                 return [
                     'success'        => true,
                     'duplicate'      => (bool) ($body['duplicate'] ?? false),
