@@ -1131,18 +1131,8 @@ class BookingCartController extends Controller
      */
     private function getOdooLoyaltyPoints($user): ?float
     {
-        $phone = $user->mobile ?? null;
-
-        if (empty($phone)) {
-            return null;
-        }
-
         try {
-            $result = app(OdooLoyaltyService::class)->getBalance($phone);
-
-            if ($result['success'] ?? false) {
-                return (float) ($result['points'] ?? 0);
-            }
+            return app(OdooLoyaltyService::class)->syncLocalBalance($user);
         } catch (\Throwable $e) {
             \Log::warning('Odoo loyalty balance fallback to local DB.', [
                 'user_id' => $user->id,

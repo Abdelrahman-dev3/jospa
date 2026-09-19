@@ -59,6 +59,55 @@ class OdooLoyaltyService
     }
 
     /**
+     * Get the live balance from Odoo and synchronize the local user's balance if there is a discrepancy.
+     * Creates a transaction record for any adjustments made.
+     *
+     * @param \App\Models\User $user
+     * @return float|null The synchronized balance, or null if sync failed.
+     */
+    public function syncLocalBalance(\App\Models\User $user): ?float
+    {
+        $phone = $user->mobile ?? null;
+        if (empty($phone)) {
+            return null;
+        }
+
+        $result = $this->getBalance($phone);
+
+        if ($result['success'] ?? false) {
+            $odooPoints = (float) ($result['points'] ?? 0);
+            $localPoints = (float) ($user->loyalty_points ?? 0);
+
+            if (round($localPoints, 2) !== round($odooPoints, 2)) {
+                $difference = $odooPoints - $localPoints;
+                $action = $difference > 0 ? 'add' : 'deduct';
+
+                \App\Models\LoyaltyPointTransaction::create([
+                    'user_id' => $user->id,
+                    'action' => $action,
+                    'points' => abs($difference),
+                    'balance_after' => $odooPoints,
+                    'source' => 'odoo_sync',
+                    'meta' => ['reason' => 'Automatic sync to match Odoo'],
+                ]);
+
+                $user->loyalty_points = $odooPoints;
+                $user->save();
+
+                Log::info('Loyalty points synced with Odoo automatically.', [
+                    'user_id' => $user->id,
+                    'old_balance' => $localPoints,
+                    'new_balance' => $odooPoints,
+                    'difference' => $difference,
+                ]);
+            }
+
+            return $odooPoints;
+        }
+
+        return null;
+    }
+    /**
      * Add, deduct, or set loyalty points in Odoo.
      *
      * POST /odoo/loyalty/adjust
