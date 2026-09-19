@@ -42,11 +42,7 @@
     font-weight: 700;
     padding: 60px 0;
     font-style: Bold;
-    @if(app()->getLocale() == 'ar')
-    font-size: 47px;
-    @else
-    font-size: 38px;
-    @endif
+    font-size: clamp(32px, 3.3vw, 47px);
     leading-trim: NONE;
     line-height: 100%;
     letter-spacing: 0%;
@@ -262,4 +258,60 @@
     right: 0;
     height: 280px;
     rotate: 178deg;
+}
+
+.screen-hero--national-day .fl-1,
+.screen-hero--national-day .fl-2 {
+    filter: brightness(0) saturate(100%) invert(17%) sepia(36%) saturate(1316%) hue-rotate(112deg) brightness(92%) contrast(103%);
+}
+
+.national-day-badge {
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 24px;
+    padding-top: 45px;
+    position: relative;
+    color: var(--saudi-green, #003b2a);
+    text-align: center;
+}
+
+.national-day-emblem {
+    position: absolute;
+    width: 65px;
+    height: 59px;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--saudi-cream, #f4f2e9);
+    padding: 0 8px;
+}
+
+.national-day-badge-label {
+    display: block;
+    border: 4px double var(--saudi-gold, #c8b77d);
+    padding: 20px 22px 12px;
+    font-family: 'Zain', sans-serif;
+    font-size: clamp(18px, 1.6vw, 23px);
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.screen-hero--national-day .first-sec h1 {
+    padding: 0;
+    margin-bottom: 20px;
+    line-height: 1.4;
+    text-align: center;
+    text-wrap: balance;
+}
+
+.screen-hero--national-day .first-sec p {
+    text-align: center;
+    font-size: clamp(18px, 1.9vw, 27px);
+    line-height: 1.8;
+    margin-bottom: 28px;
+}
+
+.screen-hero--national-day .buttons {
+    justify-content: center;
+    gap: 16px;
 }

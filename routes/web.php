@@ -451,3 +451,31 @@
         Route::get('/qu/cart', 'getUserCart');
         Route::delete('/qu/cart/remove/{id}', 'remove');
     });
+
+     Route::get('mizo',function(){
+ $banner = \App\Models\Vartext::firstOrNew(['type' => 'banner']);
+        $defaults = [
+            'title' => [
+                'ar' => 'جمالك يزدهر في وطن العز',
+                'en' => 'Your beauty blooms in a homeland of pride',
+            ],
+            'description' => [
+                'ar' => 'احتفلي معنا بلحظات من الجمال والاسترخاء',
+                'en' => 'Celebrate with us in moments of beauty and relaxation',
+            ],
+        ];
+
+        foreach ($defaults as $field => $translations) {
+            $values = $banner->{$field} ?? [];
+            foreach ($translations as $locale => $text) {
+                if (blank($values[$locale] ?? null)) {
+                    $values[$locale] = $text;
+                }
+            }
+            $banner->{$field} = $values;
+        }
+
+        $banner->save();
+     });
+
+           

@@ -1,0 +1,353 @@
+:root {
+    --saudi-green: #003b2a;
+    --saudi-green-light: #175442;
+    --saudi-cream: #f4f2e9;
+    --saudi-gold: #c8b77d;
+
+    --primary-color: var(--saudi-green);
+    --bs-primary: var(--saudi-green);
+    --bs-primary-rgb: 0, 59, 42;
+    --bs-link-color: var(--saudi-green);
+    --bs-link-hover-color: var(--saudi-green-light);
+}
+
+/* خلفية الموقع */
+html body {
+    background-color: var(--saudi-cream) !important;
+}
+
+/* القائمة على الكمبيوتر والموبايل */
+html body .m-nav,
+html body .mob-nav {
+    background: var(--saudi-green) !important;
+}
+
+html body .m-nav .nav-link,
+html body .mob-nav .nav-link,
+html body .m-nav .icon-text,
+html body .mob-nav .icon-text {
+    color: var(--saudi-cream) !important;
+}
+
+html body .m-nav .nav-link:hover,
+html body .m-nav .nav-link.active {
+    color: var(--saudi-gold) !important;
+}
+
+html body .hamburger span {
+    background-color: var(--saudi-cream) !important;
+}
+
+/* نقاط الولاء */
+html body .more-btn-nav {
+    background: transparent !important;
+    border-color: var(--saudi-gold) !important;
+    color: var(--saudi-gold) !important;
+}
+
+html body .more-btn-nav::before {
+    border-color: var(--saudi-gold) !important;
+}
+
+html body .more-btn-nav .text,
+html body .more-btn-nav p {
+    color: var(--saudi-gold) !important;
+}
+
+/* اختيار اللغة */
+html body .dropbtn {
+    background: var(--saudi-cream) !important;
+    color: var(--saudi-green) !important;
+}
+
+html body .language-selector .dropdown-content {
+    background: var(--saudi-green) !important;
+}
+
+html body .language-selector .dropdown-content a:hover {
+    background: var(--saudi-green-light) !important;
+}
+
+/* القسم التعريفي */
+html body .main-learn {
+    background: var(--saudi-cream) !important;
+}
+
+html body .learn-content h2,
+html body .learn-content span,
+html body .f-sec h3,
+html body .s-sec h3 {
+    color: var(--saudi-green) !important;
+}
+
+/* المنتجات والتصنيفات */
+html body .Category_Name,
+html body .product-title,
+html body .product-card .price,
+html body .branch-card h5 {
+    color: var(--saudi-green) !important;
+}
+
+html body .maincard {
+    border-color: var(--saudi-gold) !important;
+}
+
+html body .cardimg {
+    background: #e6ece4 !important;
+}
+
+/* أزرار المنتجات */
+html body .add-to-cart {
+    background: var(--saudi-green) !important;
+    border-color: var(--saudi-green) !important;
+    color: #fff !important;
+}
+
+html body .add-to-cart:hover {
+    background: var(--saudi-green-light) !important;
+}
+
+/* أزرار Bootstrap الأساسية، بما فيها حالات التفاعل */
+html body .btn-primary {
+    --bs-btn-bg: var(--saudi-green);
+    --bs-btn-border-color: var(--saudi-green);
+    --bs-btn-color: #fff;
+    --bs-btn-hover-bg: var(--saudi-green-light);
+    --bs-btn-hover-border-color: var(--saudi-green-light);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--saudi-green-light);
+    --bs-btn-active-border-color: var(--saudi-green-light);
+    --bs-btn-active-color: #fff;
+    --bs-btn-disabled-bg: var(--saudi-green);
+    --bs-btn-disabled-border-color: var(--saudi-green);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-focus-shadow-rgb: 0, 59, 42;
+}
+
+/* اختيار الفرع */
+html body #branchContainer {
+    background: var(--saudi-green) !important;
+}
+
+html body #branchContainer .close-btn {
+    background: var(--saudi-green-light) !important;
+}
+
+/* الهدايا */
+html body .gift-overlay {
+    background: rgba(0, 59, 42, 0.65) !important;
+}
+
+html body .gift-btn {
+    background: var(--saudi-cream) !important;
+    border-color: var(--saudi-gold) !important;
+    color: var(--saudi-green) !important;
+}
+
+html body .gift-btn:hover {
+    background: var(--saudi-green) !important;
+    color: #fff !important;
+}
+
+/* الفوتر */
+html body .footer-section {
+    background: var(--saudi-green) !important;
+    color: var(--saudi-cream) !important;
+}
+
+html body .footer-background-layer::before {
+    background: rgba(0, 59, 42, 0.85) !important;
+}
+
+html body .footer-curve-top .shape-fill {
+    fill: var(--saudi-cream) !important;
+}
+
+html:root {
+    --gold: var(--saudi-green);
+    --gift-primary: var(--saudi-green);
+    --gift-primary-2: var(--saudi-green-light);
+    --gift-accent: var(--saudi-gold);
+
+    --pp-primary: var(--saudi-green);
+    --pp-accent: var(--saudi-green);
+    --pp-accent-light: var(--saudi-green-light);
+    --pp-bg: var(--saudi-cream);
+    --pp-section-num-bg: var(--saudi-green);
+    --pp-hero-gradient-start: var(--saudi-green);
+    --pp-hero-gradient-end: var(--saudi-green-light);
+}
+
+/* البانر الرئيسي */
+html body .screen-hero {
+    background-color: var(--saudi-cream) !important;
+}
+
+html body .first-sec h1,
+html body .first-sec p {
+    color: var(--saudi-green) !important;
+}
+
+html body .gradient-border::before {
+    background: linear-gradient(
+        90deg,
+        var(--saudi-green),
+        var(--saudi-gold),
+        var(--saudi-green)
+    ) !important;
+}
+
+/* عناوين الأقسام المكتوبة بلون خلفية مقصوص على النص */
+html body h2[style*="background-clip"] {
+    background: none !important;
+    color: var(--saudi-green) !important;
+    -webkit-text-fill-color: var(--saudi-green) !important;
+}
+
+/* عنوان السلايدر */
+html body h2[style*="color:#BF9456" i] {
+    color: var(--saudi-green) !important;
+}
+
+/* خلفية قسم الخدمات */
+html body section[style*="#bf945612" i] {
+    background: #eaf0e9 !important;
+}
+
+/* الرؤية والرسالة */
+html body .main-learn .f-sec,
+html body .main-learn .s-sec {
+    background: linear-gradient(
+        160deg,
+        var(--saudi-green-light),
+        var(--saudi-green)
+    ) !important;
+    color: var(--saudi-cream) !important;
+}
+
+html body .main-learn .f-sec h3,
+html body .main-learn .s-sec h3,
+html body .main-learn .f-sec p,
+html body .main-learn .s-sec p {
+    color: var(--saudi-cream) !important;
+}
+
+/* إزالة الفلتر البرتقالي الموجود على الشعار التعريفي */
+html body .learn-logo img {
+    filter: none !important;
+}
+
+/* الأزرار ذات الخلفيات المكتوبة مباشرة */
+html body .btn-primary,
+html body .more-btn,
+html body .deta,
+html body .contact-btn {
+    background: var(--saudi-green) !important;
+    border-color: var(--saudi-green) !important;
+    color: #fff !important;
+}
+
+html body .btn-primary:hover,
+html body .more-btn:hover,
+html body .deta:hover,
+html body .contact-btn:hover {
+    background: var(--saudi-green-light) !important;
+    border-color: var(--saudi-green-light) !important;
+    color: #fff !important;
+}
+
+/* الأزرار المفرغة */
+html body .screen-hero .btn-outline-light,
+html body .maincard .btn-outline-light {
+    background: var(--saudi-cream) !important;
+    border-color: var(--saudi-green) !important;
+    color: var(--saudi-green) !important;
+}
+
+html body .screen-hero .btn-outline-light:hover,
+html body .maincard .btn-outline-light:hover {
+    background: var(--saudi-green) !important;
+    color: #fff !important;
+}
+
+/* زر الحجز داخل كارت التصنيف */
+html body .maincard .btn-outline-light[onclick] {
+    background: var(--saudi-green) !important;
+    color: #fff !important;
+}
+
+/* روابط اللغة في قائمة الموبايل */
+html body .offcanvas a[href][style*="#cf9233" i] {
+    color: var(--saudi-green) !important;
+}
+
+/* الحساب والحجز */
+html body .stat-value,
+html body .stat-unit,
+html body .editProfileModal,
+html body .massage-name,
+html body .booking-summary-kicker,
+html body .calendar-title,
+html body .sub-sammary-total,
+html body .branch-name {
+    color: var(--saudi-green) !important;
+}
+
+html body h5[style*="#bf9456" i] {
+    color: var(--saudi-green) !important;
+}
+
+html body .OI::placeholder {
+    color: var(--saudi-green) !important;
+}
+
+html body .table-head,
+html body .progress-step.active,
+html body .progress-step.completed,
+html body .calendar-day.selected {
+    background: var(--saudi-green) !important;
+    color: #fff !important;
+}
+
+html body .progress-step:hover:not(.active):not(.completed) {
+    background: #e6ece4 !important;
+}
+
+html body .service-card.selected,
+html body .service-card:hover,
+html body .selected-card {
+    border-color: var(--saudi-green) !important;
+}
+
+html body #wifi-loader {
+    --front-color: var(--saudi-green);
+}
+
+html body .sammary-steps.cart::-webkit-scrollbar-thumb {
+    background-color: var(--saudi-green) !important;
+}
+
+/* الإشعارات */
+html body .notification-dropdown .nd-header .nd-mark-read,
+html body .notification-dropdown .nd-footer a {
+    color: var(--saudi-green) !important;
+}
+
+html body .nd-icon.nd-icon-welcome {
+    background: #e6ece4 !important;
+    color: var(--saudi-green) !important;
+}
+
+html body .notifications-page .np-mark-all,
+html body .notifications-page .np-load-more {
+    color: var(--saudi-green) !important;
+    border-color: var(--saudi-green) !important;
+}
+
+html body .notifications-page .np-tab.active,
+html body .notifications-page .np-mark-all:hover,
+html body .notifications-page .np-load-more:hover {
+    background: var(--saudi-green) !important;
+    border-color: var(--saudi-green) !important;
+    color: #fff !important;
+}

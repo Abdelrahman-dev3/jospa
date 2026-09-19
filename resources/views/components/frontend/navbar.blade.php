@@ -32,12 +32,18 @@
         }
     }
 </style>
+@if ((int) setting('saudi_national_day_theme', 0) === 1)
+    <link
+        rel="stylesheet"
+        href="{{ asset('custom-css/saudi-national-day.css') }}?v=1"
+    >
+@endif
 @php
     $hasOffers = \App\Models\Ouroffersection::where('end_date', '>', \Carbon\Carbon::now())->exists();
 @endphp
     <div class="m-nav d-none d-lg-flex flex-column">
-        <div class="top-bar d-flex align-items-center gap-3 px-3 py-1" style="background: transparent;width: 100%;justify-content: space-between;padding: 5px 34px !important;">
-            <div class="other d-flex" style="gap: 35px;">
+        <div class="top-bar d-flex align-items-center">
+            <div class="other d-flex">
                 <!-- Email -->
                 <a href="mailto:info@jospa-sa.com" class="contact-info">
                     <span class="iconify" data-icon="mdi:email" data-width="18" data-height="18"></span> info@jospa-sa.com
@@ -48,7 +54,7 @@
                     <span class="iconify" data-icon="mdi:phone" data-width="18" data-height="18"></span> 966920012924+
                 </a>
             </div>
-            <div class="social d-flex" style="gap: 35px;">
+            <div class="social d-flex">
                 <!-- WhatsApp -->
                 <a href="https://wa.me/966920012924" target="_blank" class="social-icon">
                     <span class="iconify" data-icon="mdi:whatsapp" data-width="20" data-height="20"></span>
@@ -63,7 +69,7 @@
                 </a>
             </div>
         </div>
-        <div style="display: flex;width: 100%;">
+        <div class="desktop-nav-main">
             <div class="logo"><a href="/"> <img src="{{asset('images/jospalogo.png')}}"></a></div>
             <div class="links">
                 <ul class="navbar-nav mb-2 mb-lg-0 d-flex align-items-center gap-4" style="flex-direction: row;white-space: nowrap;z-index: 999999;">
@@ -204,7 +210,7 @@
             @endif
     
         </div>
-            <div class="loyalty" style="width: 15% !important;height: 100%;display: flex;justify-content: left;align-items: center;">
+            <div class="loyalty">
                 <a href="{{route('home.loyalety')}}" class="more-btn-nav">
                     <p style="color: #BF9456;font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
                 </a>

@@ -4,6 +4,7 @@
     use App\Models\Vartext;
 
     $lang = app()->getLocale();
+    $nationalDayTheme = (int) setting('saudi_national_day_theme', 0) === 1;
     $vartext = Vartext::where('type','banner')->first();
     $ads = Ad::where('page', 'home')->where('status', 1)->get();
 @endphp
@@ -13,7 +14,7 @@
 
 
 <!-- html -->
-<div class="screen-hero">
+<div class="screen-hero {{ $nationalDayTheme ? 'screen-hero--national-day' : '' }}">
     <img src="{{asset('Vector.png')}}" class="fl-1" alt="fl img" loading="lazy">
     <img src="{{asset('images/icons/fl-2.png')}}" class="fl-2" alt="fl img" loading="lazy" >
     
@@ -21,6 +22,15 @@
     <div class="hero-container">
         
         <div class="first-sec">
+            @if($nationalDayTheme)
+                <div class="national-day-badge" role="img" aria-label="{{ $lang === 'ar' ? 'اليوم الوطني السعودي ٩٦' : 'Saudi National Day 96' }}">
+                    <svg class="national-day-emblem" viewBox="0 0 80 72" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M40 43V18 M40 24Q27 9 16 24 M40 24Q25 15 20 32 M40 24Q31 9 28 17 M40 24Q40 5 40 11 M40 24Q53 9 64 24 M40 24Q55 15 60 32 M40 24Q49 9 52 17 M40 30l-3 4 3 4-3 4"/>
+                        <path d="M15 48Q39 68 65 45 M65 48Q41 68 15 45 M17 45l-5 8 M63 45l5 8 M12 51l-5-3 M68 51l5-3"/>
+                    </svg>
+                    <span class="national-day-badge-label">{{ $lang === 'ar' ? 'اليوم الوطني السعودي ٩٦' : 'Saudi National Day 96' }}</span>
+                </div>
+            @endif
             <h1>{{ $vartext->title[$lang] ?? $vartext->title['en'] ?? '' }}</h1>
             <p >{{ $vartext->description[$lang] ?? $vartext->description['en'] ?? '' }}</p>
 
