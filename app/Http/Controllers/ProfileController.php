@@ -6,6 +6,7 @@ use App\Models\GiftCard;
 use App\Models\LoyaltyPoint;
 use App\Models\reject;
 use App\Models\User;
+use App\Services\OdooLoyaltyService;
 use Illuminate\Http\Request;
 use Modules\Booking\Models\Booking;
 use Modules\Promotion\Models\Coupon;
@@ -24,7 +25,9 @@ class ProfileController extends Controller
 
         $wallet = Wallet::where('user_id', $user->id)->first();
         $balance = $wallet ? $wallet->amount : 0.00;
-        $points = LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0;
+
+        // Loyalty points: Odoo is source of truth, fall back to local DB on failure
+        $points = $this->getOdooLoyaltyPoints($user) ?? (LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0);
 
         $bookings = Booking::userBaseQuery($user->id, ['service.service'])->whereHas('services')->get();
 
@@ -121,4 +124,33 @@ class ProfileController extends Controller
 
         return view('frontend.account.gifts.completed', compact('gifts'));
     }
+
+    /**
+     * Fetch the live loyalty points from Odoo using the customer's phone number.
+     * Returns null on failure so the caller can fall back to local DB.
+     */
+    private function getOdooLoyaltyPoints($user): ?float
+    {
+        $phone = $user->mobile ?? null;
+
+        if (empty($phone)) {
+            return null;
+        }
+
+        try {
+            $result = app(OdooLoyaltyService::class)->getBalance($phone);
+
+            if ($result['success'] ?? false) {
+                return (float) ($result['points'] ?? 0);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Odoo loyalty balance fallback to local DB.', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
 }
+

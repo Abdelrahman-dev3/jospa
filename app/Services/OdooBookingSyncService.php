@@ -318,7 +318,7 @@ class OdooBookingSyncService
             $requestedServiceIds = collect((array) $giftCard->requested_services)->filter()->values();
             $requestedPackageIds = collect((array) $giftCard->package_ids)->filter()->values();
 
-            return [
+            $item = [
                 'id' => $giftCard->id,
                 'invoice_id' => $invoice->id,
                 'user_id' => (int) $giftCard->user_id,
@@ -326,10 +326,6 @@ class OdooBookingSyncService
                 'buyer_name' => $user?->first_name . ' ' . $user?->last_name,
                 'buyer_email' => $user?->email,
                 'buyer_phone' => $user?->mobile,
-                'sender_name' => $giftCard->sender_name,
-                'sender_phone' => $giftCard->sender_phone,
-                'recipient_name' => $giftCard->recipient_name,
-                'recipient_phone' => $giftCard->recipient_phone,
                 'delivery_method' => $this->normalizeDeliveryMethod($giftCard->delivery_method),
                 'message' => $giftCard->message,
                 'amount' => (float) ($giftCard->subtotal ?? 0),
@@ -357,6 +353,24 @@ class OdooBookingSyncService
                 })->values()->all(),
                 'coupons' => (array) ($giftCard->coupons ?? []),
             ];
+
+            // Only include sender/recipient fields when the privacy flag allows and a value exists.
+            // Odoo prints "From: Name - Phone" / "To: Name - Phone" for whatever is sent;
+            // anything not sent is simply not printed.
+            if ($giftCard->show_sender_name && filled($giftCard->sender_name)) {
+                $item['sender_name'] = $giftCard->sender_name;
+            }
+            if ($giftCard->show_sender_phone && filled($giftCard->sender_phone)) {
+                $item['sender_phone'] = $giftCard->sender_phone;
+            }
+            if ($giftCard->show_recipient_name && filled($giftCard->recipient_name)) {
+                $item['recipient_name'] = $giftCard->recipient_name;
+            }
+            if ($giftCard->show_recipient_phone && filled($giftCard->recipient_phone)) {
+                $item['recipient_phone'] = $giftCard->recipient_phone;
+            }
+
+            return $item;
         })->values()->all();
     }
 

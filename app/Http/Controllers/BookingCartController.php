@@ -33,6 +33,7 @@ use App\Models\Setting;
 use Modules\Promotion\Models\Coupon;
 use Modules\Promotion\Models\UserCouponRedeem;
 use App\Services\UserNotificationService;
+use App\Services\OdooLoyaltyService;
 
 
 
@@ -607,11 +608,11 @@ class BookingCartController extends Controller
     
      public function balance(Request $request)
     {
-        $user = $request->user(); // المستخدم الحالي من التوكن
+        $user = $request->user();
 
-        $points = DB::table('loyalty_points')
-                    ->where('user_id', $user->id)
-                    ->sum('points'); // لو في أكثر من سجل، نجمع النقاط كلها
+        // Odoo is source of truth, fall back to local DB
+        $points = $this->getOdooLoyaltyPoints($user)
+            ?? DB::table('loyalty_points')->where('user_id', $user->id)->sum('points');
 
         return response()->json([
             'user_id' => $user->id,
@@ -626,7 +627,9 @@ class BookingCartController extends Controller
         $wallet = Wallet::where('user_id', $user->id)->where('status', 1)->first();
         $walletBalance = $wallet ? (float) $wallet->amount : 0.0;
 
-        $points = (int) (LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0);
+        // Odoo is source of truth, fall back to local DB
+        $points = (int) ($this->getOdooLoyaltyPoints($user)
+            ?? (LoyaltyPoint::where('user_id', $user->id)->value('points') ?? 0));
         $ratePerPoint = (float) (Setting::get('point_value') ?? 0.5);
         $loyaltyBalance = $points * $ratePerPoint;
 
@@ -1120,5 +1123,33 @@ class BookingCartController extends Controller
         $method = $request->get('payment_method') ?? $request->get('paymentMethod') ?? 'card';
         $method = is_string($method) ? trim($method) : '';
         return $method !== '' ? $method : 'card';
+    }
+
+    /**
+     * Fetch the live loyalty points from Odoo using the customer's phone number.
+     * Returns null on failure so the caller can fall back to local DB.
+     */
+    private function getOdooLoyaltyPoints($user): ?float
+    {
+        $phone = $user->mobile ?? null;
+
+        if (empty($phone)) {
+            return null;
+        }
+
+        try {
+            $result = app(OdooLoyaltyService::class)->getBalance($phone);
+
+            if ($result['success'] ?? false) {
+                return (float) ($result['points'] ?? 0);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Odoo loyalty balance fallback to local DB.', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
+
+        return null;
     }
 }

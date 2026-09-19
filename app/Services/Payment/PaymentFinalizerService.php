@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Setting;
 use App\Services\GiftCardActivationService;
 use App\Services\UserNotificationService;
+use App\Services\OdooLoyaltyService;
 
 class PaymentFinalizerService
 {
@@ -174,7 +175,7 @@ class PaymentFinalizerService
     }
 
     /**
-     * Add loyalty points to user account
+     * Add loyalty points to user account and report to Odoo.
      */
     private function addLoyaltyPoints(int $userId, float $paidAmount): void
     {
@@ -195,9 +196,29 @@ class PaymentFinalizerService
             'source' => 'اضافة نقاط ولاء بناءا علي المبلغ الاجمالي :' . $paidAmount ,
         ]);
 
-        // Notify user about loyalty points
+        // Report to Odoo (source of truth)
         $user = User::find($userId);
-        if ($user) {
+        if ($user && filled($user->mobile)) {
+            try {
+                $reference = 'WEB-EARN-' . $userId . '-' . now()->format('YmdHis') . '-' . mt_rand(1000, 9999);
+                $customerName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+
+                app(OdooLoyaltyService::class)->adjust(
+                    phone: $user->mobile,
+                    operation: 'add',
+                    points: $pointsToAdd,
+                    reference: $reference,
+                    note: 'Points earned on website payment (amount: ' . $paidAmount . ')',
+                    name: $customerName !== '' ? $customerName : null,
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to report earned points to Odoo.', [
+                    'user_id' => $userId,
+                    'points'  => $pointsToAdd,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+
             app(UserNotificationService::class)->notifyLoyaltyPointsAdded($user, (int) $pointsToAdd);
         }
     }

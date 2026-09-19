@@ -9,6 +9,7 @@ use App\Models\LoyaltyPoint;
 use App\Models\GiftCard;
 use Illuminate\Support\Facades\DB;
 use App\Models\LoyaltyPointTransaction;
+use App\Services\OdooLoyaltyService;
 
 class PaymentSubMethodsService
 {
@@ -73,6 +74,30 @@ class PaymentSubMethodsService
                             'balance_after' => $loyalty->points,
                             'source' => 'خصم من خلال وسيلة نقاط الولاء',
                         ]);
+
+                        // Report deduction to Odoo (source of truth)
+                        $user = \App\Models\User::find($userId);
+                        if ($user && filled($user->mobile)) {
+                            try {
+                                $reference = 'WEB-REDEEM-' . $userId . '-' . now()->format('YmdHis') . '-' . mt_rand(1000, 9999);
+                                $customerName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+
+                                app(OdooLoyaltyService::class)->adjust(
+                                    phone: $user->mobile,
+                                    operation: 'deduct',
+                                    points: $pointsUsed,
+                                    reference: $reference,
+                                    note: 'Points redeemed on website checkout',
+                                    name: $customerName !== '' ? $customerName : null,
+                                );
+                            } catch (\Throwable $e) {
+                                \Illuminate\Support\Facades\Log::warning('Failed to report redeemed points to Odoo.', [
+                                    'user_id' => $userId,
+                                    'points'  => $pointsUsed,
+                                    'error'   => $e->getMessage(),
+                                ]);
+                            }
+                        }
                     }
                     $usedLoyalty = $pointsUsed;
                     $final -= $used;

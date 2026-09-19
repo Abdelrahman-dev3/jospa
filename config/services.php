@@ -61,6 +61,7 @@ return [
         'secret_key' => env('TAP_SECRET_KEY'),
     ],
     'odoo' => [
+        'base_url' => env('ODOO_BASE_URL', 'https://jospa.odoo.com'),
         'booking_create_url' => env('ODOO_BOOKING_CREATE_URL'),
         'giftcard_check_url' => env('ODOO_GIFTCARD_CHECK_URL'),
         'api_key' => env('ODOO_API_KEY'),
