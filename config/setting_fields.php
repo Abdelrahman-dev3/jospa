@@ -14,7 +14,7 @@ return [
                 'label' => 'App Name', // you know what label it is
                 'rules' => 'required|min:2|max:50', // validation rule of laravel
                 'class' => '', // any class for input
-                'value' => config('app.name'), // default value if you want
+                'value' => config( 'app.name' ), // default value if you want
             ],
             [
                 'type' => 'text', // input fields type
@@ -191,6 +191,14 @@ return [
                 'rules' => 'nullable|min:2|max:199', // validation rule of laravel
                 'value' => '', // default value if you want
             ],
+            [
+                'type' => 'checkbox',
+                'data' => 'integer',
+                'name' => 'saudi_national_day_theme',
+                'label' => 'ثيم اليوم الوطني للسعودية',
+                'rules' => 'required|boolean',
+                'value' => 0,
+            ],
         ],
     ],
     'social' => [
@@ -315,7 +323,7 @@ return [
                 'data' => 'misc', // data type, string, int, boolean
                 'name' => 'home_booking_calendar_color', // unique name for field
                 'label' => 'Home Booking Calendar Color', // you know what label it is
-                'rules' => ['nullable', 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'], // validation rule of laravel
+                'rules' => [ 'nullable', 'regex:/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/' ], // validation rule of laravel
                 'class' => '', // any class for input
                 'value' => '#0EA5E9', // default value if you want
             ],
@@ -572,7 +580,7 @@ return [
                 'label' => 'integration', // you know what label it is
                 'rules' => 'required|max:191', // validation rule of laravel
                 'class' => '', // any class for input
-                'value' => env('TAQNYAT_API_KEY'), // default value if you want
+                'value' => env( 'TAQNYAT_API_KEY' ), // default value if you want
                 'help' => 'TAQNYAT API Key', // Help text for the input field.
             ],
             [
@@ -582,7 +590,7 @@ return [
                 'label' => 'integration', // you know what label it is
                 'rules' => 'required|max:191', // validation rule of laravel
                 'class' => '', // any class for input
-                'value' => env('TAQNYAT_SENDER_NAME'), // default value if you want
+                'value' => env( 'TAQNYAT_SENDER_NAME' ), // default value if you want
                 'help' => 'TAQNYAT Sender Name', // Help text for the input field.
             ],
             [
@@ -612,7 +620,7 @@ return [
                 'label' => 'integration', // you know what label it is
                 'rules' => 'required|max:500', // validation rule of laravel
                 'class' => '', // any class for input
-                'value' => 'تم إرسال هدية إلى [[sender_name]] على الرقم [[sender_phone]].', // الرسالة الفعلية  
+                'value' => 'تم إرسال هدية إلى [[sender_name]] على الرقم [[sender_phone]].', // الرسالة الفعلية
                 'help'  => 'هذه الرسالة سترسل إلى مرسل الهدية. استخدم [[sender_name]] لاستبدال اسم المستلم و[[sender_phone]] لاستبدال رقمه تلقائيًا.', // نص المساعدة
             ],
             [

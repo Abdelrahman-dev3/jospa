@@ -45,6 +45,33 @@
       <div class="col-md-4">
         <InputField :label="'الحد الأدنى لحجز الخدمات المنزلية (ريال)'" :placeholder="'مثال: 150'" v-model="min_home_booking_amount" :errorMessage="errors.min_home_booking_amount" type="number"></InputField>
       </div>
+      <div class="col-md-4">
+  <div class="form-group">
+    <label class="form-label" for="saudi_national_day_theme">
+      ثيم اليوم الوطني للسعودية
+    </label>
+
+    <div class="form-check form-switch">
+      <input
+        id="saudi_national_day_theme"
+        v-model="saudi_national_day_theme"
+        class="form-check-input"
+        type="checkbox"
+        role="switch"
+        :true-value="1"
+        :false-value="0"
+      />
+
+      <label class="form-check-label" for="saudi_national_day_theme">
+        تفعيل ألوان اليوم الوطني على الموقع
+      </label>
+    </div>
+
+    <span class="text-danger">
+      {{ errors.saudi_national_day_theme }}
+    </span>
+  </div>
+</div>
     </div>
     <div class="row py-4">
       <SubmitButton :IS_SUBMITED="IS_SUBMITED"></SubmitButton>
@@ -141,7 +168,9 @@ const setFormData = (data) => {
       default_time_zone: data.default_time_zone,
       data_table_limit: data.data_table_limit,
       default_currency: data.default_currency,
-      min_home_booking_amount: data.min_home_booking_amount || 0
+      min_home_booking_amount: data.min_home_booking_amount || 0,
+      saudi_national_day_theme:
+  Number(data.saudi_national_day_theme) === 1 ? 1 : 0,
     }
   })
 }
@@ -155,10 +184,15 @@ const { value: default_time_zone } = useField('default_time_zone')
 const { value: data_table_limit } = useField('data_table_limit')
 const { value: default_currency } = useField('default_currency')
 const { value: min_home_booking_amount } = useField('min_home_booking_amount')
+const { value: saudi_national_day_theme } =
+  useField('saudi_national_day_theme')
+
+saudi_national_day_theme.value = 0
 slot_duration.value = '00:30'
 home_booking_calendar_color.value = '#0EA5E9'
 min_home_booking_amount.value = 0
-const data = 'slot_duration,google_analytics,home_booking_calendar_color,default_language,default_time_zone,data_table_limit,default_currency,min_home_booking_amount'
+const data = 'slot_duration,google_analytics,home_booking_calendar_color,default_language,default_time_zone,data_table_limit,default_currency,min_home_booking_amount,saudi_national_day_theme'
+//const data = 'slot_duration,google_analytics,home_booking_calendar_color,default_language,default_time_zone,data_table_limit,default_currency,min_home_booking_amount'
 onMounted(() => {
   createRequest(GET_URL(data)).then((response) => {
     setFormData(response)
