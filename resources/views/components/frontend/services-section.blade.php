@@ -20,11 +20,11 @@
     <div class="text" data-text="Loading"></div>
 </div>
 
-<section class="py-5" style="background: #bf945612">
+<section class="py-5" style="background: var(--site-brand-alpha-12, #bf945612)">
     <img src="Vector.png" style="position: absolute;left: 0;z-index: 999;height: 280px;" alt="">
 
     <div id="bookNaw" >
-        <h2 class="mb-5 mt-3 text-center" style="font-size: 50px;background: #BF9456;-webkit-background-clip: text;-webkit-text-fill-color: transparent;font-weight: bold;">
+        <h2 class="mb-5 mt-3 text-center" style="font-size: 50px;background: var(--site-brand, #BF9456);-webkit-background-clip: text;-webkit-text-fill-color: transparent;font-weight: bold;">
             {{ __('messagess.our_service_categories') }}
         </h2>
         @if(isset($categories) && $categories->count() > 0)

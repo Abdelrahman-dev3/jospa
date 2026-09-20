@@ -30,13 +30,13 @@
         color: #979797;
     }
     .btn-gold {
-      background-color: #c79c3f;
+      background-color: var(--site-brand, #c79c3f);
       color: #fff;
       font-weight: 600;
       border: none;
     }
     .btn-gold:hover {
-      background-color: #b68d35;
+      background-color: var(--site-brand-hover, #b68d35);
       color: #fff;
     }
     .product-img {
@@ -49,11 +49,11 @@
         justify-content: center;
     }
     .product-img i {
-      color: #c79c3f;
+      color: var(--site-brand, #c79c3f);
       font-size: 22px;
     }
     .table thead th {
-      background-color: #BF9456;
+      background-color: var(--site-brand, #BF9456);
       color: white;
       text-align: center;
     }
@@ -105,7 +105,7 @@
         color: white;
         font-size: 12px;
         font-weight: bold;
-        background: #BF9456;
+        background: var(--site-brand, #BF9456);
         border: none;
         cursor: pointer;
     }
@@ -138,7 +138,7 @@
         color: white;
         width: 70%;
         height: 55px;
-        background-color: #BF9456;
+        background-color: var(--site-brand, #BF9456);
         border-radius: 28px;
         display: flex;
         justify-content: center;
@@ -163,7 +163,7 @@
         width: 100% !important;
     }
     .table thead th {
-        color: #BF9456;
+        color: var(--site-brand, #BF9456);
     }
     .prc{
         display:none;

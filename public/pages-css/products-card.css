@@ -69,11 +69,11 @@
 .price {
   font-size: 18px;
   font-weight: bold;
-  color: #d19d00;
+  color: var(--site-brand, #d19d00);
 }
 
 .add-to-cart {
-    background: #d19d00;
+    background: var(--site-brand, #d19d00);
     color: #fff;
     border: none;
     padding: 8px 14px;
@@ -90,13 +90,13 @@
 }
 
 .add-to-cart:hover {
-  background: #b8860b;
+  background: var(--site-brand-hover, #b8860b);
 }
 .more-btn{
     margin-top: 66px;
     width: 30%;
     height: 55px;
-    background-color: #CF9233;
+    background-color: var(--site-brand, #CF9233);
     border-radius: 28px;
     display: flex;
     justify-content: center;

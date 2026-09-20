@@ -22,7 +22,7 @@ body {
         background: white !important;
     }
     .coupon-card{
-        border: 1px solid #CF9233;
+        border: 1px solid var(--site-brand, #CF9233);
         margin-bottom: 10px;
     }
 }
@@ -32,7 +32,7 @@ body {
 }
 
 .coupon-title {
-  color: #CF9233;
+  color: var(--site-brand, #CF9233);
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 8px;

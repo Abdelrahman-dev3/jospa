@@ -1,6 +1,6 @@
 <style>
     .maincard{
-        border: 1px solid #BF945633;
+        border: 1px solid var(--site-brand-alpha-33, #BF945633);
         padding: 30px;
         text-align: center;
         height: 85%;
@@ -9,7 +9,7 @@
     .cardimg{
         width: 70%;
         height: 250px;
-        background: #BF94561A;
+        background: var(--site-brand-alpha-1a, #BF94561A);
         display: flex;
         justify-content: center; 
         align-items: center;
@@ -26,7 +26,7 @@
         font-size: 30px;
         font-weight: 300 !important;
         font-family: 'Almarai', sans-serif !important;
-        color: #BF9456;
+        color: var(--site-brand, #BF9456);
     }
     .Category_desc{
         font-size: 20px;
@@ -98,7 +98,7 @@
         }
         
         .tooltip-content::-webkit-scrollbar-thumb {
-            background-color: #BF9456;
+            background-color: var(--site-brand, #BF9456);
             border-radius: 8px;
             border: 2px solid #f0f0f0;
         }
@@ -126,11 +126,11 @@
     </div>
     <div class="cardbtns">
         @if(isset($category_id))
-            <a onclick="selectMainService({{ $category_id ?? 0 }})" class="btn btn-outline-light" style="font-size: 15px;width: 100%;background:#BF9456;font-family: 'Almarai', sans-serif; color: white">{{ __('messagess.bookNow') }}</a>
+            <a onclick="selectMainService({{ $category_id ?? 0 }})" class="btn btn-outline-light" style="font-size: 15px;width: 100%;background:var(--site-brand, #BF9456);font-family: 'Almarai', sans-serif; color: white">{{ __('messagess.bookNow') }}</a>
         @else
-            <a href="#" class="btn btn-primary" style="font-family: 'Almarai', sans-serif;width: 100%;background:#BF9456;">{{ __('messagess.details') }}</a>
+            <a href="#" class="btn btn-primary" style="font-family: 'Almarai', sans-serif;width: 100%;background:var(--site-brand, #BF9456);">{{ __('messagess.details') }}</a>
         @endif
             <br>
-        <a href="{{ route('frontend.category.details', $category_id) }}"   class="btn btn-outline-light" style="font-size: 15px;border: 1px solid #BF9456;width: 100%;margin-top:10px;color: #BF9456;font-family: 'Almarai', sans-serif">{{ __('messagess.details') }}</a>
+        <a href="{{ route('frontend.category.details', $category_id) }}"   class="btn btn-outline-light" style="font-size: 15px;border: 1px solid var(--site-brand, #BF9456);width: 100%;margin-top:10px;color: var(--site-brand, #BF9456);font-family: 'Almarai', sans-serif">{{ __('messagess.details') }}</a>
     </div>
 </div>

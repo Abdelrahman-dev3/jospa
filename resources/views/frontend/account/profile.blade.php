@@ -147,7 +147,7 @@
      <div class="row" style="width: 87%;margin: 40px auto 60px auto;">
     <div class="col-lg-8 mb-4">
       <div class="rounded p-3" style="background: white;">
-        <h5 style="padding: 10px;color: #BF9456;font-weight: bold;font-size: 21px;" class="text-center mb-3">{{ __('profile.my_transactions') }}</h5>
+        <h5 style="padding: 10px;color: var(--site-brand, #BF9456);font-weight: bold;font-size: 21px;" class="text-center mb-3">{{ __('profile.my_transactions') }}</h5>
         <div class="table-head">
             <h5>{{ __('profile.service') }}</h5>
             <h5>{{ __('profile.service_location') }}</h5>

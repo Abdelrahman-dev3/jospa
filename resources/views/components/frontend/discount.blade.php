@@ -25,7 +25,7 @@
                 <h3>{{ $description }}</h3>
                 <div style="width: 17%;margin: auto;">
                     <a href="{{route('frontend.Ouroffers')}}" class="more-btn-discount">
-                        <p style="color:white;font-size: 16px;margin: 0 13px;color:#BF9456">{{ __('messagess.learn_more') }}</p>
+                        <p style="color:white;font-size: 16px;margin: 0 13px;color:var(--site-brand, #BF9456)">{{ __('messagess.learn_more') }}</p>
                     </a>
                 </div>
             @endif

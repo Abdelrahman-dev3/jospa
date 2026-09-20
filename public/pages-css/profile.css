@@ -112,13 +112,13 @@ ease-in-out;
   margin-bottom: 8px;
 }
 .stat-value {
-  color: #BF9456;
+  color: var(--site-brand, #BF9456);
   font-weight: bold;
   font-size: 18px;
 }
 .stat-unit {
     font-size: 13px;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     margin: 8px;
 }
 .stat-icon {
@@ -136,7 +136,7 @@ ease-in-out;
 .table-head {
     display: flex;
     justify-content: space-around;
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     font-weight: bold;
     color: white;
     padding: 9px;
@@ -157,7 +157,7 @@ ease-in-out;
     font-weight: bold;
 }
 .editProfileModal{
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     z-index: 2;
     padding: 6px 8px;
     border-radius: 50%;

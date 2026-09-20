@@ -32,7 +32,7 @@
   .learn-content h2{
     font-size: 45px;
     margin-bottom: 15px;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     margin-top: 13px;
     font-weight: bold;
   }
@@ -53,7 +53,7 @@
     font-size: 18px;
     padding: 22px;
     width: 30%;
-    background: linear-gradient(to bottom, #D5B990, #BF9456);
+    background: linear-gradient(to bottom, #D5B990, var(--site-brand, #BF9456));
     margin-left: 10px;
     border-radius: 5px;
   }

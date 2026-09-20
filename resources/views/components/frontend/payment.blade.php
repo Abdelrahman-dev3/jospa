@@ -20,7 +20,7 @@
 @endphp
   <style>
     :root{
-      --gold:#BF9456;
+      --gold:var(--site-brand, #BF9456);
       --gold-dark:#b67a24;
       --muted:#858585;
       --card-bg:#ffffff;
@@ -82,8 +82,8 @@
     }
     
     .toggle-switch input[type="checkbox"]:checked + .toggle-switch-background {
-      background-color: #bf9456;
-      box-shadow: inset 0 0 0 2px #bf9456;
+      background-color: var(--site-brand, #bf9456);
+      box-shadow: inset 0 0 0 2px var(--site-brand, #bf9456);
     }
     
     .toggle-switch input[type="checkbox"]:checked + .toggle-switch:before {
@@ -262,7 +262,7 @@
     .hyperpay-brand-option input:checked + .hyperpay-brand-box{
       border-color:var(--gold);
       background:#fff6e8;
-      box-shadow:0 8px 20px rgba(191, 148, 86, 0.14);
+      box-shadow:0 8px 20px rgba(var(--site-brand-rgb, 191, 148, 86), 0.14);
     }
 
     .hyperpay-brand-option.is-coming-soon{
@@ -341,16 +341,16 @@
         align-items:stretch;
     }
     .method.payment-method-card:hover{
-        border-color:rgba(191,148,86,.65);
-        box-shadow:0 8px 20px rgba(191,148,86,.10);
+        border-color:rgba(var(--site-brand-rgb, 191,148,86),.65);
+        box-shadow:0 8px 20px rgba(var(--site-brand-rgb, 191,148,86),.10);
         transform:translateY(-1px);
     }
     .method.payment-method-card.is-coming-soon{
         cursor:not-allowed;
     }
     .method.payment-method-card:has(input[type="radio"]:checked){
-        border-color:#CF9233;
-        box-shadow:0 10px 24px rgba(207,146,51,.14);
+        border-color:var(--site-brand, #CF9233);
+        box-shadow:0 10px 24px rgba(var(--site-brand-rgb, 207,146,51),.14);
         background:#fffdfa;
     }
     .payment-method-card .form-check{
@@ -418,8 +418,8 @@
         font-weight: 300;
     }
     .form-check-input:checked {
-        background-color: #CF9233;
-        border-color: #CF9233;
+        background-color: var(--site-brand, #CF9233);
+        border-color: var(--site-brand, #CF9233);
     }
     .toggle-input{
         display: flex;
@@ -527,7 +527,7 @@
             .cart {
                 width: 60px;
                 height: 60px;
-                background: #bf9456;
+                background: var(--site-brand, #bf9456);
                 color: #fff;
                 border-radius: 50%;
                 cursor: pointer;

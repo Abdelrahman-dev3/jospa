@@ -15,8 +15,10 @@
 
 <!-- html -->
 <div class="screen-hero {{ $nationalDayTheme ? 'screen-hero--national-day' : '' }}">
-    <img src="{{asset('Vector.png')}}" class="fl-1" alt="fl img" loading="lazy">
-    <img src="{{asset('images/icons/fl-2.png')}}" class="fl-2" alt="fl img" loading="lazy" >
+    @unless($nationalDayTheme)
+        <img src="{{asset('Vector.png')}}" class="fl-1" alt="fl img" loading="lazy">
+        <img src="{{asset('images/icons/fl-2.png')}}" class="fl-2" alt="fl img" loading="lazy" >
+    @endunless
     
     
     <div class="hero-container">

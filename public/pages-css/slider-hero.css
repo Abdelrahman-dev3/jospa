@@ -47,7 +47,7 @@
     line-height: 100%;
     letter-spacing: 0%;
     text-align: right;
-    color: #c09766;
+    color: var(--site-brand, #c09766);
 }
 
 .first-sec p {
@@ -59,7 +59,7 @@
     line-height: 54px;
     letter-spacing: 0%;
     text-align: right;
-    color: #c09766;
+    color: var(--site-brand, #c09766);
 }
 
 .buttons {
@@ -93,7 +93,7 @@
     inset: 0;
     padding: 2px;
     border-radius: 40px;
-    background: linear-gradient(90deg, #CF9233, #FFFFFF, #CF9233);
+    background: linear-gradient(90deg, var(--site-brand, #CF9233), #FFFFFF, var(--site-brand, #CF9233));
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
         linear-gradient(#fff 0 0);
@@ -102,13 +102,13 @@
 }
 
 .btn-primary {
-    background: #c69b6d;
+    background: var(--site-brand, #c69b6d);
     color: #fff;
 }
 
 .btn-outline-light {
     background: #fff;
-    color: #c69b6d;
+    color: var(--site-brand, #c69b6d);
 }
 
 .second-sec {

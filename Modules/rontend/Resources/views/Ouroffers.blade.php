@@ -87,17 +87,17 @@
             position: relative;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            color: #CF9233;
+            color: var(--site-brand, #CF9233);
         }
         .more-btn:hover{
-            color: #CF9233;
+            color: var(--site-brand, #CF9233);
         }
         .more-btn::before {
             content: "";
             position: absolute;
             width: 96%;
             height: 80%;
-            border: 2px solid #CF9233;
+            border: 2px solid var(--site-brand, #CF9233);
             border-radius: 28px;
         }
 

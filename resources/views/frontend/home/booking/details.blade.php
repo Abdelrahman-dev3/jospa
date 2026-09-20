@@ -52,7 +52,7 @@
         .right-box {
             font-family: 'Zain', sans-serif;
             flex: 1;
-            background: #BF9456;
+            background: var(--site-brand, #BF9456);
             padding: 45px;
             color: white;
             animation: slideRight 1.3s ease-out;
@@ -693,7 +693,7 @@
             position: absolute;
             width: 96%;
             height: 80%;
-            border: 2px solid #CF9233;
+            border: 2px solid var(--site-brand, #CF9233);
             border-radius: 28px;
         }
     </style>

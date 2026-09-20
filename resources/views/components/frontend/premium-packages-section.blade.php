@@ -3,7 +3,7 @@
 <section class="py-5" style="position: relative;">
   <div class="container">
     <img src="{{asset('images/icons/fl-2.png')}}" alt="fl img" style="position: absolute;left: 0;top: 0;">
-      <h2 class="mb-5 text-center" style="margin-bottom: 67px;margin-top: 140px;font-size: 50px;background: #BF9456;-webkit-background-clip: text;-webkit-text-fill-color: transparent; font-weight: bold;">
+      <h2 class="mb-5 text-center" style="margin-bottom: 67px;margin-top: 140px;font-size: 50px;background: var(--site-brand, #BF9456);-webkit-background-clip: text;-webkit-text-fill-color: transparent; font-weight: bold;">
           {{ __('messagess.our_premium_packages') }}
       </h2>
       @if(isset($packages) && $packages->count() > 0)

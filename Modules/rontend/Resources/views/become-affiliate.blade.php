@@ -18,7 +18,7 @@
     <style>
         /* CSS Variables for Global Styling */
         :root {
-            --primary-gold: #CF9233;
+            --primary-gold: var(--site-brand, #CF9233);
             --dark-gold: #B67A24;
             --light-gold-accent: #fdf5e6; /* لون ذهبي فاتح جداً للخلفيات الهادئة */
             --background-color: #F8F8F8;

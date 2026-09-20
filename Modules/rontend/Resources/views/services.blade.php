@@ -32,7 +32,7 @@
 
     <style>
         .swiper-pagination-bullet-active {
-            background-color: #BF9456;
+            background-color: var(--site-brand, #BF9456);
             opacity: 1;
         }
         .swiper-slide{

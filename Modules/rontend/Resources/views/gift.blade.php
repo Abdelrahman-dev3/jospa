@@ -97,7 +97,7 @@ body {
 
 .thumbnail-img:hover,
 .thumbnail-img.active {
-    border-color: #d4a574;
+    border-color: var(--site-brand, #d4a574);
     opacity: 1;
 }
 
@@ -154,7 +154,7 @@ body {
 }
 
 .radio-item input[type="radio"]:checked + .radio-indicator {
-    border-color: #d4a574;
+    border-color: var(--site-brand, #d4a574);
 }
 
 .radio-item input[type="radio"]:checked + .radio-indicator::after {
@@ -165,7 +165,7 @@ body {
     transform: translate(-50%, -50%);
     width: 6px;
     height: 6px;
-    background: #d4a574;
+    background: var(--site-brand, #d4a574);
     border-radius: 50%;
 }
 
@@ -211,8 +211,8 @@ body {
 .form-input:focus,
 .form-textarea:focus {
     outline: none;
-    border-color: #d4a574;
-    box-shadow: 0 0 0 2px rgba(212, 165, 116, 0.1);
+    border-color: var(--site-brand, #d4a574);
+    box-shadow: 0 0 0 2px rgba(var(--site-brand-rgb, 212, 165, 116), 0.1);
 }
 
 .form-textarea {
@@ -301,7 +301,7 @@ body {
     padding: 15px;
     border-radius: 6px;
     margin: 20px 0;
-    border-right: 3px solid #d4a574;
+    border-right: 3px solid var(--site-brand, #d4a574);
 }
 
 .notes-title {
@@ -327,7 +327,7 @@ body {
 
 .notes-list li::before {
     content: '•';
-    color: #d4a574;
+    color: var(--site-brand, #d4a574);
     position: absolute;
     right: 0;
     top: 0;
@@ -366,7 +366,7 @@ body {
 .add-to-cart-button {
     width: 100%;
     padding: 12px 20px;
-    background: linear-gradient(135deg, #d4a574, #c19456);
+    background: linear-gradient(135deg, var(--site-brand, #d4a574), var(--site-brand-hover, #c19456));
     color: white;
     border: none;
     border-radius: 6px;
@@ -379,7 +379,7 @@ body {
 }
 
 .add-to-cart-button:hover {
-    background: linear-gradient(135deg, #c19456, #b08745);
+    background: linear-gradient(135deg, var(--site-brand-hover, #c19456), #b08745);
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(196, 148, 86, 0.3);
 }
@@ -414,7 +414,7 @@ body {
 }
 
 .footer-link:hover {
-    color: #d4a574;
+    color: var(--site-brand, #d4a574);
 }
 
 /* Responsive Design */

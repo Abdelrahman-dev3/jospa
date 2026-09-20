@@ -1,5 +1,5 @@
 .maincard{
-    border: 1px solid #BF945633;
+    border: 1px solid var(--site-brand-alpha-33, #BF945633);
     padding: 30px;
     text-align: center;
     height: 85%;
@@ -8,7 +8,7 @@
 .cardimg{
     width: 70%;
     height: 250px;
-    background: #BF94561A;
+    background: var(--site-brand-alpha-1a, #BF94561A);
     display: flex;
     justify-content: center; 
     align-items: center;
@@ -25,7 +25,7 @@
     font-size: 30px;
     font-weight: 300 !important;
     font-family: 'Almarai', sans-serif !important;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
 }
 .Category_desc{
     font-size: 20px;
@@ -95,7 +95,7 @@ cursor: help;
     }
     
     .tooltip-content::-webkit-scrollbar-thumb {
-        background-color: #BF9456;
+        background-color: var(--site-brand, #BF9456);
         border-radius: 8px;
         border: 2px solid #f0f0f0;
     }

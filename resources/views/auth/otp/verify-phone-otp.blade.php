@@ -42,7 +42,7 @@
 
     .otp-mobile {
         text-align: center;
-        color: #BF9456;
+        color: var(--site-brand, #BF9456);
         font-size: 15px;
         font-weight: 700;
         margin-bottom: 20px;
@@ -75,12 +75,12 @@
     }
 
     .otp-box:focus {
-        border-color: #BF9456;
-        box-shadow: 0 0 5px rgba(191, 148, 86, 0.5);
+        border-color: var(--site-brand, #BF9456);
+        box-shadow: 0 0 5px rgba(var(--site-brand-rgb, 191, 148, 86), 0.5);
     }
 
     .send-btn {
-        background: #BF9456;
+        background: var(--site-brand, #BF9456);
         color: #fff;
         border: none;
         border-radius: 36px;
@@ -110,7 +110,7 @@
     .resend-otp button {
         background: none;
         border: none;
-        color: #BF9456;
+        color: var(--site-brand, #BF9456);
         font-weight: 500;
         cursor: pointer;
     }

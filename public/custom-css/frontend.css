@@ -1,5 +1,5 @@
 :root {
-  --primary-color: #bf9456;
+  --primary-color: var(--site-brand, #bf9456);
 }
 
 body{

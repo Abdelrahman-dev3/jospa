@@ -183,6 +183,11 @@ html body .screen-hero {
     background-color: var(--saudi-cream) !important;
 }
 
+html body .screen-hero .fl-1,
+html body .screen-hero .fl-2 {
+    display: none !important;
+}
+
 html body .first-sec h1,
 html body .first-sec p {
     color: var(--saudi-green) !important;
@@ -350,4 +355,44 @@ html body .notifications-page .np-load-more:hover {
     background: var(--saudi-green) !important;
     border-color: var(--saudi-green) !important;
     color: #fff !important;
+}
+/* Shared brand tokens: original colors remain as fallbacks when disabled. */
+html:root {
+    --site-brand: var(--saudi-green);
+    --site-brand-hover: var(--saudi-green-light);
+    --site-brand-rgb: 0, 59, 42;
+    --site-brand-contrast: #fff;
+    --site-brand-alpha-29: rgba(0, 59, 42, 0.1608);
+    --site-brand-alpha-20: rgba(0, 59, 42, 0.1255);
+    --site-brand-alpha-33: rgba(0, 59, 42, 0.2);
+    --site-brand-alpha-1a: rgba(0, 59, 42, 0.102);
+    --site-brand-alpha-70: rgba(0, 59, 42, 0.4392);
+    --site-brand-alpha-80: rgba(0, 59, 42, 0.502);
+    --site-brand-alpha-12: rgba(0, 59, 42, 0.0706);
+    --site-brand-alpha-10: rgba(0, 59, 42, 0.0627);
+}
+
+/* Shared controls, including authentication pages without the navbar. */
+html body .text-primary,
+html body .icon-primary {
+    color: var(--saudi-green) !important;
+}
+
+html body .bg-primary {
+    background-color: var(--saudi-green) !important;
+}
+
+html body .border-primary {
+    border-color: var(--saudi-green) !important;
+}
+
+html body .form-control:focus,
+html body .form-select:focus {
+    border-color: var(--saudi-green) !important;
+    box-shadow: 0 0 0 .2rem rgba(0, 59, 42, .2) !important;
+}
+
+html body .form-check-input:checked {
+    background-color: var(--saudi-green);
+    border-color: var(--saudi-green);
 }

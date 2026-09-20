@@ -890,7 +890,7 @@
                                 </div>
 
                             
-                                <div style="text-align:right; font-weight:bold; color:#CF9233; margin-top:8px;">
+                                <div style="text-align:right; font-weight:bold; color:var(--site-brand, #CF9233); margin-top:8px;">
                                     ${currentLang === 'ar' ? 'السعر:' : 'Price:'} ${sub.price || 0} ${currentLang === 'ar' ? 'ريال' : 'SAR'}
                                 </div>
                             </div>

@@ -61,7 +61,7 @@
             .service-content {
               font-family: 'Zain', sans-serif;
               flex: 1;
-              background: #BF9456;
+              background: var(--site-brand, #BF9456);
               color: #fff;
               padding: 40px;
               display: flex;
@@ -70,7 +70,7 @@
             }
     
             .service-content h4 {
-            color: #BF9456;
+            color: var(--site-brand, #BF9456);
             margin: 0 0 11px 0;
             font-size: 18px;
             }
@@ -183,7 +183,7 @@
             .more-btn-hero{
             width: 65%;
             height: 43px;
-            background-color: #BF9456;
+            background-color: var(--site-brand, #BF9456);
             border-radius: 28px;
             display: flex;
             justify-content: center;
@@ -224,7 +224,7 @@
               max-width: 1000px;
               max-height: 80vh;
               overflow-y: auto;
-              background: #bf9456;
+              background: var(--site-brand, #bf9456);
               padding: 30px;
               border-radius: 15px;
               box-shadow: 0 8px 30px rgba(0,0,0,0.2);
@@ -263,7 +263,7 @@
           .branch-card h5 {
               font-size: 18px;
               font-weight: 600;
-              color: #BF9456;
+              color: var(--site-brand, #BF9456);
               margin: 10px 0 5px 0;
           }
     
@@ -277,7 +277,7 @@
               position: absolute;
               top: 15px;
               right: 20px;
-              background: #BF9456;
+              background: var(--site-brand, #BF9456);
               color: #fff;
               border: none;
               font-size: 18px;
@@ -303,7 +303,7 @@
           }
           #wifi-loader {
             --background: #62abff;
-            --front-color: #BF9456;
+            --front-color: var(--site-brand, #BF9456);
             --back-color: #c3c8de;
             --text-color: #414856;
             width: 64px;
@@ -554,7 +554,7 @@
                                         background-position: center;
                                         height: 200px;
                                         border-radius: 18px !important;
-                                        @if($Cat->id == $category->id) border: 4px #BF9456 solid; @endif">
+                                        @if($Cat->id == $category->id) border: 4px var(--site-brand, #BF9456) solid; @endif">
         
                                 <!-- Overlay -->
                                 <div class="overlay d-flex align-items-end justify-content-center"

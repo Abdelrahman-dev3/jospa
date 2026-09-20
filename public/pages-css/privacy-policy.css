@@ -6,14 +6,14 @@
 
 :root {
     --pp-primary: #4D4541;
-    --pp-accent: #BF9456;
+    --pp-accent: var(--site-brand, #BF9456);
     --pp-accent-light: #d4ab6a;
     --pp-bg: #f8f6f3;
     --pp-card-bg: #ffffff;
     --pp-text: #3a3330;
     --pp-text-muted: #7a7067;
     --pp-border: #e8ddd0;
-    --pp-section-num-bg: #BF9456;
+    --pp-section-num-bg: var(--site-brand, #BF9456);
     --pp-hero-gradient-start: #4D4541;
     --pp-hero-gradient-end: #6b5d54;
     --pp-shadow: 0 4px 24px rgba(77, 69, 65, 0.08);
@@ -39,7 +39,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(circle at 30% 50%, rgba(191, 148, 86, 0.15) 0%, transparent 60%);
+    background: radial-gradient(circle at 30% 50%, rgba(var(--site-brand-rgb, 191, 148, 86), 0.15) 0%, transparent 60%);
     animation: ppHeroGlow 8s ease-in-out infinite alternate;
 }
 
@@ -70,8 +70,8 @@
 }
 
 @keyframes ppIconPulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(191, 148, 86, 0.3); }
-    50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(191, 148, 86, 0); }
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--site-brand-rgb, 191, 148, 86), 0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(var(--site-brand-rgb, 191, 148, 86), 0); }
 }
 
 .pp-hero-icon i {
@@ -200,7 +200,7 @@
     justify-content: center;
     font-size: 1.1rem;
     font-weight: 700;
-    box-shadow: 0 4px 12px rgba(191, 148, 86, 0.3);
+    box-shadow: 0 4px 12px rgba(var(--site-brand-rgb, 191, 148, 86), 0.3);
 }
 
 .pp-section-title {
@@ -277,7 +277,7 @@
 }
 
 .pp-list li:hover {
-    background: rgba(191, 148, 86, 0.06);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.06);
 }
 
 /* Table */
@@ -321,7 +321,7 @@
 }
 
 .pp-table tbody tr:hover {
-    background: rgba(191, 148, 86, 0.05);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.05);
 }
 
 .pp-table tbody td {
@@ -357,7 +357,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at 80% 20%, rgba(191, 148, 86, 0.2), transparent 60%);
+    background: radial-gradient(circle at 80% 20%, rgba(var(--site-brand-rgb, 191, 148, 86), 0.2), transparent 60%);
 }
 
 .pp-consent-content {
@@ -431,8 +431,8 @@
 
 .footer-link-item:hover {
     color: #fff;
-    background: rgba(191, 148, 86, 0.3);
-    border-color: rgba(191, 148, 86, 0.5);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.3);
+    border-color: rgba(var(--site-brand-rgb, 191, 148, 86), 0.5);
 }
 
 .footer-link-item i {

@@ -91,7 +91,7 @@
             <!-- Submit -->
             <div style="margin-top:15px;display: flex;">
                 <button type="submit" style="
-                    background:#BF9456;
+                    background:var(--site-brand, #BF9456);
                     color:#fff !important;
                     font-weight:bold;
                     border:none;

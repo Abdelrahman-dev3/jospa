@@ -32,12 +32,7 @@
         }
     }
 </style>
-@if ((int) setting('saudi_national_day_theme', 0) === 1)
-    <link
-        rel="stylesheet"
-        href="{{ asset('custom-css/saudi-national-day.css') }}?v=1"
-    >
-@endif
+@include('components.frontend.national-day-theme')
 @php
     $hasOffers = \App\Models\Ouroffersection::where('end_date', '>', \Carbon\Carbon::now())->exists();
 @endphp
@@ -212,7 +207,7 @@
         </div>
             <div class="loyalty">
                 <a href="{{route('home.loyalety')}}" class="more-btn-nav">
-                    <p style="color: #BF9456;font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
+                    <p style="color: var(--site-brand, #BF9456);font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
                 </a>
             </div>
         </div>
@@ -334,12 +329,12 @@
             </a>
          </li>
          <li  class="nav-item">
-            <a href="{{ route('language.switch', 'en') }}" style="color:#cf9233;text-decoration-line: none;">English</a> |
-            <a href="{{ route('language.switch', 'ar') }}" style="color:#cf9233;text-decoration-line: none;">العربية</a>
+            <a href="{{ route('language.switch', 'en') }}" style="color:var(--site-brand, #cf9233);text-decoration-line: none;">English</a> |
+            <a href="{{ route('language.switch', 'ar') }}" style="color:var(--site-brand, #cf9233);text-decoration-line: none;">العربية</a>
          </li>
         <div class="loyalty" style="width: 100% !important;height: 100%;margin: 11px;display: flex;justify-content: center;align-items: center;">
             <a href="{{route('home.loyalety')}}" class="more-btn-nav" style="width: 55%;">
-                <p style="color: #BF9456;font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
+                <p style="color: var(--site-brand, #BF9456);font-size: 16px;margin: 0 13px;font-weight: bold;"> <img style="width: 22px;margin: 0 7px;" src="{{ asset('images/icons/basil-present-outline-11.svg') }}" > {{ __('messagess.loyalty_points') }}</p>
             </a>
         </div>
         </ul>

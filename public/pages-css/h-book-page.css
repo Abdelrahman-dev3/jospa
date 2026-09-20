@@ -10,7 +10,7 @@ body {
     font-family: 'Zain', sans-serif;
 }
 .OI::placeholder {
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     opacity: 1;
 }
 /* Main Container */
@@ -61,20 +61,20 @@ body {
 }
 
 .progress-step.active {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     /* Green for active step */
     color: white;
 }
 
 .progress-step.completed {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     /* Green for completed step */
     color: white;
 }
 
 /* Optional: Hover effect for clickable steps */
 .progress-step:hover:not(.active):not(.completed) {
-    background: #BF945629;
+    background: var(--site-brand-alpha-29, #BF945629);
 }
 
 /* Disable hover and cursor for future steps */
@@ -102,12 +102,12 @@ body {
 }
 
 .gender-card:hover {
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
     transform: translateY(-5px);
 }
 
 .gender-card.selected {
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
     background: rgba(200, 168, 130, 0.1);
 }
 
@@ -148,7 +148,7 @@ body {
     aspect-ratio: 4 / 5;
     overflow: hidden;
     border-radius: 22px;
-    border: 1px solid rgba(191, 148, 86, 0.18);
+    border: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.18);
     background: linear-gradient(135deg, #f6efe5 0%, #e7d3b0 100%);
     cursor: pointer;
     transition: 0.25s ease;
@@ -157,8 +157,8 @@ body {
 }
 
 .service-card.selected {
-    border-color: #BF9456;
-    box-shadow: 0 18px 35px rgba(191, 148, 86, 0.22);
+    border-color: var(--site-brand, #BF9456);
+    box-shadow: 0 18px 35px rgba(var(--site-brand-rgb, 191, 148, 86), 0.22);
     transform: translateY(-6px);
 }
 
@@ -169,9 +169,9 @@ body {
 }
 
 .service-card:hover {
-    border-color: #BF9456;
+    border-color: var(--site-brand, #BF9456);
     transform: translateY(-6px);
-    box-shadow: 0 18px 35px rgba(191, 148, 86, 0.18);
+    box-shadow: 0 18px 35px rgba(var(--site-brand-rgb, 191, 148, 86), 0.18);
 }
 
 .service-card__media {
@@ -283,12 +283,12 @@ body {
 }
 
 .staff-card:hover {
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
     transform: translateY(-5px);
 }
 
 .staff-card.selected {
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
     background: rgba(200, 168, 130, 0.1);
 }
 
@@ -342,13 +342,13 @@ body {
 }
 
 .time-slot:hover {
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
 }
 
 .time-slot.selected {
-    background: #C8A882;
+    background: var(--site-brand, #C8A882);
     color: white;
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
 }
 /* Service Detail */
 .service-detail {
@@ -424,7 +424,7 @@ body {
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #C8A882;
+    border-color: var(--site-brand, #C8A882);
 }
 
 /* Navigation Buttons */
@@ -447,12 +447,12 @@ body {
 }
 
 .btn-primary {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
 }
 
 .btn-secondary {
@@ -548,7 +548,7 @@ body {
 .massage-name {
     font-size: 18px;
     font-weight: bold;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     margin-bottom: 10px;
 }
 
@@ -612,7 +612,7 @@ body {
 
 label {
     font-size: 1.08rem;
-    color: #bc9a69;
+    color: var(--site-brand, #bc9a69);
     margin-bottom: 8px;
     font-weight: 500;
     letter-spacing: 0.5px;
@@ -621,7 +621,7 @@ label {
     animation: fadeInUp 0.7s cubic-bezier(.4,1.6,.6,1);
     background: #fff;
     border-radius: 18px;
-    box-shadow: 0 4px 24px #bc9a6920;
+    box-shadow: 0 4px 24px var(--site-brand-alpha-20, #bc9a6920);
     padding: 32px 24px 24px 24px;
     margin-bottom: 32px;
 }
@@ -644,7 +644,7 @@ label {
 
 .header-title h2 {
     font-size: 2.2rem;
-    color: #a8834b;
+    color: var(--site-brand-hover, #a8834b);
     font-weight: bold;
     letter-spacing: 1.5px;
     margin: 0;
@@ -772,7 +772,7 @@ label {
     margin-bottom: 6px;
     background: #faf8f5;
     transition: border-color 0.2s, box-shadow 0.2s;
-    box-shadow: 0 1px 4px #bc9a6920;
+    box-shadow: 0 1px 4px var(--site-brand-alpha-20, #bc9a6920);
 }
         .tooltip-label {
   position: relative;
@@ -851,7 +851,7 @@ h5, .h5 {
     border-radius: 22px;
     padding: 18px;
     background: linear-gradient(180deg, #ffffff 0%, #fbf8f3 100%);
-    border: 1px solid rgba(191, 148, 86, 0.16);
+    border: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.16);
     cursor: pointer;
     transition: 0.2s ease-in-out;
 }
@@ -887,7 +887,7 @@ h5, .h5 {
     border-radius: 18px;
     object-fit: cover;
     flex-shrink: 0;
-    border: 1px solid rgba(191, 148, 86, 0.18);
+    border: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.18);
 }
 
 .summary-card__body {
@@ -954,8 +954,8 @@ h5, .h5 {
     gap: 8px;
     padding: 10px 14px;
     border-radius: 999px;
-    background: rgba(191, 148, 86, 0.12);
-    color: #bf9456;
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.12);
+    color: var(--site-brand, #bf9456);
     font-size: 14px;
     font-weight: 800;
 }
@@ -1010,13 +1010,13 @@ h5, .h5 {
     justify-content: space-between;
     gap: 20px;
     padding: 28px 32px 18px;
-    border-bottom: 1px solid rgba(191, 148, 86, 0.14);
+    border-bottom: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.14);
 }
 
 .booking-summary-kicker {
     display: inline-block;
     margin-bottom: 10px;
-    color: #bf9456;
+    color: var(--site-brand, #bf9456);
     font-size: 13px;
     font-weight: 800;
 }
@@ -1096,7 +1096,7 @@ h5, .h5 {
 .booking-summary-products {
     margin-top: 24px;
     padding-top: 24px;
-    border-top: 1px solid rgba(191, 148, 86, 0.12);
+    border-top: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.12);
 }
 
 .booking-summary-products-title {
@@ -1114,7 +1114,7 @@ h5, .h5 {
     margin-top: 24px;
 }
  .selected-card{
-border:2px solid #BF9456;
+border:2px solid var(--site-brand, #BF9456);
 }
 .calendar {
     width: 400px;
@@ -1138,7 +1138,7 @@ border:2px solid #BF9456;
 }
 
 .calendar-title {
-  color: #BF9456;
+  color: var(--site-brand, #BF9456);
   font-weight: bold;
 }
 
@@ -1161,7 +1161,7 @@ border:2px solid #BF9456;
 }
 
 .calendar-day.selected {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color:white;
     font-weight: bold;
 }
@@ -1226,7 +1226,7 @@ border:2px solid #BF9456;
 }
 #wifi-loader {
   --background: #62abff;
-  --front-color: #BF9456;
+  --front-color: var(--site-brand, #BF9456);
   --back-color: #c3c8de;
   --text-color: #414856;
   width: 64px;
@@ -1432,14 +1432,14 @@ border:2px solid #BF9456;
   padding: 10px 35px;
   font-size: 16px;
   border-radius: 50px;
-  border: 2px solid #cc902b;
+  border: 2px solid var(--site-brand, #cc902b);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .btn-outline {
   background: transparent;
-  color: #cc902b;
+  color: var(--site-brand, #cc902b);
   width: 28%;
   overflow: hidden;
 }
@@ -1453,13 +1453,13 @@ border:2px solid #BF9456;
 }
 
 .btn-filled {
-  background: #cc902b;
+  background: var(--site-brand, #cc902b);
   color: black;
   width: 28%;
 }
 
 .btn-filled:hover {
-  background: #b1791f;
+  background: var(--site-brand-hover, #b1791f);
 }
 
 .btn-e i {
@@ -1482,7 +1482,7 @@ border:2px solid #BF9456;
     color: #979797;
 }
 .sub-sammary-total{
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
 }
 .two-btn{
     display: flex;
@@ -1511,7 +1511,7 @@ border:2px solid #BF9456;
 }
 
 .branch-option input:checked + .branch-image img {
-  border: 2px solid #f7931e; /* لون مميز عند التحديد */
+  border: 2px solid var(--site-brand, #f7931e); /* لون مميز عند التحديد */
 }
 
 .branch-image img {
@@ -1526,7 +1526,7 @@ border:2px solid #BF9456;
 }
 
 .branch-name {
-  color: #BF9456;
+  color: var(--site-brand, #BF9456);
   font-weight: bold;
   margin-bottom: 5px;
   font-size: 18px;
@@ -1548,7 +1548,7 @@ border:2px solid #BF9456;
         grid-template-columns: repeat(1, minmax(250px, 1fr)) !important;
     }
     .summary-card {
-        border: 1px solid #BF9456;
+        border: 1px solid var(--site-brand, #BF9456);
     }
     .sub-label {
         display: none;
@@ -1590,7 +1590,7 @@ border:2px solid #BF9456;
     right: 20px;
     width: 50px;
     height: 50px;
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color: white;
     font-size: 24px;
     display: flex;
@@ -1646,7 +1646,7 @@ border:2px solid #BF9456;
 }
 
 .sammary-steps.cart::-webkit-scrollbar-thumb {
-    background-color: #BF9456;
+    background-color: var(--site-brand, #BF9456);
     border-radius: 8px;
     border: 2px solid #f0f0f0;
 }
@@ -1675,7 +1675,7 @@ border:2px solid #BF9456;
 }
 
 .help-header h4 {
-    color: #bc9a69;
+    color: var(--site-brand, #bc9a69);
     font-weight: bold;
 }
 
@@ -1696,7 +1696,7 @@ border:2px solid #BF9456;
 .step-help-btn {
     margin-right: 10px;
     cursor: pointer;
-    color: #bc9a69;
+    color: var(--site-brand, #bc9a69);
     font-size: 18px;
     transition: transform 0.2s;
 }

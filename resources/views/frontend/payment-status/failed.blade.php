@@ -20,7 +20,7 @@
         .capture-container {
             background: #fff;
             border-radius: 22px;
-            box-shadow: 0 6px 32px #bc9a6920, 0 1.5px 8px #bc9a6910;
+            box-shadow: 0 6px 32px var(--site-brand-alpha-20, #bc9a6920), 0 1.5px 8px var(--site-brand-alpha-10, #bc9a6910);
             padding: 48px 36px 38px 36px;
             max-width: 420px;
             width: 100%;
@@ -38,7 +38,7 @@
             display: inline-block;
         }
         .capture-title {
-            color: #bc9a69;
+            color: var(--site-brand, #bc9a69);
             font-size: 2.1rem;
             font-weight: bold;
             margin-bottom: 18px;
@@ -51,23 +51,24 @@
             font-weight: 500;
         }
         .back-btn {
-            background: #bc9a69;
+            background: var(--site-brand, #bc9a69);
             color: #fff;
             border: none;
             border-radius: 32px;
             padding: 16px 44px;
             font-size: 1.18rem;
             font-weight: bold;
-            box-shadow: 0 2px 12px #bc9a6920;
+            box-shadow: 0 2px 12px var(--site-brand-alpha-20, #bc9a6920);
             cursor: pointer;
             transition: background 0.22s, transform 0.18s;
             outline: none;
         }
         .back-btn:hover {
-            background: #a8834b;
+            background: var(--site-brand-hover, #a8834b);
             transform: scale(1.04);
         }
     </style>
+    @include('components.frontend.national-day-theme')
 </head>
 <body>
     <div class="capture-container">

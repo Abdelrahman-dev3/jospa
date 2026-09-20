@@ -56,49 +56,49 @@
         }
         
         :root {
-            --primary-color: #bf9456 !important;
-            --primary: #bf9456 !important;
+            --primary-color: var(--site-brand, #bf9456) !important;
+            --primary: var(--site-brand, #bf9456) !important;
         }
 
         .btn-primary {
-            background-color: #bf9456 !important;
-            border-color: #bf9456 !important; 
+            background-color: var(--site-brand, #bf9456) !important;
+            border-color: var(--site-brand, #bf9456) !important;
         }
         
         .btn-primary:hover {
-            background-color: #a8834b !important;
-            border-color: #a8834b !important;
+            background-color: var(--site-brand-hover, #a8834b) !important;
+            border-color: var(--site-brand-hover, #a8834b) !important;
         }
         
         a {
-            color: #bf9456 !important;
+            color: var(--site-brand, #bf9456) !important;
         }
         
         a:hover {
-            color: #a8834b !important;
+            color: var(--site-brand-hover, #a8834b) !important;
         }
         
         .text-primary {
-            color: #bf9456 !important;
+            color: var(--site-brand, #bf9456) !important;
         }
         
         .border-primary {
-            border-color: #bf9456 !important;
+            border-color: var(--site-brand, #bf9456) !important;
         }
         
         .bg-primary {
-            background-color: #bf9456 !important;
+            background-color: var(--site-brand, #bf9456) !important;
         }
         
         .icon-primary {
-            color: #bf9456 !important;
+            color: var(--site-brand, #bf9456) !important;
         }
         
         input:focus,
         textarea:focus,
         select:focus {
-            border-color: #bf9456 !important;
-            box-shadow: 0 0 0 0.2rem rgba(191, 148, 86, 0.25) !important;
+            border-color: var(--site-brand, #bf9456) !important;
+            box-shadow: 0 0 0 0.2rem rgba(var(--site-brand-rgb, 191, 148, 86), 0.25) !important;
             outline: none !important;
         }
         
@@ -106,16 +106,17 @@
         input[type="password"]:focus,
         input[type="text"]:focus,
         input[type="number"]:focus {
-            border-color: #bf9456 !important;
-            box-shadow: 0 0 0 0.2rem rgba(191, 148, 86, 0.25) !important;
+            border-color: var(--site-brand, #bf9456) !important;
+            box-shadow: 0 0 0 0.2rem rgba(var(--site-brand-rgb, 191, 148, 86), 0.25) !important;
         }
         
         .form-control:focus,
         .form-select:focus {
-            border-color: #bf9456 !important;
-            box-shadow: 0 0 0 0.2rem rgba(191, 148, 86, 0.25) !important;
+            border-color: var(--site-brand, #bf9456) !important;
+            box-shadow: 0 0 0 0.2rem rgba(var(--site-brand-rgb, 191, 148, 86), 0.25) !important;
         }
     </style>
+    @include('components.frontend.national-day-theme')
 </head>
 
 <body>

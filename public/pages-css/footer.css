@@ -76,7 +76,7 @@
     margin-bottom: 5px;
 }
 .footer-logo-exp {
-    : 'Almarai', sans-serif; 
+    font-family: 'Almarai', sans-serif;
     font-size: 1rem;
     color: white;
     font-weight: 300;
@@ -108,9 +108,9 @@
     display: flex;
     align-items: center;
     padding: 12px 30px;
-    background-color: #BF9456;
+    background-color: var(--site-brand, #BF9456);
     color: #fff;
-    border: 1px solid #BF9456;
+    border: 1px solid var(--site-brand, #BF9456);
     border-radius: 50px;
     text-decoration: none;
     font-size: 1rem;
@@ -180,8 +180,8 @@
 
 .footer-link-item:hover {
     color: #fff;
-    background: rgba(191, 148, 86, 0.3);
-    border-color: rgba(191, 148, 86, 0.5);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.3);
+    border-color: rgba(var(--site-brand-rgb, 191, 148, 86), 0.5);
 }
 
 .footer-link-item i {

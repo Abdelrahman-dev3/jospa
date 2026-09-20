@@ -2,6 +2,7 @@
 <html dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
 <head>
     @yield('head')
+    @include('components.frontend.national-day-theme')
 </head>
 <body dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}" class="{{ app()->getLocale() }}">
     @php

@@ -52,11 +52,11 @@
     max-height: 480px;
     background: #fff;
     border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(191, 148, 86, 0.08);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(var(--site-brand-rgb, 191, 148, 86), 0.08);
     z-index: 99999;
     display: none;
     overflow: hidden;
-    border: 1px solid rgba(191, 148, 86, 0.12);
+    border: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.12);
 }
 
 [dir="rtl"] .notification-dropdown {
@@ -112,7 +112,7 @@
 
 .notification-dropdown .nd-header .nd-mark-read {
     font-size: 12px;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     cursor: pointer;
     border: none;
     background: none;
@@ -123,7 +123,7 @@
 }
 
 .notification-dropdown .nd-header .nd-mark-read:hover {
-    background: rgba(191, 148, 86, 0.08);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.08);
 }
 
 /* Notification List */
@@ -165,7 +165,7 @@
 }
 
 .notification-dropdown .nd-item.unread {
-    background: rgba(191, 148, 86, 0.04);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.04);
 }
 
 .notification-dropdown .nd-item.unread::before {
@@ -177,7 +177,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
 }
 
 [dir="rtl"] .notification-dropdown .nd-item.unread::before {
@@ -229,7 +229,7 @@
 
 .nd-icon.nd-icon-welcome {
     background: linear-gradient(135deg, #fdf3e8, #f7e4d0);
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
 }
 
 .nd-icon.nd-icon-default {
@@ -304,7 +304,7 @@
 
 .notification-dropdown .nd-footer a {
     font-size: 13px;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s;
@@ -351,9 +351,9 @@
 
 .notifications-page .np-mark-all {
     font-size: 13px;
-    color: #BF9456;
+    color: var(--site-brand, #BF9456);
     cursor: pointer;
-    border: 1px solid #BF9456;
+    border: 1px solid var(--site-brand, #BF9456);
     background: none;
     padding: 6px 16px;
     border-radius: 8px;
@@ -362,7 +362,7 @@
 }
 
 .notifications-page .np-mark-all:hover {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color: #fff;
 }
 
@@ -385,9 +385,9 @@
 }
 
 .notifications-page .np-tab.active {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color: #fff;
-    border-color: #BF9456;
+    border-color: var(--site-brand, #BF9456);
 }
 
 .notifications-page .np-list {
@@ -412,13 +412,13 @@
 }
 
 .notifications-page .np-item:hover {
-    box-shadow: 0 4px 16px rgba(191, 148, 86, 0.1);
+    box-shadow: 0 4px 16px rgba(var(--site-brand-rgb, 191, 148, 86), 0.1);
     transform: translateY(-1px);
 }
 
 .notifications-page .np-item.unread {
-    background: rgba(191, 148, 86, 0.03);
-    border-color: rgba(191, 148, 86, 0.15);
+    background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.03);
+    border-color: rgba(var(--site-brand-rgb, 191, 148, 86), 0.15);
 }
 
 .notifications-page .np-item.unread::after {
@@ -430,7 +430,7 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
 }
 
 [dir="rtl"] .notifications-page .np-item.unread::after {
@@ -491,8 +491,8 @@
     margin: 24px auto;
     padding: 10px 32px;
     background: #fff;
-    border: 1px solid #BF9456;
-    color: #BF9456;
+    border: 1px solid var(--site-brand, #BF9456);
+    color: var(--site-brand, #BF9456);
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
@@ -500,6 +500,6 @@
 }
 
 .notifications-page .np-load-more:hover {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color: #fff;
 }

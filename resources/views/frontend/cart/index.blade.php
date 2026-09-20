@@ -36,14 +36,14 @@ use Illuminate\Support\Str;
     .cart-payment-notice{
         position: relative;
         overflow: hidden;
-        border: 1px solid rgba(191, 148, 86, 0.18);
+        border: 1px solid rgba(var(--site-brand-rgb, 191, 148, 86), 0.18);
         border-radius: 26px;
         padding: 22px 24px;
         margin-bottom: 22px;
         background:
-            radial-gradient(circle at top right, rgba(191, 148, 86, 0.22), transparent 42%),
+            radial-gradient(circle at top right, rgba(var(--site-brand-rgb, 191, 148, 86), 0.22), transparent 42%),
             linear-gradient(135deg, #fffaf2 0%, #ffffff 54%, #f7efe2 100%);
-        box-shadow: 0 18px 42px rgba(191, 148, 86, 0.12);
+        box-shadow: 0 18px 42px rgba(var(--site-brand-rgb, 191, 148, 86), 0.12);
     }
 
     .cart-payment-notice::before{
@@ -53,7 +53,7 @@ use Illuminate\Support\Str;
         top: 0;
         bottom: 0;
         width: 7px;
-        background: linear-gradient(180deg, #bf9456 0%, #8d6938 100%);
+        background: linear-gradient(180deg, var(--site-brand, #bf9456) 0%, #8d6938 100%);
     }
 
     .cart-payment-notice__wrap{
@@ -72,7 +72,7 @@ use Illuminate\Support\Str;
         justify-content: center;
         color: #fff;
         font-size: 24px;
-        background: linear-gradient(135deg, #bf9456 0%, #8d6938 100%);
+        background: linear-gradient(135deg, var(--site-brand, #bf9456) 0%, #8d6938 100%);
         box-shadow: 0 14px 28px rgba(141, 105, 56, 0.22);
     }
 
@@ -83,7 +83,7 @@ use Illuminate\Support\Str;
         padding: 7px 14px;
         border-radius: 999px;
         margin-bottom: 10px;
-        background: rgba(191, 148, 86, 0.12);
+        background: rgba(var(--site-brand-rgb, 191, 148, 86), 0.12);
         color: #8d6938;
         font-size: 13px;
         font-weight: 800;
