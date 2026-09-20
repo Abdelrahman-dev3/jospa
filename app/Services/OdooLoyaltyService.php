@@ -112,6 +112,57 @@ class OdooLoyaltyService
 
         return null;
     }
+
+    /**
+     * Fetch the gift card PDF voucher from Odoo.
+     *
+     * POST /odoo/giftcard/pdf
+     *
+     * @param string $code
+     * @return string|null The base64 encoded PDF string, or null on failure.
+     */
+    public function fetchGiftCardPdf(string $code): ?string
+    {
+        $url = $this->buildUrl('/odoo/giftcard/pdf');
+
+        if ($url === null) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout($this->timeout())
+                ->withHeaders($this->buildHeaders())
+                ->post($url, ['data' => ['code' => $code]]);
+
+            if ($response->successful()) {
+                $body = $response->json();
+                
+                $pdf = data_get($body, 'pdf') 
+                    ?? data_get($body, 'result.pdf') 
+                    ?? data_get($body, 'result.gift_card.pdf')
+                    ?? data_get($body, 'data.pdf')
+                    ?? data_get($body, 'result.data.pdf');
+                    
+                if (is_string($pdf) && $pdf !== '') {
+                    return $pdf;
+                }
+            }
+            
+            Log::warning('Odoo gift card PDF fetch failed or missing pdf in response.', [
+                'code' => $code,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            
+        } catch (\Throwable $e) {
+            Log::error('Odoo gift card PDF fetch exception.', [
+                'code' => $code,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
     /**
      * Add, deduct, or set loyalty points in Odoo.
      *
