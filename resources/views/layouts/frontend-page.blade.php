@@ -2,6 +2,7 @@
 <html lang="{{ $htmlLang ?? app()->getLocale() }}" dir="{{ $htmlDir ?? language_direction() }}" class="{{ trim('theme-fs-sm ' . ($htmlClass ?? '')) }}">
 <head>
     @yield('head')
+    @include('components.frontend.national-day-theme')
 </head>
 <body
     @if(!empty($bodyClass)) class="{{ $bodyClass }}" @endif

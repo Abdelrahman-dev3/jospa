@@ -31,7 +31,7 @@
     .m-nav{
         width: 100%;
         height: 115px; 
-        background: #BF9456;
+        background: var(--site-brand, #BF9456);
         position: fixed;
         top: 0;
         z-index: 9999;
@@ -68,7 +68,7 @@
         border-radius: 28px;
         display: flex;
         text-decoration-line: none;
-        border: 2px #cf9233 solid;
+        border: 2px var(--site-brand, #cf9233) solid;
         justify-content: center;
         align-items: center;
         position: relative;
@@ -80,7 +80,7 @@
         position: absolute;
         width: 96%;
         height: 87%;
-        border: 2px #cf9233 solid;
+        border: 2px var(--site-brand, #cf9233) solid;
         border-radius: 28px;
     }
     .iconc{
@@ -97,7 +97,7 @@
     }
     .text{
         text-align: center;
-        color: #cf9233;
+        color: var(--site-brand, #cf9233);
         margin-top: 12px;
     }
     .icon-circle {
@@ -143,7 +143,7 @@
     }
     .mob-nav{
         text-align: right;
-        background: #BF9456;
+        background: var(--site-brand, #BF9456);
         min-height: 45px;
         display: flex;
         direction: rtl;
@@ -164,7 +164,7 @@
         padding: 15px 25px;
         font-size: 13px;
         font-weight: 700;
-        color: #bf9456;
+        color: var(--site-brand, #bf9456);
         background: white;
         border: none;
         border-radius: 50px;
@@ -220,7 +220,7 @@
   }
 
   .dropdown-content a:hover {
-    background: #bf9456;
+    background: var(--site-brand, #bf9456);
   }
 
   .language-selector:hover .dropdown-content {

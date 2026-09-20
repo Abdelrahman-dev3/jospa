@@ -9,14 +9,14 @@
     --foreground: hsl(38, 20%, 95%);
     --card: hsl(30, 15%, 15%);
     --card-foreground: hsl(38, 20%, 95%);
-    --primary: hsl(38, 70%, 55%);
-    --primary-foreground: hsl(30, 10%, 10%);
+    --primary: var(--site-brand, hsl(38, 70%, 55%));
+    --primary-foreground: var(--site-brand-contrast, hsl(30, 10%, 10%));
     --secondary: hsl(30, 20%, 20%);
     --secondary-foreground: hsl(38, 20%, 95%);
     --muted: hsl(30, 15%, 25%);
     --muted-foreground: hsl(38, 10%, 65%);
-    --accent: hsl(38, 85%, 60%);
-    --accent-foreground: hsl(30, 10%, 10%);
+    --accent: var(--site-brand-hover, hsl(38, 85%, 60%));
+    --accent-foreground: var(--site-brand-contrast, hsl(30, 10%, 10%));
     --border: hsl(30, 15%, 25%);
     --input: hsl(30, 15%, 20%);
 }
@@ -227,7 +227,7 @@ z-index: 5; /* فوق الصورة */
 
 
 .pricing-header-item {
-    background: #BF9456;
+    background: var(--site-brand, #BF9456);
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -254,7 +254,7 @@ z-index: 5; /* فوق الصورة */
 }
 
 .pricing-row:hover {
-    border-color: #BF9456;
+    border-color: var(--site-brand, #BF9456);
 }
 
 .pricing-cell {

@@ -22,7 +22,7 @@
     }
 
     .gift-overlay {
-        background: #BF945680;
+        background: var(--site-brand-alpha-80, #BF945680);
     }
 
     .main-gift {
@@ -84,12 +84,12 @@
         position: relative;
         z-index: 9;
         border-radius: 42px !important;
-        border: 1px solid #c69b6d;
+        border: 1px solid var(--site-brand, #c69b6d);
         background: #fff;
         max-width: 340px;
         width: 100%;
         height: 58px;
-        color: #c69b6d;
+        color: var(--site-brand, #c69b6d);
         transition: all 0.3s ease;
     }
 
@@ -100,7 +100,7 @@
     }
 
     .gift-btn:hover {
-        background-color: #c69b6d;
+        background-color: var(--site-brand, #c69b6d);
         color: #fff;
     }
 

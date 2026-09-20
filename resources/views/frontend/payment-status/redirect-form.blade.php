@@ -36,7 +36,7 @@
         }
         .redirect-card button {
             border: 0;
-            background: #bf9456;
+            background: var(--site-brand, #bf9456);
             color: #fff;
             border-radius: 10px;
             padding: 12px 18px;
@@ -44,6 +44,7 @@
             cursor: pointer;
         }
     </style>
+    @include('components.frontend.national-day-theme')
 </head>
 <body onload="document.getElementById('urpayHostedForm').submit()">
     <div class="redirect-card">

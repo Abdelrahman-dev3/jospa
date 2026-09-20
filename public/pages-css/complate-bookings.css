@@ -29,13 +29,13 @@ body {
     color: #979797;
 }
 .btn-gold {
-  background-color: #c79c3f;
+  background-color: var(--site-brand, #c79c3f);
   color: #fff;
   font-weight: 600;
   border: none;
 }
 .btn-gold:hover {
-  background-color: #b68d35;
+  background-color: var(--site-brand-hover, #b68d35);
   color: #fff;
 }
 .product-img {
@@ -48,11 +48,11 @@ body {
     justify-content: center;
 }
 .product-img i {
-  color: #c79c3f;
+  color: var(--site-brand, #c79c3f);
   font-size: 22px;
 }
 .table thead th {
-  background-color: #BF9456;
+  background-color: var(--site-brand, #BF9456);
   color: white;
   text-align: center;
 }

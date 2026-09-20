@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ asset('pages-css/slider.css') }}">
     {{ $slot }}
 <div class="main-head">
-    <h2 class="mb-5 mt-3 text-center" style="position: relative;z-index: 1;font-size: 42px;color:#BF9456;font-weight: bold;">
+    <h2 class="mb-5 mt-3 text-center" style="position: relative;z-index: 1;font-size: 42px;color:var(--site-brand, #BF9456);font-weight: bold;">
         {{ __('messagess.our_branches') }}
     </h2>
 

@@ -30,7 +30,7 @@
     .style-box{
         width: 50%;
         height: 58%;
-        background: #BF9456;
+        background: var(--site-brand, #BF9456);
         position: absolute;
         left: -25%;
         top: -172px;
@@ -61,12 +61,12 @@
       font-size: 22px;
       font-weight: bold;
       margin-bottom: 6px;
-      color: #BF9456;
+      color: var(--site-brand, #BF9456);
     }
 
     .icon {
       margin-left: 6px;
-      color: #BF9456;
+      color: var(--site-brand, #BF9456);
     }
 
     p {
@@ -103,7 +103,7 @@
     }
 
     .phone {
-      color: #BF9456;
+      color: var(--site-brand, #BF9456);
       display: flex;
       align-items: center;
       gap: 6px;

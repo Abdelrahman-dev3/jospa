@@ -50,6 +50,7 @@
             color: #555;
         }
     </style>
+    @include('components.frontend.national-day-theme')
 </head>
 <body>
     <div class="payment-card">

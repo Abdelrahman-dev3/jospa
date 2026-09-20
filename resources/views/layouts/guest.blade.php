@@ -47,6 +47,7 @@
 
         }
     </style>
+    @include('components.frontend.national-day-theme')
 </head>
 
 <body>

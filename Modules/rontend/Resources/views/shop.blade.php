@@ -30,7 +30,7 @@
 
     <style>
         .swiper-pagination-bullet-active {
-            background-color: #BF9456;
+            background-color: var(--site-brand, #BF9456);
             opacity: 1;
         }
                 .swiper-slide{
@@ -168,10 +168,10 @@
             gap: 25px;
         }
         .c-border{
-            border: 3px solid #cf9233;
+            border: 3px solid var(--site-brand, #cf9233);
         }
         .color{
-            color: #cf9233;
+            color: var(--site-brand, #cf9233);
         }
     </style>
 

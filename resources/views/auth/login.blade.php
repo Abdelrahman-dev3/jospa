@@ -64,7 +64,7 @@
 
             <!-- Submit -->
             <div style="margin-top:15px;display: flex;">
-                <button type="submit" style="background: rgb(191, 148, 86);font-weight: bold;border: none;border-radius: 36px;padding: 15px 20px;width: 50%;margin: auto;font-size: 18px;cursor: pointer;transition: background 0.3s, transform 0.2s;display: inline-block;text-align: center;color: rgb(255, 255, 255) !important;transform: none;" onmouseover="this.style.transform='translateY(-2px)';"
+                <button type="submit" style="background: var(--site-brand, rgb(191, 148, 86));font-weight: bold;border: none;border-radius: 36px;padding: 15px 20px;width: 50%;margin: auto;font-size: 18px;cursor: pointer;transition: background 0.3s, transform 0.2s;display: inline-block;text-align: center;color: rgb(255, 255, 255) !important;transform: none;" onmouseover="this.style.transform='translateY(-2px)';"
                    onmouseout="this.style.transform='none';">
                     {{ __('auth.login_button') }}
                 </button>
@@ -73,7 +73,7 @@
 
         <p style="text-align:center;margin-top:20px;">
             {{ __('auth.no_account') }}
-            <a href="{{ route('signup') }}" style="color:#BF9456;font-weight:500;text-decoration:none;">{{ __('auth.signup') }}</a>
+            <a href="{{ route('signup') }}" style="color:var(--site-brand, #BF9456);font-weight:500;text-decoration:none;">{{ __('auth.signup') }}</a>
         </p>
     </div>
 </div>
