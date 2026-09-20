@@ -837,54 +837,33 @@ class OdooBookingSyncService
                 $giftCardsCreated = $this->extractGiftCardsCreated($data);
             }
 
-            if (! empty($giftIds) && is_array($giftCardsCreated ?? null) && ! empty($giftCardsCreated)) {
+            if (! empty($giftIds)) {
 
                 $localGiftCards = GiftCard::whereIn('id', $giftIds)->get()->keyBy('id');
 
-                foreach ($giftCardsCreated as $index => $giftItem) {
-                    if (! is_array($giftItem)) {
-                        continue;
+                if ($localGiftCards->isNotEmpty()) {
+                    foreach ($localGiftCards as $localId => $matchingGiftCard) {
+                        
+                        $giftItem = collect($giftCardsCreated ?? [])->firstWhere('code', $matchingGiftCard->ref) 
+                                    ?? collect($giftCardsCreated ?? [])->first();
+                        
+                        $giftDocument = $giftItem ? $this->extractGiftCardDocument($giftItem) : null;
+                        $code = $giftItem['code'] ?? $matchingGiftCard->ref;
+                        $giftPdfUrl = null;
+
+                        if (blank($giftDocument)) {
+                            Log::warning('Gift card PDF was not returned by Odoo; PDF delivery to buyer will be skipped.', [
+                                'invoice_id' => $invoice->id,
+                                'gift_card_id' => $matchingGiftCard->id,
+                            ]);
+                        }
+
+                    if (filled($giftDocument)) {
+                        $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : $localId) . ".pdf";
+                        $giftPdfUrl = $this->resolvePublicPdfUrl((string) $giftDocument, $giftCardFilename);
                     }
 
-                    $giftDocument = $this->extractGiftCardDocument($giftItem);
-                    $code = $giftItem['code'] ?? null;
-                    $amount = $giftItem['amount'] ?? 0;
-                    $isGift = ! empty($giftItem['is_gift']);
-
-                    if (blank($giftDocument)) {
-                        Log::warning('Gift card created PDF is missing in Odoo response.', [
-                            'invoice_id' => $invoice->id,
-                            'index' => $index,
-                            'code' => $code,
-                        ]);
-                        continue;
-                    }
-
-                    // Match local GiftCard record
-                    $matchingGiftCard = null;
-                    if ($code !== null) {
-                        $matchingGiftCard = $localGiftCards->first(fn ($g) => $g->ref === $code);
-                    }
-                    if (! $matchingGiftCard && isset($giftIds[$index])) {
-                        $matchingGiftCard = $localGiftCards->get($giftIds[$index]);
-                    }
-                    if (! $matchingGiftCard && $localGiftCards->isNotEmpty()) {
-                        $matchingGiftCard = $localGiftCards->values()->get($index) ?? $localGiftCards->first();
-                    }
-
-                    if (! $matchingGiftCard) {
-                        Log::warning('Gift card PDF delivery skipped: no matching local gift card for Odoo item.', [
-                            'invoice_id' => $invoice->id,
-                            'index' => $index,
-                            'code' => $code,
-                        ]);
-                        continue;
-                    }
-
-                    $giftCardFilename = "GiftCard_" . ($code ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $code) : ($index + 1)) . ".pdf";
-                    $giftPdfUrl = $this->resolvePublicPdfUrl((string) $giftDocument, $giftCardFilename);
-
-                    if ($matchingGiftCard && filled($giftPdfUrl)) {
+                    if (filled($giftPdfUrl)) {
                         try {
                             $matchingGiftCard->forceFill([
                                 'pdf_url' => $giftPdfUrl,
@@ -905,12 +884,6 @@ class OdooBookingSyncService
                                 'error' => $e->getMessage(),
                             ]);
                         }
-                    } elseif (blank($giftPdfUrl)) {
-                        Log::warning('Gift card PDF URL could not be resolved for SMS delivery.', [
-                            'invoice_id' => $invoice->id,
-                            'gift_card_id' => $matchingGiftCard?->id,
-                            'code' => $code,
-                        ]);
                     }
 
                     $recipientPhone = $matchingGiftCard?->recipient_phone;
@@ -919,17 +892,7 @@ class OdooBookingSyncService
                     $buyerOrSenderPhone = $matchingGiftCard?->sender_phone ?: $buyerPhone;
                     $personalMessage = trim((string) ($matchingGiftCard?->message ?? ''));
 
-                    // SMS fallback is sent to recipient if available, otherwise to buyer
                     $targetPhone = filled($recipientPhone) ? $recipientPhone : $buyerOrSenderPhone;
-
-                    if (blank($targetPhone)) {
-                        Log::warning('Gift card PDF delivery skipped: target phone number missing.', [
-                            'invoice_id' => $invoice->id,
-                            'code' => $code,
-                            'gift_card_id' => $matchingGiftCard?->id,
-                        ]);
-                        continue;
-                    }
 
                     if (filled($giftPdfUrl)) {
                         $sentSms = app(TaqnyatSmsService::class)->sendGift(
@@ -977,7 +940,7 @@ class OdooBookingSyncService
                     }
 
                     // WhatsApp to Buyer (PDF Template)
-                    if (filled($buyerOrSenderPhone)) {
+                    if (filled($buyerOrSenderPhone) && filled($giftPdfUrl)) {
                         $giftTemplateName = $whatsAppService->resolveGiftCardPdfTemplateName();
                         $giftTemplateVariables = $this->buildGiftCardPdfTemplateVariables(
                             $matchingGiftCard,
@@ -989,8 +952,8 @@ class OdooBookingSyncService
                         $sentGiftPdf = $giftTemplateName !== ''
                             ? $whatsAppService->sendTemplateWithDocument(
                                 phone: (string) $buyerOrSenderPhone,
-                                fileUrlOrBase64: (string) ($giftPdfUrl ?: $giftDocument),
-                                filename: $giftCardFilename,
+                                fileUrlOrBase64: (string) $giftPdfUrl,
+                                filename: $giftCardFilename ?? 'giftcard.pdf',
                                 variables: $giftTemplateVariables,
                                 templateName: $giftTemplateName,
                                 fallbackToPlainDocument: false,
@@ -1015,8 +978,9 @@ class OdooBookingSyncService
                     }
                 }
             }
+        }
 
-            // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
+        // 3. Send Redeemed Gift Card PDF (if present) to the Buyer (اللي دفع)
             $giftCardRedeemed = $this->extractGiftCardRedeemed($data);
             if (is_array($giftCardRedeemed) && filled($giftCardRedeemed['pdf'] ?? null) && filled($buyerPhone)) {
                 $redeemedPdfBase64 = $giftCardRedeemed['pdf'];
