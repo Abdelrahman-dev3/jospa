@@ -13,7 +13,7 @@ class SyncLoyaltyToOdoo extends Command
                             {--dry-run : Preview what would be synced without actually sending to Odoo}
                             {--user= : Sync only a specific user ID}';
 
-    protected $description = 'One-time sync of existing website loyalty balances to Odoo using the "set" operation.';
+    protected $description = 'One-time sync to push missing website loyalty balances to Odoo using add/deduct operations.';
 
     public function handle(): int
     {
@@ -77,12 +77,36 @@ class SyncLoyaltyToOdoo extends Command
             }
 
             try {
+                // First fetch the Odoo balance
+                $balanceResult = $odooService->getBalance($user->mobile);
+                
+                if (!($balanceResult['success'] ?? false)) {
+                    $failed++;
+                    $this->newLine();
+                    $this->error("  Failed: User #{$user->id} — Could not fetch balance from Odoo.");
+                    $bar->advance();
+                    continue;
+                }
+
+                $odooPoints = (float) ($balanceResult['points'] ?? 0);
+                $localPoints = (float) $loyalty->points;
+                
+                if (round($localPoints, 2) === round($odooPoints, 2)) {
+                    $skipped++;
+                    $bar->advance();
+                    continue; // Already synchronized
+                }
+
+                $difference = $localPoints - $odooPoints;
+                $operation = $difference > 0 ? 'add' : 'deduct';
+                $pointsToAdjust = abs($difference);
+
                 $result = $odooService->adjust(
                     phone: $user->mobile,
-                    operation: 'set',
-                    points: (float) $loyalty->points,
+                    operation: $operation,
+                    points: $pointsToAdjust,
                     reference: $reference,
-                    note: 'Initial one-time sync from website',
+                    note: 'Initial sync: equalizing difference between system and Odoo',
                     name: $customerName !== '' ? $customerName : null,
                 );
 

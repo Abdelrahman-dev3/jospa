@@ -76,7 +76,12 @@ class OdooLoyaltyService
 
         if ($result['success'] ?? false) {
             $odooPoints = (float) ($result['points'] ?? 0);
-            $localPoints = (float) ($user->loyalty_points ?? 0);
+            
+            $loyaltyModel = \App\Models\LoyaltyPoint::firstOrCreate(
+                ['user_id' => $user->id],
+                ['points' => 0]
+            );
+            $localPoints = (float) $loyaltyModel->points;
 
             if (round($localPoints, 2) !== round($odooPoints, 2)) {
                 $difference = $odooPoints - $localPoints;
@@ -91,8 +96,8 @@ class OdooLoyaltyService
                     'meta' => ['reason' => 'Automatic sync to match Odoo'],
                 ]);
 
-                $user->loyalty_points = $odooPoints;
-                $user->save();
+                $loyaltyModel->points = $odooPoints;
+                $loyaltyModel->save();
 
                 Log::info('Loyalty points synced with Odoo automatically.', [
                     'user_id' => $user->id,
