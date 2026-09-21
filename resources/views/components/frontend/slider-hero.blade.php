@@ -10,8 +10,7 @@
 @endphp
 
 <!-- css -->
-<link rel="stylesheet" href="{{ asset('pages-css/slider-hero.css') }}">
-
+<link rel="stylesheet" href="{{ asset('pages-css/slider-hero.css?v=2') }}">
 
 <!-- html -->
 <div class="screen-hero {{ $nationalDayTheme ? 'screen-hero--national-day' : '' }}">
