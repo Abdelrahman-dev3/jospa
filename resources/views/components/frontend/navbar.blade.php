@@ -3,7 +3,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{{ asset('pages-css/second-navbar.css') }}">
+<link rel="stylesheet" href="{{ asset('pages-css/second-navbar.css?v=2') }}">
 <link rel="stylesheet" href="{{ asset('pages-css/notifications-dropdown.css') }}">
 <style>
     @media (max-width: 480px) {
