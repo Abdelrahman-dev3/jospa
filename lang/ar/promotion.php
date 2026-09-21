@@ -26,6 +26,8 @@ return [
     'coupon_not_found' => 'القسيمة غير موجودة',
     'coupon_price' => 'سعر القسيمة',
     'lbl_services' => 'الخدمات', 
-    'select_services' => 'اختر الخدمات'
+    'select_services' => 'اختر الخدمات',
+    'specific_dates' => 'تواريخ محددة',
+    'specific_dates_hint' => 'اختر أيام محددة يمكن فيها استخدام القسيمة. اتركه فارغاً للسماح بالاستخدام في أي يوم.',
 
 ];

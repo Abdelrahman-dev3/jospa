@@ -27,6 +27,8 @@ return [
     'coupon_not_found' => 'Coupon Not Found',
     'coupon_price' => 'Coupon Price',
     'lbl_services' => 'Services', 
-    'select_services' => 'Select Services'
+    'select_services' => 'Select Services',
+    'specific_dates' => 'Specific Dates',
+    'specific_dates_hint' => 'Select specific days when the coupon can be used. Leave empty to allow usage on any day.',
 
 ];

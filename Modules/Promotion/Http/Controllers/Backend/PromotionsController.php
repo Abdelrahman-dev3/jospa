@@ -306,8 +306,8 @@ class PromotionsController extends Controller
         $couponData = $data;
         $couponData['promotion_id'] = $promotion->id;
         // $couponData['services'] = json_encode($request->services);
-        $couponData['services'] = $request->services;
-        $couponData['specific_dates'] = $request->specific_dates;
+        $couponData['services'] = is_string($request->services) ? json_decode($request->services, true) : $request->services;
+        $couponData['specific_dates'] = is_string($request->specific_dates) ? json_decode($request->specific_dates, true) : $request->specific_dates;
 
         if ($request->coupon_type == 'custom') {
             $couponData['coupon_type'] = $request->coupon_type;
@@ -371,11 +371,11 @@ class PromotionsController extends Controller
 
         // Simple format - Store as [1, 2, 3]
         if ($request->has('services')) {
-            $couponData['services'] = json_encode($request->services);
+            $couponData['services'] = is_string($request->services) ? json_decode($request->services, true) : $request->services;
         }
 
         if ($request->has('specific_dates')) {
-            $couponData['specific_dates'] = $request->specific_dates;
+            $couponData['specific_dates'] = is_string($request->specific_dates) ? json_decode($request->specific_dates, true) : $request->specific_dates;
         }
 
         if ($coupon && $coupon->used_by == null) {
