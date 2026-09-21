@@ -148,10 +148,106 @@
         </div>
 
         <div>
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-sm btn-outline-secondary" 
+                @click="clearAllServices"
+                :disabled="ISREADONLY"
+                v-if="services && services.length > 0">
+                Clear All
+              </button>
+            </div>
+
+            <Multiselect 
+              v-model="services" 
+              :value="services" 
+              v-bind="multiSelectOption" 
+              :options="serviceOptions"
+              id="services" 
+              autocomplete="off" 
+              :disabled="ISREADONLY" 
+              track-by="value" 
+              label="label" 
+              mode="tags"
+              :close-on-select="false" 
+              :searchable="true" 
+              :create-option="false"
+              :placeholder="$t('promotion.select_services')" 
+            />
+            <span class="text-danger">{{ errors['services'] }}</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="row">
+            <div class="col-md-12">
+              <label class="form-label">{{ $t('promotion.coupon_type') }}</label>
+              <Multiselect v-model="coupon_type" :value="coupon_type" v-bind="singleSelectOption"
+                :options="couponOptions" id="type" autocomplete="off" :disabled="ISREADONLY"></Multiselect>
+            </div>
+          </div>
+        </div>
+        <div class="form-group col-md-12" v-if="coupon_type">
+          <div v-if="coupon_type == 'custom'">
+            <InputField class="col-md-12" type="text" :is-required="true" :label="$t('promotion.coupon_code')"
+              placeholder="Enter a coupon code" v-model="coupon_code" :error-message="errors['coupon_code']"
+              :error-messages="errorMessages['coupon_code']" :is-read-only="ISREADONLY"></InputField>
+          </div>
+          <div v-else-if="coupon_type == 'bulk'">
+            <InputField class="col-md-12" type="number" :is-required="true" :label="$t('promotion.number_of_coupon')"
+              placeholder="" v-model="number_of_coupon" :error-message="errors['number_of_coupon']"
+              :error-messages="errorMessages['number_of_coupon']" :is-read-only="ISREADONLY"></InputField>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="col-md-12">
+            <label class="form-label">{{ $t('promotion.percent_or_fixed') }}</label>
+            <Multiselect v-model="discount_type" :value="discount_type" v-bind="singleSelectOption"
+              :options="typeOptions" id="type" autocomplete="off"></Multiselect>
+          </div>
+        </div>
+        <div class="col-md-12" v-if="discount_type">
+          <div v-if="discount_type == 'percent'">
+            <InputField type="number" step="any" :is-required="true" :label="$t('promotion.discount_percentage')"
+              placeholder="Enter Discount Percentage" v-model="discount_percentage"
+              :error-message="errors['discount_percentage']"></InputField>
+          </div>
+          <div v-else-if="discount_type == 'fixed'">
+            <InputField type="number" :is-required="true" :label="$t('promotion.discount_amount')"
+              placeholder="Enter Discount Amount" v-model="discount_amount" :error-message="errors['discount_amount']">
+            </InputField>
+          </div>
+        </div>
+
+        <div>
           <InputField class="col-md-12" type="number" :is-required="true" :label="$t('promotion.use_limit')"
             placeholder="" v-model="use_limit" :error-message="errors['use_limit']"
             :error-messages="errorMessages['use_limit']" :is-read-only="coupon_type == 'bulk' || ISREADONLY">
           </InputField>
+        </div>
+
+        <div class="form-group">
+          <div class="col-md-12">
+            <label class="form-label" for="specific_dates">
+              <i class="fa-solid fa-calendar-days me-1"></i>
+              {{ $t('promotion.specific_dates') || 'تواريخ محددة للاستخدام' }}
+            </label>
+            <div class="w-100">
+              <flat-pickr id="specific_dates" class="form-control" :config="specificDatesConfig"
+                v-model="specificDatesRaw" placeholder="اختر تواريخ محددة (اختياري)">
+              </flat-pickr>
+              <small class="text-muted">{{ $t('promotion.specific_dates_hint') || 'اختر أيام محددة يمكن فيها استخدام القسيمة. اتركه فارغاً للسماح بالاستخدام في أي يوم.' }}</small>
+            </div>
+            <div class="mt-2 d-flex flex-wrap gap-1" v-if="specific_dates && specific_dates.length > 0">
+              <span v-for="(date, index) in specific_dates" :key="index"
+                class="badge bg-primary d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                {{ date }}
+                <button type="button" class="btn-close btn-close-white" style="font-size: 8px;"
+                  @click="removeSpecificDate(index)" aria-label="Remove"></button>
+              </span>
+            </div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -248,6 +344,31 @@ const config = ref({
   minDate: new Date()
 })
 
+const specificDatesConfig = ref({
+  dateFormat: 'Y-m-d',
+  mode: 'multiple',
+  static: true,
+  conjunction: ', ',
+})
+
+const specificDatesRaw = ref('')
+
+// Sync specificDatesRaw string → specific_dates array
+watch(specificDatesRaw, (newVal) => {
+  if (!newVal || newVal.trim() === '') {
+    specific_dates.value = []
+    return
+  }
+  specific_dates.value = newVal.split(',').map(d => d.trim()).filter(d => d !== '')
+})
+
+const removeSpecificDate = (index) => {
+  const dates = [...(specific_dates.value || [])]
+  dates.splice(index, 1)
+  specific_dates.value = dates
+  specificDatesRaw.value = dates.join(', ')
+}
+
 const singleSelectOption = ref({
   closeOnSelect: true,
   searchable: true,
@@ -289,6 +410,7 @@ const defaultData = () => {
     description: '',
     category_id: null,
     services: [],
+    specific_dates: [],
     start_date_time: new Date().toJSON().slice(0, 10),
     end_date_time: new Date(new Date().setDate(new Date().getDate() + 1)).toJSON().slice(0, 10),
     feature_image: null,
@@ -310,7 +432,8 @@ const defaultData = () => {
         coupon_type: 'bulk',
         number_of_coupon: 1,
         coupon_code: '',
-        use_limit: 1
+        use_limit: 1,
+        specific_dates: []
       }
     ]
   }
@@ -366,7 +489,24 @@ const setFormData = (data) => {
   const firstCoupon = data.coupon && data.coupon[0] ? data.coupon[0] : {}
   const derivedCategoryId = data.category_id ?? inferCategoryIdFromServices(parsedServices)
 
+  // Parse specific_dates
+  let parsedSpecificDates = []
+  if (firstCoupon.specific_dates) {
+    try {
+      if (typeof firstCoupon.specific_dates === 'string') {
+        parsedSpecificDates = JSON.parse(firstCoupon.specific_dates)
+      } else if (Array.isArray(firstCoupon.specific_dates)) {
+        parsedSpecificDates = firstCoupon.specific_dates
+      }
+    } catch (e) {
+      parsedSpecificDates = []
+    }
+  }
+
   isSyncingCategoryFilter.value = true
+
+  // Set the specificDatesRaw for flat-pickr
+  specificDatesRaw.value = Array.isArray(parsedSpecificDates) ? parsedSpecificDates.join(', ') : ''
 
   resetForm({
     values: {
@@ -374,6 +514,7 @@ const setFormData = (data) => {
       description: data.description || '',
       category_id: derivedCategoryId,
       services: parsedServices,
+      specific_dates: parsedSpecificDates,
       start_date_time: data.start_date_time,
       end_date_time: data.end_date_time,
       feature_image: data.feature_image !== props.defaultImage ? data.feature_image : null,
@@ -485,6 +626,7 @@ const { value: coupon_type } = useField('coupon_type')
 const { value: number_of_coupon } = useField('number_of_coupon')
 const { value: coupon_code } = useField('coupon_code')
 const { value: use_limit } = useField('use_limit')
+const { value: specific_dates } = useField('specific_dates')
 
 const errorMessages = ref({})
 
@@ -559,8 +701,6 @@ const clearAllServices = () => {
   services.value = []
 }
 
-
-
 const ISREADONLY = ref(false)
 // Form Submit
 const IS_SUBMITED = ref(false)
@@ -572,6 +712,7 @@ const formSubmit = handleSubmit((values) => {
   const cleanValues = {
     ...values,
     services: JSON.stringify(Array.isArray(values.services) ? values.services : []),
+    specific_dates: JSON.stringify(Array.isArray(values.specific_dates) ? values.specific_dates : []),
     description: values.description || '',
     name: values.name || '',
     custom_fields_data: JSON.stringify(values.custom_fields_data || {})

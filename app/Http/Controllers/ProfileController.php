@@ -126,21 +126,14 @@ class ProfileController extends Controller
     }
 
     /**
-     * Fetch the live loyalty points from Odoo using the customer's phone number.
-     * Returns null on failure so the caller can fall back to local DB.
+     * Fetch the loyalty points from local DB.
+     * Returns null if no record exists.
      */
     private function getOdooLoyaltyPoints($user): ?float
     {
-        try {
-            return app(OdooLoyaltyService::class)->syncLocalBalance($user);
-        } catch (\Throwable $e) {
-            \Log::warning('Odoo loyalty balance fallback to local DB.', [
-                'user_id' => $user->id,
-                'error'   => $e->getMessage(),
-            ]);
-        }
+        $loyalty = \App\Models\LoyaltyPoint::where('user_id', $user->id)->first();
 
-        return null;
+        return $loyalty ? (float) $loyalty->points : null;
     }
 }
 

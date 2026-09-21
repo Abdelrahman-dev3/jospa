@@ -17,10 +17,11 @@ class Coupon extends Model
      */
     protected $table = 'promotions_coupon';
 
-    protected $fillable = ['coupon_code','coupon_type','is_expired', 'timezone', 'services' , 'discount_type', 'discount_percentage', 'discount_amount', 'start_date_time', 'end_date_time', 'promotion_id', 'use_limit'];
+    protected $fillable = ['coupon_code','coupon_type','is_expired', 'timezone', 'services' , 'specific_dates', 'discount_type', 'discount_percentage', 'discount_amount', 'start_date_time', 'end_date_time', 'promotion_id', 'use_limit'];
 
     protected $casts = [
         'services' => 'array',
+        'specific_dates' => 'array',
         'start_date_time' => 'datetime',
         'end_date_time' => 'datetime',
     ];
@@ -56,7 +57,29 @@ class Coupon extends Model
                     ->orWhereRaw(
                         '(select count(*) from user_coupon_redeem where user_coupon_redeem.coupon_id = promotions_coupon.id) < promotions_coupon.use_limit'
                     );
+            })
+            ->where(function (Builder $query) {
+                // If specific_dates is set, only allow usage on those dates
+                $today = now()->toDateString();
+                $query->whereNull('specific_dates')
+                    ->orWhereJsonLength('specific_dates', 0)
+                    ->orWhereJsonContains('specific_dates', $today);
             });
+    }
+
+    /**
+     * Check if the coupon is available today based on specific_dates.
+     * If no specific dates are set, the coupon is always available (date-wise).
+     */
+    public function isAvailableToday(): bool
+    {
+        $specificDates = $this->specific_dates;
+
+        if (empty($specificDates) || ! is_array($specificDates)) {
+            return true;
+        }
+
+        return in_array(now()->toDateString(), $specificDates, true);
     }
 
     public function usageCount(): int

@@ -36,6 +36,11 @@ class CouponController extends Controller
         $serviceId = (int) $serviceId;
 
         if ($coupon && in_array($serviceId, $services, true)) {
+            // Check specific dates
+            if (! $coupon->isAvailableToday()) {
+                return response()->json(['valid' => false, 'message' => __('messagess.coupon_not_available_today', [], app()->getLocale()) ?: 'This coupon is not available today']);
+            }
+
             $bookingService = BookingService::where('booking_id', $bookingId)->whereNull('coupon_code')->first();
 
             if (!$bookingService) {
@@ -87,6 +92,14 @@ class CouponController extends Controller
 
         if (!$coupon) {
             return response()->json(['valid' => false]);
+        }
+
+        // Check specific dates
+        if (! $coupon->isAvailableToday()) {
+            return response()->json([
+                'valid' => false,
+                'message' => __('messagess.coupon_not_available_today', [], app()->getLocale()) ?: 'This coupon is not available today',
+            ]);
         }
 
         $services = $this->normalizeServices($coupon->services);
