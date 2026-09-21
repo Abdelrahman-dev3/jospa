@@ -1402,12 +1402,49 @@ public function index_list(Request $request)
         // branchId = 0 => check across all branches, an employee can't be in two places at once.
         $busyRanges = $this->employeeBusyRanges($employeeId, 0, $date, $ignoreBookingId, true);
 
-        if ($this->rangeOverlapsAny($start, $end, $busyRanges)) {
-            throw ValidationException::withMessages([
-                'employee_id' => [__('booking.slot_conflict') !== 'booking.slot_conflict'
-                    ? __('booking.slot_conflict')
-                    : 'This staff member already has a booking that overlaps this time slot.'],
-            ]);
+        $overlappingBookingIds = [];
+        foreach ($busyRanges as $range) {
+            if ($start->lt($range['end']) && $end->gt($range['start'])) {
+                if (isset($range['booking_id'])) {
+                    $overlappingBookingIds[] = $range['booking_id'];
+                }
+            }
+        }
+
+        if (!empty($overlappingBookingIds)) {
+            $overlappingBookingIds = array_unique($overlappingBookingIds);
+            
+            $bookingsToDelete = [];
+            $hasPaidConflict = false;
+
+            $overlappingBookings = Booking::with('transactions')->whereIn('id', $overlappingBookingIds)->get();
+
+            foreach ($overlappingBookings as $overlapBooking) {
+                $isUnpaid = !$overlapBooking->transactions->contains('payment_status', 1);
+                
+                if ($isUnpaid && $overlapBooking->status === 'pending') {
+                    $bookingsToDelete[] = $overlapBooking;
+                } else {
+                    $hasPaidConflict = true;
+                }
+            }
+
+            if ($hasPaidConflict || count($overlappingBookingIds) > count($bookingsToDelete)) {
+                throw ValidationException::withMessages([
+                    'employee_id' => [__('booking.slot_conflict') !== 'booking.slot_conflict'
+                        ? __('booking.slot_conflict')
+                        : 'This staff member already has a booking that overlaps this time slot.'],
+                ]);
+            }
+
+            foreach ($bookingsToDelete as $bookingToDelete) {
+                $bookingToDelete->bookingService()->delete();
+                $bookingToDelete->packages()->delete();
+                $bookingToDelete->products()->delete();
+                $bookingToDelete->transactions()->delete();
+                $bookingToDelete->userCouponRedeem()->delete();
+                $bookingToDelete->delete();
+            }
         }
     }
 
@@ -1909,6 +1946,7 @@ public function index_list(Request $request)
             ->map(function ($service) {
                 $start = Carbon::parse($service->start_date_time);
                 return [
+                    'booking_id' => $service->booking_id,
                     'start' => $start,
                     'end' => $start->copy()->addMinutes((int) $service->duration_min),
                 ];
@@ -1930,6 +1968,7 @@ public function index_list(Request $request)
                 $duration = (int) $package->services->sum('duration_min');
                 $start = Carbon::parse($package->booking->start_date_time);
                 return [
+                    'booking_id' => $package->booking_id,
                     'start' => $start,
                     'end' => $start->copy()->addMinutes($duration),
                 ];
