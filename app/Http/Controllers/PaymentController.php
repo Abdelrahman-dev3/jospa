@@ -30,9 +30,9 @@ class PaymentController extends Controller
         $gifts = collect();
         
         if($isPayNow == 'payment'){
-            $cartservice = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service','service.employee','branch:id,name,description',]);
+            $cartservice = Booking::getUserIncompleteBookings($userId, 'payment', ['services.service','services.employee','branch:id,name,description',]);
         }else{
-            $cartservice = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service','service.employee','branch:id,name,description',]);
+            $cartservice = Booking::getUserIncompleteBookings($userId, 'cart', ['services.service','services.employee','branch:id,name,description',]);
             $cartproduct = Cart::with('product')->where(['user_id' => $userId])->get();
             $productPrice = $cartproduct->sum(function ($item) {
                 $price = $item->product->max_price ?? $item->product->min_price ?? 0;
@@ -54,7 +54,7 @@ class PaymentController extends Controller
         }
 
         $servicePrice = $cartservice->sum(function ($item) {
-            return $item->service ? ($item->service->service_price ?? 0) : 0;
+            return $item->services->sum(fn($s) => $s->service_price ?? 0);
         });
         
         $cartTotal = $servicePrice + $productPrice  + $GiftPrice;
@@ -66,7 +66,7 @@ class PaymentController extends Controller
     
         $finalPrice = $cartTotal - $discountTotal;
         
-        $serviceCount = $cartservice->sum(fn($item) => $item->service ? 1 : 0);
+        $serviceCount = $cartservice->sum(fn($item) => $item->services->count());
         
         $wallet =  Wallet::where('user_id',$userId)->where('status', 1)->first();
         

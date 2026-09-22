@@ -945,7 +945,7 @@
 
                     <div class="summary-row">
                         <div class="muted">{{ __('messagess.total_product_price') }}</div>
-                        <div><strong id="productsPrice">{{$totalPrice - ( $totalPrice * 0.15 ) }}</strong> {{ __('messagess.SR') }}</div>
+                        <div><strong id="productsPrice">{{$totalPrice}}</strong> {{ __('messagess.SR') }}</div>
                     </div>
 
                     <!--<div class="summary-row">-->
@@ -963,7 +963,7 @@
                         <div>
                             <strong id="tax">
                             @if($pageName == 'cart')
-                                {{ getTaxamount($productsAmount)['total_tax_amount'] + ( $totalPrice * 0.15 ) + getBookingTaxamount($totalPrice, 0, null )['total_tax_amount']  }} 
+                                {{ getBookingTaxamount($totalPrice - $productsAmount, 0, null)['total_tax_amount'] + getTaxamount($productsAmount)['total_tax_amount'] }}
                             @elseif($pageName == 'bookings')
                                 0.00
                             @elseif($pageName == 'gift')
@@ -1031,7 +1031,7 @@
                     
                     <div class="summary-total">
                         <div>{{ __('messagess.total_amount') }}</div>
-                        <div id="totalPrice" style="color:var(--gold)"><span>{{$totalPrice + getBookingTaxamount($totalPrice, 0, null )['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0) }}</span> {{ __('messagess.SR') }}</div>
+                        <div id="totalPrice" style="color:var(--gold)"><span>{{$totalPrice + getBookingTaxamount($totalPrice - $productsAmount, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0) }}</span> {{ __('messagess.SR') }}</div>
                     </div>
                     <button class="pay-btn mt-3" id="confirmPay"><i class="fa-solid fa-credit-card me-2"></i> {{ __('messagess.confirm_payment') }} </button>
                 </div>
@@ -1040,7 +1040,7 @@
     </div>
   </form>
      <script>
-        const baseTotal = {{$totalPrice + getBookingTaxamount($totalPrice, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
+        const baseTotal = {{$totalPrice + getBookingTaxamount($totalPrice - $productsAmount, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
         const gatewayDiscounts = @json($gatewayDiscounts);
         const gatewayDiscountPrefix = "{{ app()->getLocale() === 'ar' ? 'خصم' : 'Discount' }}";
         const gatewayDiscountCurrency = "{{ __('messagess.SR') }}";

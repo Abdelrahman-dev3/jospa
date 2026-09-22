@@ -26,16 +26,16 @@ class PaymentCalculatorService
         }
         
         if ($typePage === 'payment') {
-            $services = Booking::getUserIncompleteBookings($userId, 'payment', ['service.service']);
+            $services = Booking::getUserIncompleteBookings($userId, 'payment', ['services.service']);
 
             
             $cartIds = $services->pluck('id')->toArray();
 
             $total += $services->sum(fn($item) =>
-                ($item->service->service_price ?? 0) - ($item->service->discount_amount ?? 0)
+                $item->services->sum(fn($s) => ($s->service_price ?? 0) - ($s->discount_amount ?? 0))
             );
         } else {
-            $services = Booking::getUserIncompleteBookings($userId, 'cart', ['service.service']);
+            $services = Booking::getUserIncompleteBookings($userId, 'cart', ['services.service']);
 
             $products = Cart::with('product')->where('user_id', $userId)->get();
             $gifts    = GiftCard::where('user_id', $userId)->where('payment_status', 0)->get();
@@ -45,8 +45,7 @@ class PaymentCalculatorService
             $cartIds    = $services->pluck('id')->toArray();
 
             $total += $services->sum(fn($item) =>
-                ($item->service->service_price ?? 0)
-                - ($item->service->discount_amount ?? 0)
+                $item->services->sum(fn($s) => ($s->service_price ?? 0) - ($s->discount_amount ?? 0))
             );
 
             $productTotal = $products->sum(fn($item) =>
@@ -58,7 +57,14 @@ class PaymentCalculatorService
             $total += $gifts->sum(fn($g) => $g->subtotal ?? 0);
         }
 
-        $tax = getBookingTaxamount($total, 0, null)['total_tax_amount'] + getTaxamount($productTotal)['total_tax_amount'];
+        // FIX: Calculate booking tax on services+gifts only (excluding products),
+        // then add product tax separately. Previously $total (which already included
+        // products) was passed to getBookingTaxamount AND getTaxamount($productTotal)
+        // was added again, causing product tax to be counted twice — inflating the
+        // amount sent to the payment gateway above what was shown to the customer.
+        $serviceAndGiftTotal = $total - $productTotal;
+        $tax = getBookingTaxamount($serviceAndGiftTotal, 0, null)['total_tax_amount']
+             + getTaxamount($productTotal)['total_tax_amount'];
 
         $grossTotal = $total + $tax;
         $couponDiscount = 0;
