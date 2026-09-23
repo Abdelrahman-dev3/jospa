@@ -40,7 +40,6 @@
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('profile.date') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('profile.time') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('messages.status') }}</th>
-                <th style="padding:16px 20px;"></th>
             </tr> 
           </thead>
           <tbody>
@@ -79,9 +78,6 @@
                     @else
                         <span class="badge bg-primary" style="font-size: 13px; padding: 6px 12px;">{{ $booking->status }}</span>
                     @endif
-                  </td>
-                  <td style="color: #FF473E; font-weight: bold; cursor: pointer;" data-booking-id="{{$booking->id}}" data-bs-toggle="modal" data-bs-target="#cancelModal">
-                      {{ __('messagess.cancellation_of_reservation') }}
                   </td>
                 </tr>
                 @endforeach
