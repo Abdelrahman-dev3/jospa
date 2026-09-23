@@ -40,9 +40,13 @@ class ServicesExport implements FromCollection, WithHeadings,WithStyles
             ->with(['category', 'sub_category'])
             ->withCount(['branches', 'employee']);
 
-        $query->whereDate('created_at', '>=', $this->dateRange[0]);
+        if (!empty($this->dateRange[0])) {
+            $query->whereDate('created_at', '>=', $this->dateRange[0]);
+        }
 
-        $query->whereDate('created_at', '<=', $this->dateRange[1]);
+        if (!empty($this->dateRange[1])) {
+            $query->whereDate('created_at', '<=', $this->dateRange[1]);
+        }
 
         $query = $query->orderBy('updated_at', 'desc');
 

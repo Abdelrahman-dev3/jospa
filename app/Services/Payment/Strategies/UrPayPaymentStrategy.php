@@ -26,9 +26,9 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
         if ($remainingAmount <= 0) {
             try {
-                $this->commitFinalizedPayment($data['user_id'], $request, $data, $subResult);
+                $invoiceId = $this->commitFinalizedPayment($data['user_id'], $request, $data, $subResult);
 
-                return $this->respondSubMethodOnlySuccess($request, $data);
+                return $this->respondSubMethodOnlySuccess($request, $data, $invoiceId ?? null);
             } catch (\Throwable $e) {
                 return $this->respondPayException($request, $e);
             }

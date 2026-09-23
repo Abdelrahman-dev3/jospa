@@ -70,7 +70,7 @@
                     @if($booking->status == 'confirmed')
                         <span class="badge bg-success" style="font-size: 13px; padding: 6px 12px;">{{ __('notifications.status_confirmed') }}</span>
                     @elseif($booking->status == 'pending')
-                        <span class="badge bg-warning text-dark" style="font-size: 13px; padding: 6px 12px;">{{ __('messages.pending') ?? 'قيد الانتظار' }}</span>
+                        <span class="badge bg-warning text-dark" style="font-size: 13px; padding: 6px 12px;">{{ __('booking.status_pending') }}</span>
                     @elseif($booking->status == 'check_in')
                         <span class="badge bg-info" style="font-size: 13px; padding: 6px 12px;">{{ __('notifications.status_check_in') }}</span>
                     @elseif($booking->status == 'checkout')

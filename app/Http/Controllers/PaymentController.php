@@ -18,6 +18,28 @@ use App\Support\FrontendPaymentSettings;
 
 class PaymentController extends Controller
 {
+    public function checkAttemptStatus($attempt_id)
+    {
+        $attempt = \App\Models\PaymentAttempt::find($attempt_id);
+
+        if (!$attempt) {
+            return response()->json(['status' => false, 'message' => 'Payment attempt not found.'], 404);
+        }
+
+        $userId = auth()->id();
+        if ($userId && $attempt->user_id !== $userId) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'attempt_id' => $attempt->id,
+                'payment_status' => $attempt->status,
+                'invoice_id' => $attempt->invoice_id,
+            ]
+        ]);
+    }
     public function index(Request $request){
         
         $isPayNow = $request->has('ids') ? 'payment' : 'cart';
@@ -130,7 +152,30 @@ class PaymentController extends Controller
             ]),
         };
 
-        return $strategy->pay($request, $isPayNow);
+        $idempotencyKey = $request->header('Idempotency-Key');
+        $cacheKey = null;
+
+        if ($idempotencyKey) {
+            $userId = auth()->id() ?? 0;
+            $cacheKey = "idemp_pay_{$userId}_{$idempotencyKey}";
+            if (\Illuminate\Support\Facades\Cache::has($cacheKey)) {
+                $cachedResponse = \Illuminate\Support\Facades\Cache::get($cacheKey);
+                if (is_array($cachedResponse)) {
+                    return response()->json($cachedResponse['data'], $cachedResponse['status']);
+                }
+            }
+        }
+
+        $response = $strategy->pay($request, $isPayNow);
+
+        if ($cacheKey && $response instanceof \Illuminate\Http\JsonResponse) {
+            \Illuminate\Support\Facades\Cache::put($cacheKey, [
+                'status' => $response->getStatusCode(),
+                'data' => $response->getData(true)
+            ], now()->addHours(24));
+        }
+
+        return $response;
     }
 
     public function tabbySuccess(Request $request, $invoice = null)

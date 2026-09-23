@@ -120,12 +120,13 @@ abstract class BasePaymentStrategy
         return $invoiceId;
     }
 
-    protected function respondSubMethodOnlySuccess(Request $request, array $paymentData)
+    protected function respondSubMethodOnlySuccess(Request $request, array $paymentData, int $invoiceId = null)
     {
         return $this->respondSuccess($request, 'Payment completed using sub methods.', [
             'paid' => true,
             'amount' => $paymentData['final_before_sub'],
             'payment_method' => $paymentData['payment_method'],
+            'invoice_id' => $invoiceId,
         ]);
     }
 

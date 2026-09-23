@@ -834,8 +834,51 @@ class BookingCartController extends Controller
         }
 
         return view('frontend.payment-status.captured');
-}
+    }
 
+    public function checkoutPreview(Request $request)
+    {
+        $user = $request->user() ?? auth()->user();
+
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not authenticated.'], 401);
+        }
+
+        $userId = $user->id;
+        $couponCode = $request->get('coupon_code') ?? $request->get('invoiceCopon');
+        $paymentMethod = $request->get('payment_method') ?? 'card';
+
+        $calculator = app(\App\Services\Payment\PaymentCalculatorService::class);
+        $calcData = $calculator->calculateTotal('cart', $couponCode, $paymentMethod, $userId);
+
+        if (isset($calcData['error'])) {
+            return response()->json(['status' => false, 'message' => $calcData['error']], 422);
+        }
+
+        $subMethodService = app(\App\Services\Payment\PaymentSubMethodsService::class);
+        $subData = $subMethodService->apply($userId, $request, $calcData['total'], false);
+
+        if (isset($subData['error'])) {
+            return response()->json(['status' => false, 'message' => $subData['error']], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'subtotal' => $calcData['total'] + $calcData['discountAmount'] - $calcData['tax'],
+                'tax' => $calcData['tax'],
+                'total_before_submethods' => $calcData['total'],
+                'coupon_discount_amount' => $calcData['couponDiscountAmount'] ?? 0,
+                'payment_gateway_discount_amount' => $calcData['paymentGatewayDiscountAmount'] ?? 0,
+                'used_wallet' => $subData['used_wallet'] ?? 0,
+                'used_loyalty' => $subData['used_loyalty'] ?? 0,
+                'used_gift' => $subData['used_gift'] ?? 0,
+                'final_amount' => $subData['final_amount'] ?? $calcData['total'],
+                'is_full_balance_covered' => ($subData['final_amount'] ?? $calcData['total']) <= 0,
+            ]
+        ]);
+    }
+    
     public function cartPay(Request $request)
     {
         $user = $request->user() ?? auth()->user();

@@ -243,12 +243,14 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
         Route::post('/cart/products/{id}', 'addToCart');
         Route::delete('/cart/{id}', 'destroy');
         Route::post('/cart-pay', 'cartPay');
+        Route::post('/cart-checkout-preview', 'checkoutPreview');
         Route::get('/wallet-loyalty-balance', 'walletLoyaltyBalance');
         Route::get('/loyallety', 'balance');
     });
 
     Route::controller(PaymentController::class)->group(function () {
         Route::post('/payment-chanal', 'payment');
+        Route::get('/payment-attempt/status/{attempt_id}', 'checkAttemptStatus');
     });
 
     Route::controller(BookingController::class)->group(function () {

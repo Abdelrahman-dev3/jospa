@@ -24,8 +24,8 @@ class TamaraPaymentStrategy extends BasePaymentStrategy
 
         if ($remainingAmount <= 0) {
             try {
-                $this->commitFinalizedPayment($data['user_id'], $request, $data, $subResult);
-                return $this->respondSubMethodOnlySuccess($request, $data);
+                $invoiceId = $this->commitFinalizedPayment($data['user_id'], $request, $data, $subResult);
+                return $this->respondSubMethodOnlySuccess($request, $data, $invoiceId ?? null);
             } catch (\Throwable $e) {
                 return $this->respondPayException($request, $e);
             }
