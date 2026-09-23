@@ -142,23 +142,30 @@ class PaymentSubMethodsService
                 $giftBalance = 0;
                 $giftValid = false;
 
-                try {
-                    $response = \Illuminate\Support\Facades\Http::timeout((int) config('services.odoo.timeout', 15))
-                        ->withHeaders($headers)
-                        ->post($checkUrl, $payload);
-        
-                    if ($response->successful()) {
-                        $body = $response->json();
-                        if (isset($body['valid']) && $body['valid'] === true) {
-                            $giftValid = true;
-                            $giftBalance = (float) ($body['balance'] ?? 0);
+                $localGiftCard = \App\Models\GiftCard::where('ref', $code)->where('payment_status', 1)->lockForUpdate()->first();
+
+                if ($localGiftCard && $localGiftCard->balance > 0) {
+                    $giftValid = true;
+                    $giftBalance = (float) $localGiftCard->balance;
+                } else {
+                    try {
+                        $response = \Illuminate\Support\Facades\Http::timeout((int) config('services.odoo.timeout', 15))
+                            ->withHeaders($headers)
+                            ->post($checkUrl, $payload);
+            
+                        if ($response->successful()) {
+                            $body = $response->json();
+                            if (isset($body['valid']) && $body['valid'] === true) {
+                                $giftValid = true;
+                                $giftBalance = (float) ($body['balance'] ?? 0);
+                            }
                         }
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::error('Odoo giftcard check failed during checkout', [
+                            'code' => $code,
+                            'error' => $e->getMessage()
+                        ]);
                     }
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::error('Odoo giftcard check failed during checkout', [
-                        'code' => $code,
-                        'error' => $e->getMessage()
-                    ]);
                 }
 
                 if (!$giftValid || $giftBalance <= 0) {
@@ -167,7 +174,13 @@ class PaymentSubMethodsService
                 }
 
                 $usedGift = min($giftBalance, $final);
-                // Note: we do not deduct the balance locally here. 
+                
+                if ($commit && $localGiftCard) {
+                    $localGiftCard->balance -= $usedGift;
+                    $localGiftCard->save();
+                }
+                
+                // Note: If falling back to Odoo, we do not deduct the balance locally here. 
                 // Odoo will deduct the balance when the order is successfully created in OdooBookingSyncService.
                 $final -= $usedGift;
             }

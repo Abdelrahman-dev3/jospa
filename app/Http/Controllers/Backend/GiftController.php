@@ -41,6 +41,18 @@ class GiftController extends Controller
             ], 400);
         }
 
+        // 1. Check local database first
+        $localGiftCard = \App\Models\GiftCard::where('ref', $code)->where('payment_status', 1)->first();
+
+        if ($localGiftCard && $localGiftCard->balance > 0) {
+            return response()->json([
+                'status'  => true,
+                'balance' => $localGiftCard->balance,
+                'message' => __('messagess.gift_code_valid')
+            ], 200);
+        }
+
+        // 2. Fallback to Odoo
         $checkUrl = (string) config('services.odoo.giftcard_check_url');
         if (empty($checkUrl)) {
             $bookingCreateUrl = (string) config('services.odoo.booking_create_url');
