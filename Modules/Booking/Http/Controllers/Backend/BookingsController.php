@@ -800,14 +800,14 @@ public function index_list(Request $request)
         $employee_id = $request->employee_id;
         $branch_id = $request->branch_id;
         $locale = app()->getLocale();
-        $data = Service::selectRaw("JSON_UNQUOTE(JSON_EXTRACT(services.name, '$.\"$locale\"')) as service_name,service_branches.*")
-            // select('services.name as service_name', 'service_branches.*')
+        $data = Service::selectRaw("JSON_UNQUOTE(JSON_EXTRACT(services.name, '$.\"$locale\"')) as service_name, services.id, service_branches.service_price, service_branches.duration_min, service_branches.branch_id")
             ->with('employee')
             ->leftJoin('service_branches', 'service_branches.service_id', 'services.id')
+            ->active()
             ->whereHas('category', function ($q) {
                 $q->active();
             })
-            ->where('branch_id', $branch_id);
+            ->where('service_branches.branch_id', $branch_id);
 
         if (isset($employee_id)) {
             $data = $data->whereHas('employee', function ($q) use ($employee_id) {
