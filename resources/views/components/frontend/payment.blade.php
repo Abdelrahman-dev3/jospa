@@ -977,8 +977,8 @@
                         {{ __('messagess.coupon_disabled_by_gift_card') }}
                     </div>
                     <div class="coupon-input">
-                        <input class="form-control" id="invoiceCouponInput" name="invoiceCopon" placeholder="{{ __('messagess.coupon_code') }}">
-                        <button class="apply-btn" type="button" id="applyCoupon">{{ __('messagess.apply') }}</button>
+                        <input class="form-control" id="invoiceCouponInput" name="invoiceCopon" placeholder="{{ __('messagess.coupon_code') }}" @if(isset($GifttCount) && $GifttCount > 0) disabled title="{{ __('messagess.gift_card_coupon_not_allowed') ?? 'Gift cards and coupons cannot be used together' }}" @endif>
+                        <button class="apply-btn" type="button" id="applyCoupon" @if(isset($GifttCount) && $GifttCount > 0) disabled @endif>{{ __('messagess.apply') }}</button>
                     </div>
                     
                     <div class="toggle-input">
