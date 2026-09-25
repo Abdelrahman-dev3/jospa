@@ -35,6 +35,19 @@ class CouponController extends Controller
         $services = $this->normalizeServices($coupon?->services ?? []);
         $serviceId = (int) $serviceId;
 
+        if (auth()->check()) {
+            $hasGiftCardInCart = \App\Models\GiftCard::where('user_id', auth()->id())
+                ->where('payment_status', 0)
+                ->exists();
+
+            if ($hasGiftCardInCart) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => __('messagess.gift_card_coupon_not_allowed')
+                ]);
+            }
+        }
+
         if ($coupon && in_array($serviceId, $services, true)) {
             // Check specific dates
             if (! $coupon->isAvailableToday()) {
@@ -83,6 +96,19 @@ class CouponController extends Controller
                 'valid' => false,
                 'message' => __('messagess.gift_card_coupon_not_allowed'),
             ], 422);
+        }
+
+        if (auth()->check()) {
+            $hasGiftCardInCart = \App\Models\GiftCard::where('user_id', auth()->id())
+                ->where('payment_status', 0)
+                ->exists();
+
+            if ($hasGiftCardInCart) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => __('messagess.gift_card_coupon_not_allowed'),
+                ], 422);
+            }
         }
 
         $coupon = Coupon::query()
