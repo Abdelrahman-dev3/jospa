@@ -157,9 +157,12 @@
     }
 
     .coupon-input , .gift-input{
-      display: none !important;
+      display: flex;
       gap:8px;
       margin:18px 0;
+    }
+    .coupon-input {
+      display: none !important;
     }
     .payment-disable-reason{
       display:none;
