@@ -546,10 +546,10 @@ class BookingCartController extends Controller
     
     public function destroy($id)
     {
-        $booking = Booking::find($id);
+        $booking = Booking::where('user_id', auth()->id())->find($id);
     
         if (!$booking) {
-            return response()->json(['message' => 'Cart item not found'], 404);
+            return response()->json(['message' => 'Cart item not found or unauthorized'], 404);
         }
         $booking->bookingService()->delete();
         $booking->delete();
@@ -559,10 +559,10 @@ class BookingCartController extends Controller
 
     public function destroy_product($id)
     {
-        $product = Cart::findOrFail($id);
+        $product = Cart::where('user_id', auth()->id())->find($id);
     
         if (!$product) {
-            return response()->json(['message' => 'Cart item not found'], 404);
+            return response()->json(['message' => 'Cart item not found or unauthorized'], 404);
         }
         
         $product->delete();
@@ -572,10 +572,10 @@ class BookingCartController extends Controller
 
     public function destroy_gift($id)
     {
-        $gift = GiftCard::findOrFail($id);
+        $gift = GiftCard::where('user_id', auth()->id())->find($id);
     
         if (!$gift) {
-            return response()->json(['message' => 'Cart item not found'], 404);
+            return response()->json(['message' => 'Cart item not found or unauthorized'], 404);
         }
         
         $gift->delete();

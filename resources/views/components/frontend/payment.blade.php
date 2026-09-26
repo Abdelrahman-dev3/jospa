@@ -157,7 +157,7 @@
     }
 
     .coupon-input , .gift-input{
-      display:flex;
+      display: none !important;
       gap:8px;
       margin:18px 0;
     }
