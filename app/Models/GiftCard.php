@@ -8,6 +8,7 @@ use Modules\Package\Models\Package;
 
 class GiftCard extends Model
 {
+    use \Illuminate\Database\Eloquent\SoftDeletes;
     protected $fillable = [
         'ref',
         'balance',

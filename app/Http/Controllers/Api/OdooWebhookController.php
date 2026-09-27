@@ -69,6 +69,14 @@ class OdooWebhookController extends Controller
         switch (strtolower($action)) {
             case 'create':
             case 'update':
+                $localCategoryId = 1; // Default
+                if (!empty($data['category_id'])) {
+                    $cat = Category::where('odoo_id', $data['category_id'])->first();
+                    if ($cat) {
+                        $localCategoryId = $cat->id;
+                    }
+                }
+
                 $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
                 $service = Service::updateOrCreate(
                     ['odoo_id' => $odooId],
@@ -85,7 +93,7 @@ class OdooWebhookController extends Controller
                         'default_price' => $data['price'] ?? 0,
                         'duration_min' => $data['duration'] ?? 60,
                         'status' => $data['active'] ?? 1,
-                        'category_id' => $data['category_id'] ?? 1, // Required by DB
+                        'category_id' => $localCategoryId,
                     ]
                 );
                 return response()->json(['status' => true, 'message' => "Service {$action}d successfully.", 'id' => $service->id]);
@@ -113,6 +121,14 @@ class OdooWebhookController extends Controller
         switch (strtolower($action)) {
             case 'create':
             case 'update':
+                $localParentId = null;
+                if (!empty($data['parent_id'])) {
+                    $parentCat = Category::where('odoo_id', $data['parent_id'])->first();
+                    if ($parentCat) {
+                        $localParentId = $parentCat->id;
+                    }
+                }
+
                 $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
                 $category = Category::updateOrCreate(
                     ['odoo_id' => $odooId],
@@ -123,7 +139,7 @@ class OdooWebhookController extends Controller
                         ],
                         'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
                         'status' => $data['active'] ?? 1,
-                        'parent_id' => $data['parent_id'] ?? null,
+                        'parent_id' => $localParentId,
                     ]
                 );
                 return response()->json(['status' => true, 'message' => "Service Category {$action}d successfully.", 'id' => $category->id]);
@@ -151,6 +167,14 @@ class OdooWebhookController extends Controller
         switch (strtolower($action)) {
             case 'create':
             case 'update':
+                $localParentId = null;
+                if (!empty($data['parent_id'])) {
+                    $parentCat = ProductCategory::where('odoo_id', $data['parent_id'])->first();
+                    if ($parentCat) {
+                        $localParentId = $parentCat->id;
+                    }
+                }
+
                 $name = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
                 $category = ProductCategory::updateOrCreate(
                     ['odoo_id' => $odooId],
@@ -158,7 +182,7 @@ class OdooWebhookController extends Controller
                         'name' => $name,
                         'slug' => \Illuminate\Support\Str::slug($name) . '-' . $odooId,
                         'status' => $data['active'] ?? 1,
-                        'parent_id' => $data['parent_id'] ?? null,
+                        'parent_id' => $localParentId,
                     ]
                 );
                 return response()->json(['status' => true, 'message' => "Product Category {$action}d successfully.", 'id' => $category->id]);
@@ -203,7 +227,10 @@ class OdooWebhookController extends Controller
 
                 // Sync category via pivot table if category_id is provided
                 if (!empty($data['category_id'])) {
-                    $product->categories()->syncWithoutDetaching([$data['category_id']]);
+                    $prodCategory = ProductCategory::where('odoo_id', $data['category_id'])->first();
+                    if ($prodCategory) {
+                        $product->categories()->syncWithoutDetaching([$prodCategory->id]);
+                    }
                 }
 
                 return response()->json(['status' => true, 'message' => "Product {$action}d successfully.", 'id' => $product->id]);
