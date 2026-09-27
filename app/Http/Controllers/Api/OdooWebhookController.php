@@ -60,13 +60,15 @@ class OdooWebhookController extends Controller
         switch (strtolower($action)) {
             case 'create':
             case 'update':
+                $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
                 $service = Service::updateOrCreate(
                     ['odoo_id' => $odooId],
                     [
                         'name' => [
                             'ar' => $data['name_ar'] ?? $data['name'] ?? 'Unnamed',
-                            'en' => $data['name_en'] ?? $data['name'] ?? 'Unnamed',
+                            'en' => $nameEn,
                         ],
+                        'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
                         'description' => [
                             'ar' => $data['description_ar'] ?? '',
                             'en' => $data['description_en'] ?? '',
@@ -74,7 +76,7 @@ class OdooWebhookController extends Controller
                         'default_price' => $data['price'] ?? 0,
                         'duration_min' => $data['duration'] ?? 60,
                         'status' => $data['active'] ?? 1,
-                        // Add mapping for category_id, etc. as needed from Odoo
+                        'category_id' => $data['category_id'] ?? 1, // Required by DB
                     ]
                 );
                 return response()->json(['status' => true, 'message' => "Service {$action}d successfully.", 'id' => $service->id]);
