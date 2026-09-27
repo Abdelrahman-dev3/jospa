@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Modules\Service\Models\Service;
+use Modules\Category\Models\Category;
+use Modules\Product\Models\ProductCategory;
+use Modules\Product\Models\Product;
 use Illuminate\Support\Facades\Log;
 
 class OdooWebhookController extends Controller
@@ -38,6 +41,12 @@ class OdooWebhookController extends Controller
         try {
             if ($model === 'service') {
                 return $this->handleServiceSync($action, $data);
+            } elseif ($model === 'service_category') {
+                return $this->handleServiceCategorySync($action, $data);
+            } elseif ($model === 'product_category') {
+                return $this->handleProductCategorySync($action, $data);
+            } elseif ($model === 'product') {
+                return $this->handleProductSync($action, $data);
             }
             
             // Add other models like 'employee', 'booking' here in the future
@@ -88,6 +97,125 @@ class OdooWebhookController extends Controller
                     return response()->json(['status' => true, 'message' => 'Service deleted successfully.']);
                 }
                 return response()->json(['status' => false, 'message' => 'Service not found.'], 404);
+
+            default:
+                return response()->json(['status' => false, 'message' => "Action '{$action}' not recognized."], 400);
+        }
+    }
+
+    private function handleServiceCategorySync(string $action, array $data)
+    {
+        $odooId = $data['odoo_id'] ?? null;
+        if (!$odooId) {
+            return response()->json(['status' => false, 'message' => 'odoo_id is required for service_category sync.'], 400);
+        }
+
+        switch (strtolower($action)) {
+            case 'create':
+            case 'update':
+                $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
+                $category = Category::updateOrCreate(
+                    ['odoo_id' => $odooId],
+                    [
+                        'name' => [
+                            'ar' => $data['name_ar'] ?? $data['name'] ?? 'Unnamed',
+                            'en' => $nameEn,
+                        ],
+                        'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
+                        'status' => $data['active'] ?? 1,
+                        'parent_id' => $data['parent_id'] ?? null,
+                    ]
+                );
+                return response()->json(['status' => true, 'message' => "Service Category {$action}d successfully.", 'id' => $category->id]);
+
+            case 'delete':
+                $category = Category::where('odoo_id', $odooId)->first();
+                if ($category) {
+                    $category->delete();
+                    return response()->json(['status' => true, 'message' => 'Service Category deleted successfully.']);
+                }
+                return response()->json(['status' => false, 'message' => 'Service Category not found.'], 404);
+
+            default:
+                return response()->json(['status' => false, 'message' => "Action '{$action}' not recognized."], 400);
+        }
+    }
+
+    private function handleProductCategorySync(string $action, array $data)
+    {
+        $odooId = $data['odoo_id'] ?? null;
+        if (!$odooId) {
+            return response()->json(['status' => false, 'message' => 'odoo_id is required for product_category sync.'], 400);
+        }
+
+        switch (strtolower($action)) {
+            case 'create':
+            case 'update':
+                $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
+                $category = ProductCategory::updateOrCreate(
+                    ['odoo_id' => $odooId],
+                    [
+                        'name' => [
+                            'ar' => $data['name_ar'] ?? $data['name'] ?? 'Unnamed',
+                            'en' => $nameEn,
+                        ],
+                        'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
+                        'status' => $data['active'] ?? 1,
+                        'parent_id' => $data['parent_id'] ?? null,
+                    ]
+                );
+                return response()->json(['status' => true, 'message' => "Product Category {$action}d successfully.", 'id' => $category->id]);
+
+            case 'delete':
+                $category = ProductCategory::where('odoo_id', $odooId)->first();
+                if ($category) {
+                    $category->delete();
+                    return response()->json(['status' => true, 'message' => 'Product Category deleted successfully.']);
+                }
+                return response()->json(['status' => false, 'message' => 'Product Category not found.'], 404);
+
+            default:
+                return response()->json(['status' => false, 'message' => "Action '{$action}' not recognized."], 400);
+        }
+    }
+
+    private function handleProductSync(string $action, array $data)
+    {
+        $odooId = $data['odoo_id'] ?? null;
+        if (!$odooId) {
+            return response()->json(['status' => false, 'message' => 'odoo_id is required for product sync.'], 400);
+        }
+
+        switch (strtolower($action)) {
+            case 'create':
+            case 'update':
+                $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
+                $product = Product::updateOrCreate(
+                    ['odoo_id' => $odooId],
+                    [
+                        'name' => [
+                            'ar' => $data['name_ar'] ?? $data['name'] ?? 'Unnamed',
+                            'en' => $nameEn,
+                        ],
+                        'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
+                        'description' => [
+                            'ar' => $data['description_ar'] ?? '',
+                            'en' => $data['description_en'] ?? '',
+                        ],
+                        'price' => $data['price'] ?? 0,
+                        'status' => $data['active'] ?? 1,
+                        'category_id' => $data['category_id'] ?? null,
+                    ]
+                );
+                return response()->json(['status' => true, 'message' => "Product {$action}d successfully.", 'id' => $product->id]);
+
+            case 'delete':
+                $product = Product::where('odoo_id', $odooId)->first();
+                if ($product) {
+                    $product->delete();
+                    return response()->json(['status' => true, 'message' => 'Product deleted successfully.']);
+                }
+                return response()->json(['status' => false, 'message' => 'Product not found.'], 404);
 
             default:
                 return response()->json(['status' => false, 'message' => "Action '{$action}' not recognized."], 400);

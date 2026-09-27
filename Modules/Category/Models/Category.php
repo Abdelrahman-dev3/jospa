@@ -21,7 +21,7 @@ class Category extends BaseModel
 
     protected $table = 'categories';
 
-    protected $fillable = ['slug', 'is_visible', 'name', 'status', 'parent_id', 'is_gift_card', 'is_online', 'calendar_color'];
+    protected $fillable = ['slug', 'odoo_id', 'is_visible', 'name', 'status', 'parent_id', 'is_gift_card', 'is_online', 'calendar_color'];
 
     const CUSTOM_FIELD_MODEL = 'Modules\Category\Models\Category';
 
