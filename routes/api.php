@@ -47,6 +47,10 @@ use Modules\Service\Http\Controllers\Backend\API\ServiceController;
 
 Route::match(['get', 'post'], '/webhooks/javna/whatsapp', [JavnaWebhookController::class, 'whatsapp'])->name('webhooks.javna.whatsapp');
 
+// Odoo Webhook Route (Public/Token Auth)
+use App\Http\Controllers\Api\OdooWebhookController;
+Route::post('/webhooks/odoo', [OdooWebhookController::class, 'handle'])->name('webhooks.odoo');
+
 Route::prefix('var')->group(function () {
     Route::controller(AdController::class)->group(function () {
         Route::get('/AD', 'index');
