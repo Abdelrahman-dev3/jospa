@@ -1635,6 +1635,13 @@ public function index_list(Request $request)
         }
         $booking = Booking::findOrFail($id);
 
+        if ($booking->transactions()->where('payment_status', 1)->exists()) {
+            return response()->json([
+                'message' => 'لا يمكن حذف الحجز لوجود دفعة منجزة، يرجى إلغاء الحجز بدلاً من الحذف.', 
+                'status' => false
+            ], 400);
+        }
+
         $booking->delete();
 
         $message = __('messages.delete_form', ['form' => __('booking.singular_title')]);
@@ -1700,13 +1707,20 @@ public function index_list(Request $request)
         $paymentStatus = (int) $request->value;
         $transactionType = $request->input('transaction_type', 'cash');
 
-        BookingTransaction::updateOrCreate(
-            ['booking_id' => $id],
-            [
+        $latestTransaction = BookingTransaction::where('booking_id', $id)->latest('id')->first();
+        
+        if ($latestTransaction) {
+            BookingTransaction::where('booking_id', $id)->update([
                 'payment_status' => $paymentStatus,
                 'transaction_type' => $transactionType,
-            ]
-        );
+            ]);
+        } else {
+            BookingTransaction::create([
+                'booking_id' => $id,
+                'payment_status' => $paymentStatus,
+                'transaction_type' => $transactionType,
+            ]);
+        }
 
         if ($paymentStatus === 1) {
             Booking::where('id', $id)
