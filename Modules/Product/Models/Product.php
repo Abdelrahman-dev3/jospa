@@ -15,6 +15,7 @@ class Product extends BaseModel
     protected $table = 'products';
 
     protected $fillable = [
+        'odoo_id',
         'name',
         'slug',
         'short_description',

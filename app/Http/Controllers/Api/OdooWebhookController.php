@@ -151,15 +151,12 @@ class OdooWebhookController extends Controller
         switch (strtolower($action)) {
             case 'create':
             case 'update':
-                $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
+                $name = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
                 $category = ProductCategory::updateOrCreate(
                     ['odoo_id' => $odooId],
                     [
-                        'name' => [
-                            'ar' => $data['name_ar'] ?? $data['name'] ?? 'Unnamed',
-                            'en' => $nameEn,
-                        ],
-                        'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
+                        'name' => $name,
+                        'slug' => \Illuminate\Support\Str::slug($name) . '-' . $odooId,
                         'status' => $data['active'] ?? 1,
                         'parent_id' => $data['parent_id'] ?? null,
                     ]
@@ -189,24 +186,26 @@ class OdooWebhookController extends Controller
         switch (strtolower($action)) {
             case 'create':
             case 'update':
-                $nameEn = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
+                $name = $data['name_en'] ?? $data['name'] ?? 'Unnamed';
                 $product = Product::updateOrCreate(
                     ['odoo_id' => $odooId],
                     [
-                        'name' => [
-                            'ar' => $data['name_ar'] ?? $data['name'] ?? 'Unnamed',
-                            'en' => $nameEn,
-                        ],
-                        'slug' => \Illuminate\Support\Str::slug($nameEn) . '-' . $odooId,
-                        'description' => [
-                            'ar' => $data['description_ar'] ?? '',
-                            'en' => $data['description_en'] ?? '',
-                        ],
-                        'price' => $data['price'] ?? 0,
+                        'name' => $name,
+                        'slug' => \Illuminate\Support\Str::slug($name) . '-' . $odooId,
+                        'short_description' => $data['description_en'] ?? $data['description'] ?? '',
+                        'description' => $data['description_en'] ?? $data['description'] ?? '',
+                        'min_price' => $data['price'] ?? 0,
+                        'max_price' => $data['price'] ?? 0,
+                        'stock_qty' => $data['stock_qty'] ?? 0,
                         'status' => $data['active'] ?? 1,
-                        'category_id' => $data['category_id'] ?? null,
                     ]
                 );
+
+                // Sync category via pivot table if category_id is provided
+                if (!empty($data['category_id'])) {
+                    $product->categories()->syncWithoutDetaching([$data['category_id']]);
+                }
+
                 return response()->json(['status' => true, 'message' => "Product {$action}d successfully.", 'id' => $product->id]);
 
             case 'delete':
