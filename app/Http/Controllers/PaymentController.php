@@ -144,7 +144,7 @@ class PaymentController extends Controller
 
         $strategy = match ($method) {
             'card' => app(CardPaymentStrategy::class),
-            'urpay', 'stcpay', 'applepay_urpay' => app(UrPayPaymentStrategy::class),
+            'urpay', 'applepay_urpay' => app(UrPayPaymentStrategy::class),
             'tabby' => app(TabbyPaymentStrategy::class),
             'tamara' => app(TamaraPaymentStrategy::class),
             default => throw ValidationException::withMessages([
@@ -214,7 +214,7 @@ class PaymentController extends Controller
             return false;
         }
 
-        $checkMethod = in_array($method, ['stcpay', 'applepay_urpay'], true) ? 'urpay' : $method;
+        $checkMethod = $method === 'applepay_urpay' ? 'urpay' : $method;
 
         if ((FrontendPaymentSettings::paymentMethods()[$checkMethod] ?? 0) !== 1) {
             return false;

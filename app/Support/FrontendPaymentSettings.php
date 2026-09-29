@@ -121,7 +121,7 @@ class FrontendPaymentSettings
     {
         return match ($method) {
             'tap', 'card' => 'card',
-            'urpay', 'stcpay' => 'urpay',
+            'urpay' => 'urpay',
             'tabby' => 'tabby',
             'tamara' => 'tamara',
             default => null,
