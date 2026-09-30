@@ -225,6 +225,12 @@ class BookingsController extends Controller
             if (!in_array($booking->status, ['check_in', 'checkout', 'completed'])) {
 
                 $booking->update(['status' => 'cancelled']);
+
+                try {
+                    \App\Jobs\SendCancelBookingWhatsAppJob::dispatch($booking->id);
+                } catch (\Exception $e) {
+                    \Log::error("Failed to dispatch cancel WhatsApp job: " . $e->getMessage());
+                }
             } else {
 
                 return response()->json(['message' => "Cannot cancel a booking with status: {$booking->status}"], 422);
@@ -239,6 +245,12 @@ class BookingsController extends Controller
             }
             if (!empty($request->services)) {
                 $this->updateBookingService($request->services, $booking->id);
+            }
+
+            try {
+                \App\Jobs\SendUpdateBookingWhatsAppJob::dispatch($booking->id);
+            } catch (\Exception $e) {
+                \Log::error("Failed to dispatch update WhatsApp job: " . $e->getMessage());
             }
         }
 
@@ -286,6 +298,14 @@ class BookingsController extends Controller
             // Send user account notification for status change
             if ($booking->user) {
                 app(UserNotificationService::class)->notifyBookingStatusChanged($booking->user, $booking, $status);
+            }
+
+            if ($status === 'cancelled') {
+                try {
+                    \App\Jobs\SendCancelBookingWhatsAppJob::dispatch($booking->id);
+                } catch (\Exception $e) {
+                    \Log::error("Failed to dispatch cancel WhatsApp job: " . $e->getMessage());
+                }
             }
         }
 
