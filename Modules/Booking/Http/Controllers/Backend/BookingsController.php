@@ -4,6 +4,7 @@ namespace Modules\Booking\Http\Controllers\Backend;
 
 use App\Authorizable;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendCancelBookingWhatsAppJob;
 use App\Jobs\SendUpdateBookingWhatsAppJob;
 use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
@@ -1680,6 +1681,7 @@ public function index_list(Request $request)
     public function updateStatus($id, Request $request)
     {
         $booking = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($id);
+        $previousStatus = $booking->status;
         $status = $request->status;
 
         if (isset($request->action_type) && $request->action_type == 'update-status') {
@@ -1687,6 +1689,17 @@ public function index_list(Request $request)
         }
 
         $booking->update(['status' => $status]);
+
+        if ($status === 'cancelled' && $previousStatus !== 'cancelled') {
+            try {
+                SendCancelBookingWhatsAppJob::dispatch($booking->id);
+            } catch (\Throwable $exception) {
+                \Log::error('Failed to dispatch cancelled-booking WhatsApp job.', [
+                    'booking_id' => $booking->id,
+                    'exception' => $exception->getMessage(),
+                ]);
+            }
+        }
 
         $notify_type = null;
 
