@@ -79,6 +79,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Booking Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Appointment values are stored as the salon's local wall-clock time.
+    | This timezone is used when selecting bookings for timed reminders.
+    |
+    */
+    'booking_timezone' => env('BOOKING_TIMEZONE', 'Asia/Riyadh'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

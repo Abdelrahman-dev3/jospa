@@ -35,8 +35,11 @@ class SendBookingReminders extends Command
 
         // Find bookings starting between 5h45m and 6h15m from now
         // This 30-minute window ensures the every-15-minute scheduler catches them exactly once
-        $from = Carbon::now()->addHours(5)->addMinutes(45);
-        $to   = Carbon::now()->addHours(6)->addMinutes(15);
+        // Booking dates are entered and stored in the salon's local time, rather
+        // than UTC. Use that same timezone when calculating the six-hour window.
+        $timezone = config('app.booking_timezone', 'Asia/Riyadh');
+        $from = Carbon::now($timezone)->addHours(5)->addMinutes(45);
+        $to   = Carbon::now($timezone)->addHours(6)->addMinutes(15);
 
         $bookings = Booking::with('user')
             ->whereNotIn('status', ['cancelled', 'canceled', 'completed'])
