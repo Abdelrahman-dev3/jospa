@@ -95,6 +95,9 @@ return [
         // at the PDF template; PDF templates must be sent with a document header.
         'whatsapp_gift_card_recipient_template_name' => env('JAVNA_WHATSAPP_GIFT_CARD_RECIPIENT_TEMPLATE_NAME'),
         'whatsapp_booking_confirmation_template_name' => env('JAVNA_WHATSAPP_BOOKING_CONFIRMATION_TEMPLATE_NAME', 'jospa_appointment_confirmation'),
+        'whatsapp_booking_update_template_name' => env('JAVNA_WHATSAPP_BOOKING_UPDATE_TEMPLATE_NAME', 'jospa_appointment_update'),
+        'whatsapp_booking_cancel_template_name' => env('JAVNA_WHATSAPP_BOOKING_CANCEL_TEMPLATE_NAME', 'jospa_appointment_cancel'),
+        'whatsapp_booking_reminder_template_name' => env('JAVNA_WHATSAPP_BOOKING_REMINDER_TEMPLATE_NAME', 'jospa_appointment_reminder'),
         'whatsapp_evaluation_template_name' => env('JAVNA_WHATSAPP_EVALUATION_TEMPLATE_NAME', 'post_service__evaluation'),
     ],
 

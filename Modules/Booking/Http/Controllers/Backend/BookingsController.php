@@ -4,6 +4,7 @@ namespace Modules\Booking\Http\Controllers\Backend;
 
 use App\Authorizable;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendUpdateBookingWhatsAppJob;
 use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
 use App\Models\User;
@@ -1191,12 +1192,15 @@ public function index_list(Request $request)
         return $this->withEmployeeScheduleLocks($employeeIds, $date, function () use ($request, $id) {
             return DB::transaction(function () use ($request, $id) {
                 $booking = Booking::with('transactions')->lockForUpdate()->findOrFail($id);
+                $previousStartDateTime = $booking->start_date_time;
 
                 if ($booking->transactions->contains('payment_status', 1)) {
                     $this->updatePaidBookingSchedule($booking, $request);
 
                     // FIX: validate the new schedule before returning success.
                     $this->assertNoScheduleConflicts($booking);
+
+                    $this->notifyCustomerOfRescheduledBooking($booking, $previousStartDateTime);
 
                     $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
 
@@ -1236,6 +1240,8 @@ public function index_list(Request $request)
                 // an internal overlap, or a slot outside the employee's availability.
                 $this->assertNoScheduleConflicts($booking);
 
+                $this->notifyCustomerOfRescheduledBooking($booking, $previousStartDateTime);
+
                 $message = __('booking.booking_service_update', ['form' => __('booking.singular_title')]);
 
                 $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($booking->id);
@@ -1248,6 +1254,28 @@ public function index_list(Request $request)
     private function updatePaidBookingSchedule(Booking $booking, Request $request): void
     {
         $this->updateExistingBookingSchedule($booking, $request);
+    }
+
+    /** Send an approved WhatsApp template only when the appointment time changed. */
+    private function notifyCustomerOfRescheduledBooking(Booking $booking, $previousStartDateTime): void
+    {
+        $booking->refresh();
+
+        if ((string) $booking->start_date_time === (string) $previousStartDateTime) {
+            return;
+        }
+
+        // A reminder already sent for the old appointment must not suppress the new one.
+        $booking->update(['reminder_sent_at' => null]);
+
+        try {
+            SendUpdateBookingWhatsAppJob::dispatch($booking->id)->afterCommit();
+        } catch (\Throwable $exception) {
+            \Log::error('Failed to dispatch rescheduled-booking WhatsApp job.', [
+                'booking_id' => $booking->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function updateExistingBookingSchedule(Booking $booking, Request $request): void
