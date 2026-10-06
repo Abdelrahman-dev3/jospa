@@ -215,10 +215,18 @@ class ReconcileUrPayPendingPayments extends Command
 
     private function resolvePayloadStatus(array $payload): ?string
     {
-        // Check result/Result first
+        // paymentId = -1 means the bank has no record of this payment
+        $paymentId = $payload['paymentId'] ?? $payload['PaymentId'] ?? null;
+        if ($paymentId !== null && (string) $paymentId === '-1') {
+            return 'failure';
+        }
+
+        // Check result/Result and error fields
         $resultCandidates = [
             $payload['result'] ?? null,
             $payload['Result'] ?? null,
+            $payload['errorText'] ?? null,
+            $payload['ErrorText'] ?? null,
             $payload['responsecode'] ?? null,
             $payload['responseCode'] ?? null,
             $payload['ResponseCode'] ?? null,
