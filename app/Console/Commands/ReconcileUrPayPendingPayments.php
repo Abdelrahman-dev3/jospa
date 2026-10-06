@@ -80,6 +80,8 @@ class ReconcileUrPayPendingPayments extends Command
             $this->line("نتيجة البنك: " . ($queryResult['result'] ?? $queryResult['Result'] ?? 'غير معروف'));
             $this->line("الحالة المُحللة: " . ($status ?? 'غير محددة'));
             $this->line("المبلغ المدفوع: {$paidAmount} SAR");
+            $this->line("الرد الكامل من البنك:");
+            $this->line(json_encode($queryResult, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 
             Log::info('UrPay reconciliation: bank query result.', [
                 'attempt_id' => $attempt->id,
@@ -213,30 +215,65 @@ class ReconcileUrPayPendingPayments extends Command
 
     private function resolvePayloadStatus(array $payload): ?string
     {
-        $result = strtolower(trim((string) ($payload['result'] ?? $payload['Result'] ?? '')));
-        if ($result === '') {
-            return null;
-        }
+        // Check result/Result first
+        $resultCandidates = [
+            $payload['result'] ?? null,
+            $payload['Result'] ?? null,
+            $payload['responsecode'] ?? null,
+            $payload['responseCode'] ?? null,
+            $payload['ResponseCode'] ?? null,
+            $payload['status'] ?? null,
+            $payload['Status'] ?? null,
+            $payload['authRespCode'] ?? null,
+            $payload['responseMessage'] ?? null,
+            $payload['authRespMessage'] ?? null,
+        ];
 
-        $cancelKeywords = ['cancel', 'cancelled', 'canceled', 'abort'];
-        foreach ($cancelKeywords as $keyword) {
-            if (str_contains($result, $keyword)) {
-                return 'cancel';
+        foreach ($resultCandidates as $candidate) {
+            if ($candidate === null || trim((string) $candidate) === '') {
+                continue;
+            }
+
+            $result = strtolower(trim((string) $candidate));
+
+            $cancelKeywords = ['cancel', 'cancelled', 'canceled', 'abort'];
+            foreach ($cancelKeywords as $keyword) {
+                if (str_contains($result, $keyword)) {
+                    return 'cancel';
+                }
+            }
+
+            $failKeywords = ['not captured', 'not-captured', 'not_captured', 'not approved', 'not-approved', 'not_approved', 'unsuccessful', 'fail', 'declin', 'denied', 'reject', 'error', 'expired', 'timeout', 'void'];
+            foreach ($failKeywords as $keyword) {
+                if (str_contains($result, $keyword)) {
+                    return 'failure';
+                }
+            }
+
+            $successKeywords = ['captured', 'approved', 'success', 'successful', 'paid', 'settled'];
+            foreach ($successKeywords as $keyword) {
+                if (str_contains($result, $keyword)) {
+                    return 'success';
+                }
             }
         }
 
-        $failKeywords = ['not captured', 'not-captured', 'not_captured', 'not approved', 'not-approved', 'not_approved', 'unsuccessful', 'fail', 'declin', 'denied', 'reject', 'error', 'expired', 'timeout', 'void'];
-        foreach ($failKeywords as $keyword) {
-            if (str_contains($result, $keyword)) {
-                return 'failure';
-            }
+        // Fallback: if auth code and tranid exist with a valid amount, it's likely captured
+        $auth = trim((string) ($payload['auth'] ?? $payload['Auth'] ?? ''));
+        $tranId = trim((string) ($payload['tranid'] ?? $payload['transId'] ?? $payload['tranId'] ?? ''));
+        $paidAmount = $this->resolveAmount($payload);
+
+        if ($auth !== '' && $tranId !== '' && $paidAmount > 0) {
+            return 'success';
         }
 
-        $successKeywords = ['captured', 'approved', 'success', 'successful', 'paid', 'settled'];
-        foreach ($successKeywords as $keyword) {
-            if (str_contains($result, $keyword)) {
-                return 'success';
-            }
+        // Fallback: check responsecode numeric values (00 = success for many banks)
+        $respCode = trim((string) ($payload['responsecode'] ?? $payload['responseCode'] ?? $payload['ResponseCode'] ?? ''));
+        if ($respCode === '00' || $respCode === '000') {
+            return 'success';
+        }
+        if ($respCode !== '' && $respCode !== '00' && $respCode !== '000') {
+            return 'failure';
         }
 
         return null;
