@@ -94,11 +94,27 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     public function success(Request $request)
     {
+        Log::info('UrPay SUCCESS callback received.', [
+            'method' => $request->method(),
+            'all_params' => $request->all(),
+            'headers' => $request->headers->all(),
+            'ip' => $request->ip(),
+            'url' => $request->fullUrl(),
+        ]);
+
         return $this->handleCallback($request, 'success');
     }
 
     public function failure(Request $request)
     {
+        Log::info('UrPay FAILURE callback received.', [
+            'method' => $request->method(),
+            'all_params' => $request->all(),
+            'headers' => $request->headers->all(),
+            'ip' => $request->ip(),
+            'url' => $request->fullUrl(),
+        ]);
+
         $message = $this->resolveGatewayMessage($request, __('messages.payment_failed'));
         $this->markPaymentAttemptFailed($this->resolveAttemptId($request, session('urpay_payment')), $message, [
             'callback_payload' => $request->all(),
@@ -114,6 +130,14 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
 
     public function cancel(Request $request)
     {
+        Log::info('UrPay CANCEL callback received.', [
+            'method' => $request->method(),
+            'all_params' => $request->all(),
+            'headers' => $request->headers->all(),
+            'ip' => $request->ip(),
+            'url' => $request->fullUrl(),
+        ]);
+
         $message = $this->resolveGatewayMessage($request, __('messages.payment_cancelled'));
         $this->markPaymentAttemptCancelled($this->resolveAttemptId($request, session('urpay_payment')), $message, [
             'callback_payload' => $request->all(),
@@ -136,6 +160,17 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
         }
 
         $verification = $this->verifyPayment($request, $data);
+
+        $decryptedForLog = $this->getDecryptedResponsePayload($request);
+        Log::info('UrPay handleCallback: verification result.', [
+            'expected_outcome' => $expectedOutcome,
+            'verification_ok' => $verification['ok'],
+            'verification_status' => $verification['status'] ?? null,
+            'verification_message' => $verification['message'] ?? null,
+            'decrypted_payload' => $decryptedForLog,
+            'attempt_id' => $this->resolveAttemptId($request, $data),
+        ]);
+
         if (! $verification['ok']) {
             $this->markPaymentAttemptFailed($this->resolveAttemptId($request, $data), $verification['message'], [
                 'gateway_transaction_id' => $this->resolveUrPayTransactionId($request, $data),

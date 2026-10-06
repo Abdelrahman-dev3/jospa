@@ -24,6 +24,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('occasions:send-birthdays')->dailyAt('10:00')->withoutOverlapping();
         $schedule->command('occasions:send-recurring')->dailyAt('10:00')->withoutOverlapping();
         $schedule->command('booking:send-reminders')->everyFifteenMinutes()->withoutOverlapping();
+        $schedule->command('urpay:reconcile-pending --minutes=15')->everyTenMinutes()->withoutOverlapping();
     }
 
     /**
