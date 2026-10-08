@@ -248,7 +248,7 @@
         height: 48px;
     }
 }
-@media (max-width: 992px) {
+@media (max-width: 991.98px) {
     .m-nav {
         display: none !important;
     }
@@ -317,7 +317,7 @@
 }
 
 /* Desktop proportions follow the compact, two-row reference header. */
-@media (min-width: 993px) {
+@media (min-width: 992px) {
     .mob-nav {
         display: none;
     }
@@ -450,4 +450,97 @@
     .m-nav .more-btn-nav img {
         margin: 0 !important;
     }
+}
+/* Keep shared header typography independent of page heading styles. */
+.site-navbar, #mobileMenu {
+    font-family: 'Zain', sans-serif;
+}
+.site-navbar .settings > a {
+    color: #fff;
+    text-decoration: none;
+}
+.site-navbar .icon-text {
+    line-height: 1.4;
+    font-weight: 500;
+}
+.m-nav.site-navbar .links .nav-link {
+    font-size: 16px;
+    line-height: 1.5;
+    font-weight: 400;
+    padding: 8px 0;
+}
+.m-nav.site-navbar .nav-item {
+    margin: 0;
+}
+#mobileMenu .nav-item {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+}
+#mobileMenu .nav-link {
+    padding: 10px 0;
+    font-weight: 400;
+}
+@media (min-width: 992px) and (max-width: 1399.98px) {
+    .m-nav.site-navbar {
+        height: 150px;
+    }
+    .m-nav.site-navbar .desktop-nav-main {
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px 16px;
+    }
+    .m-nav.site-navbar .links {
+        flex: 0 0 100%;
+        order: 4;
+    }
+    .m-nav.site-navbar .links .navbar-nav {
+        gap: clamp(10px, 2vw, 24px) !important;
+    }
+}
+@media (min-width: 992px) {
+    .mob-nav.site-navbar {
+        display: none !important;
+    }
+}
+@media (max-width: 991.98px) {
+    .m-nav.site-navbar {
+        display: none !important;
+    }
+    .mob-nav.site-navbar {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        direction: inherit;
+    }
+    .mob-nav.site-navbar .logo-img {
+        width: clamp(80px, 22vw, 148px) !important;
+        height: auto;
+    }
+    .mob-nav.site-navbar .settings {
+        min-width: 0 !important;
+        gap: 10px !important;
+        margin: 0 !important;
+    }
+    .mob-nav.site-navbar .icon-circle {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 4px;
+        font-size: 20px;
+    }
+    .mob-nav.site-navbar .icon-text {
+        font-size: 11px !important;
+    }
+    .mob-nav.site-navbar .mob-btn {
+        padding: 4px;
+        flex-shrink: 0;
+    }
+}
+@media (min-width: 992px) {
+    .frontend-navbar-spacer { min-height: 115px; }
+}
+@media (min-width: 992px) and (max-width: 1399.98px) {
+    .frontend-navbar-spacer { min-height: 150px; }
 }

@@ -58,9 +58,7 @@ public function getServiceGroups(Request $request)
 
         if ($is_home) {
             $serviceQuery->where('services.is_visible', 1);
-        } else {
-            $serviceQuery->where('services.is_visible', 0);
-        }
+        } 
     });
 
     if ($is_home) {

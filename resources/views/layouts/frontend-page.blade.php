@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="{{ $htmlLang ?? app()->getLocale() }}" dir="{{ $htmlDir ?? language_direction() }}" class="{{ trim('theme-fs-sm ' . ($htmlClass ?? '')) }}">
 <head>
     @yield('head')
@@ -24,7 +24,7 @@
     @endif
 
     @if($showNavbar)
-        <div class="position-relative" @if(!is_null($topSpacerHeight)) style="height: {{ $topSpacerHeight }};" @endif>
+        <div class="position-relative frontend-navbar-spacer" @if(!is_null($topSpacerHeight)) style="height: {{ $topSpacerHeight }};" @endif>
             @include('components.frontend.navbar')
             @if($showTopNotifications)
                 @include('components.frontend.notifications')
