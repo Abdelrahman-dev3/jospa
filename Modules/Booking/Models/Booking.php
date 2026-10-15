@@ -374,6 +374,11 @@ class Booking extends BaseModel
         return $this->hasMany(BookingPackageService::class, 'booking_id', 'id');
     }
 
+    public function activities()
+    {
+        return $this->morphMany(\Spatie\Activitylog\Models\Activity::class, 'subject')->latest('id');
+    }
+
     protected static function booted()
     {
         static::updated(function ($booking) {

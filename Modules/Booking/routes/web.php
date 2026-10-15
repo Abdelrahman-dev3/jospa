@@ -43,6 +43,7 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::get('/services-index_list', [BookingsController::class, 'services_index_list'])->name('services_index_list');
         Route::get('/trashed', [BookingsController::class, 'trashed'])->name('trashed');
         Route::patch('/trashed/{id}', [BookingsController::class, 'restore'])->name('restore');
+        Route::get('/{id}/activity-log', [BookingsController::class, 'activityLog'])->name('activity_log');
         Route::post('/update-status/{id}', [BookingsController::class, 'updateStatus'])->name('updateStatus');
         Route::post('/update-payment-status/{id}', [BookingsController::class, 'updatePaymentStatus'])->name('updatePaymentStatus');
         Route::post('/employee-order', [BookingsController::class, 'updateEmployeeOrder'])->name('employee_order');

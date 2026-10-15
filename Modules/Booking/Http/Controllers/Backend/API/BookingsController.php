@@ -25,6 +25,7 @@ use Modules\Promotion\Models\Coupon;
 use Modules\Promotion\Models\Promotion;
 use Modules\Promotion\Models\UserCouponRedeem;
 use Modules\Package\Models\BookingPackageService;
+use Modules\Booking\Services\BookingActivityLogger;
 //use Modules\Booking\Trait\BookingTrait;
 
 class BookingsController extends Controller
@@ -213,12 +214,14 @@ class BookingsController extends Controller
             \Log::error($e->getMessage());
         }
     
+        BookingActivityLogger::logCreated($booking, auth()->user());
         return response()->json(['message' => $message, 'status' => true, 'booking_id' => $booking->id], 200);
     }
 
     public function update(Request $request)
     {
         $booking = Booking::findOrFail($request->id);
+        $oldSnapshot = BookingActivityLogger::createSnapshot($booking);
 
         if ($request->has('status') && $request->status == 'cancelled') {
 
@@ -254,6 +257,9 @@ class BookingsController extends Controller
             }
         }
 
+        $newSnapshot = BookingActivityLogger::createSnapshot($booking->fresh());
+        BookingActivityLogger::logUpdated($booking, $oldSnapshot, $newSnapshot, auth()->user());
+
         $message = __('booking.booking_update');
 
         return response()->json(['message' => $message, 'status' => true], 200);
@@ -269,7 +275,9 @@ class BookingsController extends Controller
             $status = $request->value;
         }
 
+        $oldStatus = $booking->status;
         $booking->update(['status' => $status]);
+        BookingActivityLogger::logStatusChanged($booking, $oldStatus, $status, auth()->user());
 
         $notify_type = null;
 

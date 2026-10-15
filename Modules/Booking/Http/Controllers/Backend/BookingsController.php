@@ -39,6 +39,7 @@ use Modules\Promotion\Models\UserCouponRedeem;
 use Modules\Package\Models\PackageService;
 use Modules\Package\Models\UserPackageRedeem;
 use Modules\Package\Models\UserPackageServices;
+use Modules\Booking\Services\BookingActivityLogger;
 class BookingsController extends Controller
 {
     // use Authorizable;
@@ -1103,6 +1104,7 @@ public function index_list(Request $request)
                 }
 
                 $data = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services', )->findOrFail($booking->id);
+                BookingActivityLogger::logCreated($data, auth()->user());
 
                 return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($data)], 200);
             }, 3); // FIX: retry up to 3x on deadlock before giving up
@@ -1183,6 +1185,7 @@ public function index_list(Request $request)
         // employee who wasn't previously involved, and that employee's schedule needs
         // the same protection as a brand-new booking would get.
         $existing = Booking::with('services', 'bookingPackages')->find($id);
+        $oldSnapshot = $existing ? BookingActivityLogger::createSnapshot($existing) : [];
         $employeeIds = array_merge(
             $this->extractRequestEmployeeIds($request),
             $existing ? $existing->services->pluck('employee_id')->all() : [],
@@ -1190,8 +1193,8 @@ public function index_list(Request $request)
         );
         $date = $this->extractRequestDate($request, $existing->start_date_time ?? null);
 
-        return $this->withEmployeeScheduleLocks($employeeIds, $date, function () use ($request, $id) {
-            return DB::transaction(function () use ($request, $id) {
+        return $this->withEmployeeScheduleLocks($employeeIds, $date, function () use ($request, $id, $oldSnapshot) {
+            return DB::transaction(function () use ($request, $id, $oldSnapshot) {
                 $booking = Booking::with('transactions')->lockForUpdate()->findOrFail($id);
                 $previousStartDateTime = $booking->start_date_time;
 
@@ -1689,6 +1692,7 @@ public function index_list(Request $request)
         }
 
         $booking->update(['status' => $status]);
+        BookingActivityLogger::logStatusChanged($booking, $previousStatus, $status, auth()->user(), $request->input('reason'));
 
         if ($status === 'cancelled' && $previousStatus !== 'cancelled') {
             try {
@@ -2391,4 +2395,64 @@ public function index_list(Request $request)
         return $name;
     }
 
+
+    public function activityLog($id, Request $request)
+    {
+        $booking = Booking::withTrashed()->with(['user', 'branch', 'services.employee', 'bookingPackages', 'createdBy', 'updatedBy', 'deletedBy'])->findOrFail($id);
+
+        $activities = BookingActivityLogger::getFormattedActivities($booking);
+
+        $summary = [
+            'booking_id' => $booking->id,
+            'customer_name' => $booking->user ? ($booking->user->full_name ?? $booking->user->name) : '-',
+            'customer_phone' => $booking->user->mobile ?? '-',
+            'branch_name' => $booking->branch->name ?? '-',
+            'status' => $booking->status,
+            'status_label' => BookingActivityLogger::getStatusLabel($booking->status),
+            'status_color' => BookingActivityLogger::$statusColors[$booking->status] ?? 'primary',
+            'status_icon' => BookingActivityLogger::$statusIcons[$booking->status] ?? 'fa-solid fa-calendar',
+            'created_by' => BookingActivityLogger::formatCauser($booking->createdBy ?? $booking->user, 'المنشئ'),
+            'created_at' => $booking->created_at ? $booking->created_at->translatedFormat('d F Y - h:i A') : '-',
+            'created_time_ago' => $booking->created_at ? $booking->created_at->diffForHumans() : '-',
+            'updated_by' => BookingActivityLogger::formatCauser($booking->updatedBy, 'آخر تعديل'),
+            'updated_at' => $booking->updated_at ? $booking->updated_at->translatedFormat('d F Y - h:i A') : '-',
+            'updated_time_ago' => $booking->updated_at ? $booking->updated_at->diffForHumans() : '-',
+            'is_deleted' => $booking->trashed(),
+            'deleted_by' => $booking->trashed() ? BookingActivityLogger::formatCauser($booking->deletedBy, 'الحاذف') : null,
+            'deleted_at' => $booking->deleted_at ? $booking->deleted_at->translatedFormat('d F Y - h:i A') : null,
+            'total_activities_count' => count($activities),
+        ];
+
+        if ($request->ajax() && $request->wantsJson() && !$request->has('html')) {
+            return response()->json([
+                'status' => true,
+                'booking' => $summary,
+                'activities' => $activities,
+            ]);
+        }
+
+        return view('booking::backend.bookings.activity_log_modal', compact('booking', 'activities', 'summary'));
+    }
+
+    public function restore($id)
+    {
+        $booking = Booking::withTrashed()->findOrFail($id);
+        $booking->restore();
+        $booking->deleted_by = null;
+        $booking->save();
+
+        BookingActivityLogger::logRestored($booking, auth()->user());
+
+        return response()->json(['status' => true, 'message' => __('messages.restore_form', ['form' => __('booking.singular_title')])]);
+    }
+
+    public function trashed()
+    {
+        $module_action = 'Trashed List';
+        $module_name = $this->module_name;
+        $module_title = $this->module_title;
+        $module_icon = $this->module_icon;
+        $bookings = Booking::onlyTrashed()->with('user', 'createdBy')->paginate(10);
+        return view('booking::backend.bookings.trash', compact('module_action', 'module_name', 'module_title', 'module_icon', 'bookings'));
+    }
 }
