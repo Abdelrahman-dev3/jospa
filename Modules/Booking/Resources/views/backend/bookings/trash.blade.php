@@ -65,11 +65,8 @@
                                         {{ $module_name_singular->created_by }}
                                     </td>
                                     <td class="text-end">
-                                        <a href="javascript:void(0)"
-                                            data-iq-modal="open"
-                                            data-iq-modal-title="سجل حركات ونشاطات الحجز #{{ $module_name_singular->id }}"
-                                            data-iq-modal-size="xl"
-                                            data-iq-modal-url="{{ route('backend.bookings.activity_log', $module_name_singular->id) }}"
+                                        <a href="{{ route('backend.bookings.activity_log', $module_name_singular->id) }}"
+                                            target="_blank"
                                             class="btn btn-info btn-sm" data-bs-toggle="tooltip"
                                             title="سجل الحجز (Activity Log)"><i class="fa-solid fa-clock-rotate-left"></i></a>
                                         <a href="{{ route("backend.$module_name.restore", $module_name_singular) }}"

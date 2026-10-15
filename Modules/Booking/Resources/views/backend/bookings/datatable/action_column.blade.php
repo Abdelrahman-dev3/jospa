@@ -1,10 +1,7 @@
 <div class="text-end d-flex gap-2 align-items-center justify-content-end">
     <!-- Activity Log Button -->
-    <a href="javascript:void(0)"
-        data-iq-modal="open"
-        data-iq-modal-title="سجل حركات ونشاطات الحجز #{{ $data->id }}"
-        data-iq-modal-size="xl"
-        data-iq-modal-url="{{ route('backend.bookings.activity_log', $data->id) }}"
+    <a href="{{ route('backend.bookings.activity_log', $data->id) }}"
+        target="_blank"
         class="btn btn-sm btn-icon btn-soft-info"
         data-bs-toggle="tooltip"
         data-bs-placement="top"
