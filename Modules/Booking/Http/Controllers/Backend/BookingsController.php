@@ -2432,7 +2432,13 @@ public function index_list(Request $request)
             ]);
         }
 
-        return view('booking::backend.bookings.activity_log_modal', compact('booking', 'activities', 'summary'));
+        // If AJAX request asking for HTML (for modal), return modal partial
+        if ($request->ajax()) {
+            return view('booking::backend.bookings.activity_log_modal', compact('booking', 'activities', 'summary'));
+        }
+
+        // Full page view for direct URL access
+        return view('booking::backend.bookings.activity_log', compact('booking', 'activities', 'summary'));
     }
 
     public function restore($id)
