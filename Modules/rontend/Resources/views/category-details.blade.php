@@ -501,6 +501,90 @@
               clip-path: inset(0 0 0 100%);
             }
           }
+          .sub-service-card {
+              box-sizing: border-box;
+              width: 100%;
+              min-width: 0;
+              min-height: 340px;
+              border-radius: 18px;
+              display: flex;
+              background-color: #40352c;
+              background-size: cover;
+              background-position: center;
+              overflow: hidden;
+          }
+          .sub-service-card__body {
+              box-sizing: border-box;
+              width: 100%;
+              min-width: 0;
+              padding: 24px;
+              display: flex;
+              flex-direction: column;
+              gap: 18px;
+              background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.85));
+              color: #fff;
+              text-align: center;
+              overflow-wrap: break-word;
+          }
+          .sub-service-card__title {
+              margin: 0;
+              color: #fff;
+              font-size: 22px;
+              font-weight: 700;
+              line-height: 1.5;
+          }
+          .sub-service-card__description {
+              margin: 0;
+              font-size: 16px;
+              font-weight: 400;
+              line-height: 1.8;
+              white-space: pre-line;
+          }
+          .sub-service-card__meta {
+              display: flex;
+              flex-wrap: wrap;
+              justify-content: center;
+              gap: 12px 20px;
+              margin-top: auto;
+              padding-top: 8px;
+              font-size: 16px;
+              line-height: 1.5;
+          }
+          .sub-service-card__meta > span {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+          }
+          .sub-service-card__meta img {
+              width: 15px;
+              height: 15px;
+              object-fit: contain;
+              flex-shrink: 0;
+          }
+          .sub-service-card__book {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+              width: 100%;
+              min-height: 46px;
+              padding: 10px 16px;
+              border: 1px solid rgba(255,255,255,.6);
+              border-radius: 28px;
+              background: var(--site-brand, #BF9456);
+              color: #fff;
+              font: inherit;
+              font-size: 17px;
+              font-weight: 700;
+              line-height: 1.5;
+              cursor: pointer;
+          }
+          .sub-service-card__book img { width: 16px; }
+          .sub-service-card__book:hover { filter: brightness(1.1); }
+          .sub-service-card__book:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+          @media (max-width: 575.98px) {
+              .sub-service-card__body { padding: 20px; }
+          }
       </style>
 @endsection
 
@@ -572,20 +656,20 @@
         <!-- sub serves card-->
         <div class="container my-5">
             @if($category->services && $category->services->count() > 0)
-                <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-3 p-3">
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
                     @foreach($category->services as $service)
-                        <div class="col position-relative" style="min-height: 260px;">
-                            <div class="galary" style="background-image: url({{  $service->feature_image ?? asset('images/pages/Rectangle%2042520.png') }});
+                        <div class="col d-flex">
+                            <div class="sub-service-card" style="background-image: url('{{ $service->feature_image ?? asset('images/pages/Rectangle%2042520.png') }}');
                                         background-size: cover;
                                         background-position: center;
-                                        height: 100%; "></div>
-                            <div class="cont">
-                                <h1>{{ $service->name }}</h1>
+                                        ">
+                            <div class="sub-service-card__body">
+                                <h3 class="sub-service-card__title">{{ $service->name }}</h3>
                                     @php
                                       $description = $service->description;
         
                                       if (is_string($description)) {
-                                          $description = json_decode($description, true);
+                                          $description = json_decode($description, true) ?? [$currentLocale => $description];
                                       }
         
                                       if (!is_array($description)) {
@@ -593,19 +677,18 @@
                                       }
                                     @endphp
                                 @if(!empty($description[$currentLocale]))
-                                  <div class="descrip">{{ Str::limit($description[$currentLocale], 120) ?? '' }}</div>
+                                  <div class="sub-service-card__description">{{ $description[$currentLocale] }}</div>
                                 @endif
         
-                                <div class="price_min">
-                                    <div> <img style="width: 15px;margin: 0 7px;" src="{{ asset('/images/icons/Vector (3).png') }}"> {{ $service->default_price }} {{ __('messagess.SAR') }}</div>
-                                    <span><img style="width: 15px;margin: 0 7px;" src="{{ asset('/images/icons/Vector (4).png') }}"> {{ $service->duration_min ?? 0 }} {{ __('messagess.minutes') }} </span>
+                                <div class="sub-service-card__meta">
+                                    <span><img src="{{ asset('/images/icons/Vector (3).png') }}" alt="">{{ $service->default_price }} {{ __('messagess.SAR') }}</span>
+                                    <span><img src="{{ asset('/images/icons/Vector (4).png') }}" alt="">{{ $service->duration_min ?? 0 }} {{ __('messagess.minutes') }}</span>
                                 </div>
-        
-                                <div class="m-btn">
-                                <a onclick="selectMainService_sub({{ $id }} , {{ $service->id }})" class="more-btn-hero">
-                                    <p style="font-weight: 100;color:white;font-size: 16px;margin: 0 13px;font-family: 'Zain', sans-serif;"><img style="width: 15px;margin: 0 7px;" src="{{ asset('images/icons/Vector (2).png') }}" > {{ __('messagess.book_now') }} </p>
-                                </a>
-                                </div>
+                                <button type="button" onclick="selectMainService_sub({{ $id }}, {{ $service->id }})" class="sub-service-card__book">
+                                    <img src="{{ asset('images/icons/Vector (2).png') }}" alt="">
+                                    {{ __('messagess.book_now') }}
+                                </button>
+                            </div>
                             </div>
                         </div>
                     @endforeach
@@ -728,7 +811,7 @@ function showBranchesForMainService(mainServiceId, subServiceId) {
                 renderedBranchCards++;
             });
 
-            if (branches.some(item => item.is_visible == 1)) {
+            if (branches.some(item => item.is_visible == 1) || branches.length === 0) {
                 const card_H = document.createElement('div');
                 card_H.className = 'branch-card';
 
@@ -808,7 +891,7 @@ function showBranchesForMainService(mainServiceId, subServiceId) {
                 container.appendChild(card);
             });
 
-            const hasHomeService = branches.some(item => item.is_visible == 1);
+            const hasHomeService = branches.some(item => item.is_visible == 1) || branches.length === 0;
 
             if (hasHomeService) {
 

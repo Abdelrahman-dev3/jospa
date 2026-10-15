@@ -313,6 +313,7 @@ public function index_list(Request $request)
         ->varified()
         ->employee()
         ->where('is_manager', 0)
+        ->where('show_in_calender', 1)
         ->orderBy('id', 'ASC');
 
     if ($branchId > 0) {
