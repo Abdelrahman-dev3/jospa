@@ -14,7 +14,10 @@ class BookingsController extends Controller
         $States = State::where('status' , 1)->get();
         $first_States = State::where('status' , 1)->first();
         $suggest = Product::with(['media' , 'categories'])->where('status', 1)->where('is_featured', 1)->where('deleted_at', null)->take(4)->get();
-        return view('frontend.salon.create' , compact('States', 'suggest' , 'first_States'));
+        // Booking window restriction
+        $scheduleIsClosed = BookingAvailabilityService::isScheduleClosed();
+        $scheduleClosedInfo = $scheduleIsClosed ? BookingAvailabilityService::getScheduleClosedInfo() : null;
+        return view('frontend.salon.create' , compact('States', 'suggest' , 'first_States', 'scheduleIsClosed', 'scheduleClosedInfo'));
     }    
     public function home(Request $request){
         $States = State::where('status' , 1)->get();
