@@ -36,7 +36,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #000000 100%);
     padding: 40px 20px;
     font-family: 'Lemonada', 'Segoe UI', sans-serif;
     direction: {{ language_direction() }};
@@ -161,7 +161,7 @@
 .schedule-closed-info-date {
     font-size: 18px;
     font-weight: 700;
-    color: #f9a825;
+    color: var(--primary-color);
 }
 
 /* ── CTA Button ── */
@@ -176,7 +176,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     text-decoration: none;
-    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    background: var(--primary-color);
     color: #fff;
     border: none;
     box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
