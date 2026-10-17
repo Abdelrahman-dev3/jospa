@@ -246,6 +246,9 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(BookingCartController::class)->group(function () {
         Route::post('/cart/products/{id}', 'addToCart');
         Route::delete('/cart/{id}', 'destroy');
+        Route::delete('/cart/product/{id}', 'destroy_product');
+        Route::delete('/cart/gift/{id}', 'destroy_gift');
+        Route::delete('/cart/destroy/all', 'destroy_All');
         Route::post('/cart-pay', 'cartPay');
         Route::post('/cart-checkout-preview', 'checkoutPreview');
         Route::get('/wallet-loyalty-balance', 'walletLoyaltyBalance');

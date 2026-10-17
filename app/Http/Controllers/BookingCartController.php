@@ -581,6 +581,13 @@ class BookingCartController extends Controller
         $booking->bookingService()->delete();
         $booking->delete();
     
+        if (request()->expectsJson() || request()->is('api/*')) {
+            return response()->json([
+                'status' => true,
+                'message' => __('messages.item_removed_from_cart'),
+            ], 200);
+        }
+
         return redirect()->back()->with('success', __('messages.item_removed_from_cart'));
     } 
 
@@ -594,6 +601,13 @@ class BookingCartController extends Controller
         
         $product->delete();
     
+        if (request()->expectsJson() || request()->is('api/*')) {
+            return response()->json([
+                'status' => true,
+                'message' => __('messages.item_removed_from_cart'),
+            ], 200);
+        }
+
         return redirect()->back()->with('success', __('messages.item_removed_from_cart'));
     } 
 
@@ -607,6 +621,13 @@ class BookingCartController extends Controller
         
         $gift->delete();
     
+        if (request()->expectsJson() || request()->is('api/*')) {
+            return response()->json([
+                'status' => true,
+                'message' => __('messages.item_removed_from_cart'),
+            ], 200);
+        }
+
         return redirect()->back()->with('success', __('messages.item_removed_from_cart'));
     } 
 
@@ -616,7 +637,10 @@ class BookingCartController extends Controller
         $user = auth()->user();
         
         $bookings = Booking::with('services')
-            ->where('created_by', $user->id)
+            ->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhere('created_by', $user->id);
+            })
             ->unpaid()
             ->get();
         
@@ -628,6 +652,13 @@ class BookingCartController extends Controller
         Cart::where('user_id', $user->id)->delete();
         
         GiftCard::where('user_id', $user->id)->where('payment_status', 0)->delete();
+
+        if (request()->expectsJson() || request()->is('api/*')) {
+            return response()->json([
+                'status' => true,
+                'message' => __('messages.items_removed_from_cart'),
+            ], 200);
+        }
 
         return redirect()->back()->with('success', __('messages.items_removed_from_cart'));
     }
