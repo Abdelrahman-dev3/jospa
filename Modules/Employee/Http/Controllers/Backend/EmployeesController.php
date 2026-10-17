@@ -215,11 +215,11 @@ class EmployeesController extends Controller
             }
 
             if (!$this->isValidDate($startDate) || !$this->isValidDate($endDate)) {
-                return back()->withInput()->with('error', 'تأكد من إدخال تاريخ بداية ونهاية الإجازة بشكل صحيح');
+                return back()->withInput()->with('error', __('employee.leave_dates_invalid'));
             }
 
             if (Carbon::parse($endDate)->lt(Carbon::parse($startDate))) {
-                return back()->withInput()->with('error', 'تاريخ نهاية الإجازة يجب أن يكون بعد تاريخ البداية أو مساوياً له');
+                return back()->withInput()->with('error', __('employee.leave_end_date_after_start'));
             }
 
             StaffLeavePeriod::create([
@@ -241,7 +241,7 @@ class EmployeesController extends Controller
             }
 
             if (!$this->isValidDate($date)) {
-                return back()->withInput()->with('error', 'تأكد من إدخال تاريخ الدوام المخصص بشكل صحيح');
+                return back()->withInput()->with('error', __('employee.custom_date_invalid'));
             }
 
             $isHoliday = isset($custom['is_holiday']) && (string) $custom['is_holiday'] === '1';
@@ -253,11 +253,11 @@ class EmployeesController extends Controller
                 $endMinutes = $this->timeToMinutes($endTime);
 
                 if ($startMinutes === null || $endMinutes === null) {
-                    return back()->withInput()->with('error', 'تأكد من إدخال وقت بداية ونهاية الدوام المخصص لتاريخ ' . $date);
+                    return back()->withInput()->with('error', __('employee.custom_times_required', ['date' => $date]));
                 }
 
                 if ($endMinutes <= $startMinutes) {
-                    return back()->withInput()->with('error', 'وقت نهاية الدوام المخصص لتاريخ ' . $date . ' يجب أن يكون بعد وقت البداية');
+                    return back()->withInput()->with('error', __('employee.custom_end_time_after_start', ['date' => $date]));
                 }
             }
 
@@ -275,7 +275,7 @@ class EmployeesController extends Controller
             );
         }
 
-        return back()->with('success', 'تم حفظ ساعات العمل بنجاح');
+        return back()->with('success', __('employee.working_hours_saved'));
     }
 
     private function validateWorkingHourRow(string $dayName, array $data): ?string
@@ -289,11 +289,13 @@ class EmployeesController extends Controller
         $end = $this->timeToMinutes($data['end'] ?? null);
 
         if ($start === null || $end === null) {
-            return "تأكد من وقت بداية ونهاية يوم {$dayName}";
+            $dayLabel = \Lang::has('employee.' . strtolower($dayName)) ? __('employee.' . strtolower($dayName)) : $dayName;
+            return __('employee.day_times_invalid', ['day' => $dayLabel]);
         }
 
         if ($end <= $start) {
-            return "وقت نهاية يوم {$dayName} يجب أن يكون بعد وقت البداية";
+            $dayLabel = \Lang::has('employee.' . strtolower($dayName)) ? __('employee.' . strtolower($dayName)) : $dayName;
+            return __('employee.day_end_after_start', ['day' => $dayLabel]);
         }
 
         $breakRanges = [];
@@ -302,20 +304,24 @@ class EmployeesController extends Controller
             $breakEnd = $this->timeToMinutes($break['end_break'] ?? null);
 
             if ($breakStart === null || $breakEnd === null) {
-                return "تأكد من أوقات الاستراحة في يوم {$dayName}";
+            $dayLabel = \Lang::has('employee.' . strtolower($dayName)) ? __('employee.' . strtolower($dayName)) : $dayName;
+            return __('employee.break_times_invalid', ['day' => $dayLabel]);
             }
 
             if ($breakEnd <= $breakStart) {
-                return "وقت نهاية الاستراحة في يوم {$dayName} يجب أن يكون بعد بدايتها";
+            $dayLabel = \Lang::has('employee.' . strtolower($dayName)) ? __('employee.' . strtolower($dayName)) : $dayName;
+            return __('employee.break_end_after_start', ['day' => $dayLabel]);
             }
 
             if ($breakStart < $start || $breakEnd > $end) {
-                return "الاستراحة في يوم {$dayName} يجب أن تكون داخل وقت الدوام";
+            $dayLabel = \Lang::has('employee.' . strtolower($dayName)) ? __('employee.' . strtolower($dayName)) : $dayName;
+            return __('employee.break_inside_work_hours', ['day' => $dayLabel]);
             }
 
             foreach ($breakRanges as $range) {
                 if ($breakStart < $range['end'] && $breakEnd > $range['start']) {
-                    return "يوجد تداخل بين الاستراحات في يوم {$dayName}";
+            $dayLabel = \Lang::has('employee.' . strtolower($dayName)) ? __('employee.' . strtolower($dayName)) : $dayName;
+            return __('employee.break_overlap', ['day' => $dayLabel]);
                 }
             }
 

@@ -182,9 +182,9 @@
 
             <div class="mt-4 p-3 border rounded">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0"><i class="fa-solid fa-calendar-days"></i> إجازات الموظف المحددة بتاريخ</h5>
+                    <h5 class="mb-0"><i class="fa-solid fa-calendar-days"></i> {{ __('employee.staff_leave_periods') }}</h5>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="add-leave-period">
-                        <i class="fa fa-plus-circle" aria-hidden="true"></i> إضافة إجازة
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> {{ __('employee.add_leave') }}
                     </button>
                 </div>
 
@@ -204,7 +204,7 @@
                                 <div class="col-md-2">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="delete_leave_periods[]" value="{{ $leave->id }}" id="delete-leave-{{ $leave->id }}">
-                                        <label class="form-check-label" for="delete-leave-{{ $leave->id }}">حذف</label>
+                                        <label class="form-check-label" for="delete-leave-{{ $leave->id }}">{{ __('employee.delete') }}</label>
                                     </div>
                                 </div>
                             </div>
@@ -217,12 +217,12 @@
 
             <div class="mt-4 p-3 border rounded">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0"><i class="fa-solid fa-calendar-check"></i> دوام مخصص بتاريخ محدد (استثنائي)</h5>
+                    <h5 class="mb-0"><i class="fa-solid fa-calendar-check"></i> {{ __('employee.custom_working_hours') }}</h5>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="add-custom-hour">
-                        <i class="fa fa-plus-circle" aria-hidden="true"></i> إضافة دوام مخصص
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> {{ __('employee.add_custom_hour') }}
                     </button>
                 </div>
-                <p class="text-muted small mb-3">يمكنك تحديد دوام خاص لموظفة في تاريخ معين (مثل من 10:00 إلى 17:00 أو إجازة في ذلك التاريخ)، وسيتجاوز هذا الدوام جدول العمل الأسبوعي الاعتيادي.</p>
+                <p class="text-muted small mb-3">{{ __('employee.custom_working_hours_desc') }}</p>
 
                 @if($customWorkingHours->count() > 0)
                     <div class="mb-3">
@@ -230,12 +230,12 @@
                             <table class="table table-bordered table-sm align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="min-width: 140px;">التاريخ</th>
-                                        <th style="min-width: 110px;">وقت البدء</th>
-                                        <th style="min-width: 110px;">وقت الانتهاء</th>
-                                        <th style="min-width: 120px;">الحالة</th>
-                                        <th>ملاحظات</th>
-                                        <th style="width: 70px;" class="text-center">حذف</th>
+                                        <th style="min-width: 140px;">{{ __('employee.date') }}</th>
+                                        <th style="min-width: 110px;">{{ __('employee.start_time') }}</th>
+                                        <th style="min-width: 110px;">{{ __('employee.end_time') }}</th>
+                                        <th style="min-width: 120px;">{{ __('employee.lbl_status') }}</th>
+                                        <th>{{ __('employee.notes') }}</th>
+                                        <th style="width: 70px;" class="text-center">{{ __('employee.delete') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -252,9 +252,9 @@
                                             </td>
                                             <td>
                                                 @if($customHour->is_holiday)
-                                                    <span class="badge bg-danger">إجازة في هذا اليوم</span>
+                                                    <span class="badge bg-danger">{{ __('employee.holiday_on_this_day') }}</span>
                                                 @else
-                                                    <span class="badge bg-success">دوام عمل</span>
+                                                    <span class="badge bg-success">{{ __('employee.working_day') }}</span>
                                                 @endif
                                             </td>
                                             <td>
@@ -263,7 +263,7 @@
                                             <td class="text-center">
                                                 <div class="form-check d-inline-block">
                                                     <input class="form-check-input" type="checkbox" name="delete_custom_hours[]" value="{{ $customHour->id }}" id="delete-custom-{{ $customHour->id }}">
-                                                    <label class="form-check-label" for="delete-custom-{{ $customHour->id }}">حذف</label>
+                                                    <label class="form-check-label" for="delete-custom-{{ $customHour->id }}">{{ __('employee.delete') }}</label>
                                                 </div>
                                             </td>
                                         </tr>
@@ -366,15 +366,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
             leaveRow.innerHTML = `
                 <div class="col-md-3">
-                    <label class="form-label">من تاريخ</label>
+                    <label class="form-label">{{ __('employee.from_date') }}</label>
                     <input class="form-control" type="date" name="leave_periods[${leaveIndex}][start_date]" required>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">إلى تاريخ</label>
+                    <label class="form-label">{{ __('employee.to_date') }}</label>
                     <input class="form-control" type="date" name="leave_periods[${leaveIndex}][end_date]" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">السبب</label>
+                    <label class="form-label">{{ __('employee.reason') }}</label>
                     <input class="form-control" type="text" name="leave_periods[${leaveIndex}][reason]" maxlength="255">
                 </div>
                 <div class="col-md-2">
@@ -402,29 +402,29 @@ document.addEventListener("DOMContentLoaded", function () {
             customRow.innerHTML = `
                 <div class="row align-items-end g-2">
                     <div class="col-md-3">
-                        <label class="form-label small mb-1">التاريخ <span class="text-danger">*</span></label>
+                        <label class="form-label small mb-1">{{ __('employee.date') }} <span class="text-danger">*</span></label>
                         <input class="form-control form-control-sm" type="date" name="custom_hours[${customIndex}][date]" required>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small mb-1">وقت البدء</label>
+                        <label class="form-label small mb-1">{{ __('employee.start_time') }}</label>
                         <input class="form-control form-control-sm custom-start-time" type="time" name="custom_hours[${customIndex}][start_time]" value="10:00" required>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small mb-1">وقت الانتهاء</label>
+                        <label class="form-label small mb-1">{{ __('employee.end_time') }}</label>
                         <input class="form-control form-control-sm custom-end-time" type="time" name="custom_hours[${customIndex}][end_time]" value="17:00" required>
                     </div>
                     <div class="col-md-2">
                         <div class="form-check pt-4">
                             <input class="form-check-input custom-holiday-checkbox" type="checkbox" name="custom_hours[${customIndex}][is_holiday]" value="1" id="holiday-check-${customIndex}">
-                            <label class="form-check-label small" for="holiday-check-${customIndex}">إجازة / عطلة</label>
+                            <label class="form-check-label small" for="holiday-check-${customIndex}">{{ __('employee.holiday_day_off') }}</label>
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label small mb-1">ملاحظة</label>
-                        <input class="form-control form-control-sm" type="text" name="custom_hours[${customIndex}][notes]" placeholder="سبب التخصيص" maxlength="255">
+                        <label class="form-label small mb-1">{{ __('employee.note') }}</label>
+                        <input class="form-control form-control-sm" type="text" name="custom_hours[${customIndex}][notes]" placeholder="{{ __('employee.custom_reason_placeholder') }}" maxlength="255">
                     </div>
                     <div class="col-md-1 text-end">
-                        <button type="button" class="btn btn-sm btn-danger remove-custom-hour" title="حذف"><i class="fa fa-trash"></i></button>
+                        <button type="button" class="btn btn-sm btn-danger remove-custom-hour" title="{{ __('employee.delete') }}"><i class="fa fa-trash"></i></button>
                     </div>
                 </div>
             `;
