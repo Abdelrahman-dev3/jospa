@@ -8,6 +8,7 @@ use App\Jobs\SendCancelBookingWhatsAppJob;
 use App\Jobs\SendUpdateBookingWhatsAppJob;
 use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
+use App\Models\StaffCustomWorkingHour;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Expression;
@@ -633,6 +634,12 @@ public function index_list(Request $request)
                 ->pluck('staff_id')
                 ->mapWithKeys(fn ($id) => [(int) $id => true])
                 ->all(),
+            'staff_custom_hours' => StaffCustomWorkingHour::whereIn('staff_id', $employeeIds)
+                ->whereDate('date', $date)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->unique('staff_id')
+                ->keyBy('staff_id'),
             'staff_working_hours' => StaffWorkingHour::whereIn('staff_id', $employeeIds)
                 ->where('day_of_week', $dayName)
                 ->orderBy('id', 'desc')
@@ -677,7 +684,8 @@ public function index_list(Request $request)
             return ['events' => $events, 'ranges' => []];
         }
 
-        if (isset($context['leave_staff_ids'][(int) $resourceId])) {
+        $hasCustom = isset($context['staff_custom_hours']) && $context['staff_custom_hours']->has((int) $resourceId);
+        if (!$hasCustom && isset($context['leave_staff_ids'][(int) $resourceId])) {
             return ['events' => $events, 'ranges' => []];
         }
 
@@ -748,6 +756,19 @@ public function index_list(Request $request)
 
     private function resolveEmployeeWorkingConfig(User $employee, int $branchId, string $dayName, array $context): ?array
     {
+        if (isset($context['staff_custom_hours']) && $context['staff_custom_hours']->has($employee->id)) {
+            $custom = $context['staff_custom_hours']->get($employee->id);
+            if ($custom->is_holiday) {
+                return null;
+            }
+
+            return [
+                'start_time' => $this->normalizeTime($custom->start_time),
+                'end_time' => $this->normalizeTime($custom->end_time),
+                'breaks' => $this->normalizeBreaks($custom->breaks),
+            ];
+        }
+
         $staffWorkingHours = $context['staff_working_hours']->get($employee->id);
 
         if ($staffWorkingHours) {
@@ -1512,7 +1533,8 @@ public function index_list(Request $request)
             ]);
         }
 
-        if (isset($context['leave_staff_ids'][$employeeId])) {
+        $hasCustom = isset($context['staff_custom_hours']) && $context['staff_custom_hours']->has($employeeId);
+        if (!$hasCustom && isset($context['leave_staff_ids'][$employeeId])) {
             throw ValidationException::withMessages([
                 'employee_id' => ['This staff member is on approved leave on this date.'],
             ]);
@@ -1898,6 +1920,12 @@ public function index_list(Request $request)
                 ->pluck('staff_id')
                 ->mapWithKeys(fn ($id) => [(int) $id => true])
                 ->all(),
+            'staff_custom_hours' => StaffCustomWorkingHour::where('staff_id', $employee->id)
+                ->whereDate('date', $date)
+                ->orderBy('id', 'desc')
+                ->get()
+                ->unique('staff_id')
+                ->keyBy('staff_id'),
             'staff_working_hours' => StaffWorkingHour::where('staff_id', $employee->id)
                 ->where('day_of_week', $dayName)
                 ->orderBy('id', 'desc')
@@ -1911,7 +1939,8 @@ public function index_list(Request $request)
                 ->get(),
         ];
 
-        if (isset($context['holiday_branch_ids'][$branchId]) || isset($context['leave_staff_ids'][(int) $employee->id])) {
+        $hasCustom = isset($context['staff_custom_hours']) && $context['staff_custom_hours']->has($employee->id);
+        if (isset($context['holiday_branch_ids'][$branchId]) || (! $hasCustom && isset($context['leave_staff_ids'][(int) $employee->id]))) {
             return [];
         }
 

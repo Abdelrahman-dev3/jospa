@@ -21,6 +21,7 @@
             @php
             $savedWorkingHours = App\Models\StaffWorkingHour::where('staff_id', $userId)->get()->keyBy('day_of_week');
             $leavePeriods = App\Models\StaffLeavePeriod::where('staff_id', $userId)->orderBy('start_date')->get();
+            $customWorkingHours = App\Models\StaffCustomWorkingHour::where('staff_id', $userId)->orderBy('date')->get();
                 $days = [
                     1 => 'saturday',
                     2 => 'sunday',
@@ -214,6 +215,68 @@
                 <div id="leave-periods-container"></div>
             </div>
 
+            <div class="mt-4 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-calendar-check"></i> دوام مخصص بتاريخ محدد (استثنائي)</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="add-custom-hour">
+                        <i class="fa fa-plus-circle" aria-hidden="true"></i> إضافة دوام مخصص
+                    </button>
+                </div>
+                <p class="text-muted small mb-3">يمكنك تحديد دوام خاص لموظفة في تاريخ معين (مثل من 10:00 إلى 17:00 أو إجازة في ذلك التاريخ)، وسيتجاوز هذا الدوام جدول العمل الأسبوعي الاعتيادي.</p>
+
+                @if($customWorkingHours->count() > 0)
+                    <div class="mb-3">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 140px;">التاريخ</th>
+                                        <th style="min-width: 110px;">وقت البدء</th>
+                                        <th style="min-width: 110px;">وقت الانتهاء</th>
+                                        <th style="min-width: 120px;">الحالة</th>
+                                        <th>ملاحظات</th>
+                                        <th style="width: 70px;" class="text-center">حذف</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($customWorkingHours as $customHour)
+                                        <tr>
+                                            <td>
+                                                <input class="form-control form-control-sm" type="date" value="{{ $customHour->date->format('Y-m-d') }}" disabled>
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm" type="time" value="{{ $customHour->is_holiday ? '' : $customHour->start_time }}" disabled>
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm" type="time" value="{{ $customHour->is_holiday ? '' : $customHour->end_time }}" disabled>
+                                            </td>
+                                            <td>
+                                                @if($customHour->is_holiday)
+                                                    <span class="badge bg-danger">إجازة في هذا اليوم</span>
+                                                @else
+                                                    <span class="badge bg-success">دوام عمل</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm" type="text" value="{{ $customHour->notes }}" disabled>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="form-check d-inline-block">
+                                                    <input class="form-check-input" type="checkbox" name="delete_custom_hours[]" value="{{ $customHour->id }}" id="delete-custom-{{ $customHour->id }}">
+                                                    <label class="form-check-label" for="delete-custom-{{ $customHour->id }}">حذف</label>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+
+                <div id="custom-hours-container"></div>
+            </div>
+
                 <div data-v-50fdd42d="" class="d-grid d-md-block setting-footer"><button data-v-50fdd42d="" class="btn btn-primary" name="submit"><i data-v-50fdd42d="" class="fa-solid fa-floppy-disk"></i> {{ __('employee.submit') }}</button></div>
         </form>
     </div>
@@ -323,6 +386,71 @@ document.addEventListener("DOMContentLoaded", function () {
 
             leaveRow.querySelector(".remove-leave-period").addEventListener("click", function () {
                 leaveRow.remove();
+            });
+        });
+    }
+
+    const addCustomHourButton = document.getElementById("add-custom-hour");
+    const customHoursContainer = document.getElementById("custom-hours-container");
+
+    if (addCustomHourButton && customHoursContainer) {
+        addCustomHourButton.addEventListener("click", function () {
+            const customIndex = customHoursContainer.querySelectorAll(".custom-hour-row").length;
+            const customRow = document.createElement("div");
+            customRow.classList.add("card", "mb-2", "p-2", "custom-hour-row");
+
+            customRow.innerHTML = `
+                <div class="row align-items-end g-2">
+                    <div class="col-md-3">
+                        <label class="form-label small mb-1">التاريخ <span class="text-danger">*</span></label>
+                        <input class="form-control form-control-sm" type="date" name="custom_hours[${customIndex}][date]" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">وقت البدء</label>
+                        <input class="form-control form-control-sm custom-start-time" type="time" name="custom_hours[${customIndex}][start_time]" value="10:00" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">وقت الانتهاء</label>
+                        <input class="form-control form-control-sm custom-end-time" type="time" name="custom_hours[${customIndex}][end_time]" value="17:00" required>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-check pt-4">
+                            <input class="form-check-input custom-holiday-checkbox" type="checkbox" name="custom_hours[${customIndex}][is_holiday]" value="1" id="holiday-check-${customIndex}">
+                            <label class="form-check-label small" for="holiday-check-${customIndex}">إجازة / عطلة</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small mb-1">ملاحظة</label>
+                        <input class="form-control form-control-sm" type="text" name="custom_hours[${customIndex}][notes]" placeholder="سبب التخصيص" maxlength="255">
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="button" class="btn btn-sm btn-danger remove-custom-hour" title="حذف"><i class="fa fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
+
+            customHoursContainer.appendChild(customRow);
+
+            const holidayCheckbox = customRow.querySelector(".custom-holiday-checkbox");
+            const startInput = customRow.querySelector(".custom-start-time");
+            const endInput = customRow.querySelector(".custom-end-time");
+
+            holidayCheckbox.addEventListener("change", function () {
+                if (this.checked) {
+                    startInput.disabled = true;
+                    endInput.disabled = true;
+                    startInput.required = false;
+                    endInput.required = false;
+                } else {
+                    startInput.disabled = false;
+                    endInput.disabled = false;
+                    startInput.required = true;
+                    endInput.required = true;
+                }
+            });
+
+            customRow.querySelector(".remove-custom-hour").addEventListener("click", function () {
+                customRow.remove();
             });
         });
     }

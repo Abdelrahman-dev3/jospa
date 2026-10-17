@@ -18,6 +18,7 @@ use App\Services\GiftCardActivationService;
 use App\Services\OdooBookingSyncService;
 use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
+use App\Models\StaffCustomWorkingHour;
 use Modules\Product\Models\Product;
 use Modules\Product\Models\Cart;
 use Modules\BussinessHour\Models\BussinessHour;
@@ -291,14 +292,22 @@ class BookingCartController extends Controller
             return false;
         }
 
-        if (StaffLeavePeriod::where('staff_id', $staffId)
+        $customWorkingHour = StaffCustomWorkingHour::where('staff_id', $staffId)
+            ->whereDate('date', $date)
+            ->first();
+
+        if ($customWorkingHour) {
+            if ($customWorkingHour->is_holiday) {
+                return false;
+            }
+        } elseif (StaffLeavePeriod::where('staff_id', $staffId)
             ->whereDate('start_date', '<=', $date)
             ->whereDate('end_date', '>=', $date)
             ->exists()) {
             return false;
         }
 
-        $workingConfig = $this->resolveEmployeeWorkingConfig($staffId, $effectiveBranchId, $dayName);
+        $workingConfig = $this->resolveEmployeeWorkingConfig($staffId, $effectiveBranchId, $dayName, $date);
         if (! $workingConfig) {
             return false;
         }
@@ -351,8 +360,26 @@ class BookingCartController extends Controller
             ->value('branch_id') ?? 0);
     }
 
-    private function resolveEmployeeWorkingConfig(int $staffId, int $branchId, string $dayName): ?array
+    private function resolveEmployeeWorkingConfig(int $staffId, int $branchId, string $dayName, ?string $date = null): ?array
     {
+        if ($date) {
+            $customWorkingHour = StaffCustomWorkingHour::where('staff_id', $staffId)
+                ->whereDate('date', $date)
+                ->first();
+
+            if ($customWorkingHour) {
+                if ($customWorkingHour->is_holiday) {
+                    return null;
+                }
+
+                return $this->makeWorkingConfig(
+                    $customWorkingHour->start_time,
+                    $customWorkingHour->end_time,
+                    $customWorkingHour->breaks
+                );
+            }
+        }
+
         $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)
             ->where('day_of_week', $dayName)
             ->orderBy('id', 'desc')

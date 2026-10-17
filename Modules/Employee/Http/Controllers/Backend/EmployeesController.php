@@ -25,6 +25,7 @@ use Yajra\DataTables\DataTables;
 use Modules\Wallet\Models\Wallet;
 use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
+use App\Models\StaffCustomWorkingHour;
 
 
 class EmployeesController extends Controller
@@ -229,7 +230,52 @@ class EmployeesController extends Controller
             ]);
         }
     
-        return back()->with('success', 'تم حفظ ساعات العمل بنجاح');;
+        StaffCustomWorkingHour::where('staff_id', $id)
+            ->whereIn('id', $request->input('delete_custom_hours', []))
+            ->delete();
+
+        foreach ($request->input('custom_hours', []) as $custom) {
+            $date = $custom['date'] ?? null;
+            if (!$date) {
+                continue;
+            }
+
+            if (!$this->isValidDate($date)) {
+                return back()->withInput()->with('error', 'تأكد من إدخال تاريخ الدوام المخصص بشكل صحيح');
+            }
+
+            $isHoliday = isset($custom['is_holiday']) && (string) $custom['is_holiday'] === '1';
+            $startTime = $custom['start_time'] ?? null;
+            $endTime = $custom['end_time'] ?? null;
+
+            if (!$isHoliday) {
+                $startMinutes = $this->timeToMinutes($startTime);
+                $endMinutes = $this->timeToMinutes($endTime);
+
+                if ($startMinutes === null || $endMinutes === null) {
+                    return back()->withInput()->with('error', 'تأكد من إدخال وقت بداية ونهاية الدوام المخصص لتاريخ ' . $date);
+                }
+
+                if ($endMinutes <= $startMinutes) {
+                    return back()->withInput()->with('error', 'وقت نهاية الدوام المخصص لتاريخ ' . $date . ' يجب أن يكون بعد وقت البداية');
+                }
+            }
+
+            StaffCustomWorkingHour::updateOrCreate(
+                [
+                    'staff_id' => $id,
+                    'date' => $date,
+                ],
+                [
+                    'start_time' => $isHoliday ? null : $startTime,
+                    'end_time' => $isHoliday ? null : $endTime,
+                    'is_holiday' => $isHoliday,
+                    'notes' => $custom['notes'] ?? null,
+                ]
+            );
+        }
+
+        return back()->with('success', 'تم حفظ ساعات العمل بنجاح');
     }
 
     private function validateWorkingHourRow(string $dayName, array $data): ?string

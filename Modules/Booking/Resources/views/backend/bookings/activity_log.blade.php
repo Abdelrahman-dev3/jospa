@@ -63,7 +63,7 @@
                         <li class="list-group-item bg-danger-subtle py-3 px-4">
                             <div class="d-flex align-items-center gap-2 text-danger">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
-                                <strong>هذا الحجز في سلة المهملات</strong>
+                                <strong>هذا الحجز تم حذفه نهائياً</strong>
                             </div>
                         </li>
                         @endif
@@ -231,7 +231,7 @@
                         <div class="col-6">
                             <div class="p-2 rounded bg-danger-subtle">
                                 <div class="fw-bold fs-5 text-danger">{{ $deletedCount }}</div>
-                                <div class="text-muted" style="font-size:0.72rem">حذف / استرجاع</div>
+                                <div class="text-muted" style="font-size:0.72rem">حذف</div>
                             </div>
                         </div>
                         <div class="col-6">
@@ -276,7 +276,7 @@
                         @endif
                         @if($deletedCount)
                         <button class="btn btn-sm btn-outline-danger filter-btn" data-filter="deleted">
-                            <i class="fa-solid fa-trash me-1"></i> حذف/استرجاع ({{ $deletedCount }})
+                            <i class="fa-solid fa-trash me-1"></i> حذف ({{ $deletedCount }})
                         </button>
                         @endif
                         @if($paymentCount)
@@ -482,7 +482,7 @@
                                         <div class="alert alert-danger mb-0 d-flex align-items-start gap-2 py-2">
                                             <i class="fa-solid fa-triangle-exclamation fa-lg mt-1"></i>
                                             <div>
-                                                <strong>تم حذف هذا الحجز ونقله إلى سلة المهملات.</strong>
+                                                <strong>تم حذف هذا الحجز نهائياً.</strong>
                                                 @if(!empty($activity['properties']['reason']))
                                                     <div class="mt-1 small">السبب: {{ $activity['properties']['reason'] }}</div>
                                                 @endif

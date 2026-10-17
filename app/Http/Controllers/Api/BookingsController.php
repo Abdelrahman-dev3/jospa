@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\StaffLeavePeriod;
 use App\Models\StaffWorkingHour;
+use App\Models\StaffCustomWorkingHour;
 use App\Models\Branch;
 use Modules\World\Models\State;
 use Modules\Holiday\Models\Holiday;
@@ -167,7 +168,15 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         return response()->json([]);
     }
 
-    if (StaffLeavePeriod::where('staff_id', $staffId)
+    $customWorkingHour = StaffCustomWorkingHour::where('staff_id', $staffId)
+        ->whereDate('date', $date)
+        ->first();
+
+    if ($customWorkingHour) {
+        if ($customWorkingHour->is_holiday) {
+            return response()->json([]);
+        }
+    } elseif (StaffLeavePeriod::where('staff_id', $staffId)
         ->whereDate('start_date', '<=', $date)
         ->whereDate('end_date', '>=', $date)
         ->exists()) {
@@ -178,7 +187,7 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         return response()->json([]);
     }
 
-    $workingConfig = $this->resolveWorkingConfig($staffId, $dayName, $branchId);
+    $workingConfig = $this->resolveWorkingConfig($staffId, $dayName, $branchId, $date);
     if (!$workingConfig) {
         return response()->json([]);
     }
@@ -211,8 +220,26 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
             ->value('branch_id') ?? 0);
     }
 
-    private function resolveWorkingConfig(int $staffId, string $dayName, int $branchId = 0): ?array
+    private function resolveWorkingConfig(int $staffId, string $dayName, int $branchId = 0, ?string $date = null): ?array
     {
+        if ($date) {
+            $customWorkingHour = StaffCustomWorkingHour::where('staff_id', $staffId)
+                ->whereDate('date', $date)
+                ->first();
+
+            if ($customWorkingHour) {
+                if ($customWorkingHour->is_holiday) {
+                    return null;
+                }
+
+                return $this->makeWorkingConfig(
+                    $customWorkingHour->start_time,
+                    $customWorkingHour->end_time,
+                    $customWorkingHour->breaks
+                );
+            }
+        }
+
         $staffWorkingHours = StaffWorkingHour::where('staff_id', $staffId)
             ->where('day_of_week', $dayName)
             ->orderBy('id', 'desc')

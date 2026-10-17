@@ -15,7 +15,7 @@
                             </span>
                             @if($summary['is_deleted'])
                                 <span class="badge bg-danger px-2 py-1">
-                                    <i class="fa-solid fa-trash me-1"></i> محذوف (سلة المهملات)
+                                    <i class="fa-solid fa-trash me-1"></i> محذوف نهائياً
                                 </span>
                             @endif
                         </div>
@@ -287,7 +287,7 @@
                                     <div class="alert alert-danger mb-0 py-2 small d-flex align-items-center gap-2">
                                         <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
                                         <div>
-                                            <strong>تم حذف هذا الحجز ونقله إلى سلة المهملات.</strong>
+                                            <strong>تم حذف هذا الحجز نهائياً.</strong>
                                             @if(!empty($activity['properties']['reason']))
                                                 <div class="mt-1">السبب: {{ $activity['properties']['reason'] }}</div>
                                             @endif

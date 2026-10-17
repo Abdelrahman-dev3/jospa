@@ -345,7 +345,7 @@ class BookingActivityLogger
                 'user_agent' => request()->userAgent(),
             ];
 
-            $description = "تم حذف الحجز ونقله إلى سلة المهملات بواسطة " . $causerName;
+            $description = "تم حذف الحجز نهائياً بواسطة " . $causerName;
 
             $activity = activity('booking')
                 ->performedOn($booking)
@@ -380,7 +380,7 @@ class BookingActivityLogger
                 'user_agent' => request()->userAgent(),
             ];
 
-            $description = "تم استرجاع الحجز من سلة المهملات بواسطة " . $causerName;
+            $description = "تم استرجاع الحجز بواسطة " . $causerName;
 
             $activity = activity('booking')
                 ->performedOn($booking)
@@ -542,7 +542,7 @@ class BookingActivityLogger
                     'event_badge' => 'حذف الحجز',
                     'badge_color' => 'danger',
                     'icon' => 'fa-solid fa-trash-can',
-                    'description' => "تم حذف الحجز ونقله إلى سلة المهملات بواسطة " . $deleterName,
+                    'description' => "تم حذف الحجز نهائياً بواسطة " . $deleterName,
                     'causer' => self::formatCauser($deleter, 'الحاذف'),
                     'created_at' => $booking->deleted_at->toDateTimeString(),
                     'time_ago' => $booking->deleted_at->diffForHumans(),
