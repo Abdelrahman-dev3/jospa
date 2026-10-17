@@ -86,7 +86,16 @@ class MobileCartController extends Controller
 
         $user = $request->user();
         $branchId = (int) $validated['branch'];
-        $createdBookingIds = [];
+        foreach ($validated['services'] as $serviceGroup) {
+            foreach ($serviceGroup['subServices'] as $subService) {
+                if (!\App\Services\BookingAvailabilityService::isDateAllowed($subService['date'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => \App\Services\BookingAvailabilityService::getRejectionMessage($subService['date']),
+                    ], 422);
+                }
+            }
+        }
 
         DB::transaction(function () use ($validated, $user, $branchId, &$createdBookingIds) {
             foreach ($validated['services'] as $serviceGroup) {

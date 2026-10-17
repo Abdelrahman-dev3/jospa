@@ -1841,7 +1841,7 @@ public function index_list(Request $request)
             return response()->json(['status' => true, 'data' => []]);
         }
 
-        if (Carbon::parse($date)->lt(Carbon::today())) {
+        if (Carbon::parse($date)->lt(Carbon::today()) || !\App\Services\BookingAvailabilityService::isDateAllowed($date)) {
             return response()->json(['status' => true, 'data' => []]);
         }
 

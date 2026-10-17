@@ -155,6 +155,10 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         return response()->json([]);
     }
 
+    if (!\App\Services\BookingAvailabilityService::isDateAllowed($date)) {
+        return response()->json([]);
+    }
+
     $dayName = strtolower($dateObj->format('l'));
     $serviceId = (int) $request->query('service_id', 0);
     $serviceDuration = (int) (Service::whereKey($serviceId)->value('duration_min') ?? 0);

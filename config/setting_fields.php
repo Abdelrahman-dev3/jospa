@@ -8,6 +8,60 @@ return [
 
         'elements' => [
             [
+                'type' => 'checkbox',
+                'data' => 'boolean',
+                'name' => 'booking_window_restriction',
+                'label' => 'Enable Booking Window Restriction',
+                'rules' => 'nullable',
+                'class' => '',
+                'value' => 0,
+            ],
+            [
+                'type' => 'text',
+                'data' => 'string',
+                'name' => 'booking_window_type',
+                'label' => 'Booking Window Type',
+                'rules' => 'nullable',
+                'class' => '',
+                'value' => 'rolling',
+            ],
+            [
+                'type' => 'number',
+                'data' => 'integer',
+                'name' => 'booking_advance_months',
+                'label' => 'Booking Advance Months',
+                'rules' => 'nullable|numeric',
+                'class' => '',
+                'value' => 2,
+            ],
+            [
+                'type' => 'number',
+                'data' => 'integer',
+                'name' => 'booking_advance_days',
+                'label' => 'Booking Advance Days',
+                'rules' => 'nullable|numeric',
+                'class' => '',
+                'value' => 60,
+            ],
+            [
+                'type' => 'date',
+                'data' => 'string',
+                'name' => 'booking_start_date',
+                'label' => 'Booking Start Date',
+                'rules' => 'nullable',
+                'class' => '',
+                'value' => '',
+            ],
+            [
+                'type' => 'date',
+                'data' => 'string',
+                'name' => 'booking_end_date',
+                'label' => 'Booking End Date',
+                'rules' => 'nullable',
+                'class' => '',
+                'value' => '',
+            ],
+            [
                 'type' => 'text', // input fields type
                 'data' => 'general', // data type, string, int, boolean
                 'name' => 'app_name', // unique name for field

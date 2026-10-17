@@ -272,12 +272,8 @@ public function getAvailableDates($id)
     // احصل على مواعيد العمل للفرع
     $businessHours = BussinessHour::where('branch_id', $id)->get();
 
-    // حساب التواريخ المتاحة (30 يومًا قادمًا كمثال)
-    $availableDates = [];
-    for ($i = 0; $i < 30; $i++) {
-        $date = now()->addDays($i)->format('Y-m-d');
-        $availableDates[] = $date;
-    }
+    // حساب التواريخ المتاحة استناداً إلى نافذة الحجز المحددة في الإعدادات
+    $availableDates = \App\Services\BookingAvailabilityService::getAllowedDatesList(365);
 
     return response()->json([
         'status' => true,

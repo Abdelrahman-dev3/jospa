@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Modules\World\Models\State;
 use Modules\Product\Models\Product;
 use Modules\World\Models\City;
+use App\Services\BookingAvailabilityService;
 
 class BookingsController extends Controller
 {
@@ -19,6 +20,15 @@ class BookingsController extends Controller
         $States = State::where('status' , 1)->get();
         $suggest = Product::with(['media' , 'categories'])->where('status', 1)->where('is_featured', 1)->where('deleted_at', null)->get();
         $cities = City::where('status' , 1)->get();
-        return view('frontend.home.booking.create' , compact('States', 'suggest' ,'cities'));
+
+        // Booking window restriction
+        $scheduleIsClosed = BookingAvailabilityService::isScheduleClosed();
+        $scheduleClosedInfo = $scheduleIsClosed ? BookingAvailabilityService::getScheduleClosedInfo() : null;
+
+        return view('frontend.home.booking.create' , compact(
+            'States', 'suggest', 'cities',
+            'scheduleIsClosed', 'scheduleClosedInfo'
+        ));
     }    
 }
+

@@ -144,6 +144,14 @@ class BookingCartController extends Controller
                         ], 422);
                     }
 
+                    $bookingDate = $slotData['start_date_time']->toDateString();
+                    if (!\App\Services\BookingAvailabilityService::isDateAllowed($bookingDate)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => \App\Services\BookingAvailabilityService::getRejectionMessage($bookingDate),
+                        ], 422);
+                    }
+
                     if ($this->hasSlotConflict($slotData['staff_id'], $slotData['start_date_time'], $slotData['duration'])) {
                         return response()->json([
                             'success' => false,
