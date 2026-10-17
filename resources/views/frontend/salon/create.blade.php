@@ -22,7 +22,305 @@
 @endsection
 
 @section('content')
-    <!-- Main Container -->
+
+@if(!empty($scheduleIsClosed) && $scheduleIsClosed)
+{{-- ═══════════════════════════════════════════════════════════ --}}
+{{-- BOOKING SCHEDULE CLOSED PAGE --}}
+{{-- ═══════════════════════════════════════════════════════════ --}}
+<style>
+/* ── Schedule Closed Page ─────────────────────────────────── */
+:root {
+    --primary-color: #bf9456;
+}
+
+.schedule-closed-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #000000 100%);
+    padding: 40px 20px;
+    font-family: 'Lemonada', 'Segoe UI', sans-serif;
+    direction: {{ language_direction() }};
+}
+
+.schedule-closed-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 32px;
+    padding: 60px 50px;
+    max-width: 580px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
+    animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Icon ── */
+.schedule-closed-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 110px;
+    height: 110px;
+    margin: 0 auto 32px;
+}
+
+.schedule-closed-icon-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--primary-color), #8b5cf6, #3b82f6, var(--primary-color));
+    animation: spin 4s linear infinite;
+    padding: 3px;
+}
+
+.schedule-closed-icon-ring::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: #1a1740;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.schedule-closed-icon-inner {
+    position: relative;
+    z-index: 1;
+    font-size: 44px;
+    animation: pulse-icon 2s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.1); }
+}
+
+/* ── Text ── */
+.schedule-closed-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #f97316, #ec4899);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 5px 18px;
+    border-radius: 50px;
+    margin-bottom: 20px;
+}
+
+.schedule-closed-title {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    line-height: 1.3;
+}
+
+.schedule-closed-subtitle {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+}
+
+/* ── Date info box ── */
+.schedule-closed-info-box {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: {{ language_direction() === 'rtl' ? 'right' : 'left' }};
+}
+
+.schedule-closed-info-icon {
+    font-size: 26px;
+    flex-shrink: 0;
+}
+
+.schedule-closed-info-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+}
+
+.schedule-closed-info-date {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* ── CTA Button ── */
+.schedule-closed-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 36px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    background: var(--primary-color);
+    color: #fff;
+    border: none;
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.35);
+}
+
+.schedule-closed-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(139, 92, 246, 0.5);
+    color: #fff;
+    text-decoration: none;
+}
+
+/* ── Floating particles ── */
+.schedule-closed-particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.15;
+    animation: float-particle linear infinite;
+}
+
+@keyframes float-particle {
+    0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+    10%  { opacity: 0.15; }
+    90%  { opacity: 0.15; }
+    100% { transform: translateY(-100px) scale(1); opacity: 0; }
+}
+
+@media (max-width: 576px) {
+    .schedule-closed-card { padding: 40px 24px; }
+    .schedule-closed-title { font-size: 22px; }
+}
+</style>
+
+<div class="schedule-closed-wrapper">
+    {{-- Particles --}}
+    <div class="schedule-closed-particles" id="scheduleParticles"></div>
+
+    <div class="schedule-closed-card">
+        {{-- Animated icon --}}
+        <div class="schedule-closed-icon-wrap">
+            <div class="schedule-closed-icon-ring"></div>
+            <span class="schedule-closed-icon-inner">🔒</span>
+        </div>
+
+        {{-- Badge --}}
+        <div class="schedule-closed-badge">
+            {{ app()->getLocale() === 'ar' ? 'الجدول مغلق' : 'Schedule Closed' }}
+        </div>
+
+        {{-- Title --}}
+        <h1 class="schedule-closed-title">
+            @if(app()->getLocale() === 'ar')
+                عذراً، الحجز غير متاح حالياً
+            @else
+                Booking is Currently Unavailable
+            @endif
+        </h1>
+
+        {{-- Subtitle --}}
+        <p class="schedule-closed-subtitle">
+            @if(app()->getLocale() === 'ar')
+                نأسف على الإزعاج. جدول الحجوزات مغلق في الوقت الحالي.
+                سيتم إعلامك فور فتح باب الحجز مرة أخرى.
+            @else
+                We apologize for the inconvenience. Our booking schedule is currently closed.
+                You will be notified once bookings are available again.
+            @endif
+        </p>
+
+        {{-- Date info --}}
+        @if(!empty($scheduleClosedInfo))
+            @if(!empty($scheduleClosedInfo['opens_at']))
+            <div class="schedule-closed-info-box">
+                <div class="schedule-closed-info-icon">📅</div>
+                <div>
+                    <div class="schedule-closed-info-label">
+                        {{ app()->getLocale() === 'ar' ? 'يفتح الحجز في' : 'Bookings open on' }}
+                    </div>
+                    <div class="schedule-closed-info-date">
+                        {{ \Carbon\Carbon::parse($scheduleClosedInfo['opens_at'])->translatedFormat('d F Y') }}
+                    </div>
+                </div>
+            </div>
+            @elseif(!empty($scheduleClosedInfo['closed_since']))
+            <div class="schedule-closed-info-box">
+                <div class="schedule-closed-info-icon">⏰</div>
+                <div>
+                    <div class="schedule-closed-info-label">
+                        {{ app()->getLocale() === 'ar' ? 'انتهى الحجز في' : 'Bookings closed on' }}
+                    </div>
+                    <div class="schedule-closed-info-date">
+                        {{ \Carbon\Carbon::parse($scheduleClosedInfo['closed_since'])->translatedFormat('d F Y') }}
+                    </div>
+                </div>
+            </div>
+            @endif
+        @endif
+
+        {{-- CTA --}}
+        <a href="{{ url('/') }}" class="schedule-closed-btn">
+            <i class="fas fa-home"></i>
+            {{ app()->getLocale() === 'ar' ? 'العودة للرئيسية' : 'Back to Home' }}
+        </a>
+    </div>
+</div>
+
+<script>
+// Generate floating particles
+(function() {
+    var container = document.getElementById('scheduleParticles');
+    if (!container) return;
+    var colors = ['#8b5cf6','#3b82f6','#ec4899','#f97316','#10b981'];
+    for (var i = 0; i < 18; i++) {
+        var p = document.createElement('div');
+        p.className = 'particle';
+        var size = Math.random() * 12 + 4;
+        var left = Math.random() * 100;
+        var delay = Math.random() * 12;
+        var duration = Math.random() * 10 + 8;
+        p.style.cssText = [
+            'width:' + size + 'px',
+            'height:' + size + 'px',
+            'left:' + left + '%',
+            'background:' + colors[i % colors.length],
+            'animation-delay:' + delay + 's',
+            'animation-duration:' + duration + 's',
+        ].join(';');
+        container.appendChild(p);
+    }
+})();
+</script>
+
+@else
+    {{-- Normal salon booking page content --}}
     <div class="container">
         <div id="wifi-loader" style="display:none;">
             <svg class="circle-outer" viewBox="0 0 86 86">
@@ -1477,4 +1775,5 @@
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+@endif
 @endsection
