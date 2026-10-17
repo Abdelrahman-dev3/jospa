@@ -31,6 +31,10 @@
 {{-- ═══════════════════════════════════════════════════════════ --}}
 <style>
 /* ── Schedule Closed Page ─────────────────────────────────── */
+:root {
+    --primary-color: #bf9456;
+}
+
 .schedule-closed-wrapper {
     min-height: 100vh;
     display: flex;
@@ -76,7 +80,7 @@
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, #f97316, #ec4899, #8b5cf6, #3b82f6, #f97316);
+    background: conic-gradient(from 0deg, var(--primary-color), #8b5cf6, #3b82f6, var(--primary-color));
     animation: spin 4s linear infinite;
     padding: 3px;
 }
