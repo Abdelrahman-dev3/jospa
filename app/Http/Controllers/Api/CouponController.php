@@ -23,7 +23,7 @@ class CouponController extends Controller
 
     public function validateCoupon(Request $request)
     {
-        $couponCode = $request->query('coupon_code');
+        $couponCode = $request->query('coupon_code') ?: $request->query('code');
         $serviceId = $request->query('service_id');
         $bookingId = $request->query('booking_id');
 
@@ -88,7 +88,7 @@ class CouponController extends Controller
 
     public function validateInvoiceCoupon(Request $request)
     {
-        $couponCode = $request->query('coupon_code');
+        $couponCode = $request->query('coupon_code') ?: $request->query('code');
         $giftCode = trim((string) $request->query('gift_code', ''));
 
         if ($giftCode !== '') {
@@ -144,13 +144,13 @@ class CouponController extends Controller
     private function normalizeServices($services): array
     {
         if (is_array($services)) {
-            return $services;
+            return array_map('intval', $services);
         }
 
         if (is_string($services)) {
             $decoded = json_decode($services, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                return $decoded;
+                return array_map('intval', $decoded);
             }
 
             return array_values(array_filter(array_map('intval', array_map('trim', explode(',', $services)))));
