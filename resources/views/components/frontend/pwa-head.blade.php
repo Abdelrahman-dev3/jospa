@@ -3,5 +3,5 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Jospa">
 <link rel="apple-touch-icon" href="{{ url('/images/pwa/icon-192.png') }}">
-<link rel="stylesheet" href="{{ asset('custom-css/pwa-install.css') }}">
+<link rel="stylesheet" href="{{ asset('custom-css/pwa-install.css') }}?v=2">
 <script src="{{ url('/js/pwa-install.js') }}" data-worker="{{ url('/sw.js') }}" defer></script>
