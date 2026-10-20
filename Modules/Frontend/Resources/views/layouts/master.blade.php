@@ -2,6 +2,7 @@
 <html lang="{{ app()->getLocale() }}" dir="{{ language_direction() }}" class="theme-fs-sm">
 <head>
     <meta charset="utf-8">
+    @include('components.frontend.pwa-head')
 
     <!-- Viewport واحد فقط -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -40,6 +41,9 @@
 
     <!-- MAIN -->
     <main>
+        @if (request()->routeIs('frontend.home'))
+            @include('components.frontend.pwa-install')
+        @endif
         @yield('content')
     </main>
 

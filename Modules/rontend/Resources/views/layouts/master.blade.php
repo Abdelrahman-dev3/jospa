@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8">
+    @include('components.frontend.pwa-head')
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -39,6 +40,9 @@
     </header>
 
     <main>
+        @if (request()->routeIs('frontend.home'))
+            @include('components.frontend.pwa-install')
+        @endif
         @yield('content')
     </main>
 
