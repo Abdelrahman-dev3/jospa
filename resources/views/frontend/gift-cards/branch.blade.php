@@ -1565,6 +1565,16 @@
       .floating-checkout-bar {
         display: none;
       }
+
+      .giftcard-proceed-btn.sidebar-proceed-btn {
+        display: none;
+        width: 100%;
+        margin: 18px 0 0;
+      }
+
+      .giftcard-proceed-btn.sidebar-proceed-btn.is-visible {
+        display: flex;
+      }
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -2023,6 +2033,12 @@
                 <span class="total-currency">ر.س</span>
               </div>
             </div>
+
+            <!-- زر المتابعة للدفع على الديسكتوب (يظهر في الخطوة الثانية فقط) -->
+            <button type="button" class="giftcard-proceed-btn sidebar-proceed-btn" id="sidebarProceedBtn" onclick="handleMainAction()">
+              <span>المتابعة للدفع</span>
+              <i class="fa-solid fa-credit-card"></i>
+            </button>
           </div>
 
         </div>
@@ -2348,6 +2364,9 @@
         if (desktopBtnIcon) desktopBtnIcon.className = 'fa-solid fa-credit-card';
       }
 
+      const sidebarBtn = document.getElementById('sidebarProceedBtn');
+      if (sidebarBtn) sidebarBtn.classList.toggle('is-visible', step !== 1);
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -2425,8 +2444,8 @@
         return;
       }
 
-      const btn = document.getElementById('btnMainAction');
-      btn.disabled = true;
+      const btns = document.querySelectorAll('#btnMainAction, #sidebarProceedBtn');
+      btns.forEach(b => b.disabled = true);
       try {
         const res = await fetch(GIFT_CONFIG.storeUrl, {
           method: 'POST',
@@ -2457,7 +2476,7 @@
       } catch (e) {
         showToast('تعذر الاتصال بالخادم، حاولي مرة أخرى');
       } finally {
-        btn.disabled = false;
+        btns.forEach(b => b.disabled = false);
       }
     }
 
