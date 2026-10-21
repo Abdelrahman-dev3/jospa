@@ -56,7 +56,20 @@ class GiftCardController extends Controller
             ['name' => 'كوبون بقيمة 4000', 'price' => 4000],
             ['name' => 'كوبون بقيمة 5000', 'price' => 5000],
         ];
-        return view('frontend.gift-cards.create', compact('subCategories', 'errors' ,'packages' , 'currentLocale' , 'coupons' , 'ads'));
+        $giftBranches = \App\Models\Branch::query()
+            ->where('status', 1)
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($branch) => [
+                'id' => $branch->id,
+                'name' => $branch->getTranslation('name', $currentLocale, true),
+                'url' => ($branch->gift_page_enabled && $branch->gift_slug)
+                    ? route('branch.gift.page', $branch->gift_slug)
+                    : null,
+            ])
+            ->values();
+
+        return view('frontend.gift-cards.create', compact('subCategories', 'errors' ,'packages' , 'currentLocale' , 'coupons' , 'ads', 'giftBranches'));
     }
 
     public function store(Request $request)

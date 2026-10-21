@@ -13,6 +13,48 @@
 @endsection
 
 @section('content')
+@if($giftBranches->contains(fn ($b) => $b['url']))
+<div id="branchPickerOverlay" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:20px;max-width:440px;width:100%;padding:28px 24px;text-align:center;direction:{{ $currentLocale === 'ar' ? 'rtl' : 'ltr' }};">
+        <h4 style="font-weight:800;margin-bottom:6px;">{{ $currentLocale === 'ar' ? 'اختاري الفرع أولاً' : 'Choose your branch first' }}</h4>
+        <p style="color:#777;font-size:14px;margin-bottom:18px;">{{ $currentLocale === 'ar' ? 'بعض الفروع لديها صفحة إهداء مخصصة بباقات الورد وبطاقات الهدايا.' : 'Some branches have a dedicated gifting page with flowers and gift cards.' }}</p>
+        <select id="branchPickerSelect" class="form-select mb-3">
+            <option value="">{{ $currentLocale === 'ar' ? 'اختاري الفرع' : 'Select a branch' }}</option>
+            @foreach($giftBranches as $b)
+                <option value="{{ $b['id'] }}" data-url="{{ $b['url'] }}">{{ $b['name'] }}</option>
+            @endforeach
+        </select>
+        <button type="button" id="branchPickerContinue" class="btn w-100" style="background:#BF9456;color:#fff;border-radius:50px;padding:12px;font-weight:700;">{{ $currentLocale === 'ar' ? 'متابعة' : 'Continue' }}</button>
+    </div>
+</div>
+<script>
+(function () {
+    var overlay = document.getElementById('branchPickerOverlay');
+    var select = document.getElementById('branchPickerSelect');
+    var KEY = 'giftBranchChosen';
+    var chosen = null;
+    try { chosen = sessionStorage.getItem(KEY); } catch (e) {}
+
+    function proceed() {
+        var opt = select.options[select.selectedIndex];
+        if (!opt || !opt.value) { select.focus(); return; }
+        try { sessionStorage.setItem(KEY, opt.value); } catch (e) {}
+        if (opt.dataset.url) { window.location.href = opt.dataset.url; return; }
+        overlay.style.display = 'none';
+    }
+
+    document.getElementById('branchPickerContinue').addEventListener('click', proceed);
+    select.addEventListener('change', function () {
+        var opt = select.options[select.selectedIndex];
+        if (opt && opt.dataset.url) proceed();
+    });
+
+    // Already chose a branch without a custom page this session: don't ask again.
+    // (A branch with a custom page redirects immediately, so landing here means the user came back.)
+    if (!chosen) overlay.style.display = 'flex';
+})();
+</script>
+@endif
 <div class="gift-page-shell">
     <div class="d-none d-md-block proh">
         <div class="slider-track">
