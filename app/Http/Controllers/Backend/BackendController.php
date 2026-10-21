@@ -184,7 +184,7 @@ class BackendController extends Controller
         // ============================================================
 
         // 1. Booking Status Breakdown (for donut chart)
-        $bookingStatusCounts = Booking::branch()
+        $bookingStatusCounts = Booking::query()->branch()
             ->whereDate('start_date_time', '>=', $startDate)
             ->whereDate('start_date_time', '<=', $endDate)
             ->selectRaw('status, COUNT(*) as cnt')
@@ -216,7 +216,7 @@ class BackendController extends Controller
         ];
 
         // 3. Period-over-period comparisons
-        $prevCompletedBookings = Booking::branch()
+        $prevCompletedBookings = Booking::query()->branch()
             ->whereDate('start_date_time', '>=', $prevStartDate)
             ->whereDate('start_date_time', '<=', $prevEndDate)
             ->where('status', 'completed')
@@ -315,7 +315,7 @@ class BackendController extends Controller
         $data['branch_chart_bookings'] = $branchBookings;
 
         // 7. Peak Booking Hours Distribution (9:00 AM to 10:00 PM)
-        $hourlyCounts = Booking::branch()
+        $hourlyCounts = Booking::query()->branch()
             ->whereDate('start_date_time', '>=', $startDate)
             ->whereDate('start_date_time', '<=', $endDate)
             ->where('status', 'completed')
@@ -335,7 +335,7 @@ class BackendController extends Controller
         $data['peak_hours_data']   = $peakData;
 
         // 8. Payment Methods Breakdown
-        $paymentCounts = Booking::branch()
+        $paymentCounts = Booking::query()->branch()
             ->whereDate('start_date_time', '>=', $startDate)
             ->whereDate('start_date_time', '<=', $endDate)
             ->where('status', 'completed')
