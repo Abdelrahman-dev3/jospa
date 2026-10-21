@@ -2,16 +2,118 @@
 
 @section('title') {{ __($module_title) }} @endsection
 
+@push('after-styles')
+<link rel="stylesheet" href='{{ mix("modules/product/style.css") }}'>
+<link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.css" />
+<style>
+    .report-summary-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1.1rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+    .report-summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(15, 23, 42, 0.08);
+    }
+    .report-summary-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .report-chart-container {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+</style>
+@endpush
+
 @section('content')
     @include('backend.reports.report-nav')
-    <div class="card">
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- SUMMARY KPI CARDS                                           --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-4">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-bullhorn"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">إجمالي الاستفادة من العروض</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-promo-count">0 عملية</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="report-summary-card" style="border-inline-start: 4px solid #db2777;">
+                <div class="report-summary-icon bg-pink bg-opacity-10" style="color:#db2777;">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">إجمالي قيمة الخصم الترويجي</div>
+                    <div class="fs-4 fw-bolder text-danger" id="stat-promo-discount">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-info bg-opacity-10 text-info">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">العملاء المستفيدين من العروض</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-promo-customers">0 عميل</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- INTERACTIVE CHART                                           --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="report-chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-column text-primary me-2"></i> العروض الترويجية الأكثر طلباً وتفاعلاً</h5>
+                <p class="text-muted small mb-0">تحليل كفاءة الحملات التسويقية وقيمة الخصومات المستفادة</p>
+            </div>
+            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 fw-bold">
+                تحليل الحملات
+            </span>
+        </div>
+        <div id="chart-promotion-usage" style="min-height: 270px;"></div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- MAIN TABLE & FILTER                                         --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="card mb-3">
         <div class="card-body">
             <x-backend.section-header>
-                <div class="row">
-                    <div class="col-md-3">
+                <div class="row w-100">
+                    <div class="col-md-6">
                         <div class="input-group gap-2 flex-nowrap">
-                            <input type="text" name="promotion_date" id="promotion_date" placeholder="Select Date" class="promotion-report-date-range form-control" readonly />
-                            <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="Reset">
+                            <input type="text" name="promotion_date" id="promotion_date" placeholder="اختر التاريخ" class="promotion-report-date-range form-control" readonly />
+                            <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="إعادة تعيين">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                      xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -24,10 +126,10 @@
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="datatable-filter">
                             <select name="promotion_id" id="promotion_id" class="select2 form-control" data-filter="select">
-                                <option value="">{{ __('report.lbl_promotion') }}</option>
+                                <option value="">{{ __('report.lbl_promotion') }} (الكل)</option>
                                 @foreach($promotions as $promotion)
                                     <option value="{{ $promotion->id }}">{{ $promotion->name }}</option>
                                 @endforeach
@@ -38,6 +140,7 @@
             </x-backend.section-header>
         </div>
     </div>
+
     <div class="card">
         <div class="card-body">
             <table id="datatable" class="table table-striped border table-responsive">
@@ -46,18 +149,82 @@
     </div>
 @endsection
 
-@push ('after-styles')
-<link rel="stylesheet" href='{{ mix("modules/product/style.css") }}'>
-<link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
-@endpush
-
-@push ('after-scripts')
+@push('after-scripts')
 <script src='{{ mix("modules/product/script.js") }}'></script>
 <script src="{{ asset('js/form-offcanvas/index.js') }}" defer></script>
 <script src="{{ asset('js/form-modal/index.js') }}" defer></script>
 <script type="text/javascript" src="{{ asset('vendor/datatable/datatables.min.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.js"></script>
 
-<script type="text/javascript" defer>
+<script type="text/javascript">
+    let promoChart = null;
+
+    function updatePromoReportAnalytics(rows) {
+        let totalCount = 0;
+        let totalDiscount = 0;
+        let customerSet = new Set();
+        let promoMap = {};
+
+        if (rows && rows.length > 0) {
+            totalCount = rows.length;
+
+            rows.forEach(row => {
+                const discAmt = parseFloat((row.discount_amount || '0').replace(/[^0-9.-]+/g, '')) || 0;
+                const pName   = row.promotion_name || 'عرض';
+                const cust    = row.customer_name || '';
+
+                totalDiscount += discAmt;
+                if (cust) customerSet.add(cust);
+
+                if (!promoMap[pName]) {
+                    promoMap[pName] = { count: 0, discount: 0 };
+                }
+                promoMap[pName].count += 1;
+                promoMap[pName].discount += discAmt;
+            });
+        }
+
+        const currencySymbol = ' ر.س';
+        document.getElementById('stat-promo-count').innerText = totalCount.toLocaleString() + ' عملية';
+        document.getElementById('stat-promo-discount').innerText = totalDiscount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+        document.getElementById('stat-promo-customers').innerText = customerSet.size.toLocaleString() + ' عميل';
+
+        const names = Object.keys(promoMap).slice(0, 10);
+        const counts = names.map(n => promoMap[n].count);
+        const discounts = names.map(n => +(Math.round(promoMap[n].discount + "e+2") + "e-2"));
+
+        renderPromoChart(names, counts, discounts);
+    }
+
+    function renderPromoChart(names, counts, discounts) {
+        const chartEl = document.querySelector('#chart-promotion-usage');
+        if (!chartEl || typeof ApexCharts === 'undefined') return;
+
+        const chartOptions = {
+            series: [
+                { name: 'مرات الاستفادة', type: 'column', data: counts },
+                { name: 'قيمة الخصومات (ر.س)', type: 'line', data: discounts }
+            ],
+            chart: { type: 'line', height: 270, toolbar: { show: false }, fontFamily: 'inherit' },
+            colors: ['#db2777', '#4f46e5'],
+            stroke: { width: [0, 3], curve: 'smooth' },
+            xaxis: { categories: names },
+            yaxis: [
+                { title: { text: 'المرات' }, labels: { formatter: v => Number(v || 0).toFixed(0) } },
+                { opposite: true, title: { text: 'الخصم (ر.س)' }, labels: { formatter: v => Number(v || 0).toLocaleString() } }
+            ],
+            legend: { position: 'top' },
+            grid: { strokeDashArray: 4, borderColor: '#f1f5f9' }
+        };
+
+        if (promoChart) {
+            promoChart.updateOptions(chartOptions);
+        } else {
+            promoChart = new ApexCharts(chartEl, chartOptions);
+            promoChart.render();
+        }
+    }
+
     const range_flatpicker = document.querySelectorAll('.promotion-report-date-range')
 
     Array.from(range_flatpicker, (elem) => {
@@ -128,9 +295,7 @@
         },
     ]
 
-    let finalColumns = [
-        ...columns
-    ]
+    let finalColumns = [ ...columns ]
 
     document.addEventListener('DOMContentLoaded', (event) => {
         initDatatable({
@@ -138,18 +303,24 @@
             finalColumns,
             advanceFilter: () => {
                 return {
-                    promotion_id: $('[name="promotion_id"]').val(),
-                    promotion_date: $('[name="promotion_date"]').val().split(' to '),
+                    promotion_date: $('#promotion_date').val(),
+                    promotion_id: $('#promotion_id').val(),
                 }
+            }
+        });
+
+        $('#datatable').on('xhr.dt', function(e, settings, json, xhr) {
+            if (json && json.data) {
+                updatePromoReportAnalytics(json.data);
             }
         });
     })
 
-    $(document).on('change', '#promotion_date', function() {
+    $('#promotion_date').on('change', function() {
         window.renderedDataTable.ajax.reload(null, false)
     })
 
-    $(document).on('change', '#promotion_id', function() {
+    $('#promotion_id').on('change', function() {
         window.renderedDataTable.ajax.reload(null, false)
     })
 </script>
