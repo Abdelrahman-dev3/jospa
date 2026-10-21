@@ -78,6 +78,9 @@
                     <span>{{ $r['title'] }}</span>
                 </a>
             @endforeach
+            <div class="ms-auto ps-2">
+                @include('backend.reports.excel-export')
+            </div>
         </div>
     </div>
 </div>

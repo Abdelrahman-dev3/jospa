@@ -84,6 +84,7 @@ return [
     'custom_date_preset' => 'Custom Dates',
     'apply_filter' => 'Apply',
     'export_csv' => 'Export CSV',
+    'export_excel' => 'Export to Excel',
     'gross_sales_period' => 'Gross sales in this period',
     'net_sales_period' => 'Net sales in this period',
     'orders_placed' => 'Orders placed',

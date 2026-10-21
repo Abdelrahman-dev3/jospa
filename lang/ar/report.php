@@ -74,6 +74,7 @@ return [
     'custom_date_preset' => 'تواريخ محددة',
     'apply_filter' => 'تطبيق',
     'export_csv' => 'تصدير بصيغة CSV',
+    'export_excel' => 'تصدير إلى Excel',
     'gross_sales_period' => 'إجمالي الخدمات في هذه الفترة',
     'net_sales_period' => 'صافي الخدمات في هذه الفترة',
     'orders_placed' => 'طلبات مؤكدة',
