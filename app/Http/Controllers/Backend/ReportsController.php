@@ -34,9 +34,9 @@ class ReportsController extends Controller
         // module icon
         $this->module_icon = 'fa-solid fa-chart-line';
 
-        $this->middleware('permission:view_financial_report')->only(['financial_report']);
-        $this->middleware('permission:view_coupon_report')->only(['coupon_report']);
-        $this->middleware('permission:orders_report')->only(['order_report']);
+        $this->middleware('permission:view_financial_report|daily_booking_report')->only(['financial_report']);
+        $this->middleware('permission:view_coupon_report|daily_booking_report')->only(['coupon_report']);
+        $this->middleware('permission:orders_report|daily_booking_report')->only(['order_report']);
 
         view()->share([
             'module_icon' => $this->module_icon,
@@ -684,6 +684,7 @@ class ReportsController extends Controller
         [$startDate, $endDate] = $this->parseDateRange($filter['date_range'] ?? []);
 
         $bookingQuery = Booking::query()
+            ->branch()
             ->with([
                 'bookingService',
                 'services',
@@ -786,7 +787,7 @@ class ReportsController extends Controller
             ->merge($orderByPeriod->keys())
             ->merge($giftByPeriod->keys())
             ->unique()
-            ->sort()
+            ->sortDesc()
             ->values();
 
         $rows = $periods->map(function ($period) use ($bookingByPeriod, $orderByPeriod, $giftByPeriod) {
@@ -991,11 +992,13 @@ class ReportsController extends Controller
                 if (! $invoice) {
                     return __('report.lbl_coupon_note_single_service');
                 }
+
+                return '-';
             })
             ->editColumn('created_at', function ($data) {
                 return customDate($data->created_at);
             })
-            ->rawColumns(['customer_name', 'invoice_id'])
+            ->rawColumns(['customer_name', 'invoice_id', 'note'])
             ->toJson();
     }
 
@@ -1379,7 +1382,7 @@ class ReportsController extends Controller
                 $query->orderBy(new Expression('(SELECT employee_id FROM booking_services WHERE booking_id = bookings.id LIMIT 1)'), $order);
             }, 1)
             ->addIndexColumn()
-            ->rawColumns([])
+            ->rawColumns(['employee_id', 'id'])
             ->toJson();
     }
 
@@ -1475,7 +1478,7 @@ class ReportsController extends Controller
             }, 1)
 
             ->addIndexColumn()
-            ->rawColumns([])
+            ->rawColumns(['first_name'])
             ->orderColumns(['id'], '-:column $1')
             ->toJson();
     }
@@ -1794,14 +1797,38 @@ class ReportsController extends Controller
 
         $filter = $request->filter;
 
-        if (isset($filter['employee_id'])) {
+        if (isset($filter['booking_date'])) {
+            [$startDate, $endDate] = $this->parseDateRange($filter['booking_date']);
+            if ($startDate && $endDate) {
+                $query = User::role(['manager', 'employee'])->select('users.id', 'users.first_name', 'users.last_name', 'users.email', 'users.mobile', 'users.updated_at')
+                    ->withCount(['employeeBooking' => function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('start_date_time', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
+                    }])
+                    ->withSum(['employeeBooking' => function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('start_date_time', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
+                    }], 'service_price')
+                    ->withSum(['commission_earning' => function ($q) use ($startDate, $endDate) {
+                        $q->whereBetween('created_at', [$startDate->toDateTimeString(), $endDate->toDateTimeString()]);
+                    }], 'commission_amount');
+            } elseif ($startDate) {
+                $query = User::role(['manager', 'employee'])->select('users.id', 'users.first_name', 'users.last_name', 'users.email', 'users.mobile', 'users.updated_at')
+                    ->withCount(['employeeBooking' => function ($q) use ($startDate) {
+                        $q->whereDate('start_date_time', $startDate->toDateString());
+                    }])
+                    ->withSum(['employeeBooking' => function ($q) use ($startDate) {
+                        $q->whereDate('start_date_time', $startDate->toDateString());
+                    }], 'service_price')
+                    ->withSum(['commission_earning' => function ($q) use ($startDate) {
+                        $q->whereDate('created_at', $startDate->toDateString());
+                    }], 'commission_amount');
+            }
+        }
+
+        if (isset($filter['employee_id']) && ! empty($filter['employee_id'])) {
             $query->where('id', $filter['employee_id']);
         }
 
         return $datatable->eloquent($query)
-            // ->editColumn('first_name', function ($data) {
-            //     return $data->full_name;
-            // })
             ->editColumn('first_name', function ($data) {
                 $Profile_image = optional($data)->profile_image ?? default_user_avatar();
                 $name = optional($data)->full_name ?? default_user_name();
@@ -1809,8 +1836,8 @@ class ReportsController extends Controller
                 return view('booking::backend.bookings.datatable.employee_id', compact('Profile_image', 'name', 'mobile'));
             })
             ->orderColumn('first_name', function ($query, $order) {
-                $query->orderBy('users.first_name', $order) // Ordering by first name
-                    ->orderBy('users.last_name', $order); // Ordering by first name
+                $query->orderBy('users.first_name', $order)
+                    ->orderBy('users.last_name', $order);
             }, 1)
             ->editColumn('total_services', function ($data) {
                 return $data->employee_booking_count ?? 0;
@@ -1822,11 +1849,9 @@ class ReportsController extends Controller
                 return Currency::format($data->commission_earning_sum_commission_amount ?? 0);
             })
             ->editColumn('total_earning', function ($data) {
-                return Currency::format($data->employee_booking_sum_service_price ?? 0);
+                return Currency::format($data->commission_earning_sum_commission_amount ?? 0);
             })
             ->editColumn('updated_at', function ($data) {
-                $module_name = $this->module_name;
-
                 $diff = Carbon::now()->diffInHours($data->updated_at);
 
                 if ($diff < 25) {
@@ -1839,29 +1864,20 @@ class ReportsController extends Controller
                 $data->selectRaw('(SELECT COUNT(service_id) FROM booking_services WHERE employee_id = users.id) as total_services')
                     ->orderBy('total_services', $order);
             })
-
             ->orderColumn('total_service_amount', function ($data, $order) {
                 $data->selectRaw('(SELECT SUM(service_price) FROM booking_services WHERE employee_id = users.id) as total_service_amount')
                     ->orderBy('total_service_amount', $order);
             })
-
-            ->orderColumn('total_service_amount', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(service_price) FROM booking_services WHERE employee_id = users.id) as total_service_amount')
-                    ->orderBy('total_service_amount', $order);
-            })
-
             ->orderColumn('total_commission_earn', function ($data, $order) {
                 $data->selectRaw('(SELECT SUM(commission_amount) FROM commission_earnings WHERE employee_id = users.id) as total_commission_earn')
                     ->orderBy('total_commission_earn', $order);
             })
-
             ->orderColumn('total_earning', function ($data, $order) {
-                $data->selectRaw('(SELECT SUM(service_price) FROM booking_services WHERE employee_id = users.id) as total_earning')
+                $data->selectRaw('(SELECT SUM(commission_amount) FROM commission_earnings WHERE employee_id = users.id) as total_earning')
                     ->orderBy('total_earning', $order);
             })
-
             ->addIndexColumn()
-            ->rawColumns([])
+            ->rawColumns(['first_name'])
             ->orderColumns(['id'], '-:column $1')
             ->toJson();
     }

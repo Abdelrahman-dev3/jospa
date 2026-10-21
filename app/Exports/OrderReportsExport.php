@@ -8,7 +8,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Modules\Product\Models\Order;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-class  OrderReportsExport implements FromCollection, WithHeadings,WithStyles
+
+class OrderReportsExport implements FromCollection, WithHeadings, WithStyles
 {
     public array $columns;
 
@@ -37,11 +38,15 @@ class  OrderReportsExport implements FromCollection, WithHeadings,WithStyles
      */
     public function collection()
     {
-        $query = Order::with('orderGroup','user');
+        $query = Order::with(['orderGroup', 'user', 'orderItems']);
 
-        $query->whereDate('orders.created_at', '>=', $this->dateRange[0]);
+        if (! empty($this->dateRange[0])) {
+            $query->whereDate('orders.created_at', '>=', $this->dateRange[0]);
+        }
 
-        $query->whereDate('orders.created_at', '<=', $this->dateRange[1]);
+        if (! empty($this->dateRange[1])) {
+            $query->whereDate('orders.created_at', '<=', $this->dateRange[1]);
+        }
 
         $query = $query->get();
 
@@ -51,11 +56,11 @@ class  OrderReportsExport implements FromCollection, WithHeadings,WithStyles
             foreach ($this->columns as $column) {
                 switch ($column) {
                     case 'order_code':
-                        $selectedData[$column] =  setting('inv_prefix').$row->orderGroup->order_code;
+                        $selectedData[$column] = setting('inv_prefix') . optional($row->orderGroup)->order_code;
                         break;
 
                     case 'customer_name':
-                        $selectedData[$column] = $row->user->full_name;
+                        $selectedData[$column] = optional($row->user)->full_name ?? default_user_name();
                         break;
 
                     case 'placed_on':
@@ -63,15 +68,15 @@ class  OrderReportsExport implements FromCollection, WithHeadings,WithStyles
                         break;
 
                     case 'items':
-                        $selectedData[$column] =$row->orderItems()->count();
+                        $selectedData[$column] = $row->orderItems ? $row->orderItems->count() : 0;
                         break;
 
                     case 'total_admin_earnings':
-                        $selectedData[$column] = Currency::format($row->total_admin_earnings);;
+                        $selectedData[$column] = Currency::format($row->total_admin_earnings ?? optional($row->orderGroup)->grand_total_amount ?? 0);
                         break;
 
                     default:
-                        $selectedData[$column] = $row[$column];
+                        $selectedData[$column] = $row[$column] ?? '-';
                         break;
                 }
             }
@@ -81,6 +86,7 @@ class  OrderReportsExport implements FromCollection, WithHeadings,WithStyles
 
         return $newQuery;
     }
+
     public function styles(Worksheet $sheet)
     {
         applyExcelStyles($sheet);

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Providers\RouteServiceProvider;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Modules\Booking\Models\Booking;
@@ -30,13 +29,13 @@ class BackendController extends Controller
         $action = $request->action ?? 'reset';
         if (isset($request->date_range) && $action !== 'reset') {
             $dates = explode(' to ', $request->date_range);
-            if (count($dates) == 2) { // When both start and end dates are provided
+            if (count($dates) == 2) {
                 $startDate = $dates[0] ?? date('Y-m-d');
                 $endDate = $dates[1] ?? date('Y-m-d');
-            } elseif (count($dates) == 1) { // When only a single date is provided
+            } elseif (count($dates) == 1) {
                 $startDate = $dates[0] ?? date('Y-m-d');
-                $endDate = $startDate; // Use the same date for both start and end
-            } else { // Default case, fallback to last 10 days
+                $endDate = $startDate;
+            } else {
                 $startDate = Carbon::now()->subDays(10)->toDateString();
                 $endDate = Carbon::now()->toDateString();
             }
@@ -45,17 +44,22 @@ class BackendController extends Controller
             $endDate = Carbon::now()->toDateString();
         }
 
+        // Previous period for comparison
+        $daysDiff = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
+        $prevStartDate = Carbon::parse($startDate)->subDays($daysDiff)->toDateString();
+        $prevEndDate = Carbon::parse($startDate)->subDay()->toDateString();
+
         $date_range = $startDate . ' to ' . $endDate;
         $data = [
-            'total_appointments' => 0,
-            'total_commission' => 0,
-            'total_revenue' => 0,
-            'total_new_customers' => 0,
+            'total_appointments'   => 0,
+            'total_commission'     => 0,
+            'total_revenue'        => 0,
+            'total_new_customers'  => 0,
             'upcomming_appointments' => [],
-            'top_services' => [],
-            'revenue_chart' => [],
-            'total_orders' => 0,
-            'product_sales' => 0,
+            'top_services'         => [],
+            'revenue_chart'        => [],
+            'total_orders'         => 0,
+            'product_sales'        => 0,
         ];
 
         $totalServices = BookingService::whereHas('booking', function ($query) use ($startDate, $endDate) {
@@ -64,14 +68,16 @@ class BackendController extends Controller
                     ->whereDate('start_date_time', '<=', $endDate);
             })->branch();
         });
-        
+
         $data['total_appointments'] = Booking::where(function ($query) use ($startDate, $endDate) {
             $query->where(function ($query) use ($startDate, $endDate) {
                 $query->whereDate('start_date_time', '>=', $startDate)
                     ->whereDate('start_date_time', '<=', $endDate);
             });
         })->where('status', 'completed')->branch()->count();
-        $data['total_commission'] = Booking::with('commission')->branch()->whereDate('start_date_time', '>=', $startDate)
+
+        $data['total_commission'] = Booking::with('commission')->branch()
+            ->whereDate('start_date_time', '>=', $startDate)
             ->whereDate('start_date_time', '<=', $endDate)->get();
 
         $data['total_commission'] = \Currency::format($data['total_commission']->sum(function ($booking) {
@@ -92,7 +98,7 @@ class BackendController extends Controller
             ->whereDate('created_at', '<=', $endDate)
             ->where('payment_status', 1)
             ->sum('subtotal');
-            
+
         $data['total_revenue'] = \Currency::format($totalServiceAmount + $totalPackageAmount + $totalgiftServices);
 
         $data['total_new_customers'] = User::where('created_at', '>=', $startDate)
@@ -102,18 +108,18 @@ class BackendController extends Controller
             })
             ->count();
 
-            $datetime = Carbon::now()->setTimezone(setting('default_time_zone') ?? 'UTC');
-   
+        $datetime = Carbon::now()->setTimezone(setting('default_time_zone') ?? 'UTC');
 
         $data['upcomming_appointments'] = Booking::with('branch', 'user', 'services')
-        ->where('start_date_time', '>=', $datetime)             ->orderBy('start_date_time')
+            ->where('start_date_time', '>=', $datetime)
+            ->orderBy('start_date_time')
             ->whereHas('user', function ($q) {
                 $q->whereNull('deleted_at');
             })
             ->whereHas('branch', function ($q) {
                 $q->whereNull('deleted_at');
             })
-            ->whereNotIn('status', ['completed', 'cancelled']) // Exclude both statuses
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->branch()
             ->take(10)
             ->get();
@@ -141,9 +147,9 @@ class BackendController extends Controller
             ->groupBy(\DB::raw('DATE(bookings.start_date_time)'))
             ->get();
 
-        $data['revenue_chart']['xaxis'] = $chartBookingRevenue?->pluck('booking_date')->toArray() ?? [];
+        $data['revenue_chart']['xaxis']          = $chartBookingRevenue?->pluck('booking_date')->toArray() ?? [];
         $data['revenue_chart']['total_bookings'] = $chartBookingRevenue?->pluck('total_booking')->toArray() ?? [];
-        $data['revenue_chart']['total_price'] = $chartBookingRevenue?->pluck('total_price')->toArray() ?? [];
+        $data['revenue_chart']['total_price']    = $chartBookingRevenue?->pluck('total_price')->toArray() ?? [];
 
         $orders = Order::where(function ($q) {
             $q->orWhereIn('order_group_id', OrderGroup::pluck('id'));
@@ -156,29 +162,131 @@ class BackendController extends Controller
             $orders->where('created_at', '>=', $startDate)
                 ->whereDate('created_at', '<=', $endDate)->sum('total_admin_earnings')
         );
+
+        // ============================================================
+        // EXECUTIVE ANALYTICS — Additional Financial & Admin KPIs
+        // ============================================================
+
+        // 1. Booking Status Breakdown (for donut chart)
+        $bookingStatusCounts = Booking::branch()
+            ->whereDate('start_date_time', '>=', $startDate)
+            ->whereDate('start_date_time', '<=', $endDate)
+            ->selectRaw('status, COUNT(*) as cnt')
+            ->groupBy('status')
+            ->pluck('cnt', 'status')
+            ->toArray();
+
+        $data['booking_status'] = [
+            'completed' => $bookingStatusCounts['completed'] ?? 0,
+            'pending'   => $bookingStatusCounts['pending']   ?? 0,
+            'cancelled' => $bookingStatusCounts['cancelled'] ?? 0,
+            'confirmed' => $bookingStatusCounts['confirmed'] ?? 0,
+        ];
+
+        // 2. Revenue Breakdown by Source
+        $productRevenue = (float) OrderGroup::where('payment_status', 'paid')
+            ->whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate)
+            ->sum('grand_total_amount');
+
+        $data['revenue_breakdown'] = [
+            'services'  => round((float) $totalServiceAmount, 2),
+            'packages'  => round((float) $totalPackageAmount, 2),
+            'giftcards' => round((float) $totalgiftServices, 2),
+            'products'  => round($productRevenue, 2),
+        ];
+
+        // 3. Period-over-period comparisons
+        $prevCompletedBookings = Booking::branch()
+            ->whereDate('start_date_time', '>=', $prevStartDate)
+            ->whereDate('start_date_time', '<=', $prevEndDate)
+            ->where('status', 'completed')
+            ->count();
+
+        $prevNewCustomers = User::whereDate('created_at', '>=', $prevStartDate)
+            ->whereDate('created_at', '<=', $prevEndDate)
+            ->whereHas('roles', fn($q) => $q->where('name', 'user'))
+            ->count();
+
+        $prevBookingIds = BookingTransaction::with('booking')
+            ->whereHas('booking', function ($q) use ($prevStartDate, $prevEndDate) {
+                $q->whereDate('start_date_time', '>=', $prevStartDate)
+                    ->whereDate('start_date_time', '<=', $prevEndDate)
+                    ->where('status', 'completed')
+                    ->branch();
+            })->pluck('booking_id')->toArray();
+
+        $prevServiceAmount = BookingService::whereIn('booking_id', $prevBookingIds)->sum('service_price');
+        $prevPackageAmount = BookingPackages::whereIn('booking_id', $prevBookingIds)->sum('package_price');
+        $prevGiftAmount    = GiftCard::whereDate('created_at', '>=', $prevStartDate)
+            ->whereDate('created_at', '<=', $prevEndDate)
+            ->where('payment_status', 1)->sum('subtotal');
+
+        $prevRevenue = (float) $prevServiceAmount + (float) $prevPackageAmount + (float) $prevGiftAmount;
+        $currRevenue = (float) $totalServiceAmount + (float) $totalPackageAmount + (float) $totalgiftServices;
+
+        $data['comparison'] = [
+            'revenue_change'   => $prevRevenue > 0
+                ? round((($currRevenue - $prevRevenue) / $prevRevenue) * 100, 1) : 0,
+            'bookings_change'  => $prevCompletedBookings > 0
+                ? round((($data['total_appointments'] - $prevCompletedBookings) / $prevCompletedBookings) * 100, 1)
+                : 0,
+            'customers_change' => $prevNewCustomers > 0
+                ? round((($data['total_new_customers'] - $prevNewCustomers) / $prevNewCustomers) * 100, 1)
+                : 0,
+        ];
+
+        // 4. Top 5 Staff by completed bookings
+        $data['top_staff'] = Booking::branch()
+            ->with('staff')
+            ->whereDate('start_date_time', '>=', $startDate)
+            ->whereDate('start_date_time', '<=', $endDate)
+            ->where('status', 'completed')
+            ->selectRaw('staff_id, COUNT(*) as total_bookings, IFNULL(SUM(
+                (SELECT SUM(bs.service_price) FROM booking_services bs WHERE bs.booking_id = bookings.id)
+            ), 0) as total_revenue')
+            ->whereNotNull('staff_id')
+            ->groupBy('staff_id')
+            ->orderByDesc('total_bookings')
+            ->limit(5)
+            ->get();
+
+        // 5. Booking cancellation rate
+        $totalBookingsInPeriod = array_sum($bookingStatusCounts);
+        $cancelledCount        = $bookingStatusCounts['cancelled'] ?? 0;
+        $data['cancellation_rate']    = $totalBookingsInPeriod > 0
+            ? round(($cancelledCount / $totalBookingsInPeriod) * 100, 1) : 0;
+        $data['total_bookings_period'] = $totalBookingsInPeriod;
+
+        // 6. Gift card sales count
+        $data['gift_cards_sold'] = GiftCard::whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate)
+            ->where('payment_status', 1)
+            ->count();
+
+        // 7. Raw revenue values for comparison arrows
+        $data['revenue_breakdown_raw'] = $currRevenue;
+        $data['prev_revenue_raw']      = $prevRevenue;
+
         return view('backend.index', compact('data', 'date_range', 'global_booking'));
     }
 
     public function setCurrentBranch($branch_id)
     {
         request()->session()->forget('selected_branch');
-
         request()->session()->put('selected_branch', $branch_id);
-
         return redirect()->back()->with('success', 'Current Branch Has Been Changes')->withInput();
     }
 
     public function resetBranch()
     {
         request()->session()->forget('selected_branch');
-
         return redirect()->back()->with('success', 'Show All Branch Content')->withInput();
     }
 
     public function setUserSetting(Request $request)
     {
         auth()->user()->update(['user_setting' => $request->settings]);
-
         return response()->json(['status' => true]);
     }
 }

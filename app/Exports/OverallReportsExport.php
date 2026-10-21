@@ -8,7 +8,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Modules\Booking\Models\Booking;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-class OverallReportsExport implements FromCollection, WithHeadings,WithStyles
+
+class OverallReportsExport implements FromCollection, WithHeadings, WithStyles
 {
     public array $columns;
 
@@ -37,11 +38,15 @@ class OverallReportsExport implements FromCollection, WithHeadings,WithStyles
      */
     public function collection()
     {
-        $query = Booking::overallReport();
+        $query = Booking::overallReport()->with('services.employee');
 
-        $query->whereDate('bookings.start_date_time', '>=', $this->dateRange[0]);
+        if (! empty($this->dateRange[0])) {
+            $query->whereDate('bookings.start_date_time', '>=', $this->dateRange[0]);
+        }
 
-        $query->whereDate('bookings.start_date_time', '<=', $this->dateRange[1]);
+        if (! empty($this->dateRange[1])) {
+            $query->whereDate('bookings.start_date_time', '<=', $this->dateRange[1]);
+        }
 
         $query = $query->get();
 
@@ -55,11 +60,12 @@ class OverallReportsExport implements FromCollection, WithHeadings,WithStyles
                         break;
 
                     case 'inv_id':
-                        $selectedData[$column] = setting('booking_invoice_prifix').$row->id;
+                        $selectedData[$column] = setting('booking_invoice_prifix') . $row->id;
                         break;
 
                     case 'employee':
-                        $selectedData[$column] = $row->services->first()->employee?->full_name ?? '-';
+                        $employee = optional(optional($row->services)->first())->employee;
+                        $selectedData[$column] = $employee ? $employee->full_name : '-';
                         break;
 
                     case 'total_service_amount':
@@ -75,7 +81,7 @@ class OverallReportsExport implements FromCollection, WithHeadings,WithStyles
                         break;
 
                     default:
-                        $selectedData[$column] = $row[$column];
+                        $selectedData[$column] = $row[$column] ?? '-';
                         break;
                 }
             }
@@ -85,6 +91,7 @@ class OverallReportsExport implements FromCollection, WithHeadings,WithStyles
 
         return $newQuery;
     }
+
     public function styles(Worksheet $sheet)
     {
         applyExcelStyles($sheet);

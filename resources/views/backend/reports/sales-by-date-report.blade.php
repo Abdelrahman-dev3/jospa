@@ -3,6 +3,7 @@
 @section('title') {{ __('report.title_sales_report') }} @endsection
 
 @section('content')
+    @include('backend.reports.report-nav')
 <style>
     .woo-reports-wrapper {
         font-family: inherit;

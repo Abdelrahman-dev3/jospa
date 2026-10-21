@@ -3,6 +3,7 @@
 @section('title') {{ __($module_title) }} @endsection
 
 @section('content')
+    @include('backend.reports.report-nav')
     <div class="card">
         <div class="card-body">
         <x-backend.section-header>

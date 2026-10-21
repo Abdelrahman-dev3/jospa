@@ -9,7 +9,7 @@ use Currency;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class CouponsExport implements FromCollection, WithHeadings,WithStyles
+class CouponsExport implements FromCollection, WithHeadings, WithStyles
 {
     public array $columns;
 
@@ -21,7 +21,6 @@ class CouponsExport implements FromCollection, WithHeadings,WithStyles
     {
         $this->columns = $columns;
         $this->dateRange = $dateRange;
-
     }
 
     public function headings(): array
@@ -30,7 +29,7 @@ class CouponsExport implements FromCollection, WithHeadings,WithStyles
 
         foreach ($this->columns as $column) {
             // Capitalize each word and replace underscores with spaces
-            if ($column != $this->columns[1]) {
+            if ($column != ($this->columns[1] ?? '')) {
                 $modifiedHeadings[] = ucwords(str_replace('_', ' ', $column));
             }
         }
@@ -41,60 +40,69 @@ class CouponsExport implements FromCollection, WithHeadings,WithStyles
     /**
      * @return \Illuminate\Support\Collection
      */
+    public function collection()
+    {
+        $Promotion_id = $this->columns[1] ?? null;
+        $query = Coupon::query();
 
-public function collection()
-{
-    $Promotion_id = $this->columns[1];
-    $query = Coupon::where('promotion_id', $Promotion_id)
-                   ->whereDate('created_at', '>=', $this->dateRange[0])
-                   ->whereDate('created_at', '<=', $this->dateRange[1])
-                   ->get();
+        if ($Promotion_id) {
+            $query->where('promotion_id', $Promotion_id);
+        }
 
-    $newQuery = $query->map(function ($row) {
-        $selectedData = [];
+        if (! empty($this->dateRange[0])) {
+            $query->whereDate('created_at', '>=', $this->dateRange[0]);
+        }
 
-        foreach ($this->columns as $column) {
-            if ($column != $this->columns[1]) {
-                switch ($column) {
-                    case 'status':
-                        $selectedData[$column] = $row[$column] ? 'active' : 'inactive';
-                        break;
-                    case 'value':
-                        // Format value based on discount type
-                        if ($row->discount_type === 'fixed') {
-                            $selectedData[$column] = Currency::format($row->discount_amount ?? 0);
-                        } elseif ($row->discount_type === 'percent') {
-                            $selectedData[$column] = $row->discount_percentage . '%';
-                        } else {
-                            // Handle other cases or set a default value
-                            $selectedData[$column] = 'N/A';
-                        }
-                        break;
-                    case 'is_expired':
-                         $selectedData[$column] = $row[$column] === 1 ? 'Yes' : 'No';
-                        break;
+        if (! empty($this->dateRange[1])) {
+            $query->whereDate('created_at', '<=', $this->dateRange[1]);
+        }
+
+        $coupons = $query->with('userRedeems')->get();
+
+        $newQuery = $coupons->map(function ($row) {
+            $selectedData = [];
+
+            foreach ($this->columns as $column) {
+                if ($column != ($this->columns[1] ?? '')) {
+                    switch ($column) {
+                        case 'status':
+                            $selectedData[$column] = $row[$column] ? 'active' : 'inactive';
+                            break;
+                        case 'value':
+                            if ($row->discount_type === 'fixed') {
+                                $selectedData[$column] = Currency::format($row->discount_amount ?? 0);
+                            } elseif ($row->discount_type === 'percent') {
+                                $selectedData[$column] = ($row->discount_percentage ?? 0) . '%';
+                            } else {
+                                $selectedData[$column] = 'N/A';
+                            }
+                            break;
+                        case 'is_expired':
+                            $selectedData[$column] = $row[$column] === 1 ? 'Yes' : 'No';
+                            break;
                         case 'used_by':
-                            $userNames = $row->userRedeems->pluck('full_name');
+                            $userNames = $row->userRedeems ? $row->userRedeems->pluck('full_name') : collect();
                             $displayedNames = $userNames->take(2)->implode(', ');
                             if ($userNames->count() > 2) {
                                 $displayedNames .= ', ...';
                             }
                             $selectedData[$column] = $displayedNames ?: '-';
                             break;
-                    default:
-                        $selectedData[$column] = $row[$column];
-                        break;
+                        default:
+                            $selectedData[$column] = $row[$column] ?? '-';
+                            break;
+                    }
                 }
             }
-        }
 
-        return $selectedData;
-    });
+            return $selectedData;
+        });
 
-    return $newQuery;
-}
-public function styles(Worksheet $sheet)
-{
-    applyExcelStyles($sheet);
-}
+        return $newQuery;
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        applyExcelStyles($sheet);
+    }
 }

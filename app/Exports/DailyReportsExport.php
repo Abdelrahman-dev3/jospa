@@ -8,7 +8,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Modules\Booking\Models\Booking;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-class DailyReportsExport implements FromCollection, WithHeadings,WithStyles
+
+class DailyReportsExport implements FromCollection, WithHeadings, WithStyles
 {
     public array $columns;
 
@@ -39,9 +40,13 @@ class DailyReportsExport implements FromCollection, WithHeadings,WithStyles
     {
         $query = Booking::dailyReport();
 
-        $query->whereDate('bookings.start_date_time', '>=', $this->dateRange[0]);
+        if (! empty($this->dateRange[0])) {
+            $query->whereDate('bookings.start_date_time', '>=', $this->dateRange[0]);
+        }
 
-        $query->whereDate('bookings.start_date_time', '<=', $this->dateRange[1]);
+        if (! empty($this->dateRange[1])) {
+            $query->whereDate('bookings.start_date_time', '<=', $this->dateRange[1]);
+        }
 
         $query = $query->get();
 
@@ -67,7 +72,7 @@ class DailyReportsExport implements FromCollection, WithHeadings,WithStyles
                         break;
 
                     default:
-                        $selectedData[$column] = $row[$column];
+                        $selectedData[$column] = $row[$column] ?? '-';
                         break;
                 }
             }
@@ -77,6 +82,7 @@ class DailyReportsExport implements FromCollection, WithHeadings,WithStyles
 
         return $newQuery;
     }
+
     public function styles(Worksheet $sheet)
     {
         applyExcelStyles($sheet);

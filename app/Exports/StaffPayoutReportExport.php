@@ -8,7 +8,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Modules\Earning\Models\EmployeeEarning;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-class StaffPayoutReportExport implements FromCollection, WithHeadings,  WithStyles
+
+class StaffPayoutReportExport implements FromCollection, WithHeadings, WithStyles
 {
     public array $columns;
 
@@ -39,9 +40,13 @@ class StaffPayoutReportExport implements FromCollection, WithHeadings,  WithStyl
     {
         $query = EmployeeEarning::with('employee');
 
-        $query->whereDate('payment_date', '>=', $this->dateRange[0]);
+        if (! empty($this->dateRange[0])) {
+            $query->whereDate('payment_date', '>=', $this->dateRange[0]);
+        }
 
-        $query->whereDate('payment_date', '<=', $this->dateRange[1]);
+        if (! empty($this->dateRange[1])) {
+            $query->whereDate('payment_date', '<=', $this->dateRange[1]);
+        }
 
         $query = $query->get();
 
@@ -55,7 +60,7 @@ class StaffPayoutReportExport implements FromCollection, WithHeadings,  WithStyl
                         break;
 
                     case 'employee':
-                        $selectedData[$column] = $row->employee->full_name ?? '-';
+                        $selectedData[$column] = optional($row->employee)->full_name ?? '-';
                         break;
 
                     case 'commission_amount':
@@ -67,7 +72,7 @@ class StaffPayoutReportExport implements FromCollection, WithHeadings,  WithStyl
                         break;
 
                     default:
-                        $selectedData[$column] = $row[$column];
+                        $selectedData[$column] = $row[$column] ?? '-';
                         break;
                 }
             }
@@ -77,6 +82,7 @@ class StaffPayoutReportExport implements FromCollection, WithHeadings,  WithStyl
 
         return $newQuery;
     }
+
     public function styles(Worksheet $sheet)
     {
         applyExcelStyles($sheet);
