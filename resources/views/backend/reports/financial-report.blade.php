@@ -2,18 +2,130 @@
 
 @section('title') {{ __($module_title) }} @endsection
 
+@push('after-styles')
+<link rel="stylesheet" href='{{ mix("modules/product/style.css") }}'>
+<link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.css" />
+<style>
+    #datatable th,
+    #datatable td {
+        text-align: center;
+    }
+    .report-summary-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 1.1rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+    .report-summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(15, 23, 42, 0.08);
+    }
+    .report-summary-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .report-chart-container {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+</style>
+@endpush
+
 @section('content')
     @include('backend.reports.report-nav')
-    <style>
-        #datatable th,
-        #datatable td {
-            text-align: center;
-        }
-    </style>
-    <div class="card">
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- SUMMARY KPI CARDS                                           --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-spa"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">إجمالي الحجوزات والخدمات</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-fin-bookings">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-success bg-opacity-10 text-success">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">مبيعات المنتجات</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-fin-orders">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fa-solid fa-gift"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">بطاقات الإهداء</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-fin-giftcards">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card" style="border-inline-start: 4px solid #4f46e5;">
+                <div class="report-summary-icon bg-indigo bg-opacity-10 text-indigo" style="color:#4f46e5;">
+                    <i class="fa-solid fa-vault"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">الإيراد المالي الإجمالي</div>
+                    <div class="fs-4 fw-bolder text-primary" id="stat-fin-grand">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- INTERACTIVE FINANCIAL MIX CHART                             --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="report-chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-area text-primary me-2"></i> تطور مصادر الإيرادات المالية</h5>
+                <p class="text-muted small mb-0">توزيع الدخل المالي بين جلسات السبا، مبيعات المنتجات، وبطاقات الإهداء</p>
+            </div>
+            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 fw-bold">
+                تحليل مالي مباشر
+            </span>
+        </div>
+        <div id="chart-financial-mix" style="min-height: 280px;"></div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- MAIN TABLE & FILTER                                         --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="card mb-3">
         <div class="card-body">
             <x-backend.section-header>
-                <div class="row">
+                <div class="row w-100">
                     <div class="col-md-3">
                         <div class="datatable-filter">
                             <select name="report_type" id="report_type" class="select2 form-control" data-filter="select">
@@ -23,10 +135,10 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-8">
+                    <div class="col-md-9">
                         <div class="input-group gap-2 flex-nowrap">
-                            <input type="text" name="date_range" id="date_range" placeholder="Select Date" class="financial-report-date-range form-control" readonly />
-                            <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="Reset">
+                            <input type="text" name="date_range" id="date_range" placeholder="اختر التاريخ أو الفترة" class="financial-report-date-range form-control" readonly />
+                            <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="إعادة تعيين">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                      xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -43,6 +155,7 @@
             </x-backend.section-header>
         </div>
     </div>
+
     <div class="card">
         <div class="card-body">
             <table id="datatable" class="table table-striped border table-responsive">
@@ -51,18 +164,91 @@
     </div>
 @endsection
 
-@push ('after-styles')
-<link rel="stylesheet" href='{{ mix("modules/product/style.css") }}'>
-<link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
-@endpush
-
-@push ('after-scripts')
+@push('after-scripts')
 <script src='{{ mix("modules/product/script.js") }}'></script>
 <script src="{{ asset('js/form-offcanvas/index.js') }}" defer></script>
 <script src="{{ asset('js/form-modal/index.js') }}" defer></script>
 <script type="text/javascript" src="{{ asset('vendor/datatable/datatables.min.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.js"></script>
 
-<script type="text/javascript" defer>
+<script type="text/javascript">
+    let finMixChart = null;
+
+    function updateFinancialReportAnalytics(rows) {
+        let sumBookings = 0;
+        let sumOrders = 0;
+        let sumGiftcards = 0;
+        let sumGrand = 0;
+
+        let periods = [];
+        let seriesBookings = [];
+        let seriesOrders = [];
+        let seriesGifts = [];
+
+        if (rows && rows.length > 0) {
+            const sortedRows = [...rows].reverse();
+
+            sortedRows.forEach(row => {
+                const bAmt = Number(row.raw_bookings_total ?? (parseFloat((row.bookings_total || '0').replace(/[^0-9.-]+/g, '')) || 0));
+                const oAmt = Number(row.raw_orders_total ?? (parseFloat((row.orders_total || '0').replace(/[^0-9.-]+/g, '')) || 0));
+                const gAmt = Number(row.raw_giftcards_total ?? (parseFloat((row.giftcards_total || '0').replace(/[^0-9.-]+/g, '')) || 0));
+                const totalAmt = Number(row.raw_grand_total ?? (parseFloat((row.grand_total || '0').replace(/[^0-9.-]+/g, '')) || 0));
+
+                sumBookings += bAmt;
+                sumOrders += oAmt;
+                sumGiftcards += gAmt;
+                sumGrand += totalAmt;
+
+                periods.push(row.period || '-');
+                seriesBookings.push(+(Math.round(bAmt + "e+2") + "e-2"));
+                seriesOrders.push(+(Math.round(oAmt + "e+2") + "e-2"));
+                seriesGifts.push(+(Math.round(gAmt + "e+2") + "e-2"));
+            });
+        }
+
+        const currencySymbol = ' ر.س';
+        document.getElementById('stat-fin-bookings').innerText = sumBookings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+        document.getElementById('stat-fin-orders').innerText = sumOrders.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+        document.getElementById('stat-fin-giftcards').innerText = sumGiftcards.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+        document.getElementById('stat-fin-grand').innerText = sumGrand.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+
+        renderFinMixChart(periods, seriesBookings, seriesOrders, seriesGifts);
+    }
+
+    function renderFinMixChart(periods, bookings, orders, gifts) {
+        const chartEl = document.querySelector('#chart-financial-mix');
+        if (!chartEl || typeof ApexCharts === 'undefined') return;
+
+        const chartOptions = {
+            series: [
+                { name: 'خدمات وحجوزات', data: bookings },
+                { name: 'منتجات المتجر', data: orders },
+                { name: 'بطاقات الإهداء', data: gifts }
+            ],
+            chart: {
+                type: 'bar',
+                height: 290,
+                stacked: true,
+                toolbar: { show: true, tools: { download: true, zoom: false, pan: false } },
+                fontFamily: 'inherit'
+            },
+            colors: ['#4f46e5', '#059669', '#d97706'],
+            plotOptions: { bar: { horizontal: false, columnWidth: '45%', borderRadius: 4 } },
+            xaxis: { categories: periods, labels: { style: { fontSize: '11px' } } },
+            yaxis: { labels: { formatter: v => Number(v || 0).toLocaleString() + ' ر.س' } },
+            legend: { position: 'top' },
+            dataLabels: { enabled: false },
+            grid: { strokeDashArray: 4, borderColor: '#f1f5f9' }
+        };
+
+        if (finMixChart) {
+            finMixChart.updateOptions(chartOptions);
+        } else {
+            finMixChart = new ApexCharts(chartEl, chartOptions);
+            finMixChart.render();
+        }
+    }
+
     const range_flatpicker = document.querySelectorAll('.financial-report-date-range')
 
     Array.from(range_flatpicker, (elem) => {
@@ -120,13 +306,11 @@
             title: "{{ __('report.lbl_grand_total') }}",
             orderable: false,
             searchable: false,
-            className: 'text-center',
+            className: 'text-center fw-bold text-success',
         },
     ]
 
-    let finalColumns = [
-        ...columns
-    ]
+    let finalColumns = [ ...columns ]
 
     document.addEventListener('DOMContentLoaded', (event) => {
         initDatatable({
@@ -137,6 +321,12 @@
                     report_type: $('[name="report_type"]').val(),
                     date_range: $('[name="date_range"]').val().split(' to '),
                 }
+            }
+        });
+
+        $('#datatable').on('xhr.dt', function(e, settings, json, xhr) {
+            if (json && json.data) {
+                updateFinancialReportAnalytics(json.data);
             }
         });
     })

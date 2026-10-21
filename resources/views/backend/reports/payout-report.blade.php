@@ -6,10 +6,120 @@
 
 @push('after-styles')
     <link rel="stylesheet" href="{{ mix('modules/service/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.css" />
+    <style>
+        .report-summary-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1.1rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.2s ease;
+        }
+        .report-summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(15, 23, 42, 0.08);
+        }
+        .report-summary-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .report-chart-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+    </style>
 @endpush
 
 @section('content')
     @include('backend.reports.report-nav')
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- SUMMARY KPI CARDS                                           --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">إجمالي العمولات المصروفة</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-payout-commission">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card" style="border-inline-start: 4px solid #059669;">
+                <div class="report-summary-icon bg-success bg-opacity-10 text-success">
+                    <i class="fa-solid fa-money-check-dollar"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">إجمالي المبالغ المدفوعة (Total Pay)</div>
+                    <div class="fs-4 fw-bolder text-success" id="stat-payout-total">0.00 ر.س</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">عدد عمليات الصرف</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-payout-count">0 عملية</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="report-summary-card">
+                <div class="report-summary-icon bg-info bg-opacity-10 text-info">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">الموظفات المستفيدات</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-payout-staff">0 موظفة</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- INTERACTIVE CHART                                           --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    <div class="report-chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-bar text-warning me-2"></i> توزيع العمولات والمدفوعات على الموظفات</h5>
+                <p class="text-muted small mb-0">مقارنة المبالغ المصروفة والعمولات المستحقة لكل أخصائية</p>
+            </div>
+            <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 fw-bold">
+                تحليل العمولات المباشر
+            </span>
+        </div>
+        <div id="chart-payout-staff" style="min-height: 280px;"></div>
+    </div>
+
+    {{-- ═══════════════════════════════════════════════════════════ --}}
+    {{-- MAIN TABLE & FILTER                                         --}}
+    {{-- ═══════════════════════════════════════════════════════════ --}}
     <div class="card">
         <div class="card-body">
             <x-backend.section-header>
@@ -17,19 +127,16 @@
                 <button type="button" class="btn btn-secondary" data-modal="export">
                   <i class="fa-solid fa-download"></i> {{ __('messages.export') }}
                 </button>
-  {{--          <button type="button" class="btn btn-secondary" data-modal="import">--}}
-  {{--            <i class="fa-solid fa-upload"></i> Import--}}
-  {{--          </button>--}}
               </div>
                 <x-slot name="toolbar">
                     <div class="input-group gap-2 flex-nowrap">
-                        <input type="text" name="booking_date" id="booking_date" placeholder="Select Date" class="booking-date-range form-control" readonly />
+                        <input type="text" name="booking_date" id="booking_date" placeholder="اختر التاريخ" class="booking-date-range form-control" readonly />
                         <select id="column_employee_id" data-placeholder="{{ __('employee.select_employee') }}" name="column_employee_id"
                             data-filter="select" class="select2 form-control"
                             data-ajax--url="{{ route('backend.get_search_data', ['type' => 'employees']) }}"
                             data-ajax--cache="true" width="100%">
                         </select>
-                        <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="Reset">
+                        <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="إعادة تعيين">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
@@ -49,17 +156,74 @@
     </div>
 @endsection
 
-@push('after-styles')
-    <!-- DataTables Core and Extensions -->
-    <link rel="stylesheet" href="{{ asset('vendor/datatable/datatables.min.css') }}">
-@endpush
-
 @push('after-scripts')
-    <!-- DataTables Core and Extensions -->
     <script type="text/javascript" src="{{ asset('vendor/datatable/datatables.min.js') }}"></script>
     <script src="{{ asset('js/form-modal/index.js') }}" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.js"></script>
 
-    <script type="text/javascript" defer>
+    <script type="text/javascript">
+        let payoutReportChart = null;
+
+        function updatePayoutReportAnalytics(rows) {
+            let totalCommission = 0;
+            let totalPay = 0;
+            let count = 0;
+            let staffMap = {};
+
+            if (rows && rows.length > 0) {
+                count = rows.length;
+
+                rows.forEach(row => {
+                    const comm = parseFloat((row.commission_amount || '0').replace(/[^0-9.-]+/g, '')) || 0;
+                    const pay  = parseFloat((row.total_pay || '0').replace(/[^0-9.-]+/g, '')) || 0;
+                    const staff = row.first_name || 'موظفة';
+
+                    totalCommission += comm;
+                    totalPay += pay;
+
+                    if (!staffMap[staff]) {
+                        staffMap[staff] = 0;
+                    }
+                    staffMap[staff] += pay;
+                });
+            }
+
+            const currencySymbol = ' ر.س';
+            document.getElementById('stat-payout-commission').innerText = totalCommission.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+            document.getElementById('stat-payout-total').innerText = totalPay.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
+            document.getElementById('stat-payout-count').innerText = count.toLocaleString() + ' عملية';
+            document.getElementById('stat-payout-staff').innerText = Object.keys(staffMap).length.toLocaleString() + ' موظفة';
+
+            // Prepare chart
+            const staffNames = Object.keys(staffMap).slice(0, 10);
+            const staffPayouts = staffNames.map(s => +(Math.round(staffMap[s] + "e+2") + "e-2"));
+
+            renderPayoutChart(staffNames, staffPayouts);
+        }
+
+        function renderPayoutChart(names, payouts) {
+            const chartEl = document.querySelector('#chart-payout-staff');
+            if (!chartEl || typeof ApexCharts === 'undefined') return;
+
+            const chartOptions = {
+                series: [{ name: 'إجمالي المستحقات المدفوعة (ر.س)', data: payouts }],
+                chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
+                colors: ['#d97706'],
+                plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '50%' } },
+                xaxis: { categories: names },
+                yaxis: { labels: { style: { fontSize: '12px' } } },
+                dataLabels: { enabled: true, formatter: v => Number(v || 0).toLocaleString() + ' ر.س' },
+                grid: { strokeDashArray: 4, borderColor: '#f1f5f9' }
+            };
+
+            if (payoutReportChart) {
+                payoutReportChart.updateOptions(chartOptions);
+            } else {
+                payoutReportChart = new ApexCharts(chartEl, chartOptions);
+                payoutReportChart.render();
+            }
+        }
+
         const range_flatpicker = document.querySelectorAll('.booking-date-range')
         Array.from(range_flatpicker, (elem) => {
             if (typeof flatpickr !== typeof undefined) {
@@ -72,7 +236,7 @@
 
         $(document).ready(function() {
             $('#column_employee_id').select2({
-                placeholder: 'Select an employee',
+                placeholder: 'اختر الموظفة',
                 allowClear: true
             });
 
@@ -119,31 +283,28 @@
                 title: "{{ __('report.lbl_tot_pay') }}",
                 searchable: false
             },
-            {
-                data: 'updated_at',
-                name: 'updated_at',
-                title: "{{ __('report.lbl_updated_at') }}",
-                visible: false,
-            },
         ]
 
-        let finalColumns = [
-            ...columns
-        ]
-
+        let finalColumns = [ ...columns ]
 
         document.addEventListener('DOMContentLoaded', (event) => {
             initDatatable({
                 url: '{{ route('backend.reports.payout-report.index_data') }}',
                 finalColumns,
-                orderColumn: [[ 6, "desc" ]],
+                orderColumn: [[ 5, "desc" ]],
                 advanceFilter: () => {
                     return {
                         booking_date: $('#booking_date').val(),
                         employee_id: $('#column_employee_id').val(),
                     }
                 }
-            })
+            });
+
+            $('#datatable').on('xhr.dt', function(e, settings, json, xhr) {
+                if (json && json.data) {
+                    updatePayoutReportAnalytics(json.data);
+                }
+            });
         })
 
         $('#booking_date').on('change', function() {
@@ -154,20 +315,4 @@
             window.renderedDataTable.ajax.reload(null, false)
         })
     </script>
-
-    <style>
-        .select2-container {
-
-            width: 180px !important;
-        }
-
-        .select2-container--default .select2-selection__arrow {
-            height: 0 !important;
-        }
-
-        .select2-container--default .select2-selection__arrow b {
-
-            margin-top: 15px !important;
-        }
-    </style>
 @endpush
