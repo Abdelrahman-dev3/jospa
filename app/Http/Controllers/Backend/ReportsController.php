@@ -757,6 +757,10 @@ class ReportsController extends Controller
                 'orders_total' => Currency::format($orderTotal),
                 'giftcards_total' => Currency::format($giftTotal),
                 'grand_total' => Currency::format($bookingTotal + $orderTotal + $giftTotal),
+                'raw_bookings_total' => (float) $bookingTotal,
+                'raw_orders_total' => (float) $orderTotal,
+                'raw_giftcards_total' => (float) $giftTotal,
+                'raw_grand_total' => (float) ($bookingTotal + $orderTotal + $giftTotal),
             ]];
 
             return $datatable->collection(collect($rows))->toJson();
@@ -803,6 +807,10 @@ class ReportsController extends Controller
                 'orders_total' => Currency::format($orderTotal),
                 'giftcards_total' => Currency::format($giftTotal),
                 'grand_total' => Currency::format($bookingTotal + $orderTotal + $giftTotal),
+                'raw_bookings_total' => (float) $bookingTotal,
+                'raw_orders_total' => (float) $orderTotal,
+                'raw_giftcards_total' => (float) $giftTotal,
+                'raw_grand_total' => (float) ($bookingTotal + $orderTotal + $giftTotal),
             ];
         });
 
@@ -1263,6 +1271,21 @@ class ReportsController extends Controller
             ->editColumn('total_amount', function ($data) {
                 return Currency::format($data->total_amount ?? 0);
             })
+            ->addColumn('raw_total_booking', function ($data) {
+                return (int) ($data->total_booking ?? 0);
+            })
+            ->addColumn('raw_total_service', function ($data) {
+                return (int) ($data->total_service ?? 0);
+            })
+            ->addColumn('raw_service_amount', function ($data) {
+                return (float) ($data->total_service_amount ?? 0);
+            })
+            ->addColumn('raw_tax_amount', function ($data) {
+                return (float) ($data->total_tax_amount ?? 0);
+            })
+            ->addColumn('raw_total_amount', function ($data) {
+                return (float) ($data->total_amount ?? 0);
+            })
             ->addIndexColumn()
             ->rawColumns([])
             ->toJson();
@@ -1377,6 +1400,18 @@ class ReportsController extends Controller
             })
             ->editColumn('total_amount', function ($data) {
                 return Currency::format($data->total_amount);
+            })
+            ->addColumn('raw_total_service', function ($data) {
+                return (int) ($data->total_service ?? 0);
+            })
+            ->addColumn('raw_service_amount', function ($data) {
+                return (float) ($data->total_service_amount ?? 0);
+            })
+            ->addColumn('raw_tax_amount', function ($data) {
+                return (float) ($data->total_tax_amount ?? 0);
+            })
+            ->addColumn('raw_total_amount', function ($data) {
+                return (float) ($data->total_amount ?? 0);
             })
             ->orderColumn('employee_id', function ($query, $order) {
                 $query->orderBy(new Expression('(SELECT employee_id FROM booking_services WHERE booking_id = bookings.id LIMIT 1)'), $order);
