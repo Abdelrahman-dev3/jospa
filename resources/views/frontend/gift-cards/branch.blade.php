@@ -2112,7 +2112,7 @@
     // ── 2. الحالة العامة للتطبيق (Application State) ──
     let appState = {
       currentStep: 1,
-      selectedBouquetId: null,
+      selectedBouquetIds: [],
       giftCardEnabled: false,
       giftCardAmount: GIFT_CONFIG.defaultAmount,
       deliveryMethod: 'store',
@@ -2136,7 +2136,7 @@
       if (!container) return;
 
       container.innerHTML = BOUQUETS_DATA.map(bouquet => {
-        const isSelected = appState.selectedBouquetId === bouquet.id;
+        const isSelected = appState.selectedBouquetIds.includes(bouquet.id);
         return `
           <div class="bouquet-card ${isSelected ? 'selected' : ''}" id="cardBouquet_${bouquet.id}" onclick="selectBouquet(${bouquet.id})">
             <div class="bouquet-img-wrapper">
@@ -2164,11 +2164,11 @@
 
     // ── 5. اختيار باقة ورد مع انميشن ──
     function selectBouquet(id) {
-      if (appState.selectedBouquetId === id) {
-        // إذا ضغط نفس الباقة يلغيها أو يبقيها
-        appState.selectedBouquetId = null;
+      // يمكن اختيار أكثر من باقة: الضغط يضيف الباقة أو يلغيها
+      if (appState.selectedBouquetIds.includes(id)) {
+        appState.selectedBouquetIds = appState.selectedBouquetIds.filter(x => x !== id);
       } else {
-        appState.selectedBouquetId = id;
+        appState.selectedBouquetIds.push(id);
       }
       renderBouquets();
       syncUIState();
@@ -2247,8 +2247,8 @@
 
     // ── 9. تحديث واجهة المستخدم والحسابات (Totals & Cart) ──
     function syncUIState() {
-      const selectedBouquet = BOUQUETS_DATA.find(b => b.id === appState.selectedBouquetId);
-      let bouquetPrice = selectedBouquet ? selectedBouquet.price : 0;
+      const selectedBouquets = BOUQUETS_DATA.filter(b => appState.selectedBouquetIds.includes(b.id));
+      let bouquetPrice = selectedBouquets.reduce((sum, b) => sum + Number(b.price), 0);
       let cardPrice = appState.giftCardEnabled ? appState.giftCardAmount : 0;
       
       let rawTotal = bouquetPrice + cardPrice;
@@ -2256,27 +2256,27 @@
       let finalTotal = Math.max(0, Math.round(rawTotal - discountAmount));
 
       // عداد السلة
-      let count = (selectedBouquet ? 1 : 0) + (appState.giftCardEnabled ? 1 : 0);
+      let count = selectedBouquets.length + (appState.giftCardEnabled ? 1 : 0);
       document.getElementById('cartBadgeCount').textContent = count;
 
       // تحديث عناصر الملخص
       const summaryContainer = document.getElementById('summaryItemsContainer');
       let itemsHTML = '';
 
-      if (selectedBouquet) {
+      selectedBouquets.forEach(selectedBouquet => {
         itemsHTML += `
           <div class="summary-item-row">
             <div class="summary-item-lead">
               <img src="${selectedBouquet.image}" alt="${selectedBouquet.title}" class="summary-item-thumb">
               <div class="summary-item-details">
                 <span class="summary-item-name">${selectedBouquet.title}</span>
-                <span class="summary-item-sub">${selectedBouquet.sub}</span>
+                <span class="summary-item-sub">${selectedBouquet.sub || ''}</span>
               </div>
             </div>
             <span class="summary-item-price">${selectedBouquet.price} ر.س</span>
           </div>
         `;
-      }
+      });
 
       if (appState.giftCardEnabled) {
         itemsHTML += `
@@ -2319,11 +2319,11 @@
       document.getElementById('previewSender').textContent = showSender ? `بكل الحب من: ${sender}` : 'إهداء سري (مجهول)';
 
       const cardBadge = document.getElementById('previewCardBadge');
-      if (appState.giftCardEnabled && appState.selectedBouquetId) {
+      if (appState.giftCardEnabled && appState.selectedBouquetIds.length) {
         cardBadge.textContent = `ورد + رصيد ${appState.giftCardAmount} ر.س`;
       } else if (appState.giftCardEnabled) {
         cardBadge.textContent = `بطاقة رصيد ${appState.giftCardAmount} ر.س`;
-      } else if (appState.selectedBouquetId) {
+      } else if (appState.selectedBouquetIds.length) {
         cardBadge.textContent = 'باقة ورد فاخرة';
       } else {
         cardBadge.textContent = 'إهداء جوسبا';
@@ -2373,7 +2373,7 @@
     // زر الإجراء الرئيسي السفلي
     function handleMainAction() {
       if (appState.currentStep === 1) {
-        if (!appState.selectedBouquetId && !appState.giftCardEnabled) {
+        if (!appState.selectedBouquetIds.length && !appState.giftCardEnabled) {
           showToast('اختاري باقة ورد أو أضيفي بطاقة هدية أولاً');
           return;
         }
@@ -2389,7 +2389,7 @@
 
     function collectGiftPayload() {
       return {
-        bouquet_id: appState.selectedBouquetId,
+        bouquet_ids: appState.selectedBouquetIds,
         card_amount: appState.giftCardEnabled ? appState.giftCardAmount : 0,
         delivery_method: appState.deliveryMethod === 'digital' ? 'electronic_card' : 'center_pickup',
         sender_name: document.getElementById('txtSenderName').value.trim(),
@@ -2411,7 +2411,7 @@
       if (!draft) return;
       try { localStorage.removeItem(GIFT_CONFIG.draftKey); } catch (e) {}
 
-      if (draft.bouquet_id && BOUQUETS_DATA.some(b => b.id === draft.bouquet_id)) appState.selectedBouquetId = draft.bouquet_id;
+      if (Array.isArray(draft.bouquet_ids)) appState.selectedBouquetIds = draft.bouquet_ids.filter(id => BOUQUETS_DATA.some(b => b.id === id));
       if (draft.card_amount > 0) {
         toggleGiftCard(true);
         selectPresetAmount(Number(draft.card_amount));

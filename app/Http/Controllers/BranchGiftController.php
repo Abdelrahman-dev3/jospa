@@ -44,7 +44,9 @@ class BranchGiftController extends Controller
         $minAmount = (float) ($branch->gift_card_min_amount ?: 1);
 
         $data = $request->validate([
-            'bouquet_id' => ['nullable', 'integer'],
+            'bouquet_ids' => ['nullable', 'array', 'max:20'],
+            'bouquet_ids.*' => ['integer'],
+            'bouquet_id' => ['nullable', 'integer'], // single id kept for older clients
             'card_amount' => ['nullable', 'numeric', 'min:' . $minAmount, 'max:' . self::MAX_CARD_AMOUNT],
             'delivery_method' => ['required', 'in:center_pickup,electronic_card,store,digital'],
             'sender_name' => ['required', 'string', 'max:255'],
@@ -55,17 +57,25 @@ class BranchGiftController extends Controller
             'show_sender_name' => ['nullable', 'boolean'],
         ]);
 
-        $bouquet = null;
-        if (! empty($data['bouquet_id'])) {
-            $bouquet = GiftBouquet::active()->where('branch_id', $branch->id)->find($data['bouquet_id']);
-            if (! $bouquet) {
-                throw ValidationException::withMessages(['bouquet_id' => __('messages.gift_card_validation_error')]);
-            }
+        $requestedIds = collect($data['bouquet_ids'] ?? [])
+            ->when(! empty($data['bouquet_id']), fn ($ids) => $ids->push($data['bouquet_id']))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $bouquets = $requestedIds->isEmpty()
+            ? collect()
+            : GiftBouquet::active()->where('branch_id', $branch->id)->whereIn('id', $requestedIds)->get();
+
+        if ($bouquets->count() !== $requestedIds->count()) {
+            throw ValidationException::withMessages(['bouquet_ids' => __('messages.gift_card_validation_error')]);
         }
+
+        $bouquetsTotal = (float) $bouquets->sum('price');
 
         $cardAmount = (float) ($data['card_amount'] ?? 0);
 
-        if (! $bouquet && $cardAmount <= 0) {
+        if ($bouquets->isEmpty() && $cardAmount <= 0) {
             throw ValidationException::withMessages(['bouquet_id' => __('messages.gift_card_selection_required')]);
         }
 
@@ -82,11 +92,12 @@ class BranchGiftController extends Controller
             'sender_phone' => $data['sender_phone'],
             'recipient_phone' => $data['recipient_phone'],
             'message' => $message !== '' ? $message : null,
-            'bouquet_id' => $bouquet?->id,
-            'bouquet_name' => $bouquet?->name_ar,
-            'bouquet_price' => $bouquet?->price ?? 0,
+            'bouquet_id' => $bouquets->first()?->id,
+            'bouquet_name' => $bouquets->pluck('name_ar')->implode('، ') ?: null,
+            'bouquet_price' => $bouquetsTotal,
+            'bouquets' => $bouquets->map(fn ($b) => ['id' => $b->id, 'name' => $b->name_ar, 'price' => (float) $b->price])->values()->all(),
             'card_amount' => $cardAmount,
-            'subtotal' => ($bouquet?->price ?? 0) + $cardAmount,
+            'subtotal' => $bouquetsTotal + $cardAmount,
             'requested_services' => json_encode([]),
             'package_ids' => json_encode([]),
             'payment_status' => 0,

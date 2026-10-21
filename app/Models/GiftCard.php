@@ -32,6 +32,7 @@ class GiftCard extends Model
         'show_recipient_phone',
         'branch_id',
         'bouquet_id',
+        'bouquets',
         'bouquet_name',
         'bouquet_price',
         'card_amount',
@@ -40,6 +41,7 @@ class GiftCard extends Model
     protected $casts = [
         'requested_services' => 'array',
         'package_ids' => 'array',
+        'bouquets' => 'array',
     ];
 
     public function branch()
