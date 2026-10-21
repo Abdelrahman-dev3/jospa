@@ -30,12 +30,52 @@ class GiftCard extends Model
         'show_recipient_name',
         'show_sender_phone',
         'show_recipient_phone',
+        'branch_id',
+        'bouquet_id',
+        'bouquet_name',
+        'bouquet_price',
+        'card_amount',
     ];
 
     protected $casts = [
         'requested_services' => 'array',
         'package_ids' => 'array',
     ];
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    /** True for gifts bought from a branch's dedicated gifting page. */
+    public function isBranchGift(): bool
+    {
+        return ! empty($this->branch_id);
+    }
+
+    /**
+     * Spendable balance issued when the gift is paid. For branch gifts the
+     * bouquet is a physical product handed over manually, so only the card
+     * amount becomes balance.
+     */
+    public function creditAmount(): float
+    {
+        if ($this->isBranchGift()) {
+            return (float) ($this->card_amount ?? 0);
+        }
+
+        return (float) ($this->subtotal ?? $this->options_amount ?? 0);
+    }
+
+    /** Whether paying for this gift should issue a redeemable reference code. */
+    public function requiresReference(): bool
+    {
+        if ($this->isBranchGift()) {
+            return $this->creditAmount() > 0;
+        }
+
+        return in_array($this->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true);
+    }
 
     public static function generateUniqueReference(): string
     {

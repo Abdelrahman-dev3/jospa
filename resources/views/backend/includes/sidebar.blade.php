@@ -59,6 +59,15 @@
                 </li>
                 @endhasPermission
 
+                @hasPermission('view_gift')
+                <li class="nav-item {{ request()->routeIs('app.branch-gifts*') ? 'active' : '' }}">
+                    <a href="{{ route('app.branch-gifts.index') }}" class="nav-link {{ request()->routeIs('app.branch-gifts*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-gift"></i>
+                        <span class="item-name">صفحات الإهداء للفروع</span>
+                    </a>
+                </li>
+                @endhasPermission
+
                 @if(auth()->user() && (auth()->user()->hasRole('admin') || auth()->user()->can('view_occasions')))
                 <li class="nav-item {{ request()->routeIs('app.occasions*') ? 'active' : '' }}">
                     <a href="{{ route('app.occasions.index') }}" class="nav-link {{ request()->routeIs('app.occasions*') ? 'active' : '' }}">

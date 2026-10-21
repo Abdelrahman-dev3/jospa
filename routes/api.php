@@ -173,6 +173,8 @@ Route::controller(BranchController::class)->group(function () {
 });
 
 
+Route::get('/branch-gift/{slug}', [\App\Http\Controllers\BranchGiftController::class, 'config']);
+
 Route::prefix('gift-cards')->group(function () {
     Route::controller(GiftCardController::class)->group(function () {
         Route::post('/', 'store');
@@ -242,6 +244,8 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
         Route::post('/mobile/cart/bookings', 'storeBooking');
         Route::post('/mobile/cart/gift-cards', 'storeGiftCard');
     });
+
+    Route::post('/mobile/cart/branch-gift/{slug}', [\App\Http\Controllers\BranchGiftController::class, 'store']);
 
     Route::controller(BookingCartController::class)->group(function () {
         Route::post('/cart/products/{id}', 'addToCart');

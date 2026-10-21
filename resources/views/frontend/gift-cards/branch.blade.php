@@ -1,0 +1,2580 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جوسبا JOSPA | {{ $config['branch']['name'] }} - إهداء باقات الورد وبطاقات الهدايا الفاخرة</title>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  
+  <!-- خط زين العربي الفاخر من جوجل: 'Zain', sans-serif -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zain:ital,wght@0,200;0,300;0,400;0,700;0,800;0,900;1,300;1,400&display=swap" rel="stylesheet">
+  
+  <!-- أيقونات FontAwesome 6 -->
+  <!-- أيقونات FontAwesome 6 (محلي واحتياطي سريع) -->
+  <link rel="stylesheet" href="css/icon.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+  
+  <!-- مكتبة Canvas Confetti للاحتفال عند إتمام الحجز -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       1. متغيرات التصميم ونظام الألوان الملكي (JOSPA LUXURY PALETTE)
+       ═══════════════════════════════════════════════════════════ */
+    :root {
+      --gold-primary: #BF9456;
+      --gold-light: #DFC293;
+      --gold-deep: #9A6F32;
+      --gold-gradient: linear-gradient(135deg, #BF9456 0%, #E3C89B 50%, #9A6F32 100%);
+      --gold-btn-gradient: linear-gradient(135deg, #BF9456 0%, #A97E3E 100%);
+      --gold-glow: rgba(191, 148, 86, 0.28);
+      --gold-subtle: rgba(191, 148, 86, 0.12);
+      
+      --rose-soft: #FDF5F2;
+      --rose-accent: #E5A99B;
+      --rose-glow: rgba(229, 169, 155, 0.35);
+
+      --bg-cream: #FBF8F4;
+      --surface-white: #FFFFFF;
+      --surface-card: #FFFFFF;
+      --surface-elevated: #FAF6F0;
+      --surface-border: #EFE7DC;
+      --surface-border-gold: rgba(191, 148, 86, 0.35);
+
+      --text-main: #2C2621;
+      --text-muted: #82786F;
+      --text-light: #A3998F;
+      
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-pill: 9999px;
+
+      --shadow-sm: 0 4px 12px rgba(44, 38, 33, 0.04);
+      --shadow-md: 0 8px 24px rgba(44, 38, 33, 0.07);
+      --shadow-lg: 0 16px 40px rgba(44, 38, 33, 0.10);
+      --shadow-gold: 0 8px 28px rgba(191, 148, 86, 0.35);
+
+      --font-heading: 'Zain', sans-serif;
+      --font-body: 'Zain', sans-serif;
+      --font-accent: 'Zain', sans-serif;
+
+      --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* النمط الليلي الفاخر (Dark Luxury Mode) */
+    [data-theme="dark"] {
+      --bg-cream: #12100E;
+      --surface-white: #1A1714;
+      --surface-card: #1F1C18;
+      --surface-elevated: #28241F;
+      --surface-border: #332C24;
+      --surface-border-gold: rgba(191, 148, 86, 0.45);
+      --text-main: #F7F3EE;
+      --text-muted: #B8ADA1;
+      --text-light: #7E7468;
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
+      --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       2. التهيئة الأساسية وتأثيرات الخلفية
+       ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Zain', sans-serif;
+      background-color: var(--bg-cream);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.5;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+    }
+
+    button, input, select, textarea, h1, h2, h3, h4, h5, h6, p, label, div {
+      font-family: 'Zain', sans-serif;
+    }
+
+    /* إصلاح شامل للأيقونات: منع تداخل خط زين مع الفونت أوسم وضمان ظهور الرموز */
+    .fa, .fas, .fa-solid, [class*="fa-solid"] {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 900 !important;
+      font-style: normal !important;
+    }
+    .far, .fa-regular, [class*="fa-regular"] {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 400 !important;
+      font-style: normal !important;
+    }
+    .fab, .fa-brands, [class*="fa-brands"] {
+      font-family: "Font Awesome 6 Brands" !important;
+      font-weight: 400 !important;
+      font-style: normal !important;
+    }
+    .fa::before, .fas::before, .fa-solid::before, [class*="fa-solid"]::before {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 900 !important;
+    }
+    .far::before, .fa-regular::before, [class*="fa-regular"]::before {
+      font-family: "Font Awesome 6 Free" !important;
+      font-weight: 400 !important;
+    }
+    .fab::before, .fa-brands::before, [class*="fa-brands"]::before {
+      font-family: "Font Awesome 6 Brands" !important;
+      font-weight: 400 !important;
+    }
+
+    body {
+      background-color: var(--bg-cream);
+      color: var(--text-main);
+      font-family: 'Zain', sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background-color var(--transition-normal), color var(--transition-normal);
+      direction: rtl;
+    }
+
+    /* خلفية حبيبية ناعمة + بتلات الورد المتطايرة */
+    .ambient-glow {
+      position: fixed;
+      top: 0;
+      right: 0;
+      left: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 10% 20%, rgba(229, 169, 155, 0.08) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, rgba(191, 148, 86, 0.09) 0%, transparent 40%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .petal-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .floating-petal {
+      position: absolute;
+      width: 14px;
+      height: 20px;
+      background: radial-gradient(circle, rgba(244, 185, 178, 0.5) 0%, rgba(229, 169, 155, 0.15) 100%);
+      border-radius: 50% 0 50% 50%;
+      opacity: 0.6;
+      animation: floatPetal linear infinite;
+    }
+
+    @keyframes floatPetal {
+      0% {
+        transform: translateY(-20px) rotate(0deg) translateX(0);
+        opacity: 0;
+      }
+      10% { opacity: 0.7; }
+      90% { opacity: 0.6; }
+      100% {
+        transform: translateY(105vh) rotate(360deg) translateX(120px);
+        opacity: 0;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       3. حاوية العرض المتجاوبة الفاخرة (Responsive Application Layout)
+       ═══════════════════════════════════════════════════════════ */
+    .app-root-container {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      width: 100%;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px 20px 80px;
+      transition: all var(--transition-normal);
+    }
+
+    .app-device-wrapper {
+      width: 100%;
+      background: var(--surface-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--surface-border);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      position: relative;
+      transition: all var(--transition-normal);
+    }
+
+    @media (max-width: 768px) {
+      .app-root-container {
+        padding: 0 0 70px 0;
+      }
+      .app-device-wrapper {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        box-shadow: none;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       5. رأس الصفحة (JOSPA Header)
+       ═══════════════════════════════════════════════════════════ */
+    .jospa-header {
+      background: var(--surface-white);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-action-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 20px;
+      cursor: pointer;
+      position: relative;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color var(--transition-fast);
+    }
+
+    .header-action-btn:hover {
+      color: var(--gold-primary);
+    }
+
+    .cart-badge {
+      position: absolute;
+      top: 2px;
+      right: 0px;
+      background: var(--gold-primary);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(191, 148, 86, 0.4);
+      animation: pulseCart 1.5s infinite;
+    }
+
+    @keyframes pulseCart {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    .brand-logo-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      padding: 4px 0;
+    }
+
+    .brand-logo-img {
+      height: 48px;
+      width: auto;
+      max-width: 175px;
+      object-fit: contain;
+      transition: transform var(--transition-fast);
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+    }
+
+    .brand-logo-img:hover {
+      transform: scale(1.03);
+    }
+
+    .logo-light {
+      display: block;
+    }
+    .logo-dark {
+      display: none;
+    }
+
+    [data-theme="dark"] .logo-light {
+      display: none;
+    }
+    [data-theme="dark"] .logo-dark {
+      display: block;
+    }
+
+    .header-icons-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* مؤشر الخطوات ملغى بناءً على طلب العميل */
+
+    /* ═══════════════════════════════════════════════════════════
+       7. بانر الصفحة الرئيسية الفخم (Hero Banner)
+       ═══════════════════════════════════════════════════════════ */
+    .hero-gifting-banner {
+      position: relative;
+      margin: 16px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      background: linear-gradient(135deg, #FBF4ED 0%, #F5EAE0 100%);
+      border: 1px solid var(--surface-border-gold);
+    }
+
+    [data-theme="dark"] .hero-gifting-banner {
+      background: linear-gradient(135deg, #241D17 0%, #1A1612 100%);
+    }
+
+    .hero-banner-inner {
+      position: relative;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 2;
+    }
+
+    .hero-badge-tag {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: var(--radius-pill);
+      background: var(--gold-subtle);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-deep);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    [data-theme="dark"] .hero-badge-tag {
+      color: var(--gold-light);
+    }
+
+    .hero-banner-title {
+      font-family: var(--font-heading);
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text-main);
+      max-width: 480px;
+    }
+
+    .hero-banner-subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 420px;
+      line-height: 1.6;
+    }
+
+    .hero-banner-image-backdrop {
+      position: absolute;
+      left: -20px;
+      bottom: -30px;
+      width: 260px;
+      height: 260px;
+      opacity: 0.28;
+      pointer-events: none;
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      transform: rotate(-10deg);
+      transition: transform var(--transition-normal);
+    }
+
+    .hero-gifting-banner:hover .hero-banner-image-backdrop {
+      transform: rotate(0deg) scale(1.08);
+      opacity: 0.38;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       8. فواصل العناوين الزخرفية (Decorative Section Titles)
+       ═══════════════════════════════════════════════════════════ */
+    .ornament-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin: 28px 16px 20px;
+    }
+
+    .ornament-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+    }
+
+    .ornament-text {
+      font-family: var(--font-heading);
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ornament-text i {
+      color: var(--gold-primary);
+      font-size: 16px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       9. شبكة باقات الورد (Bouquets Showcase Grid)
+       ═══════════════════════════════════════════════════════════ */
+    .bouquets-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      padding: 0 16px;
+    }
+
+    @media (min-width: 768px) {
+      .bouquets-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+    }
+
+    .bouquet-card {
+      background: var(--surface-card);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all var(--transition-normal);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+
+    .bouquet-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--gold-light);
+    }
+
+    .bouquet-card.selected {
+      border-color: var(--gold-primary);
+      background: var(--surface-white);
+      box-shadow: var(--shadow-gold), 0 0 0 2px var(--gold-primary);
+    }
+
+    .bouquet-img-wrapper {
+      position: relative;
+      width: 100%;
+      padding-top: 100%; /* Square ratio */
+      overflow: hidden;
+      background: var(--surface-elevated);
+    }
+
+    .bouquet-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition-normal);
+    }
+
+    .bouquet-card:hover .bouquet-img {
+      transform: scale(1.06);
+    }
+
+    .bouquet-badge-top {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(44, 38, 33, 0.75);
+      backdrop-filter: blur(6px);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bouquet-selected-check {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold-primary);
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all var(--transition-bounce);
+      box-shadow: 0 4px 10px rgba(191, 148, 86, 0.4);
+    }
+
+    .bouquet-card.selected .bouquet-selected-check {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .bouquet-info {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .bouquet-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.3;
+    }
+
+    .bouquet-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      color: var(--gold-deep);
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    [data-theme="dark"] .bouquet-price-row {
+      color: var(--gold-light);
+    }
+
+    .bouquet-price-currency {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .bouquet-action-btn {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px 12px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--gold-primary);
+      background: var(--gold-btn-gradient);
+      color: #FFFFFF;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all var(--transition-fast);
+      box-shadow: 0 3px 10px rgba(191, 148, 86, 0.25);
+    }
+
+    .bouquet-action-btn:hover {
+      box-shadow: 0 5px 14px rgba(191, 148, 86, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .bouquet-card.selected .bouquet-action-btn {
+      background: var(--surface-elevated);
+      color: var(--gold-deep);
+      border-color: var(--gold-primary);
+      box-shadow: none;
+    }
+
+    [data-theme="dark"] .bouquet-card.selected .bouquet-action-btn {
+      color: var(--gold-light);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       10. قسم بطاقة الهدية بالمبلغ المخصص (Custom Gift Card)
+       ═══════════════════════════════════════════════════════════ */
+    .giftcard-custom-section {
+      margin: 24px 16px;
+      background: var(--surface-card);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+    }
+
+    .giftcard-custom-section.active {
+      border-color: var(--gold-primary);
+      box-shadow: var(--shadow-gold);
+    }
+
+    /* زر المتابعة داخل قسم البطاقة - مخفي على الجوال */
+    .giftcard-proceed-btn {
+      display: none;
+    }
+
+    @media (min-width: 992px) {
+      /*
+       * تقنية كسر العمود (Column Breakout):
+       * الصفحة RTL: في grid مع direction=rtl، العمود الأيسر (desktop-main-col) هو الأول بصرياً من اليمين
+       * والسايدبار (desktop-sidebar-col) على اليسار بصرياً
+       * فلكي تمتد بطاقة الهدية لتغطي السايدبار: نمتد باتجاه اليسار (margin-left سالب)
+       */
+      .desktop-main-col .giftcard-custom-section {
+        width: calc(100% + 420px + 32px);
+        margin-top: 24px;
+        margin-bottom: 0;
+        margin-right: 0;
+        margin-left: calc(-420px - 32px);
+        box-sizing: border-box;
+      }
+
+      /* عنوان قسم بطاقة الهدية - يمتد بنفس العرض */
+      .giftcard-title-row {
+        width: calc(100% + 420px + 32px);
+        margin-left: calc(-420px - 32px);
+        box-sizing: border-box;
+      }
+
+      /* إظهار زر المتابعة على الديسكتوب */
+      .giftcard-proceed-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100;
+        margin: 20px auto;
+        padding: 16px 32px;
+        background: linear-gradient(135deg, var(--gold-primary), var(--gold-deep));
+        color: #fff;
+        border: none;
+        border-radius: var(--radius-pill);
+        font-family: 'Zain', sans-serif;
+        font-size: 17px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(191,148,86,0.4);
+        transition: all var(--transition-fast);
+        letter-spacing: 0.3px;
+      }
+
+      .giftcard-proceed-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 28px rgba(191,148,86,0.55);
+      }
+
+      .giftcard-proceed-btn:active {
+        transform: translateY(0);
+      }
+    }
+
+    .giftcard-layout {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    @media (max-width: 600px) {
+      .giftcard-layout {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+
+    .giftcard-visual-wrapper {
+      flex: 0 0 160px;
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      aspect-ratio: 4/3;
+      background: linear-gradient(135deg, #BF9456, #8F6932);
+    }
+
+    .giftcard-preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition-normal);
+    }
+
+    .giftcard-custom-section:hover .giftcard-preview-img {
+      transform: scale(1.05);
+    }
+
+    .giftcard-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .giftcard-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .giftcard-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .giftcard-enable-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-main);
+      user-select: none;
+    }
+
+    .custom-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--gold-primary);
+      background: var(--surface-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-size: 12px;
+      transition: all var(--transition-fast);
+    }
+
+    .giftcard-enable-toggle input {
+      display: none;
+    }
+
+    .giftcard-enable-toggle input:checked + .custom-checkbox {
+      background: var(--gold-primary);
+    }
+
+    /* شرائح المبالغ السريعة والمدخل - في صف واحد متناسق */
+    .giftcard-amount-box {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preset-chips-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+    }
+
+    .amount-chip {
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius-pill);
+      padding: 8px 4px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      .preset-chips-row {
+        gap: 6px;
+      }
+      .amount-chip {
+        font-size: 11.5px;
+        padding: 7px 2px;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .giftcard-amount-box {
+        flex-direction: row;
+        align-items: center;
+        gap: 14px;
+      }
+      .preset-chips-row {
+        flex: 1;
+      }
+      .amount-input-group {
+        width: 175px;
+        flex-shrink: 0;
+      }
+    }
+
+    .amount-chip:hover {
+      border-color: var(--gold-primary);
+    }
+
+    .amount-chip.active {
+      background: var(--gold-primary);
+      color: #FFFFFF;
+      border-color: var(--gold-primary);
+      box-shadow: 0 2px 8px var(--gold-glow);
+    }
+
+    .amount-input-group {
+      display: flex;
+      align-items: center;
+      background: var(--surface-elevated);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      padding: 0 14px;
+      transition: border-color var(--transition-fast);
+    }
+
+    .amount-input-group:focus-within {
+      border-color: var(--gold-primary);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .amount-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .amount-input-field {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 10px 12px;
+      font-family: var(--font-body);
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--gold-deep);
+      text-align: left;
+      direction: ltr;
+    }
+
+    [data-theme="dark"] .amount-input-field {
+      color: var(--gold-light);
+    }
+
+    .amount-currency-tag {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       11. واجهة الخطوة الثانية (Step 2: Gifting Details)
+       ═══════════════════════════════════════════════════════════ */
+    .step-content-section {
+      display: none;
+      animation: fadeInSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .step-content-section.active {
+      display: block;
+    }
+
+    @keyframes fadeInSlide {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .step-back-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 10px;
+      background: var(--surface-white);
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .step-back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--surface-border);
+      color: var(--text-main);
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .step-back-btn:hover {
+      background: var(--gold-primary);
+      color: #FFFFFF;
+      border-color: var(--gold-primary);
+    }
+
+    .step-title-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .step-title-main {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .step-title-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* بطاقة تفاصيل الإهداء والنموذج */
+    .gifting-details-card {
+      margin: 16px;
+      background: var(--surface-card);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 24px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .form-group-field {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-field-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-field-label i {
+      color: var(--gold-primary);
+      font-size: 12px;
+    }
+
+    .form-input-text {
+      width: 100%;
+      background: var(--surface-elevated);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text-main);
+      outline: none;
+      transition: all var(--transition-fast);
+    }
+
+    .form-input-text:focus {
+      border-color: var(--gold-primary);
+      background: var(--surface-white);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    /* أزرار اقتراحات رسالة الإهداء السريعة */
+    .quick-message-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .message-chip-btn {
+      background: var(--surface-elevated);
+      border: 1px dashed var(--surface-border);
+      border-radius: var(--radius-pill);
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: all var(--transition-fast);
+    }
+
+    .message-chip-btn:hover {
+      border-color: var(--gold-primary);
+      color: var(--gold-deep);
+      background: var(--gold-subtle);
+    }
+
+    /* خيار إظهار اسم المرسل */
+    .sender-visibility-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-top: 1px dashed var(--surface-border);
+      border-bottom: 1px dashed var(--surface-border);
+      margin: 16px 0;
+    }
+
+    .info-tooltip-wrap {
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .info-tooltip-wrap:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 120%;
+      right: 0;
+      background: #2C2621;
+      color: #FFFFFF;
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      z-index: 10;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* خيارات طريقة الاستلام */
+    .delivery-method-label {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      color: var(--text-main);
+    }
+
+    .delivery-options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .delivery-option-card {
+      background: var(--surface-elevated);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      position: relative;
+    }
+
+    .delivery-option-card:hover {
+      border-color: var(--gold-light);
+    }
+
+    .delivery-option-card.selected {
+      border-color: var(--gold-primary);
+      background: var(--surface-white);
+      box-shadow: 0 4px 14px var(--gold-glow);
+    }
+
+    .delivery-radio-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+
+    .delivery-option-card.selected .delivery-radio-dot {
+      border-color: var(--gold-primary);
+    }
+
+    .delivery-radio-dot::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold-primary);
+      opacity: 0;
+      transform: scale(0.5);
+      transition: all var(--transition-fast);
+    }
+
+    .delivery-option-card.selected .delivery-radio-dot::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .delivery-info-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .delivery-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .delivery-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       12. ملخص الهدية (Gift Summary Card)
+       ═══════════════════════════════════════════════════════════ */
+    .gift-summary-card {
+      margin: 16px;
+      background: var(--surface-card);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .summary-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--surface-elevated);
+      border-radius: var(--radius-md);
+      gap: 12px;
+    }
+
+    .summary-item-lead {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .summary-item-thumb {
+      width: 50px;
+      height: 50px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .summary-item-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .summary-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .summary-item-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .summary-item-price {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--gold-deep);
+      white-space: nowrap;
+    }
+
+    [data-theme="dark"] .summary-item-price {
+      color: var(--gold-light);
+    }
+
+    /* حقل كوبون الخصم التفاعلي */
+    .promo-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .promo-input {
+      flex: 1;
+      background: var(--surface-elevated);
+      border: 1.5px dashed var(--surface-border);
+      border-radius: var(--radius-pill);
+      padding: 8px 16px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .promo-input:focus {
+      border-color: var(--gold-primary);
+    }
+
+    .promo-apply-btn {
+      background: var(--surface-elevated);
+      border: 1px solid var(--gold-primary);
+      color: var(--gold-deep);
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .promo-apply-btn:hover {
+      background: var(--gold-primary);
+      color: #FFFFFF;
+    }
+
+    /* شريط المجموع الإجمالي الذهبي الفاخر */
+    .summary-total-banner {
+      background: linear-gradient(135deg, rgba(191, 148, 86, 0.12) 0%, rgba(191, 148, 86, 0.04) 100%);
+      border: 1px solid var(--surface-border-gold);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .total-title-text {
+      font-family: var(--font-heading);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .total-amount-display {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .total-number {
+      font-family: var(--font-body);
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--gold-deep);
+    }
+
+    [data-theme="dark"] .total-number {
+      color: var(--gold-light);
+    }
+
+    .total-currency {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       13. شريط التنفيذ السفلي العائم (Floating Bottom Action Bar)
+       ═══════════════════════════════════════════════════════════ */
+    .floating-checkout-bar {
+      position: sticky;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 90;
+      background: var(--surface-white);
+      border-top: 1px solid var(--surface-border);
+      padding: 14px 20px;
+      box-shadow: 0 -8px 24px rgba(44, 38, 33, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .bar-total-preview {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 auto;
+    }
+
+    .bar-total-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .bar-total-value {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--gold-deep);
+    }
+
+    [data-theme="dark"] .bar-total-value {
+      color: var(--gold-light);
+    }
+
+    .checkout-submit-btn {
+      flex: 1;
+      background: var(--gold-btn-gradient);
+      border: none;
+      border-radius: var(--radius-pill);
+      padding: 14px 24px;
+      color: #FFFFFF;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: var(--shadow-gold);
+      position: relative;
+      overflow: hidden;
+      transition: all var(--transition-fast);
+    }
+
+    .checkout-submit-btn::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transform: rotate(30deg);
+      animation: shimmerBtn 3.5s infinite;
+    }
+
+    @keyframes shimmerBtn {
+      0% { transform: translateX(-100%) rotate(30deg); }
+      100% { transform: translateX(100%) rotate(30deg); }
+    }
+
+    .checkout-submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(191, 148, 86, 0.5);
+    }
+
+    .checkout-submit-btn:active {
+      transform: translateY(1px);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       14. بطاقة الإهداء الرقمية ثلاثية الأبعاد (Live 3D Digital Card)
+       ═══════════════════════════════════════════════════════════ */
+    .live-card-preview-container {
+      margin: 16px;
+      background: var(--surface-card);
+      border: 1.5px solid var(--surface-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .digital-gift-card-3d {
+      background: linear-gradient(135deg, #1C1814 0%, #2A241E 50%, #15120F 100%);
+      border: 2px solid var(--gold-light);
+      border-radius: 18px;
+      padding: 24px;
+      color: #FFFFFF;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35), inset 0 0 20px rgba(191, 148, 86, 0.2);
+      transition: transform var(--transition-normal);
+    }
+
+    .card-watermark-lotus {
+      position: absolute;
+      left: -20px;
+      bottom: -20px;
+      font-size: 140px;
+      color: rgba(191, 148, 86, 0.08);
+      pointer-events: none;
+    }
+
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .card-brand-badge {
+      font-family: var(--font-heading);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gold-light);
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card-value-badge {
+      background: var(--gold-primary);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+    }
+
+    .card-greeting-line {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 4px;
+    }
+
+    .card-recipient-name {
+      font-family: var(--font-heading);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gold-light);
+      margin-bottom: 12px;
+    }
+
+    .card-personal-message {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #E8E2D9;
+      font-style: italic;
+      min-height: 40px;
+      margin-bottom: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border-right: 3px solid var(--gold-primary);
+    }
+
+    .card-footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 12px;
+      font-size: 12px;
+    }
+
+    .card-sender-signature {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       15. تنسيقات شاشة الكمبيوتر (Desktop Split-Screen Layout)
+       ═══════════════════════════════════════════════════════════ */
+    .desktop-columns-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .desktop-sidebar-btn {
+      display: none;
+    }
+
+    @media (min-width: 992px) {
+      .desktop-columns-container {
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        gap: 32px;
+        align-items: start;
+        padding: 20px;
+      }
+
+      .desktop-main-col {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .desktop-sidebar-col {
+        position: sticky;
+        top: 90px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .desktop-sidebar-btn {
+        display: flex;
+        width: 100%;
+        margin-top: 18px;
+      }
+
+      .floating-checkout-bar {
+        display: none;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       16. نافذة التأكيد والنجاح (Success Modal)
+       ═══════════════════════════════════════════════════════════ */
+    .success-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .success-modal-overlay.active {
+      display: flex;
+      animation: modalFadeIn 0.3s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .success-modal-card {
+      background: var(--surface-card);
+      border-radius: 32px;
+      max-width: 480px;
+      width: 100%;
+      padding: 36px 28px;
+      text-align: center;
+      border: 1.5px solid var(--gold-light);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+      position: relative;
+      animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-badge-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #BF9456 0%, #E3C89B 100%);
+      color: #FFFFFF;
+      font-size: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      box-shadow: 0 10px 25px var(--gold-glow);
+    }
+
+    .success-modal-title {
+      font-family: var(--font-heading);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-main);
+    }
+
+    .success-modal-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .order-code-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-elevated);
+      border: 1px dashed var(--gold-primary);
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold-deep);
+      margin-bottom: 24px;
+    }
+
+    [data-theme="dark"] .order-code-badge {
+      color: var(--gold-light);
+    }
+
+    .success-actions-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .modal-action-btn {
+      flex: 1;
+      padding: 12px 18px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-fast);
+      border: none;
+    }
+
+    .modal-btn-primary {
+      background: var(--gold-btn-gradient);
+      color: #FFFFFF;
+      box-shadow: var(--shadow-gold);
+    }
+
+    .modal-btn-secondary {
+      background: var(--surface-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--surface-border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- تأثير الحبيبات الضوئية وبتلات الورد المتطايرة في الخلفية -->
+  <div class="ambient-glow"></div>
+  <div class="petal-container" id="petalContainer"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       2. حاوية العرض الرئيسية للمشروع (الجوال والكمبيوتر)
+       ═══════════════════════════════════════════════════════════ -->
+  <main class="app-root-container" id="appRoot">
+    <div class="app-device-wrapper">
+      
+      <!-- الرأس الرئيسي لشاشة التطبيق (Header) -->
+      <header class="jospa-header">
+        <button class="header-action-btn" title="القائمة الرئيسية" onclick="window.location.href='{{ url('/') }}'">
+          <i class="fa-solid fa-bars-staggered"></i>
+        </button>
+
+        <a href="{{ url('/') }}" class="brand-logo-area" title="JOSPA Experience Riyadh">
+          <img src="{{ asset('images/gifting') }}/jospa_logo_transparent_dark.png" alt="JOSPA" class="brand-logo-img logo-light">
+          <img src="{{ asset('images/gifting') }}/jospa_logo_transparent_white.png" alt="JOSPA" class="brand-logo-img logo-dark">
+        </a>
+
+        <div class="header-icons-left">
+          <button class="header-action-btn" id="btnThemeToggle" title="تبديل السمة (ليلي / فاتح)" onclick="toggleTheme()">
+            <i class="fa-solid fa-moon" id="themeIcon"></i>
+          </button>
+          <button class="header-action-btn" title="سلة الهدايا" onclick="window.location.href='{{ route('cart.page') }}'">
+            <i class="fa-solid fa-bag-shopping"></i>
+            <span class="cart-badge" id="cartBadgeCount">0</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- الحاوية المشتركة للتقسيم على شاشات الكمبيوتر -->
+      <div class="desktop-columns-container">
+        
+        <!-- العمود الأيمن (الرئيسي): خطوات الاختيار والنماذج -->
+        <div class="desktop-main-col">
+
+          <!-- ═══════════════════════════════════════════════════
+               الخطوة الأولى: اختيار باقات الورد وبطاقة الهدية
+               ═══════════════════════════════════════════════════ -->
+          <section class="step-content-section active" id="step1Section">
+            
+            <!-- البانر الترحيبي الفخم (Hero Banner) -->
+            <div class="hero-gifting-banner">
+              <div class="hero-banner-image-backdrop" style="background-image: url('{{ asset('images/gifting') }}/hero.jpg');"></div>
+              <div class="hero-banner-inner">
+                <span class="hero-badge-tag">
+                  <i class="fa-solid fa-sparkles"></i>
+                  مجموعة إهداء جوسبا الفاخرة - {{ $config['branch']['name'] }}
+                </span>
+                <h1 class="hero-banner-title">هدية تجمع الورد ولحظات العناية</h1>
+                <p class="hero-banner-subtitle">اختاري باقة ورد، وأضيفي بطاقة هدية بالقيمة التي تناسبك لإسعاد من تحبين بتجربة استثنائية.</p>
+              </div>
+            </div>
+
+            <!-- عنوان قسم باقات الورد -->
+            <div class="ornament-section-title">
+              <div class="ornament-line"></div>
+              <h2 class="ornament-text">
+                <i class="fa-solid fa-feather-pointed"></i>
+                باقات الورد
+              </h2>
+              <div class="ornament-line"></div>
+            </div>
+
+            <!-- شبكة عرض باقات الورد التفاعلية -->
+            <div class="bouquets-grid" id="bouquetsGrid">
+              <!-- يتم توليد البطاقات ديناميكياً عبر الجافاسكريبت بكافة التفاصيل والصور الواقعية -->
+            </div>
+
+            <!-- عنوان قسم بطاقة الهدية بالمبلغ المخصص -->
+            <div class="ornament-section-title giftcard-title-row">
+              <div class="ornament-line"></div>
+              <h2 class="ornament-text">
+                <i class="fa-solid fa-gift"></i>
+                بطاقة هدية بمبلغ تختارينه
+              </h2>
+              <div class="ornament-line"></div>
+            </div>
+
+            <!-- قسم بطاقة الهدية المخصصة -->
+            <div class="giftcard-custom-section" id="giftCardSection">
+              <div class="giftcard-layout">
+                <div class="giftcard-visual-wrapper">
+                  <img src="{{ asset('images/gifting') }}/gift_card.jpg" alt="بطاقة هدية جوسبا الفاخرة" class="giftcard-preview-img">
+                </div>
+                <div class="giftcard-content">
+                  <h3 class="giftcard-title">بطاقة هدية بمبلغ تختارينه</h3>
+                  <p class="giftcard-desc">أضيفي بطاقة هدية يمكن للمستلمة استخدامها في جميع خدمات جوسبا (المساج، العناية بالبشرة، والسبا).</p>
+                  
+                  <label class="giftcard-enable-toggle">
+                    <input type="checkbox" id="chkEnableGiftCard" onchange="toggleGiftCard(this.checked)">
+                    <div class="custom-checkbox">
+                      <i class="fa-solid fa-check"></i>
+                    </div>
+                    <span>إضافة بطاقة هدية</span>
+                  </label>
+
+                  <div class="giftcard-amount-box" id="giftCardAmountBox">
+                    <div class="preset-chips-row">
+                      @foreach($config['card_amounts'] as $amt)
+                      <button type="button" class="amount-chip" onclick="selectPresetAmount({{ (int) $amt }})">{{ (int) $amt }} ر.س</button>
+                      @endforeach
+                    </div>
+
+                    <div class="amount-input-group">
+                      <span class="amount-label">قيمة البطاقة:</span>
+                      <input type="number" id="txtCardAmount" class="amount-input-field" value="{{ (int) $config['card_amounts'][0] }}" min="{{ (int) $config['min_amount'] }}" max="{{ (int) $config['max_amount'] }}" step="1" oninput="updateCardAmount(this.value)">
+                      <span class="amount-currency-tag">ر.س</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- زر المتابعة للدفع (يظهر فقط في الديسكتوب) -->
+              <button type="button" class="giftcard-proceed-btn" onclick="handleMainAction()">
+                <span id="desktopBtnText">المتابعة لتفاصيل الإهداء</span>
+                <i class="fa-solid fa-arrow-left" id="desktopBtnIcon"></i>
+              </button>
+            </div>
+
+          </section>
+
+          <!-- ═══════════════════════════════════════════════════
+               الخطوة الثانية: تفاصيل الإهداء وطريقة الاستلام
+               ═══════════════════════════════════════════════════ -->
+          <section class="step-content-section" id="step2Section">
+            
+            <!-- رأس الرجوع للخطوة السابقة مع لوجو اللوتس -->
+            <div class="step-back-header">
+              <button class="step-back-btn" onclick="goToStep(1)">
+                <i class="fa-solid fa-arrow-right"></i>
+                <span>العودة للباقات</span>
+              </button>
+
+              <div class="step-title-badge">
+                <span class="step-title-main">
+                  أكملي تفاصيل الإهداء
+                  <i class="fa-solid fa-spa text-gold"></i>
+                </span>
+                <span class="step-title-sub">بيانات المرسل والمستلم وطريقة الاستلام</span>
+              </div>
+            </div>
+
+            <!-- بطاقة إدخال بيانات الإهداء -->
+            <div class="gifting-details-card">
+              
+              <div class="ornament-section-title" style="margin-top: 0;">
+                <div class="ornament-line"></div>
+                <h3 class="ornament-text">تفاصيل الإهداء</h3>
+                <div class="ornament-line"></div>
+              </div>
+
+              <!-- اسم المرسل -->
+              <div class="form-group-field">
+                <div class="field-label-row">
+                  <label class="form-field-label" for="txtSenderName">
+                    <i class="fa-solid fa-user-pen"></i>
+                    اسم المرسل
+                  </label>
+                </div>
+                <input type="text" id="txtSenderName" class="form-input-text" placeholder="اكتبي اسمكِ الكريم" value="{{ trim((string) optional($user)->first_name . ' ' . (string) optional($user)->last_name) }}" oninput="updateLiveCard()">
+              </div>
+
+              <!-- اسم المستلم -->
+              <div class="form-group-field">
+                <div class="field-label-row">
+                  <label class="form-field-label" for="txtReceiverName">
+                    <i class="fa-solid fa-heart"></i>
+                    اسم المستلم
+                  </label>
+                </div>
+                <input type="text" id="txtReceiverName" class="form-input-text" placeholder="اكتبي اسم المستلمة" value="" oninput="updateLiveCard()">
+              </div>
+
+              <!-- جوال المرسل -->
+              <div class="form-group-field">
+                <div class="field-label-row">
+                  <label class="form-field-label" for="txtSenderPhone">
+                    <i class="fa-solid fa-phone"></i>
+                    جوال المرسل
+                  </label>
+                </div>
+                <input type="tel" id="txtSenderPhone" class="form-input-text" placeholder="05xxxxxxxx" value="{{ optional($user)->mobile }}" dir="ltr">
+              </div>
+
+              <!-- جوال المستلم -->
+              <div class="form-group-field">
+                <div class="field-label-row">
+                  <label class="form-field-label" for="txtReceiverPhone">
+                    <i class="fa-solid fa-mobile-screen"></i>
+                    جوال المستلم
+                  </label>
+                </div>
+                <input type="tel" id="txtReceiverPhone" class="form-input-text" placeholder="05xxxxxxxx" value="" dir="ltr">
+              </div>
+
+              <!-- رسالة الإهداء -->
+              <div class="form-group-field">
+                <div class="field-label-row">
+                  <label class="form-field-label" for="txtGiftMessage">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    رسالة الإهداء
+                  </label>
+                </div>
+                <textarea id="txtGiftMessage" class="form-input-text form-textarea" placeholder="اكتبي رسالتكِ للمستلمة..." oninput="updateLiveCard()"></textarea>
+                
+                <!-- اقتراحات رسائل سريعة جاهزة -->
+                <div class="quick-message-chips">
+                  <span class="message-chip-btn" onclick="applyQuickMessage('عيد ميلاد سعيد وعام مليء بالبهجة والدلال 🌸')">🎂 عيد ميلاد</span>
+                  <span class="message-chip-btn" onclick="applyQuickMessage('ألف مبروك التخرج ومنها للأعلى يا رب 🎓')">🎓 تخرج</span>
+                  <span class="message-chip-btn" onclick="applyQuickMessage('تستاهلين لحظات استرخاء وعناية تليق بجمال قلبك ✨')">✨ عناية ودلال</span>
+                  <span class="message-chip-btn" onclick="applyQuickMessage('شكراً من القلب على وجودكِ الرائع بحياتي 💖')">💖 شكر وتقدير</span>
+                </div>
+              </div>
+
+              <!-- خيار إظهار اسم المرسل -->
+              <div class="sender-visibility-row">
+                <label class="giftcard-enable-toggle" style="margin: 0;">
+                  <input type="checkbox" id="chkShowSenderName" checked onchange="updateLiveCard()">
+                  <div class="custom-checkbox">
+                    <i class="fa-solid fa-check"></i>
+                  </div>
+                  <span>إظهار اسم المرسل</span>
+                </label>
+                <div class="info-tooltip-wrap" data-tooltip="عند إزالة التحديد ستصل الهدية كإهداء سري (مجهول المرسل)">
+                  <i class="fa-solid fa-circle-info"></i>
+                </div>
+              </div>
+
+              <!-- طريقة الاستلام -->
+              <div class="delivery-section">
+                <div class="delivery-method-label">طريقة الاستلام</div>
+                <div class="delivery-options-grid">
+                  
+                  <div class="delivery-option-card selected" id="optStorePickup" onclick="selectDeliveryMethod('store')">
+                    <div class="delivery-radio-dot"></div>
+                    <div class="delivery-info-text">
+                      <span class="delivery-title">
+                        <i class="fa-solid fa-store text-gold me-1"></i>
+                        استلام من المركز
+                      </span>
+                      <span class="delivery-subtitle">استلام الورد من فرع {{ $config['branch']['name'] }}</span>
+                    </div>
+                  </div>
+
+                  <div class="delivery-option-card" id="optDigitalCard" onclick="selectDeliveryMethod('digital')">
+                    <div class="delivery-radio-dot"></div>
+                    <div class="delivery-info-text">
+                      <span class="delivery-title">
+                        <i class="fa-solid fa-envelope-open text-gold me-1"></i>
+                        بطاقة إلكترونية
+                      </span>
+                      <span class="delivery-subtitle">إرسال فوري عبر واتساب</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- فرع الاستلام (يظهر عند اختيار استلام من المركز) -->
+                <div class="form-group-field" id="branchSelectGroup">
+                  <label class="form-field-label">فرع الاستلام:</label>
+                  <div class="form-input-text">{{ $config['branch']['name'] }}</div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
+
+        </div>
+
+        <!-- العمود الأيسر (على الكمبيوتر): ملخص الهدية والبطاقة الرقمية الحية -->
+        <div class="desktop-sidebar-col">
+          
+          <!-- بطاقة المعاينة الرقمية الحية للهدية (3D Live Card Preview) -->
+          <div class="live-card-preview-container">
+            <div class="ornament-section-title" style="margin: 0 0 16px;">
+              <div class="ornament-line"></div>
+              <h3 class="ornament-text" style="font-size: 15px;">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                معاينة بطاقة الإهداء الحية
+              </h3>
+              <div class="ornament-line"></div>
+            </div>
+
+            <div class="digital-gift-card-3d" id="card3DElement">
+              <i class="fa-solid fa-spa card-watermark-lotus"></i>
+              <div class="card-header-row">
+                <span class="card-brand-badge">
+                  <i class="fa-solid fa-spa"></i>
+                  JOSPA VIP
+                </span>
+                <span class="card-value-badge" id="previewCardBadge">هدية متكاملة</span>
+              </div>
+              <div class="card-greeting-line">إلى الغالية:</div>
+              <div class="card-recipient-name" id="previewRecipient"></div>
+              <div class="card-personal-message" id="previewMessage"></div>
+              <div class="card-footer-row">
+                <span class="card-sender-signature" id="previewSender"></span>
+                <span style="opacity: 0.6; font-size: 10px;">بطاقة موثقة #JSP-2026</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- بطاقة ملخص الهدية (Gift Summary) -->
+          <div class="gift-summary-card">
+            <div class="ornament-section-title" style="margin: 0 0 16px;">
+              <div class="ornament-line"></div>
+              <h3 class="ornament-text">ملخص الهدية</h3>
+              <div class="ornament-line"></div>
+            </div>
+
+            <!-- قائمة العناصر المختارة -->
+            <div class="summary-items-list" id="summaryItemsContainer">
+              <!-- تُحدث تلقائياً عند اختيار أي باقة أو بطاقة -->
+            </div>
+
+
+            <!-- شريط الإجمالي الذهبي -->
+            <div class="summary-total-banner">
+              <span class="total-title-text">الإجمالي</span>
+              <div class="total-amount-display">
+                <span class="total-number" id="grandTotalNumber">0</span>
+                <span class="total-currency">ر.س</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════
+           شريط الدفع والتأكيد العائم السفلي
+           ═══════════════════════════════════════════════════════ -->
+      <footer class="floating-checkout-bar">
+        <div class="bar-total-preview">
+          <span class="bar-total-label">المجموع الإجمالي</span>
+          <span class="bar-total-value"><span id="stickyTotalNumber">0</span> ر.س</span>
+        </div>
+
+        <button type="button" class="checkout-submit-btn" id="btnMainAction" onclick="handleMainAction()">
+          <span id="mainBtnText">المتابعة لتفاصيل الإهداء</span>
+          <i class="fa-solid fa-arrow-left" id="mainBtnIcon"></i>
+        </button>
+      </footer>
+
+    </div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       نافذة إتمام الحجز والدفع التفاعلي الفاخرة (Success Modal)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="success-modal-overlay" id="successModal">
+    <div class="success-modal-card">
+      <div class="success-badge-icon">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h3 class="success-modal-title">تم اعتماد حجز الإهداء بنجاح!</h3>
+      <p class="success-modal-desc">
+        شكراً لكِ، تم استلام طلبكِ وجاري إعداد الهدية الفاخرة بكل عناية وحب لتصل في الموعد المحدد.
+      </p>
+
+      <div class="order-code-badge">
+        <i class="fa-solid fa-receipt"></i>
+        <span>رقم الإهداء: #JSP-98241</span>
+      </div>
+
+      <div class="success-actions-row">
+        <button class="modal-action-btn modal-btn-primary" onclick="shareWhatsApp()">
+          <i class="fa-brands fa-whatsapp"></i>
+          مشاركة الإهداء
+        </button>
+        <button class="modal-action-btn modal-btn-secondary" onclick="closeSuccessModal()">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       الجافاسكريبت التفاعلي الكامل للمنصة
+       ═══════════════════════════════════════════════════════════ -->
+  <script>
+    // ── 1. بيانات باقات وفازات الورد المتاحة (مطابقة للجدول المرفق) ──
+    const BOUQUETS_DATA = @json($config['bouquets']);
+    const GIFT_CONFIG = {
+      storeUrl: @json(route('branch.gift.store', $config['branch']['slug'])),
+      signinUrl: @json(route('signin')),
+      draftKey: 'branchGiftDraft:' + @json($config['branch']['slug']),
+      minAmount: {{ (int) $config['min_amount'] }},
+      maxAmount: {{ (int) $config['max_amount'] }},
+      defaultAmount: {{ (int) $config['card_amounts'][0] }},
+      isLoggedIn: @json((bool) $user)
+    };
+
+    // ── 2. الحالة العامة للتطبيق (Application State) ──
+    let appState = {
+      currentStep: 1,
+      selectedBouquetId: null,
+      giftCardEnabled: false,
+      giftCardAmount: GIFT_CONFIG.defaultAmount,
+      deliveryMethod: 'store',
+      promoDiscountPercent: 0,
+      showSender: true
+    };
+
+    // ── 3. تهيئة الصفحة عند التحميل ──
+    document.addEventListener('DOMContentLoaded', () => {
+      initPetals();
+      renderBouquets();
+      syncUIState();
+      updateLiveCard();
+      toggleGiftCard(false);
+      restoreDraft();
+    });
+
+    // ── 4. توليد كروت باقات الورد ديناميكياً ──
+    function renderBouquets() {
+      const container = document.getElementById('bouquetsGrid');
+      if (!container) return;
+
+      container.innerHTML = BOUQUETS_DATA.map(bouquet => {
+        const isSelected = appState.selectedBouquetId === bouquet.id;
+        return `
+          <div class="bouquet-card ${isSelected ? 'selected' : ''}" id="cardBouquet_${bouquet.id}" onclick="selectBouquet(${bouquet.id})">
+            <div class="bouquet-img-wrapper">
+              <img src="${bouquet.image}" alt="${bouquet.title}" class="bouquet-img" loading="lazy">
+              ${bouquet.badge ? `<span class="bouquet-badge-top">${bouquet.badge}</span>` : ''}
+              <div class="bouquet-selected-check">
+                <i class="fa-solid fa-check"></i>
+              </div>
+            </div>
+            <div class="bouquet-info">
+              <span class="bouquet-title">${bouquet.title}</span>
+              <span class="bouquet-en-sub" style="font-size: 13px; font-weight: 600; color: var(--gold-deep); direction: ltr; margin-top: -2px; letter-spacing: 0.3px;">${bouquet.sub}</span>
+              <div class="bouquet-price-row">
+                <span>${bouquet.price}</span>
+                <span class="bouquet-price-currency">ر.س</span>
+              </div>
+              <button type="button" class="bouquet-action-btn">
+                ${isSelected ? '<i class="fa-solid fa-check"></i> مُختارة' : '<i class="fa-solid fa-plus"></i> اختيار'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── 5. اختيار باقة ورد مع انميشن ──
+    function selectBouquet(id) {
+      if (appState.selectedBouquetId === id) {
+        // إذا ضغط نفس الباقة يلغيها أو يبقيها
+        appState.selectedBouquetId = null;
+      } else {
+        appState.selectedBouquetId = id;
+      }
+      renderBouquets();
+      syncUIState();
+      animateTotalChange();
+    }
+
+    // ── 6. تفعيل أو تعطيل بطاقة الهدية ──
+    function toggleGiftCard(isEnabled) {
+      appState.giftCardEnabled = isEnabled;
+      const section = document.getElementById('giftCardSection');
+      const amountBox = document.getElementById('giftCardAmountBox');
+      
+      if (isEnabled) {
+        section.classList.add('active');
+        amountBox.style.opacity = '1';
+        amountBox.style.pointerEvents = 'auto';
+      } else {
+        section.classList.remove('active');
+        amountBox.style.opacity = '0.4';
+        amountBox.style.pointerEvents = 'none';
+      }
+      syncUIState();
+      updateLiveCard();
+      animateTotalChange();
+    }
+
+    // ── 7. اختيار مبلغ سريع لبطاقة الهدية ──
+    function selectPresetAmount(amount) {
+      appState.giftCardAmount = amount;
+      document.getElementById('txtCardAmount').value = amount;
+      
+      document.querySelectorAll('.amount-chip').forEach(chip => {
+        if (parseInt(chip.textContent) === amount) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+
+      if (!appState.giftCardEnabled) {
+        document.getElementById('chkEnableGiftCard').checked = true;
+        toggleGiftCard(true);
+      }
+
+      syncUIState();
+      updateLiveCard();
+      animateTotalChange();
+    }
+
+    function updateCardAmount(val) {
+      const parsed = parseFloat(val) || 0;
+      appState.giftCardAmount = parsed;
+      syncUIState();
+      updateLiveCard();
+      animateTotalChange();
+    }
+
+    // ── 8. طريقة الاستلام (استلام من المركز أو بطاقة إلكترونية) ──
+    function selectDeliveryMethod(method) {
+      appState.deliveryMethod = method;
+      const optStore = document.getElementById('optStorePickup');
+      const optDigital = document.getElementById('optDigitalCard');
+      const branchGroup = document.getElementById('branchSelectGroup');
+
+      if (method === 'store') {
+        optStore.classList.add('selected');
+        optDigital.classList.remove('selected');
+        if (branchGroup) branchGroup.style.display = 'flex';
+      } else {
+        optDigital.classList.add('selected');
+        optStore.classList.remove('selected');
+        if (branchGroup) branchGroup.style.display = 'none';
+      }
+      updateLiveCard();
+    }
+
+    // ── 9. تحديث واجهة المستخدم والحسابات (Totals & Cart) ──
+    function syncUIState() {
+      const selectedBouquet = BOUQUETS_DATA.find(b => b.id === appState.selectedBouquetId);
+      let bouquetPrice = selectedBouquet ? selectedBouquet.price : 0;
+      let cardPrice = appState.giftCardEnabled ? appState.giftCardAmount : 0;
+      
+      let rawTotal = bouquetPrice + cardPrice;
+      let discountAmount = rawTotal * (appState.promoDiscountPercent / 100);
+      let finalTotal = Math.max(0, Math.round(rawTotal - discountAmount));
+
+      // عداد السلة
+      let count = (selectedBouquet ? 1 : 0) + (appState.giftCardEnabled ? 1 : 0);
+      document.getElementById('cartBadgeCount').textContent = count;
+
+      // تحديث عناصر الملخص
+      const summaryContainer = document.getElementById('summaryItemsContainer');
+      let itemsHTML = '';
+
+      if (selectedBouquet) {
+        itemsHTML += `
+          <div class="summary-item-row">
+            <div class="summary-item-lead">
+              <img src="${selectedBouquet.image}" alt="${selectedBouquet.title}" class="summary-item-thumb">
+              <div class="summary-item-details">
+                <span class="summary-item-name">${selectedBouquet.title}</span>
+                <span class="summary-item-sub">${selectedBouquet.sub}</span>
+              </div>
+            </div>
+            <span class="summary-item-price">${selectedBouquet.price} ر.س</span>
+          </div>
+        `;
+      }
+
+      if (appState.giftCardEnabled) {
+        itemsHTML += `
+          <div class="summary-item-row">
+            <div class="summary-item-lead">
+              <img src="{{ asset('images/gifting') }}/gift_card.jpg" alt="بطاقة هدية" class="summary-item-thumb">
+              <div class="summary-item-details">
+                <span class="summary-item-name">بطاقة هدية</span>
+                <span class="summary-item-sub">قيمة البطاقة</span>
+              </div>
+            </div>
+            <span class="summary-item-price">${appState.giftCardAmount} ر.س</span>
+          </div>
+        `;
+      }
+
+      if (count === 0) {
+        itemsHTML = `<div style="text-align: center; color: var(--text-muted); padding: 14px; font-size: 13px;">لم يتم اختيار أي هدية بعد. الرجاء اختيار باقة أو بطاقة.</div>`;
+      }
+
+      summaryContainer.innerHTML = itemsHTML;
+
+      // تحديث الأرقام الإجمالية
+      document.getElementById('grandTotalNumber').textContent = finalTotal;
+      document.getElementById('stickyTotalNumber').textContent = finalTotal;
+
+      // تحديث حالة الشيك بوكس
+      document.getElementById('chkEnableGiftCard').checked = appState.giftCardEnabled;
+    }
+
+    // ── 10. المعاينة الحية لبطاقة الإهداء ثلاثية الأبعاد ──
+    function updateLiveCard() {
+      const sender = document.getElementById('txtSenderName').value.trim() || 'فاعل خير';
+      const receiver = document.getElementById('txtReceiverName').value.trim() || 'صديقتي الغالية';
+      const message = document.getElementById('txtGiftMessage').value.trim() || 'كل عام وأنتِ بخير 🌸';
+      const showSender = document.getElementById('chkShowSenderName').checked;
+
+      document.getElementById('previewRecipient').textContent = receiver;
+      document.getElementById('previewMessage').textContent = message;
+      document.getElementById('previewSender').textContent = showSender ? `بكل الحب من: ${sender}` : 'إهداء سري (مجهول)';
+
+      const cardBadge = document.getElementById('previewCardBadge');
+      if (appState.giftCardEnabled && appState.selectedBouquetId) {
+        cardBadge.textContent = `ورد + رصيد ${appState.giftCardAmount} ر.س`;
+      } else if (appState.giftCardEnabled) {
+        cardBadge.textContent = `بطاقة رصيد ${appState.giftCardAmount} ر.س`;
+      } else if (appState.selectedBouquetId) {
+        cardBadge.textContent = 'باقة ورد فاخرة';
+      } else {
+        cardBadge.textContent = 'إهداء جوسبا';
+      }
+    }
+
+    // اقتراحات الرسائل السريعة
+    function applyQuickMessage(msg) {
+      document.getElementById('txtGiftMessage').value = msg;
+      updateLiveCard();
+      showToast('تم تطبيق الرسالة المقترحة');
+    }
+
+    // ── 11. التنقل بين خطوات الإهداء ──
+    function goToStep(step) {
+      appState.currentStep = step;
+      
+      const step1 = document.getElementById('step1Section');
+      const step2 = document.getElementById('step2Section');
+      const btnText = document.getElementById('mainBtnText');
+      const btnIcon = document.getElementById('mainBtnIcon');
+      const desktopBtnText = document.getElementById('desktopBtnText');
+      const desktopBtnIcon = document.getElementById('desktopBtnIcon');
+
+      if (step === 1) {
+        if (step1) step1.classList.add('active');
+        if (step2) step2.classList.remove('active');
+        if (btnText) btnText.textContent = 'المتابعة لتفاصيل الإهداء';
+        if (btnIcon) btnIcon.className = 'fa-solid fa-arrow-left';
+        if (desktopBtnText) desktopBtnText.textContent = 'المتابعة لتفاصيل الإهداء';
+        if (desktopBtnIcon) desktopBtnIcon.className = 'fa-solid fa-arrow-left';
+      } else {
+        if (step1) step1.classList.remove('active');
+        if (step2) step2.classList.add('active');
+        if (btnText) btnText.textContent = 'المتابعة للدفع';
+        if (btnIcon) btnIcon.className = 'fa-solid fa-credit-card';
+        if (desktopBtnText) desktopBtnText.textContent = 'المتابعة للدفع';
+        if (desktopBtnIcon) desktopBtnIcon.className = 'fa-solid fa-credit-card';
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // زر الإجراء الرئيسي السفلي
+    function handleMainAction() {
+      if (appState.currentStep === 1) {
+        if (!appState.selectedBouquetId && !appState.giftCardEnabled) {
+          showToast('اختاري باقة ورد أو أضيفي بطاقة هدية أولاً');
+          return;
+        }
+        if (appState.giftCardEnabled && (appState.giftCardAmount < GIFT_CONFIG.minAmount || appState.giftCardAmount > GIFT_CONFIG.maxAmount)) {
+          showToast('قيمة البطاقة يجب أن تكون بين ' + GIFT_CONFIG.minAmount + ' و ' + GIFT_CONFIG.maxAmount + ' ر.س');
+          return;
+        }
+        goToStep(2);
+      } else {
+        submitGift();
+      }
+    }
+
+    function collectGiftPayload() {
+      return {
+        bouquet_id: appState.selectedBouquetId,
+        card_amount: appState.giftCardEnabled ? appState.giftCardAmount : 0,
+        delivery_method: appState.deliveryMethod === 'digital' ? 'electronic_card' : 'center_pickup',
+        sender_name: document.getElementById('txtSenderName').value.trim(),
+        recipient_name: document.getElementById('txtReceiverName').value.trim(),
+        sender_phone: document.getElementById('txtSenderPhone').value.trim(),
+        recipient_phone: document.getElementById('txtReceiverPhone').value.trim(),
+        message: document.getElementById('txtGiftMessage').value.trim(),
+        show_sender_name: document.getElementById('chkShowSenderName').checked ? 1 : 0
+      };
+    }
+
+    function saveDraft() {
+      try { localStorage.setItem(GIFT_CONFIG.draftKey, JSON.stringify(collectGiftPayload())); } catch (e) {}
+    }
+
+    function restoreDraft() {
+      let draft = null;
+      try { draft = JSON.parse(localStorage.getItem(GIFT_CONFIG.draftKey) || 'null'); } catch (e) {}
+      if (!draft) return;
+      try { localStorage.removeItem(GIFT_CONFIG.draftKey); } catch (e) {}
+
+      if (draft.bouquet_id && BOUQUETS_DATA.some(b => b.id === draft.bouquet_id)) appState.selectedBouquetId = draft.bouquet_id;
+      if (draft.card_amount > 0) {
+        toggleGiftCard(true);
+        selectPresetAmount(Number(draft.card_amount));
+      }
+      document.getElementById('txtSenderName').value = draft.sender_name || document.getElementById('txtSenderName').value;
+      document.getElementById('txtReceiverName').value = draft.recipient_name || '';
+      document.getElementById('txtSenderPhone').value = draft.sender_phone || document.getElementById('txtSenderPhone').value;
+      document.getElementById('txtReceiverPhone').value = draft.recipient_phone || '';
+      document.getElementById('txtGiftMessage').value = draft.message || '';
+      document.getElementById('chkShowSenderName').checked = !!draft.show_sender_name;
+      selectDeliveryMethod(draft.delivery_method === 'electronic_card' ? 'digital' : 'store');
+      renderBouquets();
+      syncUIState();
+      updateLiveCard();
+      goToStep(2);
+    }
+
+    async function submitGift() {
+      const payload = collectGiftPayload();
+
+      if (!payload.sender_name || !payload.recipient_name || !payload.sender_phone || !payload.recipient_phone) {
+        showToast('الرجاء تعبئة أسماء وجوالات المرسل والمستلم');
+        return;
+      }
+
+      if (!GIFT_CONFIG.isLoggedIn) {
+        saveDraft();
+        showToast('سجّلي دخولك أولاً لإكمال الإهداء');
+        setTimeout(() => { window.location.href = GIFT_CONFIG.signinUrl; }, 900);
+        return;
+      }
+
+      const btn = document.getElementById('btnMainAction');
+      btn.disabled = true;
+      try {
+        const res = await fetch(GIFT_CONFIG.storeUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.status === 401 || res.status === 419) {
+          saveDraft();
+          window.location.href = GIFT_CONFIG.signinUrl;
+          return;
+        }
+
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast('تمت إضافة الإهداء إلى السلة');
+          if (typeof confetti === 'function') confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+          setTimeout(() => { window.location.href = json.data.redirect; }, 900);
+          return;
+        }
+
+        const firstError = json.errors ? Object.values(json.errors)[0][0] : (json.message || 'تعذر إكمال الطلب');
+        showToast(firstError);
+      } catch (e) {
+        showToast('تعذر الاتصال بالخادم، حاولي مرة أخرى');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+
+    // ── 13. نافذة النجاح وانطلاق الكونفيتي ──
+    function openSuccessModal() {
+      const modal = document.getElementById('successModal');
+      modal.classList.add('active');
+      
+      // إطلاق ألعاب نارية وكونفيتي ملونة بألوان الورد والذهب
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#BF9456', '#DFC293', '#E5A99B', '#FFFFFF']
+        });
+      }
+    }
+
+    function closeSuccessModal() {
+      document.getElementById('successModal').classList.remove('active');
+    }
+
+    function shareWhatsApp() {
+      const sender = document.getElementById('txtSenderName').value || 'سارة';
+      const receiver = document.getElementById('txtReceiverName').value || 'نورة';
+      const text = encodeURIComponent(`مرحباً ${receiver}، أرسلت لكِ هدية فاخرة من سبا جوسبا JOSPA بكل حب من ${sender} ✨🎁`);
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
+
+    // وضع العرض أصبح تلقائياً ومتجاوباً (Responsive)
+
+    // ── 15. تبديل الوضع الليلي الفاخر (Dark / Light Theme) ──
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+      
+      const btnIcon = document.querySelector('#btnThemeToggle i');
+      if (target === 'dark') {
+        btnIcon.className = 'fa-solid fa-sun';
+        showToast('تم تفعيل الوضع الليلي الملكي');
+      } else {
+        btnIcon.className = 'fa-solid fa-moon';
+        showToast('تم تفعيل الوضع العاجي الفاتح');
+      }
+    }
+
+    // ── 16. تأثير اهتزاز وتغيير السعر ──
+    function animateTotalChange() {
+      const el = document.getElementById('grandTotalNumber');
+      const el2 = document.getElementById('stickyTotalNumber');
+      [el, el2].forEach(elem => {
+        if (!elem) return;
+        elem.style.transform = 'scale(1.2)';
+        elem.style.color = '#BF9456';
+        setTimeout(() => {
+          elem.style.transform = 'scale(1)';
+          elem.style.color = '';
+        }, 300);
+      });
+    }
+
+    // ── 17. رسائل التنبيه المؤقتة (Toast Notifications) ──
+    function showToast(msg) {
+      let toast = document.getElementById('liveToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'liveToast';
+        toast.style.cssText = `
+          position: fixed;
+          bottom: 90px;
+          left: 50%;
+          transform: translateX(-50%) translateY(20px);
+          background: rgba(44, 38, 33, 0.92);
+          color: #FFFFFF;
+          padding: 10px 22px;
+          border-radius: 50px;
+          font-size: 13px;
+          font-weight: 600;
+          z-index: 3000;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+          border: 1px solid rgba(191, 148, 86, 0.4);
+          opacity: 0;
+          transition: all 0.3s ease;
+          pointer-events: none;
+          white-space: nowrap;
+        `;
+        document.body.appendChild(toast);
+      }
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateX(-50%) translateY(0)';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+      }, 2500);
+    }
+
+    // ── 18. بتلات الورد المتطايرة في الخلفية ──
+    function initPetals() {
+      const container = document.getElementById('petalContainer');
+      if (!container) return;
+      const count = 18;
+      for (let i = 0; i < count; i++) {
+        const petal = document.createElement('div');
+        petal.className = 'floating-petal';
+        petal.style.left = `${Math.random() * 100}vw`;
+        petal.style.animationDuration = `${8 + Math.random() * 10}s`;
+        petal.style.animationDelay = `${Math.random() * 8}s`;
+        petal.style.width = `${10 + Math.random() * 12}px`;
+        petal.style.height = `${14 + Math.random() * 16}px`;
+        container.appendChild(petal);
+      }
+    }
+
+  </script>
+</body>
+</html>

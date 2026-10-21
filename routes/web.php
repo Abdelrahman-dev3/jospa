@@ -61,6 +61,9 @@
         Route::get('/gift-cards', 'store')->name('gift.create');
     });
 
+    Route::get('/gift/{slug}', [\App\Http\Controllers\BranchGiftController::class, 'show'])->name('branch.gift.page');
+    Route::post('/gift/{slug}', [\App\Http\Controllers\BranchGiftController::class, 'store'])->middleware('auth')->name('branch.gift.store');
+
 //    Route::controller(PrivacyPolicyController::class)->group(function () {
 //        Route::get('/privacy-policy', 'index')->name('privacy.policy');
 //    });
@@ -443,6 +446,15 @@
             Route::get('/{id}/logs', 'logs')->name('logs')->whereNumber('id');
             Route::post('/birthday-settings', 'updateBirthdaySettings')->name('birthday-settings');
             Route::post('/send-today-birthdays', 'sendTodayBirthdays')->name('send-today-birthdays');
+        });
+
+        Route::controller(\App\Http\Controllers\Backend\BranchGiftController::class)->prefix('app/branch-gifts')->as('app.branch-gifts.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{id}', 'edit')->name('edit')->whereNumber('id');
+            Route::put('/{id}', 'update')->name('update')->whereNumber('id');
+            Route::post('/{id}/bouquets', 'storeBouquet')->name('bouquets.store')->whereNumber('id');
+            Route::put('/{id}/bouquets/{bouquetId}', 'updateBouquet')->name('bouquets.update')->whereNumber(['id', 'bouquetId']);
+            Route::delete('/{id}/bouquets/{bouquetId}', 'destroyBouquet')->name('bouquets.destroy')->whereNumber(['id', 'bouquetId']);
         });
     });
 

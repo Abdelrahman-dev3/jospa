@@ -21,6 +21,7 @@ class PaymentSubMethodsService
         $final = $amount;
         $usedWallet = $usedLoyalty = $usedGift = 0;
         $giftError = false;
+        $giftErrorMessage = null;
 
         $isWallet   = (bool)$request->wallet;
         $isLoyalty  = (bool)$request->loyalty;
@@ -31,7 +32,7 @@ class PaymentSubMethodsService
             return ['error' => __('messagess.gift_card_coupon_not_allowed')];
         }
 
-        DB::transaction(function () use (&$final, &$usedWallet, &$usedLoyalty, &$usedGift, &$giftError, $userId, $isWallet, $isLoyalty, $isGiftCode, $request, $commit) {
+        DB::transaction(function () use (&$final, &$usedWallet, &$usedLoyalty, &$usedGift, &$giftError, &$giftErrorMessage, $userId, $isWallet, $isLoyalty, $isGiftCode, $request, $commit) {
 
             // Wallet
             if ($isWallet && $final > 0) {
@@ -144,6 +145,22 @@ class PaymentSubMethodsService
 
                 $localGiftCard = \App\Models\GiftCard::where('ref', $code)->where('payment_status', 1)->lockForUpdate()->first();
 
+                if ($localGiftCard && $localGiftCard->isBranchGift()) {
+                    // Branch gift balance can only be spent on bookings in that same branch.
+                    $bookingBranchIds = \Modules\Booking\Models\Booking::query()
+                        ->where('user_id', $userId)
+                        ->whereIn('payment_type', ['cart', 'payment'])
+                        ->unpaid()
+                        ->whereNotIn('status', ['completed', 'cancelled', 'canceled'])
+                        ->pluck('branch_id');
+
+                    if ($bookingBranchIds->isEmpty() || $bookingBranchIds->contains(fn ($id) => (int) $id !== (int) $localGiftCard->branch_id)) {
+                        $giftError = true;
+                        $giftErrorMessage = __('messagess.gift_card_branch_mismatch');
+                        return;
+                    }
+                }
+
                 if ($localGiftCard && $localGiftCard->balance > 0) {
                     $giftValid = true;
                     $giftBalance = (float) $localGiftCard->balance;
@@ -187,7 +204,7 @@ class PaymentSubMethodsService
         });
 
         if ($giftError) {
-            return ['error' => __('messagess.invalid_gift_code')];
+            return ['error' => $giftErrorMessage ?: __('messagess.invalid_gift_code')];
         }
 
         return [

@@ -60,7 +60,7 @@ class GiftCardActivationService
 
             if ($this->requiresReference($giftCard)) {
                 $attributes['ref'] = $giftCard->ref ?: GiftCard::generateUniqueReference();
-                $attributes['balance'] = (float) ($giftCard->subtotal ?? $giftCard->options_amount ?? 0);
+                $attributes['balance'] = $giftCard->creditAmount();
             }
 
             $giftCard->fill($attributes);
@@ -105,6 +105,6 @@ class GiftCardActivationService
 
     private function requiresReference(GiftCard $giftCard): bool
     {
-        return in_array($giftCard->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true);
+        return $giftCard->requiresReference();
     }
 }

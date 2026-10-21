@@ -31,6 +31,8 @@ class Branch extends BaseModel
         'city' => 'integer',
         'state' => 'integer',
         'country' => 'integer',
+        'gift_page_enabled' => 'boolean',
+        'gift_card_amounts' => 'array',
     ];
 
     protected $appends = ['feature_image'];
@@ -75,6 +77,16 @@ class Branch extends BaseModel
         static::deleted(function () {
             self::flushCache();
         });
+    }
+
+    public function giftBouquets()
+    {
+        return $this->hasMany(GiftBouquet::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function gifts()
+    {
+        return $this->hasMany(GiftCard::class);
     }
 
     public function gallery()

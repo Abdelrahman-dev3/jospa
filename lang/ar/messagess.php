@@ -17,6 +17,7 @@ return [
     'location_data' => 'قم بملئ البيانات التالية',
     'choose_payment_method' => 'اختر طريقة الدفع',
     'invalid_gift_code' => 'رمز البطاقة غير صحيح',
+    'gift_card_branch_mismatch' => 'هذه البطاقة صالحة للاستخدام في فرعها فقط',
     'gift_code_valid' => 'رمز البطاقة صالح',
     'gift_code' => 'كود بطاقة الهدايا',
     'Coupons' => 'الكوبونات',

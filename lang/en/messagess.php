@@ -16,6 +16,7 @@ return [
     'location_data' => 'Please fill in the following information',
     'choose_payment_method' => 'Choose payment method',
     'invalid_gift_code' => 'invalid gift code',
+    'gift_card_branch_mismatch' => 'This gift card can only be used at its own branch',
     'gift_code_valid' => 'gift code valid',
     'gift_code' => 'gift card code',
     'Coupons' => 'Coupons',

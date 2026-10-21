@@ -264,6 +264,12 @@ use Illuminate\Support\Str;
                       <i class="bi bi-chevron-left"></i>
                       {{ Str::limit($item->recipient_name, 12) }}
                   </strong>
+                  @if($item->isBranchGift())
+                    <div class="small text-muted">
+                      @if($item->bouquet_name){{ $item->bouquet_name }} ({{ $item->bouquet_price + 0 }} {{ __('messagess.SR') }})@endif
+                      @if($item->card_amount > 0) {{ $item->bouquet_name ? '+ ' : '' }}{{ __('messagess.giftcard') }} {{ $item->card_amount + 0 }} {{ __('messagess.SR') }}@endif
+                    </div>
+                  @endif
                 </div>
               </td>
               <td class="prc">

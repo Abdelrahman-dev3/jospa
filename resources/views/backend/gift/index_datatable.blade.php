@@ -39,7 +39,13 @@
                 <tr>
                 <td>{{ $loop->iteration }}</td>
                 <td>{{ $gift->user->first_name ?? '-' }} {{ $gift->user->last_name ?? '-' }}</td>
-                <td>{{ in_array($gift->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</td>
+                <td>{{ in_array($gift->delivery_method, ['electronic_card', 'email', 'بطاقة الكترونية'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}
+                    @if($gift->isBranchGift())
+                        <br><span class="badge bg-info">{{ optional($gift->branch)->name }}</span>
+                        @if($gift->bouquet_name)<br><small>{{ $gift->bouquet_name }} ({{ $gift->bouquet_price + 0 }})</small>@endif
+                        @if($gift->card_amount > 0)<br><small>رصيد: {{ $gift->card_amount + 0 }}</small>@endif
+                    @endif
+                </td>
                 <td>{{ $gift->ref ?? '---' }}</td>
                 <td>{{ $gift->balance ?? '---' }}</td>
                 <td>{{ $gift->sender_name ?? '-' }}</td>
