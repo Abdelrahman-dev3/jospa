@@ -76,13 +76,16 @@ class BackendController extends Controller
             });
         })->where('status', 'completed')->branch()->count();
 
-        $data['total_commission'] = Booking::with('commission')->branch()
+        $totalCommissionRaw = (float) Booking::with('commission')->branch()
             ->whereDate('start_date_time', '>=', $startDate)
-            ->whereDate('start_date_time', '<=', $endDate)->get();
+            ->whereDate('start_date_time', '<=', $endDate)
+            ->get()
+            ->sum(function ($booking) {
+                return $booking->commission->commission_amount ?? 0;
+            });
 
-        $data['total_commission'] = \Currency::format($data['total_commission']->sum(function ($booking) {
-            return $booking->commission->commission_amount ?? 0;
-        }));
+        $data['total_commission_raw'] = $totalCommissionRaw;
+        $data['total_commission']     = \Currency::format($totalCommissionRaw);
 
         $bookings = BookingTransaction::with('booking')->whereHas('booking', function ($query) use ($startDate, $endDate) {
             $query->where(function ($query) use ($startDate, $endDate) {
@@ -99,7 +102,32 @@ class BackendController extends Controller
             ->where('payment_status', 1)
             ->sum('subtotal');
 
-        $data['total_revenue'] = \Currency::format($totalServiceAmount + $totalPackageAmount + $totalgiftServices);
+        $orders = Order::where(function ($q) {
+            $q->orWhereIn('order_group_id', OrderGroup::pluck('id'));
+        });
+
+        $data['total_orders'] = $orders->where('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate)->count();
+
+        $productRevenue = (float) OrderGroup::where('payment_status', 'paid')
+            ->whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate)
+            ->sum('grand_total_amount');
+
+        $data['product_sales_raw'] = $productRevenue;
+        $data['product_sales']     = \Currency::format($productRevenue);
+
+        $currRevenue = (float) $totalServiceAmount + (float) $totalPackageAmount + (float) $totalgiftServices + (float) $productRevenue;
+        $data['total_revenue_raw'] = $currRevenue;
+        $data['total_revenue']     = \Currency::format($currRevenue);
+
+        $netRevenue = max(0, $currRevenue - $totalCommissionRaw);
+        $data['net_revenue_raw']   = $netRevenue;
+        $data['net_revenue']       = \Currency::format($netRevenue);
+
+        $data['avg_booking_value'] = $data['total_appointments'] > 0
+            ? round($currRevenue / $data['total_appointments'], 2) : 0;
+        $data['avg_booking_value_formatted'] = \Currency::format($data['avg_booking_value']);
 
         $data['total_new_customers'] = User::where('created_at', '>=', $startDate)
             ->whereDate('created_at', '<=', $endDate)
@@ -151,18 +179,6 @@ class BackendController extends Controller
         $data['revenue_chart']['total_bookings'] = $chartBookingRevenue?->pluck('total_booking')->toArray() ?? [];
         $data['revenue_chart']['total_price']    = $chartBookingRevenue?->pluck('total_price')->toArray() ?? [];
 
-        $orders = Order::where(function ($q) {
-            $q->orWhereIn('order_group_id', OrderGroup::pluck('id'));
-        });
-
-        $data['total_orders'] = $orders->where('created_at', '>=', $startDate)
-            ->whereDate('created_at', '<=', $endDate)->count();
-
-        $data['product_sales'] = \Currency::format(
-            $orders->where('created_at', '>=', $startDate)
-                ->whereDate('created_at', '<=', $endDate)->sum('total_admin_earnings')
-        );
-
         // ============================================================
         // EXECUTIVE ANALYTICS — Additional Financial & Admin KPIs
         // ============================================================
@@ -177,18 +193,21 @@ class BackendController extends Controller
             ->toArray();
 
         $data['booking_status'] = [
-            'completed' => $bookingStatusCounts['completed'] ?? 0,
-            'pending'   => $bookingStatusCounts['pending']   ?? 0,
-            'cancelled' => $bookingStatusCounts['cancelled'] ?? 0,
-            'confirmed' => $bookingStatusCounts['confirmed'] ?? 0,
+            'completed' => (int) ($bookingStatusCounts['completed'] ?? 0),
+            'pending'   => (int) ($bookingStatusCounts['pending']   ?? 0),
+            'cancelled' => (int) ($bookingStatusCounts['cancelled'] ?? 0),
+            'confirmed' => (int) ($bookingStatusCounts['confirmed'] ?? 0),
         ];
 
-        // 2. Revenue Breakdown by Source
-        $productRevenue = (float) OrderGroup::where('payment_status', 'paid')
-            ->whereDate('created_at', '>=', $startDate)
-            ->whereDate('created_at', '<=', $endDate)
-            ->sum('grand_total_amount');
+        $totalBookingsInPeriod = array_sum($bookingStatusCounts);
+        $cancelledCount        = $bookingStatusCounts['cancelled'] ?? 0;
+        $data['cancellation_rate']     = $totalBookingsInPeriod > 0
+            ? round(($cancelledCount / $totalBookingsInPeriod) * 100, 1) : 0;
+        $data['fulfillment_rate']      = $totalBookingsInPeriod > 0
+            ? round(($data['total_appointments'] / $totalBookingsInPeriod) * 100, 1) : 0;
+        $data['total_bookings_period'] = $totalBookingsInPeriod;
 
+        // 2. Revenue Breakdown by Source
         $data['revenue_breakdown'] = [
             'services'  => round((float) $totalServiceAmount, 2),
             'packages'  => round((float) $totalPackageAmount, 2),
@@ -223,7 +242,6 @@ class BackendController extends Controller
             ->where('payment_status', 1)->sum('subtotal');
 
         $prevRevenue = (float) $prevServiceAmount + (float) $prevPackageAmount + (float) $prevGiftAmount;
-        $currRevenue = (float) $totalServiceAmount + (float) $totalPackageAmount + (float) $totalgiftServices;
 
         $data['comparison'] = [
             'revenue_change'   => $prevRevenue > 0
@@ -236,35 +254,115 @@ class BackendController extends Controller
                 : 0,
         ];
 
-        // 4. Top 5 Staff by completed bookings
-        $data['top_staff'] = Booking::branch()
-            ->with('staff')
-            ->whereDate('start_date_time', '>=', $startDate)
-            ->whereDate('start_date_time', '<=', $endDate)
-            ->where('status', 'completed')
-            ->selectRaw('staff_id, COUNT(*) as total_bookings, IFNULL(SUM(
-                (SELECT SUM(bs.service_price) FROM booking_services bs WHERE bs.booking_id = bookings.id)
-            ), 0) as total_revenue')
-            ->whereNotNull('staff_id')
-            ->groupBy('staff_id')
-            ->orderByDesc('total_bookings')
+        // 4. Top Staff Productivity Leaderboard (via BookingService)
+        $topStaffList = BookingService::whereHas('booking', function ($q) use ($startDate, $endDate) {
+                $q->whereDate('start_date_time', '>=', $startDate)
+                    ->whereDate('start_date_time', '<=', $endDate)
+                    ->where('status', 'completed')
+                    ->branch();
+            })
+            ->whereNotNull('employee_id')
+            ->with('employee')
+            ->selectRaw('employee_id, COUNT(*) as total_bookings, SUM(service_price) as total_revenue')
+            ->groupBy('employee_id')
+            ->orderByDesc('total_revenue')
             ->limit(5)
             ->get();
 
-        // 5. Booking cancellation rate
-        $totalBookingsInPeriod = array_sum($bookingStatusCounts);
-        $cancelledCount        = $bookingStatusCounts['cancelled'] ?? 0;
-        $data['cancellation_rate']    = $totalBookingsInPeriod > 0
-            ? round(($cancelledCount / $totalBookingsInPeriod) * 100, 1) : 0;
-        $data['total_bookings_period'] = $totalBookingsInPeriod;
+        $data['top_staff'] = $topStaffList;
+        $data['staff_chart_names'] = $topStaffList->map(function ($s) {
+            $emp = $s->employee;
+            if (!$emp) return 'Staff #' . $s->employee_id;
+            $name = trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? ''));
+            return $name ?: ($emp->username ?? 'Staff');
+        })->toArray();
+        $data['staff_chart_revenue'] = $topStaffList->pluck('total_revenue')->map(fn($v) => round((float)$v, 2))->toArray();
 
-        // 6. Gift card sales count
+        // 5. Gift card sales count
         $data['gift_cards_sold'] = GiftCard::whereDate('created_at', '>=', $startDate)
             ->whereDate('created_at', '<=', $endDate)
             ->where('payment_status', 1)
             ->count();
 
-        // 7. Raw revenue values for comparison arrows
+        // 6. Branch Performance Comparison
+        $currentLocale = app()->getLocale();
+        $branches = \App\Models\Branch::where('status', 1)->get();
+        $branchNames    = [];
+        $branchRevenues = [];
+        $branchBookings = [];
+
+        foreach ($branches as $branch) {
+            $bName = $branch->getTranslation('name', $currentLocale) ?: $branch->getTranslation('name', 'ar') ?: 'Branch #' . $branch->id;
+            $bBookings = Booking::where('branch_id', $branch->id)
+                ->whereDate('start_date_time', '>=', $startDate)
+                ->whereDate('start_date_time', '<=', $endDate)
+                ->where('status', 'completed')
+                ->count();
+            $bRevenue = (float) BookingService::whereHas('booking', function ($q) use ($branch, $startDate, $endDate) {
+                $q->where('branch_id', $branch->id)
+                    ->whereDate('start_date_time', '>=', $startDate)
+                    ->whereDate('start_date_time', '<=', $endDate)
+                    ->where('status', 'completed');
+            })->sum('service_price');
+
+            $branchNames[]    = $bName;
+            $branchRevenues[] = round($bRevenue, 2);
+            $branchBookings[] = $bBookings;
+        }
+
+        $data['branch_chart_names']    = $branchNames;
+        $data['branch_chart_revenue']  = $branchRevenues;
+        $data['branch_chart_bookings'] = $branchBookings;
+
+        // 7. Peak Booking Hours Distribution (9:00 AM to 10:00 PM)
+        $hourlyCounts = Booking::branch()
+            ->whereDate('start_date_time', '>=', $startDate)
+            ->whereDate('start_date_time', '<=', $endDate)
+            ->where('status', 'completed')
+            ->selectRaw('HOUR(start_date_time) as hr, COUNT(*) as cnt')
+            ->groupBy('hr')
+            ->pluck('cnt', 'hr')
+            ->toArray();
+
+        $peakLabels = [];
+        $peakData   = [];
+        for ($h = 9; $h <= 22; $h++) {
+            $formattedHour = $h > 12 ? ($h - 12) . ':00 م' : ($h == 12 ? '12:00 م' : $h . ':00 ص');
+            $peakLabels[]  = $formattedHour;
+            $peakData[]    = (int) ($hourlyCounts[$h] ?? 0);
+        }
+        $data['peak_hours_labels'] = $peakLabels;
+        $data['peak_hours_data']   = $peakData;
+
+        // 8. Payment Methods Breakdown
+        $paymentCounts = Booking::branch()
+            ->whereDate('start_date_time', '>=', $startDate)
+            ->whereDate('start_date_time', '<=', $endDate)
+            ->where('status', 'completed')
+            ->selectRaw('COALESCE(payment_type, "cash") as p_type, COUNT(*) as cnt')
+            ->groupBy('p_type')
+            ->pluck('cnt', 'p_type')
+            ->toArray();
+
+        $paymentLabels = [];
+        $paymentSeries = [];
+        foreach ($paymentCounts as $type => $count) {
+            $label = match (strtolower((string) $type)) {
+                'cash'       => 'نقدي (Cash)',
+                'cart', 'card' => 'بطاقة مدى / ائتمان',
+                'tap'        => 'Tap بوابة الدفع',
+                'wallet'     => 'المحفظة الإلكترونية',
+                'apple_pay', 'applepay' => 'Apple Pay',
+                default      => ucfirst(str_replace('_', ' ', (string) $type)),
+            };
+            $paymentLabels[] = $label;
+            $paymentSeries[] = (int) $count;
+        }
+
+        $data['payment_chart_labels'] = $paymentLabels ?: ['نقدي', 'إلكتروني'];
+        $data['payment_chart_series'] = $paymentSeries ?: [1, 0];
+
+        // Raw comparison amounts
         $data['revenue_breakdown_raw'] = $currRevenue;
         $data['prev_revenue_raw']      = $prevRevenue;
 
