@@ -449,6 +449,9 @@ use App\Models\GiftCard;
                     $productItems = $invoice->product_items;
                     $couponCode = $invoice->coupon_code ?? null;
                     $couponAmount = (float) ($invoice->coupon_discount_amount ?? 0);
+                    $serviceDiscountAmount = (float) $bookings->sum(fn ($booking) =>
+                        $booking->services->sum(fn ($service) => (float) ($service->discount_amount ?? 0))
+                    );
                     $gatewayAmount = (float) ($invoice->payment_gateway_discount_amount ?? 0);
                     $gatewayLabel = $invoice->payment_gateway_discount_label
                         ?: ($invoice->payment_gateway_discount_method ? ucfirst($invoice->payment_gateway_discount_method) : null);
@@ -500,7 +503,12 @@ use App\Models\GiftCard;
                                                 #{{ $booking->id }} | {{ $booking->branch->name ?? '-' }} | {{ $employeeName ?: '-' }}
                                             </div>
                                         </div>
-                                        <div class="line-amount">{{ number_format($net, 2) }} SR</div>
+                                        <div class="line-amount">
+                                            {{ number_format($price, 2) }} SR
+                                            @if($discount > 0)
+                                                <div class="line-meta">{{ app()->getLocale() === 'ar' ? 'بعد خصم الخدمة' : 'After service discount' }}: {{ number_format($net, 2) }} SR</div>
+                                            @endif
+                                        </div>
                                     </div>
                                 @endforeach
                             @empty
@@ -573,10 +581,10 @@ use App\Models\GiftCard;
                             <div>{{ __('messagess.coupon_code') }}</div>
                             <div>{{ $couponLabel }}</div>
                         </div>
-                        @if($couponAmount > 0)
+                        @if($serviceDiscountAmount > 0)
                             <div class="summary-row">
-                                <div>{{ app()->getLocale() === 'ar' ? 'خصم الكوبون' : 'Coupon Discount' }}</div>
-                                <div style="color: var(--rose);">- {{ number_format($couponAmount, 2) }} SR</div>
+                                <div>{{ app()->getLocale() === 'ar' ? 'خصم الخدمة' : 'Service Discount' }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($serviceDiscountAmount, 2) }} SR</div>
                             </div>
                         @endif
                         @if($gatewayAmount > 0)
@@ -597,7 +605,7 @@ use App\Models\GiftCard;
                         @endif
                         <div class="summary-row">
                             <div>{{ __('messages.invoice_discount') }}</div>
-                            <div style="color: var(--rose);">- {{ number_format($invoice->discount_amount, 2) }} SR</div>
+                            <div style="color: var(--rose);">- {{ number_format(max((float) $invoice->discount_amount - $gatewayAmount, 0), 2) }} SR</div>
                         </div>
                         <div class="summary-row">
                             <div>Tax & Service</div>

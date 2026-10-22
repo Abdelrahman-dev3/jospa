@@ -23,8 +23,8 @@ class PaymentSubMethodsService
         $giftError = false;
         $giftErrorMessage = null;
 
-        $isWallet   = (bool)$request->wallet;
-        $isLoyalty  = (bool)$request->loyalty;
+        $isWallet   = $request->boolean('wallet');
+        $isLoyalty  = $request->boolean('loyalty');
         $isGiftCode = !empty($request->gift_code);
         $couponCode = trim((string) $request->get('invoiceCopon')) ?: trim((string) $request->get('coupon_code'));
 

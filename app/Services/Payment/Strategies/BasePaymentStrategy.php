@@ -21,8 +21,8 @@ abstract class BasePaymentStrategy
             'payment_method' => $paymentMethod,
             'couponCode' => trim((string) $request->invoiceCopon) ?: trim((string) $request->coupon_code),
             'submethods' => [
-                'wallet' => (bool) $request->wallet,
-                'loyalty' => (bool) $request->loyalty,
+                'wallet' => $request->boolean('wallet'),
+                'loyalty' => $request->boolean('loyalty'),
                 'gift_code' => $request->gift_code,
             ],
             'final_before_sub' => $request->total ?? $request->total_price ?? 0,
