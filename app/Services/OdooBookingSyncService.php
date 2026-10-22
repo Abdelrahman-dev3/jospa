@@ -73,7 +73,7 @@ class OdooBookingSyncService
 
         $giftCards = collect();
         if ($giftIds !== []) {
-            $giftCards = GiftCard::with('user')
+            $giftCards = GiftCard::with(['user', 'branch'])
                 ->whereIn('id', $giftIds)
                 ->get();
         }
@@ -353,6 +353,26 @@ class OdooBookingSyncService
                 })->values()->all(),
                 'coupons' => (array) ($giftCard->coupons ?? []),
             ];
+
+            // Branch gifting page: the card is spendable only at its branch, and the
+            // bouquets are physical items handed over manually (not part of the balance).
+            if ($giftCard->isBranchGift()) {
+                $item['is_branch_gift'] = true;
+                $item['branch_id'] = (int) $giftCard->branch_id;
+                $item['branch_name'] = $this->resolveName($giftCard->branch?->name);
+                $item['card_amount'] = (float) ($giftCard->card_amount ?? 0);
+                $item['bouquets_total'] = (float) ($giftCard->bouquet_price ?? 0);
+                $item['bouquets'] = collect((array) ($giftCard->bouquets ?? []))->map(fn ($bouquet) => [
+                    'id' => $bouquet['id'] ?? null,
+                    'name' => $bouquet['name'] ?? null,
+                    'price' => (float) ($bouquet['price'] ?? 0),
+                ])->values()->all();
+                $item['total_paid'] = (float) ($giftCard->subtotal ?? 0);
+                // `amount` is the voucher value Odoo should issue (card only, bouquets excluded).
+                $item['amount'] = $item['card_amount'];
+                $item['services'] = [];
+                $item['packages'] = [];
+            }
 
             // If privacy flags allow, send the actual value. Otherwise, send an empty string
             // so Odoo knows explicitly not to print them on the voucher.
