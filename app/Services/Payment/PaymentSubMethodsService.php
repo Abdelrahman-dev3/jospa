@@ -26,7 +26,7 @@ class PaymentSubMethodsService
         $isWallet   = (bool)$request->wallet;
         $isLoyalty  = (bool)$request->loyalty;
         $isGiftCode = !empty($request->gift_code);
-        $couponCode = trim((string) ($request->get('coupon_code') ?? $request->get('invoiceCopon') ?? ''));
+        $couponCode = trim((string) $request->get('invoiceCopon')) ?: trim((string) $request->get('coupon_code'));
 
         if ($isGiftCode && $couponCode !== '') {
             return ['error' => __('messagess.gift_card_coupon_not_allowed')];

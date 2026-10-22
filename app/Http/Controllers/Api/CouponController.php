@@ -25,7 +25,7 @@ class CouponController extends Controller
 
     public function validateCoupon(Request $request)
     {
-        $couponCode = $request->query('coupon_code') ?: $request->query('code');
+        $couponCode = trim((string) $request->query('coupon_code')) ?: trim((string) $request->query('code'));
         $serviceId = $request->query('service_id');
         $bookingId = $request->query('booking_id');
 
@@ -99,7 +99,7 @@ class CouponController extends Controller
 
     public function validateInvoiceCoupon(Request $request)
     {
-        $couponCode = $request->query('coupon_code') ?: $request->query('code');
+        $couponCode = trim((string) $request->query('coupon_code')) ?: trim((string) $request->query('code'));
         $giftCode = trim((string) $request->query('gift_code', ''));
 
         if ($giftCode !== '') {

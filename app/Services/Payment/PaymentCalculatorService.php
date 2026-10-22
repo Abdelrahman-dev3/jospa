@@ -15,6 +15,7 @@ class PaymentCalculatorService
         $total = 0;
         $productTotal = 0;
         $userId ??= auth()->id();
+        $couponCode = trim((string) $couponCode);
         $cartIds    = [];
         $giftIds    = [];
         $productIds = [];
@@ -83,6 +84,10 @@ class PaymentCalculatorService
         }
 
         if ($couponCode  && $couponCode != '') {
+            if ($giftIds !== []) {
+                return ['error' => __('messagess.gift_card_coupon_not_allowed')];
+            }
+
             $coupon = Coupon::query()
                 ->where('coupon_code', $couponCode)
                 ->usable()
@@ -96,19 +101,28 @@ class PaymentCalculatorService
 
             $coupon->syncExpiredState();
 
+            // Invoice coupons must explicitly include the invoice-wide service marker.
+            $eligibleServices = $coupon->services ?? [];
+            if (is_string($eligibleServices)) {
+                $eligibleServices = json_decode($eligibleServices, true) ?? explode(',', $eligibleServices);
+            }
+            if (!is_array($eligibleServices) || !in_array(0, array_map('intval', $eligibleServices), true)) {
+                return ['error' => __('messages.invalid_coupon')];
+            }
+
             $couponDiscount = $coupon->discount_type === 'percent'
                 ? ($grossTotal * $coupon->discount_percentage) / 100
                 : $coupon->discount_amount;
         }
 
-        $couponDiscount = min($couponDiscount, $grossTotal);
+        $couponDiscount = round(max(0, min($couponDiscount, $grossTotal)), 2);
 
         $grossAfterCoupon = max($grossTotal - $couponDiscount, 0);
         $paymentGatewayDiscount = min(
             FrontendPaymentSettings::paymentGatewayDiscountAmount($paymentMethod, $grossAfterCoupon),
             $grossAfterCoupon
         );
-        $finalTotal = max($grossAfterCoupon - $paymentGatewayDiscount, 0);
+        $finalTotal = round(max($grossAfterCoupon - $paymentGatewayDiscount, 0), 2);
         $discount = $couponDiscount + $paymentGatewayDiscount;
 
         return [

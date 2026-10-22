@@ -84,6 +84,7 @@ class BookingCouponPaymentTest extends TestCase
         foreach ($cases as [$prices, $discounts, $type, $value, $expected]) {
             $bookings = $this->bookings($prices, $discounts);
             $coupon = Mockery::mock();
+            $coupon->services = [0];
             $coupon->discount_type = $type;
             $coupon->discount_percentage = $type === 'percent' ? $value : 0;
             $coupon->discount_amount = $type === 'fixed' ? $value : 0;
@@ -123,6 +124,7 @@ class BookingCouponPaymentTest extends TestCase
         $bookings = $this->bookings([100], [0]);
         $this->bookingQuery->shouldReceive('getUserIncompleteBookings')->andReturn($bookings);
         $coupon = Mockery::mock();
+        $coupon->services = [0];
         $coupon->discount_type = 'percent';
         $coupon->discount_percentage = 10;
         $coupon->shouldReceive('syncExpiredState')->times(3);
@@ -156,6 +158,29 @@ class BookingCouponPaymentTest extends TestCase
         $result = (new PaymentCalculatorService())->calculateTotal('payment', 'TEST', null, 1);
         self::assertSame('messages.invalid_coupon', $result['error']);
         self::assertArrayNotHasKey('total', $result);
+    }
+
+    public function test_service_only_coupon_cannot_discount_the_whole_invoice(): void
+    {
+        $this->bookingQuery->shouldReceive('getUserIncompleteBookings')->andReturn($this->bookings([100], [0]));
+        $coupon = Mockery::mock();
+        $coupon->services = [5];
+        $coupon->shouldReceive('syncExpiredState')->once();
+        $this->couponQuery->shouldReceive('first')->once()->andReturn($coupon);
+        $result = (new PaymentCalculatorService())->calculateTotal('payment', 'TEST', null, 1);
+        self::assertSame('messages.invalid_coupon', $result['error']);
+        self::assertArrayNotHasKey('total', $result);
+    }
+
+    public function test_service_coupon_is_not_deducted_a_second_time(): void
+    {
+        $bookings = $this->bookings([100], [10]);
+        $bookings->first()->services->first()->coupon_code = 'TEST';
+        $this->bookingQuery->shouldReceive('getUserIncompleteBookings')->andReturn($bookings);
+        $this->couponQuery->shouldNotReceive('first');
+        $result = (new PaymentCalculatorService())->calculateTotal('payment', ' test ', null, 1);
+        self::assertEqualsWithDelta(103.5, $result['total'], 0.00001);
+        self::assertEquals(0, $result['couponDiscountAmount']);
     }
 
     public function test_mixed_gift_and_booking_share_tax_and_coupon_without_rounding_loss(): void

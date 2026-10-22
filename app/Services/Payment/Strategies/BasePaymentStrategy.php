@@ -19,7 +19,7 @@ abstract class BasePaymentStrategy
             'user_id' => auth()->id(),
             'page' => $typePage,
             'payment_method' => $paymentMethod,
-            'couponCode' => $request->invoiceCopon ?? $request->coupon_code ?? '',
+            'couponCode' => trim((string) $request->invoiceCopon) ?: trim((string) $request->coupon_code),
             'submethods' => [
                 'wallet' => (bool) $request->wallet,
                 'loyalty' => (bool) $request->loyalty,
@@ -121,7 +121,7 @@ abstract class BasePaymentStrategy
         return $invoiceId;
     }
 
-    protected function respondSubMethodOnlySuccess(Request $request, array $paymentData, int $invoiceId = null)
+    protected function respondSubMethodOnlySuccess(Request $request, array $paymentData, ?int $invoiceId = null)
     {
         return $this->respondSuccess($request, 'Payment completed using sub methods.', [
             'paid' => true,

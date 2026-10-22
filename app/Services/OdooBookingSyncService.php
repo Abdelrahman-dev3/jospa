@@ -66,7 +66,7 @@ class OdooBookingSyncService
 
         $bookings = collect();
         if ($cartIds !== []) {
-            $bookings = Booking::with(['user', 'branch', 'service.service', 'service.employee', 'bookingTransaction'])
+            $bookings = Booking::with(['user', 'branch', 'services.service', 'services.employee', 'bookingTransaction'])
                 ->whereIn('id', $cartIds)
                 ->get();
         }
@@ -193,21 +193,25 @@ class OdooBookingSyncService
 
     private function buildPayload(Invoice $invoice, $bookings, $giftCards): array
     {
-        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => (float) ($booking->service->service_price ?? 0));
-        $bookingTax = (float) (getBookingTaxamount($bookingSubTotal, 0, null)['total_tax_amount'] ?? 0);
-        $bookingGross = $bookingSubTotal + $bookingTax;
-
+        $bookingSubTotal = (float) $bookings->sum(fn ($booking) => $booking->services->sum(
+            fn ($row) => (float) ($row->service_price ?? 0) - (float) ($row->discount_amount ?? 0)
+        ));
         $giftSubTotal = (float) $giftCards->sum(fn ($giftCard) => (float) ($giftCard->subtotal ?? 0));
-        $giftTax = (float) (getBookingTaxamount($giftSubTotal, 0, null)['total_tax_amount'] ?? 0);
+        $combinedSubtotal = $bookingSubTotal + $giftSubTotal;
+        $combinedTax = (float) (getBookingTaxamount($combinedSubtotal, 0, null)['total_tax_amount'] ?? 0);
+        $bookingTax = $combinedSubtotal > 0 ? round($combinedTax * $bookingSubTotal / $combinedSubtotal, 2) : 0;
+        $giftTax = $combinedTax - $bookingTax;
+        $bookingGross = $bookingSubTotal + $bookingTax;
         $giftGross = $giftSubTotal + $giftTax;
 
         $invoiceGross = max(((float) $invoice->final_total) + ((float) $invoice->discount_amount), 0);
         $bookingDiscount = $invoiceGross > 0
             ? round(((float) $invoice->discount_amount) * ($bookingGross / $invoiceGross), 2)
             : 0.0;
-        $giftDiscount = $invoiceGross > 0
-            ? round(((float) $invoice->discount_amount) * ($giftGross / $invoiceGross), 2)
+        $combinedDiscount = $invoiceGross > 0
+            ? round(((float) $invoice->discount_amount) * (($bookingGross + $giftGross) / $invoiceGross), 2)
             : 0.0;
+        $giftDiscount = $combinedDiscount - $bookingDiscount;
 
         $bookingTotal = max($bookingGross - $bookingDiscount, 0);
         $giftTotal = max($giftGross - $giftDiscount, 0);
@@ -250,8 +254,8 @@ class OdooBookingSyncService
 
     private function buildBookingDetails(Invoice $invoice, $bookings): array
     {
-        return $bookings->map(function ($booking) use ($invoice) {
-            $bookingService = $booking->service;
+        return $bookings->flatMap(function ($booking) use ($invoice) {
+            return $booking->services->map(function ($bookingService) use ($booking, $invoice) {
             $service = $bookingService?->service;
             $employee = $bookingService?->employee;
             $branch = $booking->branch;
@@ -277,7 +281,7 @@ class OdooBookingSyncService
                 'pricing' => [
                     'id' => $bookingService->id ?? null,
                     'name' => $this->resolveName($service->name ?? null),
-                    'price' => (float) ($bookingService->service_price ?? 0),
+                    'price' => (float) ($bookingService->service_price ?? 0) - (float) ($bookingService->discount_amount ?? 0),
                     'image' => $serviceImage,
                 ],
                 'employee' => [
@@ -289,6 +293,7 @@ class OdooBookingSyncService
                     'name' => $this->resolveName($branch->name ?? null),
                 ],
             ];
+            });
         })->values()->all();
     }
 
