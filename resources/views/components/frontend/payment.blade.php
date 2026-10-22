@@ -162,9 +162,6 @@
       gap:8px;
       margin:18px 0;
     }
-    .coupon-input {
-      display: none !important;
-    }
     .payment-disable-reason{
       display:none;
       margin:12px 0 8px;
