@@ -87,7 +87,15 @@ class PaymentController extends Controller
 
     
         $finalPrice = $cartTotal - $discountTotal;
-        
+
+        // Coupons already applied per service from the cart, shown in the payment summary
+        $serviceCoupons = $cartservice
+            ->flatMap(fn($item) => $item->services)
+            ->filter(fn($s) => filled($s->coupon_code))
+            ->groupBy('coupon_code')
+            ->map(fn($group) => round((float) $group->sum('discount_amount'), 2))
+            ->all();
+
         $serviceCount = $cartservice->sum(fn($item) => $item->services->count());
         
         $wallet =  Wallet::where('user_id',$userId)->where('status', 1)->first();
@@ -112,7 +120,7 @@ class PaymentController extends Controller
         $defaultPaymentMethod = FrontendPaymentSettings::defaultPaymentMethod($paymentMethods);
         $defaultPaymentSource = FrontendPaymentSettings::defaultTapPaymentSource($tapPaymentSources);
 
-        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'gatewayDiscounts', 'tapPaymentSources', 'defaultPaymentMethod', 'defaultPaymentSource'));
+        return view('frontend::payment', compact('cartservice' , 'cartproduct' , 'finalPrice' , 'discountTotal' , 'serviceCount' , 'productCount' , 'productPrice' , 'GifttCount' , 'wallet' , 'loyaltyBalance' , 'branches', 'paymentMethods', 'gatewayDiscounts', 'tapPaymentSources', 'defaultPaymentMethod', 'defaultPaymentSource', 'serviceCoupons'));
     }
 
     public function payment(Request $request)

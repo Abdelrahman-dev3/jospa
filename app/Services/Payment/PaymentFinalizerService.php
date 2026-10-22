@@ -59,8 +59,18 @@ class PaymentFinalizerService
         array $gatewayMeta = []
     ): int {
         $invoiceId = 0;
+        $alreadyFinalized = false;
 
-        DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments, $gatewayMeta) {
+        DB::transaction(function () use ($userId, $paidAmount,$tax, $discountAmount, $pageType, $cartIds, $giftIds, $submethodsApplied, &$invoiceId , $paymentMethod , $couponCode, $subPayments, $gatewayMeta, &$alreadyFinalized) {
+            // Callback, webhook and reconcile can finalize the same payment concurrently.
+            // Lock the rows being paid and bail out if another run already paid them,
+            // otherwise a second invoice (and coupon redeem) gets created.
+            if ($this->lockAndCheckAlreadyFinalized($cartIds, $giftIds)) {
+                $alreadyFinalized = true;
+                $invoiceId = $this->findExistingInvoiceId($userId, $cartIds, $giftIds);
+                return;
+            }
+
             $product_ids = [];
             $bookingIdsToNotify = [];
             
@@ -113,6 +123,10 @@ class PaymentFinalizerService
             }
         });
 
+        if ($alreadyFinalized) {
+            return $invoiceId;
+        }
+
         $odooSynced = false;
         if ($invoiceId > 0 && $pageType === 'cart' && (! empty($cartIds) || ! empty($giftIds))) {
             $odooSynced = app(OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
@@ -137,6 +151,44 @@ class PaymentFinalizerService
         $this->sendUserAccountNotifications($userId, $cartIds, $giftIds, $couponCode, $subPayments);
 
         return $invoiceId;
+    }
+
+    private function lockAndCheckAlreadyFinalized(array $cartIds, array $giftIds): bool
+    {
+        if (empty($cartIds) && empty($giftIds)) {
+            return false;
+        }
+
+        if (! empty($cartIds)) {
+            Booking::whereIn('id', $cartIds)->lockForUpdate()->get(['id']);
+
+            if (Booking::whereIn('id', $cartIds)->paid()->count() < count($cartIds)) {
+                return false;
+            }
+        }
+
+        if (! empty($giftIds)) {
+            $gifts = GiftCard::whereIn('id', $giftIds)->lockForUpdate()->get(['id', 'payment_status']);
+
+            if ($gifts->where('payment_status', 1)->count() < count($giftIds)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function findExistingInvoiceId(int $userId, array $cartIds, array $giftIds): int
+    {
+        $query = Invoice::where('user_id', $userId);
+
+        if (! empty($cartIds)) {
+            $query->whereJsonContains('cart_ids', (int) reset($cartIds));
+        } else {
+            $query->whereJsonContains('gift_ids', (int) reset($giftIds));
+        }
+
+        return (int) $query->latest('id')->value('id');
     }
 
     private function sendPaidCartBookingNotifications(array $bookingIds): void
@@ -522,7 +574,7 @@ class PaymentFinalizerService
     
     private function recordInvoiceCouponRedeem(int $invoiceId, int $userId, string $couponCode, float $discountAmount, array $cartIds): void
     {
-        if (empty($couponCode) || $discountAmount <= 0) {
+        if (empty($couponCode)) {
             return;
         }
 
@@ -533,6 +585,8 @@ class PaymentFinalizerService
 
         $updatedRows = 0;
 
+        // Per-service redeems were recorded by validate-coupon; link them to the
+        // invoice even when no invoice-level coupon discount was applied.
         if (! empty($cartIds)) {
             $updatedRows = UserCouponRedeem::query()
                 ->where('user_id', $userId)
@@ -544,7 +598,7 @@ class PaymentFinalizerService
                 ]);
         }
 
-        if ($updatedRows > 0) {
+        if ($updatedRows > 0 || $discountAmount <= 0) {
             $coupon->syncExpiredState();
             return;
         }

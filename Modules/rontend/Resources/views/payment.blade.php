@@ -41,7 +41,8 @@
         :tapPaymentSources="$tapPaymentSources"
         :defaultPaymentMethod="$defaultPaymentMethod"  
         :defaultPaymentSource="$defaultPaymentSource"
-        :paymentMethods="$paymentMethods"  
+        :paymentMethods="$paymentMethods"
+        :serviceCoupons="$serviceCoupons ?? []"
     />
     <div class="position-relative" style="height: 19vh;"></div>
     <!-- Footer -->

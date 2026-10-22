@@ -69,6 +69,19 @@ class PaymentCalculatorService
         $grossTotal = $total + $tax;
         $couponDiscount = 0;
 
+        // A coupon already applied per-service (via validate-coupon) is reflected in
+        // the service discount_amount subtracted above; applying it again on the
+        // invoice total would count the same coupon twice.
+        $serviceCouponCodes = $services
+            ->flatMap(fn($item) => $item->services->pluck('coupon_code'))
+            ->filter()
+            ->map(fn($code) => strtolower(trim($code)))
+            ->unique();
+
+        if ($couponCode && $serviceCouponCodes->contains(strtolower(trim($couponCode)))) {
+            $couponCode = null;
+        }
+
         if ($couponCode  && $couponCode != '') {
             $coupon = Coupon::query()
                 ->where('coupon_code', $couponCode)

@@ -1071,7 +1071,7 @@ class BookingCartController extends Controller
 
     private function syncCouponRedeemInvoice(int $userId, string $couponCode, float $discountAmount, array $cartIds, int $invoiceId): void
     {
-        if ($couponCode === '' || $discountAmount <= 0 || $invoiceId <= 0) {
+        if ($couponCode === '' || $invoiceId <= 0) {
             return;
         }
 
@@ -1086,7 +1086,7 @@ class BookingCartController extends Controller
             $updatedRows = UserCouponRedeem::query()->where('user_id', $userId)->where('coupon_id', $coupon->id)->whereIn('booking_id', $cartIds)->whereNull('invoice_id')->update(['invoice_id' => $invoiceId,]);
         }
 
-        if ($updatedRows > 0) {
+        if ($updatedRows > 0 || $discountAmount <= 0) {
             return;
         }
 

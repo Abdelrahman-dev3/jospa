@@ -90,7 +90,7 @@ Route::controller(LoyaltyController::class)->group(function () {
 
 Route::controller(CouponController::class)->group(function () {
     Route::get('/validate-coupon', 'validateCoupon');
-    Route::get('/validate-invoice-coupon', '');
+    Route::get('/validate-invoice-coupon', 'validateInvoiceCoupon');
     Route::get('/available-coupons', 'availableCoupons');
 });
 

@@ -24,7 +24,8 @@ class Payment extends Component
         public ?array $gatewayDiscounts = null,
         public ?array $tapPaymentSources = null,
         public ?string $defaultPaymentMethod = null,
-        public ?string $defaultPaymentSource = null
+        public ?string $defaultPaymentSource = null,
+        public array $serviceCoupons = []
     )
     {
         if ($this->paymentMethods === null) {

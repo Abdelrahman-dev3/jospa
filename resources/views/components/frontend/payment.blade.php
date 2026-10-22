@@ -11,6 +11,7 @@
         'paymentMethods' => [],
         'gatewayDiscounts' => [],
         'tapPaymentSources' => [],
+        'serviceCoupons' => [],
     ])
 @php
     $comingSoonPaymentMethods = ['tabby', 'tamara'];
@@ -930,8 +931,15 @@
 
                     <div class="summary-row">
                         <div class="muted">{{ __('messagess.total_product_price') }}</div>
-                        <div><strong id="productsPrice">{{$totalPrice}}</strong> {{ __('messagess.SR') }}</div>
+                        <div><strong id="productsPrice">{{ $totalPrice + array_sum($serviceCoupons) }}</strong> {{ __('messagess.SR') }}</div>
                     </div>
+
+                    @foreach($serviceCoupons as $serviceCouponCode => $serviceCouponDiscount)
+                        <div class="summary-row">
+                            <div class="muted">{{ __('messagess.discount_coupon') }} ({{ $serviceCouponCode }})</div>
+                            <div style="color:green"><strong>-{{ number_format($serviceCouponDiscount, 2) }}</strong> {{ __('messagess.SR') }}</div>
+                        </div>
+                    @endforeach
 
                     <!--<div class="summary-row">-->
                     <!--    <div class="muted">{{ __('messagess.service') }}</div>-->
@@ -1027,6 +1035,7 @@
      <script>
         const baseTotal = {{$totalPrice + getBookingTaxamount($totalPrice - $productsAmount, 0, null)['total_tax_amount'] + ($pageName == 'cart' ? getTaxamount($productsAmount)['total_tax_amount'] : 0)}};
         const gatewayDiscounts = @json($gatewayDiscounts);
+        const serviceCouponCodes = @json(array_map(fn($code) => strtolower(trim($code)), array_keys($serviceCoupons)));
         const gatewayDiscountPrefix = "{{ app()->getLocale() === 'ar' ? 'خصم' : 'Discount' }}";
         const gatewayDiscountCurrency = "{{ __('messagess.SR') }}";
 
@@ -1316,7 +1325,13 @@
                 toastr.error("{{ __('messagess.enter_coupon_code') }}");
                 return;
             }
-        
+
+            // Already applied on a service in the cart; the server won't apply it twice
+            if (serviceCouponCodes.includes(couponCode.toLowerCase())) {
+                toastr.error(@json(app()->getLocale() === 'ar' ? 'هذا الكوبون مطبق بالفعل على الخدمات' : 'This coupon is already applied to your services'));
+                return;
+            }
+
             fetch(`/api/validate-invoice-coupon?coupon_code=${encodeURIComponent(couponCode)}&gift_code=${encodeURIComponent(appliedGiftCode)}`)
             .then(response => response.json())
             .then(data => {
