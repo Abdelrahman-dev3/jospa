@@ -114,7 +114,7 @@ return [
     'sold_by'=>'Sold By',
     'client_since'=>'Client since ',
     'sale'=>'Sale',
-    'coupon_discount'=>'Coupon Discount',
+    'coupon_discount'=>'Service Coupon Discount',
     'loading_appointment_details' => 'Loading appointment details...',
     'loading' => 'Loading...',
     'loading_available_staff' => 'Loading staff...',

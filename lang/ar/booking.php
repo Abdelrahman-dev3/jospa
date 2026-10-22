@@ -112,7 +112,7 @@ return [
     'with'=>'مع',
     'sold_by'=>'تم البيع بواسطة',
     'client_since'=>'عميل منذ ',
-    'coupon_discount'=>'خصم الكوبون',
+    'coupon_discount'=>'خصم كوبون الخدمه',
     'lbl_appointment_id'=>'رقم الموعد',
     'add_customer_label' => 'إضافة عميل جديد',
     'loading_appointment_details' => 'جاري تحميل بيانات الموعد...',
