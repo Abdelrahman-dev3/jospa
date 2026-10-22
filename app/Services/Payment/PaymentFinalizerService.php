@@ -181,12 +181,13 @@ class PaymentFinalizerService
     private function findExistingInvoiceId(int $userId, array $cartIds, array $giftIds): int
     {
         $query = Invoice::where('user_id', $userId);
+        [$column, $id] = ! empty($cartIds) ? ['cart_ids', reset($cartIds)] : ['gift_ids', reset($giftIds)];
 
-        if (! empty($cartIds)) {
-            $query->whereJsonContains('cart_ids', (int) reset($cartIds));
-        } else {
-            $query->whereJsonContains('gift_ids', (int) reset($giftIds));
-        }
+        // IDs may have been stored as ints or numeric strings depending on the caller
+        $query->where(function ($q) use ($column, $id) {
+            $q->whereJsonContains($column, (int) $id)
+                ->orWhereJsonContains($column, (string) $id);
+        });
 
         return (int) $query->latest('id')->value('id');
     }

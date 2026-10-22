@@ -41,7 +41,12 @@ class CouponController extends Controller
             }
 
             $userId = auth()->id() ?? auth('sanctum')->id();
-            if (!$userId || !Booking::where('id', $bookingId)->where('user_id', $userId)->exists()) {
+            // The cart/payment flow scopes bookings by created_by (see Booking::userBaseQuery)
+            $ownsBooking = $userId && Booking::where('id', $bookingId)
+                ->where(fn ($q) => $q->where('created_by', $userId)->orWhere('user_id', $userId))
+                ->exists();
+
+            if (!$ownsBooking) {
                 return response()->json(['valid' => false]);
             }
 

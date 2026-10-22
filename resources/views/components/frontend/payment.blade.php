@@ -1304,6 +1304,15 @@
         document.querySelector('input[name="wallet"]').addEventListener('change', updateTotal);
         document.querySelector('input[name="loyalty"]').addEventListener('change', updateTotal);
         
+        // A code typed but never applied must not reach the server, otherwise it is
+        // charged with a discount the customer never saw (or rejected as invalid).
+        document.querySelector('form[action="{{ route('payment-chanal') }}"]')?.addEventListener('submit', function() {
+            const couponInput = document.getElementById('invoiceCouponInput');
+            if (couponInput && !couponState.applied) {
+                couponInput.value = '';
+            }
+        });
+
         // Coupon
         document.querySelector('#applyCoupon').addEventListener('click', function() {
             const button = this;

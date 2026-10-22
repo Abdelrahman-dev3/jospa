@@ -147,7 +147,7 @@ class TabbyPaymentStrategy extends BasePaymentStrategy
         // Fall back to recalculating only if the caller didn't supply them.
         if (empty($cartIds) && empty($giftIds) && empty($productIds)) {
             $calculator = app(PaymentCalculatorService::class);
-            $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon, 'tabby');
+            $totalData  = $calculator->calculateTotal($typePage, $request->invoiceCopon ?? $request->coupon_code, 'tabby');
 
             if (isset($totalData['error'])) {
                 throw new \Exception($totalData['error']);

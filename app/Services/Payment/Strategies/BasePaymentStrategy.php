@@ -37,7 +37,8 @@ abstract class BasePaymentStrategy
         ];
 
         $calculator = app(PaymentCalculatorService::class);
-        $totalData = $calculator->calculateTotal($typePage, $request->invoiceCopon, $paymentMethod);
+        // Same code that gets recorded on the invoice (invoiceCopon or coupon_code)
+        $totalData = $calculator->calculateTotal($typePage, $data['couponCode'], $paymentMethod);
         if (isset($totalData['error'])) {
             return [
                 'response' => $this->respondPaymentInputError($request, $totalData['error']),
