@@ -9,6 +9,15 @@
         <i class="fa-solid fa-clock-rotate-left"></i>
     </a>
 
+    @hasPermission('add_booking')
+        @if (optional($data->payment)->payment_status != 1 && ! in_array($data->status, ['cancelled', 'canceled']))
+            <button type="button" class="btn btn-sm btn-icon btn-soft-primary js-booking-payment-link"
+                data-booking-id="{{ $data->id }}" data-bs-toggle="tooltip" title="{{ __('booking.payment_link') }}">
+                <i class="fa-solid fa-link"></i>
+            </button>
+        @endif
+    @endhasPermission
+
     @if ($data->status == 'completed')
         <a href="/app/invoice?customer_name={{$data->user->full_name ?? ''}}"
             class="btn btn-sm btn-icon btn-soft-warning" data-bs-toggle="tooltip" data-bs-placement="top"

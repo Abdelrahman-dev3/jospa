@@ -903,7 +903,7 @@ public function index_list(Request $request)
     {
         $module_name = $this->module_name;
 
-        $query = Booking::with('branch', 'user', 'services', 'mainServices', 'payment', 'bookingPackages', 'bookedPackageService', 'userPackageServices');
+        $query = Booking::with('branch', 'user', 'services', 'mainServices', 'payment', 'latestPaymentLink', 'bookingPackages', 'bookedPackageService', 'userPackageServices');
 
         $filter = $request->filter;
 

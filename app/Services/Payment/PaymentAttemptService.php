@@ -64,11 +64,25 @@ class PaymentAttemptService
 
     public function markPaid(?int $attemptId, array $attributes = []): ?PaymentAttempt
     {
-        return $this->update($attemptId, array_merge($attributes, [
+        $attempt = $this->update($attemptId, array_merge($attributes, [
             'status' => PaymentAttempt::STATUS_PAID,
             'paid_at' => $attributes['paid_at'] ?? now(),
             'error_message' => null,
         ]));
+
+        // Keep dashboard payment links in sync once the gateway-confirmed payment is recorded.
+        if ($attempt && $attempt->page === 'payment') {
+            try {
+                app(\Modules\Booking\Services\BookingPaymentLinkService::class)->markPaidFromAttempt($attempt);
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to sync booking payment link after payment.', [
+                    'attempt_id' => $attempt->id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $attempt;
     }
 
     public function markFailed(?int $attemptId, ?string $message = null, array $attributes = []): ?PaymentAttempt

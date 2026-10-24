@@ -1,8 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Booking\Http\Controllers\Backend\BookingPaymentLinkController;
 use Modules\Booking\Http\Controllers\Backend\BookingsController;
 use Modules\Booking\Http\Controllers\Backend\HomeBookingsController;
+use Modules\Booking\Http\Controllers\BookingPaymentLinkPublicController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,6 +59,9 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
         Route::post('stripe-payment', [BookingsController::class, 'stripe_payment'])->name('stripe_payment');
         Route::get('payment_success/{booking_transaction_id}', [BookingsController::class, 'payment_success'])->name('payment_success');
         Route::get('export', [BookingsController::class, 'export'])->name('export');
+        Route::get('{booking}/payment-link', [BookingPaymentLinkController::class, 'show'])->name('payment_link.show')->whereNumber('booking');
+        Route::post('{booking}/payment-link', [BookingPaymentLinkController::class, 'store'])->name('payment_link.store')->whereNumber('booking');
+        Route::post('{booking}/payment-link/refresh', [BookingPaymentLinkController::class, 'refresh'])->name('payment_link.refresh')->whereNumber('booking');
 
         Route::group(['prefix' => 'home-bookings', 'as' => 'home_bookings.'], function () {
             Route::get('service-groups', [HomeBookingsController::class, 'serviceGroups'])->name('service_groups');
@@ -70,3 +75,7 @@ Route::group(['prefix' => 'app', 'as' => 'backend.', 'middleware' => ['auth']], 
     Route::get('bookings-table-view', [BookingsController::class, 'datatable_view'])->name('bookings.datatable_view');
     Route::resource('bookings', BookingsController::class);
 });
+
+// Public customer payment page (token-protected, no login)
+Route::get('pay/booking/{token}', [BookingPaymentLinkPublicController::class, 'show'])->middleware('throttle:30,1')->name('booking-payment-link.show');
+Route::post('pay/booking/{token}', [BookingPaymentLinkPublicController::class, 'pay'])->middleware('throttle:10,1')->name('booking-payment-link.pay');

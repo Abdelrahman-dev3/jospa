@@ -22,6 +22,9 @@
             <span>{{ $t('booking.lbl_payment_status') }}</span>
             <strong>{{ paymentStatusLabel }}</strong>
           </div>
+          <button type="button" v-if="!isPaidBooking" class="btn btn-sm btn-outline-primary mt-2 w-100" :disabled="paymentLinkLoading" @click="openPaymentLink(id)">
+            <i class="fa-solid fa-link me-2"></i>{{ $t('booking.payment_link_create') }}
+          </button>
         </div>
         <BookingStatus v-if="id" :status="status" :is-paid="is_paid" :booking_id="id" :status-list="statusList" :employee_id="employee_id" @statusUpdate="updateStatus"></BookingStatus>
         <div>
@@ -291,6 +294,10 @@
             ><strong>{{ $t('booking.lbl_sub_tot') }} </strong>
             </label>
             <span>{{ formatCurrencyVue(SUB_TOTAL_SERVICE_AMOUNT) }}</span>
+          </div>
+          <div class="form-check px-3 pb-3 ms-4" v-if="!id && canSaveBooking">
+            <input class="form-check-input" type="checkbox" id="create-payment-link" v-model="createPaymentLink">
+            <label class="form-check-label" for="create-payment-link">{{ $t('booking.payment_link_create') }}</label>
           </div>
           <div class="d-grid gap-3" v-if="canSaveBooking">
             <button type="button" :disabled="IS_SUBMITED || !canSubmitBooking" :class="`btn ${canSubmitBooking ? 'btn-primary' : 'disabled btn-gray'} btn-lg rounded-0 d-block`" @click="formSubmit">
@@ -723,6 +730,7 @@ import {
   STORE_URL,
   UPDATE_URL,
   UPDATE_STATUS,
+  PAYMENT_LINK_URL,
   PRODUCT_LIST,
   PACKAGE_LIST,
   USER_PACKAGE_LIST
@@ -1941,6 +1949,66 @@ const removeProduct = (id) => {
 
 // ------------------- Payment & Submit -------------------
 
+const createPaymentLink = ref(false)
+const paymentLinkLoading = ref(false)
+
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+// Shows the shareable payment link (and its live state) in a Bootstrap modal.
+const showPaymentLinkModal = (bookingId, data) => {
+  document.getElementById('booking-payment-link-modal')?.remove()
+  const wrapper = document.createElement('div')
+  wrapper.innerHTML = `
+    <div class="modal fade" id="booking-payment-link-modal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">${t('booking.payment_link')} #${bookingId}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted">${t('booking.payment_link_hint')}</p>
+            <p class="mb-2"><strong>${t('booking.payment_link_amount')}:</strong> ${escapeHtml(data.amount)}</p>
+            <p class="mb-3"><strong>${t('booking.payment_link_expires')}:</strong> ${escapeHtml(data.expires_at)}</p>
+            <div class="input-group">
+              <input type="text" class="form-control" id="booking-payment-link-input" readonly value="${escapeHtml(data.url)}">
+              <button class="btn btn-primary" type="button" id="booking-payment-link-copy">${t('booking.payment_link_copy')}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  document.body.appendChild(wrapper.firstElementChild)
+  const modalEl = document.getElementById('booking-payment-link-modal')
+  modalEl.querySelector('#booking-payment-link-copy').addEventListener('click', async () => {
+    const input = modalEl.querySelector('#booking-payment-link-input')
+    try {
+      await navigator.clipboard.writeText(input.value)
+    } catch (e) {
+      input.select()
+      document.execCommand('copy')
+    }
+    window.successSnackbar(t('booking.payment_link_copied'))
+  })
+  modalEl.addEventListener('hidden.bs.modal', () => modalEl.remove())
+  bootstrap.Modal.getOrCreateInstance(modalEl).show()
+}
+
+const openPaymentLink = async (bookingId) => {
+  if (!bookingId || paymentLinkLoading.value) return
+  paymentLinkLoading.value = true
+  try {
+    const res = await storeRequest({ url: () => PAYMENT_LINK_URL(bookingId), body: {} })
+    if (res.status) {
+      showPaymentLinkModal(bookingId, res.data)
+    } else {
+      window.errorSnackbar(res.message)
+    }
+  } finally {
+    paymentLinkLoading.value = false
+  }
+}
+
 const payment_data = ref(null)
 const stripe_payment_data = ref(null)
 const SINLGE_STEP = computed(() => store.singleStep)
@@ -1983,8 +2051,13 @@ const formSubmit = handleSubmit((values) => {
         submiting_booking(res)
       })
     } else {
+      const wantsPaymentLink = createPaymentLink.value
       storeRequest({ url: STORE_URL, body: values }).then((res) => {
         submiting_booking(res)
+        if (res.status && wantsPaymentLink && res.data?.id) {
+          createPaymentLink.value = false
+          openPaymentLink(res.data.id)
+        }
       })
     }
   }

@@ -129,6 +129,25 @@
             </form>
         </x-backend.advance-filter>
     </div>
+    <div class="modal fade" id="booking-payment-link-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('booking.payment_link') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">{{ __('booking.payment_link_hint') }}</p>
+                    <p class="mb-2"><strong>{{ __('booking.payment_link_amount') }}:</strong> <span id="booking-payment-link-amount"></span></p>
+                    <p class="mb-3"><strong>{{ __('booking.payment_link_expires') }}:</strong> <span id="booking-payment-link-expires"></span></p>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="booking-payment-link-input" readonly>
+                        <button class="btn btn-primary" type="button" id="booking-payment-link-copy">{{ __('booking.payment_link_copy') }}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('after-styles')
@@ -359,5 +378,43 @@
         $('#quick-action-type').change(function() {
             resetQuickAction()
         });
+    </script>
+    <script>
+        // Create / copy a payment link for an unpaid booking from the list.
+        $(document).on('click', '.js-booking-payment-link', function() {
+            const btn = $(this)
+            const bookingId = btn.data('booking-id')
+            btn.prop('disabled', true)
+            fetch("{{ url('app/bookings') }}/" + bookingId + "/payment-link", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            }).then(r => r.json()).then(res => {
+                if (!res.status) {
+                    window.errorSnackbar(res.message)
+                    return
+                }
+                $('#booking-payment-link-input').val(res.data.url)
+                $('#booking-payment-link-amount').text(res.data.amount)
+                $('#booking-payment-link-expires').text(res.data.expires_at)
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('booking-payment-link-modal')).show()
+                window.renderedDataTable.ajax.reload(null, false)
+            }).catch(() => window.errorSnackbar("{{ __('booking.payment_link_gateway_error') }}"))
+              .finally(() => btn.prop('disabled', false))
+        })
+
+        $('#booking-payment-link-copy').on('click', async function() {
+            const input = document.getElementById('booking-payment-link-input')
+            try {
+                await navigator.clipboard.writeText(input.value)
+            } catch (e) {
+                input.select()
+                document.execCommand('copy')
+            }
+            window.successSnackbar("{{ __('booking.payment_link_copied') }}")
+        })
     </script>
 @endpush

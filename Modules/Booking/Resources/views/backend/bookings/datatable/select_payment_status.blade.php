@@ -1,3 +1,19 @@
+@php
+    $isPaidBooking = optional($data->payment)->payment_status == 1;
+    $paymentLink = $data->latestPaymentLink;
+@endphp
+<div class="mb-1 d-flex flex-wrap gap-1 align-items-center">
+    @if ($isPaidBooking)
+        <span class="badge bg-success">{{ __('booking.payment_state_paid') }}</span>
+    @else
+        <span class="badge bg-warning text-dark">{{ __('booking.payment_state_pending') }}</span>
+        @if ($paymentLink && $paymentLink->isUsable())
+            <span class="badge bg-info" title="{{ __('booking.payment_link') }}"><i class="fa-solid fa-link"></i></span>
+        @elseif ($paymentLink && $paymentLink->isExpired())
+            <span class="badge bg-secondary">{{ __('booking.payment_link_expired') }}</span>
+        @endif
+    @endif
+</div>
 @if(isset($data->payment))
 
     @if($data->payment->payment_status != 1)

@@ -126,6 +126,11 @@ class Booking extends BaseModel
         return $this->hasMany(BookingTransaction::class);
     }
 
+    public function latestPaymentLink()
+    {
+        return $this->hasOne(BookingPaymentLink::class)->latestOfMany();
+    }
+
     public function payment()
     {
         return $this->hasOne(BookingTransaction::class)->latest('id');
