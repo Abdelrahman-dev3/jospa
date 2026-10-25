@@ -265,6 +265,7 @@
             });
 
             Route::controller(ReportsController::class)->group(function () {
+                Route::get('comprehensive-report', [\App\Http\Controllers\Backend\ComprehensiveReportController::class, 'index'])->name('reports.comprehensive-report');
                 Route::get('sales-by-date', 'sales_by_date_report')->name('reports.sales-by-date');
                 Route::get('sales-by-date-index-data', 'sales_by_date_report_index_data')->name('reports.sales-by-date.index_data');
                 Route::get('sales-by-date-export', 'sales_by_date_report_export')->name('reports.sales-by-date.export');

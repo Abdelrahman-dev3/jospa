@@ -42,12 +42,17 @@ class CouponController extends Controller
 
             $userId = auth()->id() ?? auth('sanctum')->id();
             // The cart/payment flow scopes bookings by created_by (see Booking::userBaseQuery)
-            $ownsBooking = $userId && Booking::where('id', $bookingId)
+            $booking = $userId ? Booking::where('id', $bookingId)
                 ->where(fn ($q) => $q->where('created_by', $userId)->orWhere('user_id', $userId))
-                ->exists();
+                ->first() : null;
 
-            if (!$ownsBooking) {
+            if (!$booking) {
                 return response()->json(['valid' => false]);
+            }
+
+            // Branch-restricted coupons only work for bookings in the allowed branches.
+            if (! $coupon->appliesToBranch($booking->branch_id ? (int) $booking->branch_id : null)) {
+                return response()->json(['valid' => false, 'message' => __('promotion.coupon_not_valid_for_branch')]);
             }
 
             // Lock the row so concurrent/repeated requests can't apply the coupon twice,
@@ -142,6 +147,17 @@ class CouponController extends Controller
         $services = $this->normalizeServices($coupon->services);
         if (!in_array(0, $services, true)) {
             return response()->json(['valid' => false]);
+        }
+
+        // Invoice-wide coupon: every service booking in the cart must be in an allowed branch.
+        if ($coupon->isRestrictedToBranches()) {
+            $cartBranchIds = auth()->check()
+                ? Booking::getUserIncompleteBookings(auth()->id(), 'cart', [])->pluck('branch_id')
+                : collect();
+
+            if (! $coupon->appliesToAllBranches($cartBranchIds)) {
+                return response()->json(['valid' => false, 'message' => __('promotion.coupon_not_valid_for_branch')]);
+            }
         }
 
         return response()->json([

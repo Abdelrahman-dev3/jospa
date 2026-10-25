@@ -17,11 +17,12 @@ class Coupon extends Model
      */
     protected $table = 'promotions_coupon';
 
-    protected $fillable = ['coupon_code','coupon_type','is_expired', 'timezone', 'services' , 'specific_dates', 'discount_type', 'discount_percentage', 'discount_amount', 'start_date_time', 'end_date_time', 'promotion_id', 'use_limit'];
+    protected $fillable = ['coupon_code','coupon_type','is_expired', 'timezone', 'services' , 'specific_dates', 'branch_ids', 'discount_type', 'discount_percentage', 'discount_amount', 'start_date_time', 'end_date_time', 'promotion_id', 'use_limit'];
 
     protected $casts = [
         'services' => 'array',
         'specific_dates' => 'array',
+        'branch_ids' => 'array',
         'start_date_time' => 'datetime',
         'end_date_time' => 'datetime',
     ];
@@ -80,6 +81,54 @@ class Coupon extends Model
         }
 
         return in_array(now()->toDateString(), $specificDates, true);
+    }
+
+    /** Branch ids this coupon is limited to; empty means every branch. */
+    public function restrictedBranchIds(): array
+    {
+        $ids = $this->branch_ids;
+
+        if (is_string($ids)) {
+            $ids = json_decode($ids, true);
+        }
+
+        return is_array($ids) ? array_values(array_unique(array_map('intval', $ids))) : [];
+    }
+
+    public function isRestrictedToBranches(): bool
+    {
+        return $this->restrictedBranchIds() !== [];
+    }
+
+    /**
+     * Whether the coupon can be used for a booking in the given branch.
+     * A branch-restricted coupon is not valid for bookings without a branch (e.g. home service).
+     */
+    public function appliesToBranch(?int $branchId): bool
+    {
+        if (! $this->isRestrictedToBranches()) {
+            return true;
+        }
+
+        return $branchId !== null && in_array((int) $branchId, $this->restrictedBranchIds(), true);
+    }
+
+    /** Valid only if every given booking branch is allowed (used for invoice-wide coupons). */
+    public function appliesToAllBranches(iterable $branchIds): bool
+    {
+        if (! $this->isRestrictedToBranches()) {
+            return true;
+        }
+
+        $count = 0;
+        foreach ($branchIds as $branchId) {
+            $count++;
+            if (! $this->appliesToBranch($branchId === null ? null : (int) $branchId)) {
+                return false;
+            }
+        }
+
+        return $count > 0;
     }
 
     public function usageCount(): int

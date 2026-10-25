@@ -62,6 +62,12 @@ trait PaymentTrait
             $couponDiscountamount = $this->couponDiscount($total_amount, $data['coupon_code'], $booking_id);
         }
         
+        // A branch-restricted coupon is ignored (also when the client sent its own discount).
+        if (! empty($data['coupon_code']) && ! $this->couponAppliesToBookingBranch($data['coupon_code'], $booking_id)) {
+            $couponDiscountamount = 0;
+            $data['coupon_code'] = '';
+        }
+
         $data['couponDiscountamount'] = $couponDiscountamount;
         $total_amount = $total_amount - $couponDiscountamount;
         $data['$total_amount'] = $total_amount;
@@ -145,6 +151,19 @@ trait PaymentTrait
         return $total_amount;
     }
 
+    /** False when the coupon is limited to branches and the booking's branch is not one of them. */
+    public function couponAppliesToBookingBranch($coupon_code, $booking_id): bool
+    {
+        $coupon = Coupon::where('coupon_code', $coupon_code)->first();
+        if (! $coupon) {
+            return true; // unknown codes are handled by the existing flow
+        }
+
+        $branchId = Booking::where('id', $booking_id)->value('branch_id');
+
+        return $coupon->appliesToBranch($branchId ? (int) $branchId : null);
+    }
+
     public function couponDiscount($total_amount, $coupon_code, $booking_id)
     {
         $coupon = Coupon::query()
@@ -165,6 +184,10 @@ trait PaymentTrait
         $coupon = Coupon::where('coupon_code', $coupon_code)->first();
         $user_id = Booking::where('id', $booking_id)->first();
         if ($coupon) {
+            if (! $coupon->appliesToBranch($user_id && $user_id->branch_id ? (int) $user_id->branch_id : null)) {
+                return;
+            }
+
             if ($coupon->isCurrentlyExpired()) {
                 return;
             }

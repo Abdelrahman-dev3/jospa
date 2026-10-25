@@ -13,7 +13,7 @@
         .sub { text-align: center; color: #777; margin-bottom: 22px; }
         .q { margin-bottom: 22px; }
         .q p { font-weight: 700; margin: 0 0 10px; }
-        .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .opts {display: flex; flex-direction: column; gap: 45px; }
         .opts input { position: absolute; opacity: 0; pointer-events: none; }
         .opts label { border: 2px solid #e6dfd2; border-radius: 12px; padding: 12px 6px; text-align: center; cursor: pointer; font-size: 15px; }
         .opts input:checked + label { border-color: #bc9a69; background: #fbf4e8; font-weight: 700; }

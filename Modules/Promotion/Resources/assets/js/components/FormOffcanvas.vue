@@ -105,6 +105,28 @@
             <span class="text-danger">{{ errors['services'] }}</span>
           </div>
         </div>
+        <!-- Branches Selection Field (empty = all branches) -->
+        <div class="form-group">
+          <div class="col-md-12">
+            <label class="form-label">{{ $t('promotion.lbl_branches') }}</label>
+            <Multiselect
+              v-model="branch_ids"
+              v-bind="multiSelectOption"
+              :options="branchOptions"
+              id="branch_ids"
+              autocomplete="off"
+              :disabled="ISREADONLY"
+              track-by="value"
+              label="label"
+              mode="tags"
+              :close-on-select="false"
+              :searchable="true"
+              :create-option="false"
+              :placeholder="$t('promotion.all_branches')"
+            />
+            <small class="text-muted">{{ $t('promotion.branches_hint') }}</small>
+          </div>
+        </div>
         <div class="form-group">
           <div class="row">
             <div class="col-md-12">
@@ -216,8 +238,11 @@ const props = defineProps({
   defaultImage: { type: String, default: 'https://dummyimage.com/600x300/cfcfcf/000000.png' },
 
   services: { type: Array, default: () => [] },
+  branches: { type: Array, default: () => [] },
   categories: { type: Array, default: () => [] }
 })
+
+const branchOptions = computed(() => props.branches.map((branch) => ({ value: Number(branch.id), label: branch.name })))
 
 const multiSelectOption = ref({
   mode: 'tags',
@@ -337,6 +362,7 @@ const defaultData = () => {
     description: '',
     category_id: null,
     services: [],
+    branch_ids: [],
     specific_dates: [],
     start_date_time: new Date().toJSON().slice(0, 10),
     end_date_time: new Date(new Date().setDate(new Date().getDate() + 1)).toJSON().slice(0, 10),
@@ -430,6 +456,17 @@ const setFormData = (data) => {
     }
   }
 
+  // Parse branch_ids (empty = all branches)
+  let parsedBranchIds = []
+  if (firstCoupon.branch_ids) {
+    try {
+      const raw = typeof firstCoupon.branch_ids === 'string' ? JSON.parse(firstCoupon.branch_ids) : firstCoupon.branch_ids
+      parsedBranchIds = Array.isArray(raw) ? raw.map((id) => Number(id)).filter((id) => id > 0) : []
+    } catch (e) {
+      parsedBranchIds = []
+    }
+  }
+
   isSyncingCategoryFilter.value = true
 
   // Set the specificDatesRaw for flat-pickr
@@ -441,6 +478,7 @@ const setFormData = (data) => {
       description: data.description || '',
       category_id: derivedCategoryId,
       services: parsedServices,
+      branch_ids: parsedBranchIds,
       specific_dates: parsedSpecificDates,
       start_date_time: data.start_date_time,
       end_date_time: data.end_date_time,
@@ -541,6 +579,7 @@ const { handleSubmit, errors, resetForm } = useForm({
 const { value: name } = useField('name')
 const { value: category_id } = useField('category_id')
 const { value: services } = useField('services')
+const { value: branch_ids } = useField('branch_ids')
 const { value: description } = useField('description')
 const { value: start_date_time } = useField('start_date_time')
 const { value: end_date_time } = useField('end_date_time')
@@ -639,6 +678,7 @@ const formSubmit = handleSubmit((values) => {
   const cleanValues = {
     ...values,
     services: JSON.stringify(Array.isArray(values.services) ? values.services : []),
+    branch_ids: JSON.stringify(Array.isArray(values.branch_ids) ? values.branch_ids : []),
     specific_dates: JSON.stringify(Array.isArray(values.specific_dates) ? values.specific_dates : []),
     description: values.description || '',
     name: values.name || '',

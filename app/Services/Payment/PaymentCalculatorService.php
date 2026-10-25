@@ -110,6 +110,11 @@ class PaymentCalculatorService
                 return ['error' => __('messages.invalid_coupon')];
             }
 
+            // Branch-restricted coupons: every booking being paid must be in an allowed branch.
+            if (! $coupon->appliesToAllBranches($services->pluck('branch_id'))) {
+                return ['error' => __('messages.invalid_coupon')];
+            }
+
             $couponDiscount = $coupon->discount_type === 'percent'
                 ? ($grossTotal * $coupon->discount_percentage) / 100
                 : $coupon->discount_amount;

@@ -88,6 +88,13 @@ class PromotionsController extends Controller
                 ];
             });
 
+        $branches = \App\Models\Branch::orderBy('id')->get()->map(function ($branch) use ($resolveName) {
+            return [
+                'id' => $branch->id,
+                'name' => $resolveName($branch->name, 'Branch ' . $branch->id),
+            ];
+        });
+
         $export_import = true;
         $export_columns = [
             [
@@ -107,7 +114,7 @@ class PromotionsController extends Controller
 
         $export_url = route('backend.promotions.export');
 
-        return view('promotion::backend.promotions.index_datatable', compact('module_action', 'filter', 'columns', 'services', 'categories', 'customefield', 'export_import', 'export_columns', 'export_url'));
+        return view('promotion::backend.promotions.index_datatable', compact('module_action', 'filter', 'columns', 'services', 'categories', 'branches', 'customefield', 'export_import', 'export_columns', 'export_url'));
     }
 
     /**
@@ -308,6 +315,7 @@ class PromotionsController extends Controller
         // $couponData['services'] = json_encode($request->services);
         $couponData['services'] = is_string($request->services) ? json_decode($request->services, true) : $request->services;
         $couponData['specific_dates'] = is_string($request->specific_dates) ? json_decode($request->specific_dates, true) : $request->specific_dates;
+        $couponData['branch_ids'] = $this->normalizeBranchIds($request->input('branch_ids'));
 
         if ($request->coupon_type == 'custom') {
             $couponData['coupon_type'] = $request->coupon_type;
@@ -324,6 +332,20 @@ class PromotionsController extends Controller
         $message = 'New Promotion Added';
 
         return response()->json(['message' => $message, 'status' => true], 200);
+    }
+
+    /** Accepts an array or JSON string of branch ids; an empty result means "all branches". */
+    private function normalizeBranchIds($value): array
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', $value))));
     }
 
     protected function createCoupon($data)
@@ -376,6 +398,11 @@ class PromotionsController extends Controller
 
         if ($request->has('specific_dates')) {
             $couponData['specific_dates'] = is_string($request->specific_dates) ? json_decode($request->specific_dates, true) : $request->specific_dates;
+        }
+
+        if ($request->has('branch_ids')) {
+            // Mass update() bypasses model casts, so encode the JSON column ourselves.
+            $couponData['branch_ids'] = json_encode($this->normalizeBranchIds($request->input('branch_ids')));
         }
 
         if ($coupon && $coupon->used_by == null) {
@@ -445,6 +472,17 @@ class PromotionsController extends Controller
         }
 
         $coupon->syncExpiredState();
+
+        // Branch-restricted coupon: validate against the booking being paid.
+        if ($coupon->isRestrictedToBranches()) {
+            $branchId = $request->filled('booking_id')
+                ? \Modules\Booking\Models\Booking::where('id', $request->booking_id)->value('branch_id')
+                : null;
+
+            if (! $coupon->appliesToBranch($branchId ? (int) $branchId : null)) {
+                return ['valid' => false, 'message' => __('promotion.coupon_not_valid_for_branch'), 'status' => false];
+            }
+        }
 
         $servicePrice = $request->service_price;
 

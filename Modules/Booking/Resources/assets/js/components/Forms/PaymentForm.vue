@@ -168,7 +168,7 @@ const submitPayment = () => {
 const isCouponApplied = ref(false)
 
 const couponValidate = () => {
-  const coupon = { coupon_code: data.coupon_code,service_price:data.booking_amount }
+  const coupon = { coupon_code: data.coupon_code,service_price:data.booking_amount, booking_id: props.bookingId }
   updateRequest({ url: coupon_validate, body: coupon }).then((res) => {
     if (res.status) {
       data.coupon_code = res.data.coupon_code

@@ -90,6 +90,10 @@ class BookingsController extends Controller
 
             $coupon_data->syncExpiredState();
 
+            if (! $coupon_data->appliesToBranch(! empty($data['branch_id']) ? (int) $data['branch_id'] : null)) {
+                return response()->json(['message' => __('promotion.coupon_not_valid_for_branch'), 'status' => false], 200);
+            }
+
             $totalPrice = 0;
 
             // Calculate the total price based on services or packages

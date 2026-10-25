@@ -31,4 +31,8 @@ return [
     'specific_dates' => 'Specific Dates',
     'specific_dates_hint' => 'Select specific days when the coupon can be used. Leave empty to allow usage on any day.',
 
+    'lbl_branches' => 'Branches',
+    'all_branches' => 'All branches',
+    'branches_hint' => 'Leave empty to apply the code to all branches, or select one or more branches.',
+    'coupon_not_valid_for_branch' => 'This coupon is not valid for this branch.',
 ];

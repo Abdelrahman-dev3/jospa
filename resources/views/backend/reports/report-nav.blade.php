@@ -2,6 +2,12 @@
     $currentRoute = Route::currentRouteName();
     $reports = [
         [
+            'route' => 'backend.reports.comprehensive-report',
+            'title' => __('full_report.title'),
+            'icon' => 'fa-solid fa-chart-pie',
+            'badge' => null
+        ],
+        [
             'route' => 'backend.reports.sales-by-date',
             'title' => __('report.title_sales_report'),
             'icon' => 'fa-solid fa-chart-line',
@@ -79,7 +85,9 @@
                 </a>
             @endforeach
             <div class="ms-auto ps-2">
-                @include('backend.reports.excel-export')
+                @if (empty($hideExport))
+                    @include('backend.reports.excel-export')
+                @endif
             </div>
         </div>
     </div>
