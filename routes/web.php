@@ -386,6 +386,8 @@
     });
 
     Route::middleware(['auth'])->group(function () {
+        Route::get('/booking/{bookingId}/review', [\App\Http\Controllers\BookingReviewController::class, 'start'])->whereNumber('bookingId')->name('booking-review.start');
+
         Route::controller(GiftController::class)->group(function () {
             Route::get('/app/gift', 'index')->name('app.gift');
             Route::get('/validate-gift-code', 'validateGiftCode');

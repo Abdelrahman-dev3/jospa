@@ -13,6 +13,21 @@ use Illuminate\Http\Request;
  */
 class BookingReviewController extends Controller
 {
+    /**
+     * Entry point from the customer account: only the owner of a completed, paid booking
+     * can open (and lazily create) the review for it.
+     */
+    public function start(int $bookingId, BookingReviewService $service)
+    {
+        $booking = \Modules\Booking\Models\Booking::getCompletedBookings(auth()->id())->firstWhere('id', $bookingId);
+
+        abort_unless($booking, 404);
+
+        $review = $service->firstOrCreateForBooking($booking);
+
+        return redirect()->route('booking-review.show', $review->token);
+    }
+
     public function show(string $token)
     {
         $review = BookingReview::where('token', $token)->firstOrFail();

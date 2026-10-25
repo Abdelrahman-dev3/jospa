@@ -115,7 +115,12 @@ class ProfileController extends Controller
     {
         $bookings = Booking::getCompletedBookings(auth()->id());
 
-        return view('frontend.account.bookings.completed', compact('bookings'));
+        $reviewedBookingIds = \App\Models\BookingReview::whereIn('booking_id', $bookings->pluck('id'))
+            ->where('status', \App\Models\BookingReview::STATUS_COMPLETED)
+            ->pluck('booking_id')
+            ->all();
+
+        return view('frontend.account.bookings.completed', compact('bookings', 'reviewedBookingIds'));
     }
 
     public function complateGift()

@@ -170,7 +170,7 @@ class UserNotificationService
     /**
      * Invitation to review a finished service.
      */
-    public function notifyReviewRequested(User $user, AppModelsBookingReview $review): void
+    public function notifyReviewRequested(User $user, \App\Models\BookingReview $review): void
     {
         $this->send($user, [
             'type' => 'review_requested',
@@ -184,7 +184,7 @@ class UserNotificationService
     /**
      * Confirmation that the review was received.
      */
-    public function notifyReviewReceived(User $user, AppModelsBookingReview $review): void
+    public function notifyReviewReceived(User $user, \App\Models\BookingReview $review): void
     {
         $this->send($user, [
             'type' => 'review_received',

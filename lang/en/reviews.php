@@ -30,4 +30,7 @@ return [
     'date' => 'Date',
     'average' => 'Average',
     'empty' => 'No reviews yet.',
+    'rate_column' => 'Review',
+    'rate_now' => 'Rate your experience',
+    'rated' => 'Rated',
 ];

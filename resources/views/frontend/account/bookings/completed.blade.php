@@ -36,6 +36,7 @@
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('messages.branch') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('profile.date') }}</th>
                 <th style="padding:16px 20px;font-weight:bold;">{{ __('profile.time') }}</th>
+                <th style="padding:16px 20px;font-weight:bold;">{{ __('reviews.rate_column') }}</th>
             </tr> 
           </thead>
           <tbody>
@@ -61,6 +62,15 @@
                   </td>
                   <td>
                     {{ \Carbon\Carbon::parse($booking->start_date_time)->format('H:i') }}
+                  </td>
+                  <td>
+                    @if ($loop->first)
+                      @if (in_array($booking->id, $reviewedBookingIds, true))
+                        <span class="text-success"><i class="bi bi-check-circle"></i> {{ __('reviews.rated') }}</span>
+                      @else
+                        <a href="{{ route('booking-review.start', $booking->id) }}" class="btn btn-sm btn-warning">{{ __('reviews.rate_now') }}</a>
+                      @endif
+                    @endif
                   </td>
                 </tr>
                 @endforeach
