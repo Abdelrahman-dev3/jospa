@@ -390,6 +390,79 @@ class JavnaWhatsAppService
         return $sent;
     }
 
+    /**
+     * Send an interactive LIST message (WhatsApp limits: body 1024 chars, button label 20,
+     * up to 10 rows, row title 24). A list is used instead of reply buttons because reply
+     * buttons are capped at 3 and our questions have 4 options.
+     * Interactive messages only deliver inside the 24h customer-service window.
+     *
+     * @param array<int, array{id: string, title: string}> $rows
+     */
+    public function sendInteractiveList(string $phone, string $body, string $buttonLabel, array $rows): bool
+    {
+        $this->lastAcceptedMessage = null;
+
+        if (! $this->isEnabled()) {
+            return false;
+        }
+
+        $normalizedPhone = $this->normalizePhoneForWhatsApp($phone);
+        if ($normalizedPhone === null || $rows === [] || count($rows) > 10) {
+            return false;
+        }
+
+        $sender = trim((string) config('services.javna.whatsapp_sender', ''));
+        $rows = array_map(fn ($row) => [
+            'id' => (string) $row['id'],
+            'title' => mb_substr((string) $row['title'], 0, 24),
+        ], $rows);
+        $buttonLabel = mb_substr($buttonLabel, 0, 20);
+        $body = mb_substr($body, 0, 1024);
+
+        $candidates = [
+            'interactive_list_messages_destinations' => [
+                'messages' => [[
+                    'from' => $sender,
+                    'destinations' => [$normalizedPhone],
+                    'content' => [
+                        'body' => ['text' => $body],
+                        'action' => [
+                            'title' => $buttonLabel,
+                            'sections' => [['title' => $buttonLabel, 'rows' => $rows]],
+                        ],
+                    ],
+                ]],
+            ],
+            'interactive_list_messages_to' => [
+                'messages' => [[
+                    'from' => $sender,
+                    'to' => $normalizedPhone,
+                    'content' => [
+                        'body' => ['text' => $body],
+                        'action' => [
+                            'title' => $buttonLabel,
+                            'sections' => [['title' => $buttonLabel, 'rows' => $rows]],
+                        ],
+                    ],
+                ]],
+            ],
+        ];
+
+        $path = trim((string) config('services.javna.whatsapp_interactive_list_path', '/whatsapp/v1.0/message/interactive/list'));
+
+        return $this->deliverPayloadCandidates(
+            endpoint: rtrim((string) config('services.javna.whatsapp_api_url'), '/') . '/' . ltrim($path, '/'),
+            apiToken: (string) config('services.javna.whatsapp_api_token'),
+            timeout: (int) config('services.javna.whatsapp_timeout', 15),
+            phone: $normalizedPhone,
+            payloadCandidates: $candidates,
+            successLogMessage: 'Outbound WhatsApp interactive list sent successfully.',
+            rejectedLogMessage: 'WhatsApp provider rejected outbound interactive list payload.',
+            exceptionLogMessage: 'Failed to send outbound WhatsApp interactive list.',
+            finalErrorLogMessage: 'All outbound WhatsApp interactive list payload styles failed.'
+        );
+    }
+
     public function getLastAcceptedMessage(): ?array
     {
         return $this->lastAcceptedMessage;

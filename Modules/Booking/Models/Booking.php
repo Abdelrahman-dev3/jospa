@@ -387,7 +387,7 @@ class Booking extends BaseModel
     protected static function booted()
     {
         static::updated(function ($booking) {
-            if ($booking->isDirty('status') && in_array($booking->status, ['checkout', 'check_out'])) {
+            if ($booking->isDirty('status') && in_array($booking->status, ['checkout', 'check_out', 'completed'])) {
                 try {
                     \App\Jobs\SendPostServiceEvaluationWhatsAppJob::dispatch($booking->id)->delay(now()->addMinutes(10));
                 } catch (\Throwable $e) {

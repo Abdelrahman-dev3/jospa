@@ -499,4 +499,5 @@ return [
     'value_must_be_positive' => 'يجب أن تكون القيمة أكبر من صفر.',
     'value_exceeds_maximum' => 'القيمة تتجاوز الحد الأقصى المسموح به.',
     'currency_value_required' => 'قيمة العملة مطلوبة.',
+    'review_loyalty_points' => 'نقاط الولاء مقابل التقييم',
 ];

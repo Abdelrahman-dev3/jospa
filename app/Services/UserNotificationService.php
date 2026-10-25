@@ -168,6 +168,34 @@ class UserNotificationService
     }
 
     /**
+     * Invitation to review a finished service.
+     */
+    public function notifyReviewRequested(User $user, AppModelsBookingReview $review): void
+    {
+        $this->send($user, [
+            'type' => 'review_requested',
+            'title' => __('notifications.review_requested_title'),
+            'message' => __('notifications.review_requested_message'),
+            'url' => route('booking-review.show', $review->token),
+            'icon' => 'default',
+        ]);
+    }
+
+    /**
+     * Confirmation that the review was received.
+     */
+    public function notifyReviewReceived(User $user, AppModelsBookingReview $review): void
+    {
+        $this->send($user, [
+            'type' => 'review_received',
+            'title' => __('notifications.review_received_title'),
+            'message' => __('notifications.review_received_message'),
+            'url' => '/',
+            'icon' => 'default',
+        ]);
+    }
+
+    /**
      * Internal method to dispatch the notification safely.
      */
     protected function send(User $user, array $data): void

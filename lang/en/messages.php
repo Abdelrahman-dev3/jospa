@@ -493,4 +493,5 @@ return [
     'value_must_be_positive' => 'Value must be positive.',
     'value_exceeds_maximum' => 'Exceeds the maximum allowed value.',
     'currency_value_required' => 'Currency value is required.',
+    'review_loyalty_points' => 'Loyalty points per review',
 ];

@@ -98,6 +98,15 @@ return [
         'whatsapp_booking_update_template_name' => env('JAVNA_WHATSAPP_BOOKING_UPDATE_TEMPLATE_NAME', 'jospa_appointment_update'),
         'whatsapp_booking_cancel_template_name' => env('JAVNA_WHATSAPP_BOOKING_CANCEL_TEMPLATE_NAME', 'jospa_appointment_cancel'),
         'whatsapp_booking_reminder_template_name' => env('JAVNA_WHATSAPP_BOOKING_REMINDER_TEMPLATE_NAME', 'jospa_appointment_reminder'),
+        // Review request template (quick-reply button "قيّمي تجربتكِ الآن"). Must be approved in Meta first.
+        'whatsapp_review_request_template_name' => env('JAVNA_WHATSAPP_REVIEW_REQUEST_TEMPLATE_NAME', 'jospa_review_request'),
+        // How review questions are sent after the customer taps the start button:
+        // 'template' (one approved template per question) or 'list' (interactive list message).
+        'whatsapp_review_question_mode' => env('JAVNA_WHATSAPP_REVIEW_QUESTION_MODE', 'template'),
+        'whatsapp_review_question_1_template_name' => env('JAVNA_WHATSAPP_REVIEW_Q1_TEMPLATE_NAME', 'jospa_review_q1'),
+        'whatsapp_review_question_2_template_name' => env('JAVNA_WHATSAPP_REVIEW_Q2_TEMPLATE_NAME', 'jospa_review_q2'),
+        'whatsapp_review_question_3_template_name' => env('JAVNA_WHATSAPP_REVIEW_Q3_TEMPLATE_NAME', 'jospa_review_q3'),
+        'whatsapp_interactive_list_path' => env('JAVNA_WHATSAPP_INTERACTIVE_LIST_PATH', '/whatsapp/v1.0/message/interactive/list'),
         'whatsapp_evaluation_template_name' => env('JAVNA_WHATSAPP_EVALUATION_TEMPLATE_NAME', 'post_service__evaluation'),
     ],
 

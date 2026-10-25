@@ -58,4 +58,8 @@ return [
     'days_ago' => ':days days ago',
     'unread' => 'Unread',
     'all' => 'All',
+    'review_requested_title' => 'Rate your experience',
+    'review_requested_message' => 'We value your opinion! Rate your service now and earn points 🎁',
+    'review_received_title' => 'Review received',
+    'review_received_message' => 'Thank you for sharing your feedback 🤍',
 ];

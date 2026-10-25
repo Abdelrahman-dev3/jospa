@@ -86,6 +86,10 @@
         Route::get('/tamara/failure', [TamaraPaymentStrategy::class, 'failure'])->name('tamara.failure');
         Route::get('/tamara/cancel', [TamaraPaymentStrategy::class, 'cancel'])->name('tamara.cancel');
     });
+    // Customer review form (token-protected, no login)
+    Route::get('/review/{token}', [\App\Http\Controllers\BookingReviewController::class, 'show'])->middleware('throttle:30,1')->name('booking-review.show');
+    Route::post('/review/{token}', [\App\Http\Controllers\BookingReviewController::class, 'store'])->middleware('throttle:10,1')->name('booking-review.store');
+
     Route::get('/payment/hyperpay/checkout', [CardPaymentStrategy::class, 'checkout'])->name('hyperpay.checkout');
     Route::get('/payment/callback', [CardPaymentStrategy::class, 'callback'])->name('hyperpay.callback');
     Route::match(['get', 'post'], '/payment/hyperpay/result', [CardPaymentStrategy::class, 'callbackPlain'])->name('hyperpay.callback.plain');
@@ -395,6 +399,11 @@
 
         Route::controller(PaymentAttemptController::class)->group(function () {
             Route::get('/app/payment-attempts', 'index')->name('backend.payment-attempts.index');
+        });
+
+        Route::controller(\App\Http\Controllers\Backend\BookingReviewsController::class)->group(function () {
+            Route::get('/app/booking-reviews', 'index')->name('backend.booking-reviews.index');
+            Route::get('/app/booking-reviews/{id}', 'show')->name('backend.booking-reviews.show')->whereNumber('id');
         });
 
         Route::controller(LoyaltyController::class)->group(function () {

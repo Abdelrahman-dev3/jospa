@@ -58,4 +58,8 @@ return [
     'days_ago' => 'منذ :days يوم',
     'unread' => 'غير مقروء',
     'all' => 'الكل',
+    'review_requested_title' => 'قيّمي تجربتكِ',
+    'review_requested_message' => 'يهمنا رأيكِ! قيّمي خدمتكِ الآن واحصلي على نقاط تُضاف إلى رصيدكِ 🎁',
+    'review_received_title' => 'تم استلام تقييمكِ',
+    'review_received_message' => 'شكرًا لمشاركتنا رأيكِ 🤍',
 ];

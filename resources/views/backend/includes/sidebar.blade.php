@@ -77,6 +77,15 @@
                 </li>
                 @endif
 
+                @hasPermission('view_booking_reviews')
+                <li class="nav-item {{ request()->routeIs('backend.booking-reviews.*') ? 'active' : '' }}">
+                    <a href="{{ route('backend.booking-reviews.index') }}" class="nav-link {{ request()->routeIs('backend.booking-reviews.*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-star"></i>
+                        <span class="item-name">{{ __('reviews.title') }}</span>
+                    </a>
+                </li>
+                @endhasPermission
+
                 @hasPermission('view_loyalty')
                 <li class="nav-item {{ request()->routeIs('app.loyalty') ? 'active' : '' }}">
                     <a href="{{ route('app.loyalty') }}" class="nav-link {{ request()->routeIs('app.loyalty') ? 'active' : '' }}">

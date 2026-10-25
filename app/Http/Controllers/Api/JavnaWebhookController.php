@@ -174,7 +174,70 @@ class JavnaWebhookController extends Controller
             }
         }
 
+        $this->handleReviewReply($payload, $messageId, $fromNumber);
+
         return response()->json(['status' => 'received']);
+    }
+
+    /**
+     * Route customer replies (review button / list answers / numbered text) to the review flow.
+     * Delivery-status events carry no reply content, so they fall through untouched.
+     */
+    private function handleReviewReply(array $payload, ?string $messageId, ?string $fromNumber): void
+    {
+        if (blank($fromNumber)) {
+            return;
+        }
+
+        $replyId = $this->firstValue($payload, [
+            'data.message.interactive.list_reply.id',
+            'data.message.interactive.button_reply.id',
+            'data.message.button.payload',
+            'data.interactive.list_reply.id',
+            'data.interactive.button_reply.id',
+            'data.listReply.id',
+            'data.buttonReply.id',
+            'data.reply.id',
+            'data.payload',
+            'message.interactive.list_reply.id',
+            'message.interactive.button_reply.id',
+            'results.0.message.id',
+            'results.0.message.payload',
+        ]);
+        $replyText = $this->firstValue($payload, [
+            'data.message.interactive.list_reply.title',
+            'data.message.interactive.button_reply.title',
+            'data.message.button.text',
+            'data.message.text.body',
+            'data.message.text',
+            'data.message.body',
+            'data.interactive.list_reply.title',
+            'data.interactive.button_reply.title',
+            'data.listReply.title',
+            'data.buttonReply.title',
+            'data.reply.title',
+            'data.text',
+            'data.body',
+            'data.content.text',
+            'message.text.body',
+            'message.text',
+            'results.0.message.text',
+            'results.0.message.title',
+        ]);
+
+        if (blank($replyId) && blank($replyText)) {
+            return;
+        }
+
+        try {
+            app(\App\Services\Review\BookingReviewService::class)
+                ->handleInbound($fromNumber, $messageId, $replyId, $replyText);
+        } catch (\Throwable $exception) {
+            Log::error('Failed to process WhatsApp review reply.', [
+                'message' => $exception->getMessage(),
+                'message_id' => $messageId,
+            ]);
+        }
     }
 
     private function verify(Request $request): JsonResponse
