@@ -1,4 +1,4 @@
-﻿@php
+@php
 use App\Models\GiftCard;
 @endphp
 @extends('backend.layouts.app')
@@ -445,102 +445,103 @@ use App\Models\GiftCard;
 
         {{-- ======= Ù†Ù…ÙˆØ°Ø¬ Ø§Ù„ÙÙ„Ø§ØªØ± Ø§Ù„Ù…ØªÙ‚Ø¯Ù…Ø© ======= --}}
         <form method="GET" action="" id="filterForm" class="invoice-filter">
-            {{-- ØµÙ 1: Ø¨Ø­Ø« Ø£Ø³Ø§Ø³ÙŠ --}}
+            {{-- صف 1: بحث أساسي --}}
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
-                    <label class="filter-label">Ø±Ù‚Ù… Ø§Ù„ÙØ§ØªÙˆØ±Ø©</label>
-                    <input type="number" name="invoice_id" class="form-control" placeholder="Ù…Ø«Ø§Ù„: 142" value="{{ request('invoice_id') }}">
+                    <label class="filter-label">رقم الفاتورة</label>
+                    <input type="number" name="invoice_id" class="form-control" placeholder="مثال: 142" value="{{ request('invoice_id') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">{{ __('booking.lbl_customer_name') }}</label>
-                    <input type="text" name="customer_name" class="form-control" placeholder="Ø§Ø³Ù… Ø§Ù„Ø¹Ù…ÙŠÙ„" value="{{ request('customer_name') }}">
+                    <label class="filter-label">اسم العميل</label>
+                    <input type="text" name="customer_name" class="form-control" placeholder="اسم العميل" value="{{ request('customer_name') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">{{ __('labels.mobile') }}</label>
+                    <label class="filter-label">رقم الجوال</label>
                     <input type="text" name="mobile" class="form-control" placeholder="05xxxxxxxx" value="{{ request('mobile') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">ØªØ§Ø±ÙŠØ® Ù…Ø­Ø¯Ø¯</label>
+                    <label class="filter-label">تاريخ محدد</label>
                     <input type="date" name="date" class="form-control" value="{{ request('date') }}">
                 </div>
             </div>
-            {{-- ØµÙ 2: Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØ§Ø±ÙŠØ® ÙˆØ§Ù„Ù…Ø¨Ù„Øº --}}
+            {{-- صف 2: نطاق التاريخ والمبلغ --}}
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
-                    <label class="filter-label">Ù…Ù† ØªØ§Ø±ÙŠØ®</label>
+                    <label class="filter-label">من تاريخ</label>
                     <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">Ø¥Ù„Ù‰ ØªØ§Ø±ÙŠØ®</label>
+                    <label class="filter-label">إلى تاريخ</label>
                     <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ù„Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ (Ø±ÙŠØ§Ù„)</label>
+                    <label class="filter-label">الحد الأدنى للإجمالي (ريال)</label>
                     <input type="number" step="0.01" name="min_total" class="form-control" placeholder="0.00" value="{{ request('min_total') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ (Ø±ÙŠØ§Ù„)</label>
+                    <label class="filter-label">الحد الأقصى للإجمالي (ريال)</label>
                     <input type="number" step="0.01" name="max_total" class="form-control" placeholder="9999.00" value="{{ request('max_total') }}">
                 </div>
             </div>
-            {{-- ØµÙ 3: ÙÙ„Ø§ØªØ± Ù…ØªÙ†ÙˆØ¹Ø© --}}
+            {{-- صف 3: فلاتر متنوعة --}}
             <div class="row g-2 mb-3">
                 <div class="col-md-3">
-                    <label class="filter-label">Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹</label>
+                    <label class="filter-label">طريقة الدفع</label>
                     <select name="payment_method" class="form-control">
-                        <option value="">-- Ø§Ù„ÙƒÙ„ --</option>
-                        <option value="card"   {{ request('payment_method') === 'card'   ? 'selected' : '' }}>Ø¨Ø·Ø§Ù‚Ø© (Card)</option>
-                        <option value="cash"   {{ request('payment_method') === 'cash'   ? 'selected' : '' }}>Ù†Ù‚Ø¯ÙŠ (Cash)</option>
-                        <option value="wallet" {{ request('payment_method') === 'wallet' ? 'selected' : '' }}>Ù…Ø­ÙØ¸Ø© (Wallet)</option>
-                        <option value="tabby"  {{ request('payment_method') === 'tabby'  ? 'selected' : '' }}>ØªØ§Ø¨ÙŠ (Tabby)</option>
-                        <option value="tamara" {{ request('payment_method') === 'tamara' ? 'selected' : '' }}>ØªÙ…Ø§Ø±Ø§ (Tamara)</option>
+                        <option value="">-- الكل --</option>
+                        <option value="card"   {{ request('payment_method') === 'card'   ? 'selected' : '' }}>بطاقة (Card)</option>
+                        <option value="cash"   {{ request('payment_method') === 'cash'   ? 'selected' : '' }}>نقدي (Cash)</option>
+                        <option value="wallet" {{ request('payment_method') === 'wallet' ? 'selected' : '' }}>محفظة (Wallet)</option>
+                        <option value="tabby"  {{ request('payment_method') === 'tabby'  ? 'selected' : '' }}>تابي (Tabby)</option>
+                        <option value="tamara" {{ request('payment_method') === 'tamara' ? 'selected' : '' }}>تمارا (Tamara)</option>
                         <option value="urpay"  {{ request('payment_method') === 'urpay'  ? 'selected' : '' }}>UrPay</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">Ù†ÙˆØ¹ Ø§Ù„ÙØ§ØªÙˆØ±Ø©</label>
+                    <label class="filter-label">نوع الفاتورة</label>
                     <select name="invoice_type" class="form-control">
-                        <option value="">-- Ø§Ù„ÙƒÙ„ --</option>
-                        <option value="booking" {{ request('invoice_type') === 'booking' ? 'selected' : '' }}>Ø­Ø¬ÙˆØ²Ø§Øª ÙÙ‚Ø·</option>
-                        <option value="gift"    {{ request('invoice_type') === 'gift'    ? 'selected' : '' }}>Ø¨Ø·Ø§Ù‚Ø§Øª Ù‡Ø¯Ø§ÙŠØ§ ÙÙ‚Ø·</option>
-                        <option value="product" {{ request('invoice_type') === 'product' ? 'selected' : '' }}>Ù…Ù†ØªØ¬Ø§Øª ÙÙ‚Ø·</option>
+                        <option value="">-- الكل --</option>
+                        <option value="booking" {{ request('invoice_type') === 'booking' ? 'selected' : '' }}>حجوزات فقط</option>
+                        <option value="gift"    {{ request('invoice_type') === 'gift'    ? 'selected' : '' }}>بطاقات هدايا فقط</option>
+                        <option value="product" {{ request('invoice_type') === 'product' ? 'selected' : '' }}>منتجات فقط</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ù„Ù„Ø®ØµÙ… (Ø±ÙŠØ§Ù„)</label>
+                    <label class="filter-label">الحد الأدنى للخصم (ريال)</label>
                     <input type="number" step="0.01" name="min_discount" class="form-control" placeholder="0.00" value="{{ request('min_discount') }}">
                 </div>
                 <div class="col-md-3">
                     <label class="filter-label">
                         <i class="fas fa-users" style="color:var(--teal);margin-inline-end:4px;"></i>
-                        Ø£ÙƒØ«Ø± Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø´Ø±Ø§Ø¡Ù‹ (â‰¥ X ÙØ§ØªÙˆØ±Ø©)
+                        أكثر العملاء شراءً (≥ X فاتورة)
                     </label>
-                    <input type="number" min="1" name="min_invoices_count" class="form-control" placeholder="Ù…Ø«Ø§Ù„: 3" value="{{ request('min_invoices_count') }}">
+                    <input type="number" min="1" name="min_invoices_count" class="form-control" placeholder="مثال: 3" value="{{ request('min_invoices_count') }}">
                 </div>
             </div>
-            {{-- ØµÙ 4: Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„ØªØ±ØªÙŠØ¨ ÙˆØ§Ù„Ø£Ø²Ø±Ø§Ø± --}}
+            {{-- صف 4: خيارات الترتيب والأزرار --}}
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label class="filter-label">Ø§Ù„ØªØ±ØªÙŠØ¨ Ø­Ø³Ø¨</label>
+                    <label class="filter-label">الترتيب حسب</label>
                     <select name="sort_by" class="form-control">
-                        <option value="created_at"    {{ request('sort_by') === 'created_at'    ? 'selected' : '' }}>ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡</option>
-                        <option value="final_total"   {{ request('sort_by') === 'final_total'   ? 'selected' : '' }}>Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ</option>
-                        <option value="discount_amount" {{ request('sort_by') === 'discount_amount' ? 'selected' : '' }}>Ø§Ù„Ø®ØµÙ…</option>
-                        <option value="id"            {{ request('sort_by') === 'id'            ? 'selected' : '' }}>Ø±Ù‚Ù… Ø§Ù„ÙØ§ØªÙˆØ±Ø©</option>
+                        <option value="created_at"              {{ request('sort_by') === 'created_at'              ? 'selected' : '' }}>تاريخ الإنشاء</option>
+                        <option value="customer_invoices_count" {{ request('sort_by') === 'customer_invoices_count' ? 'selected' : '' }}>العملاء الأكثر فواتير (الأكثر شراءً)</option>
+                        <option value="final_total"             {{ request('sort_by') === 'final_total'             ? 'selected' : '' }}>الإجمالي</option>
+                        <option value="discount_amount"         {{ request('sort_by') === 'discount_amount'         ? 'selected' : '' }}>الخصم</option>
+                        <option value="id"                      {{ request('sort_by') === 'id'                      ? 'selected' : '' }}>رقم الفاتورة</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="filter-label">Ø§Ù„Ø§ØªØ¬Ø§Ù‡</label>
+                    <label class="filter-label">الاتجاه</label>
                     <select name="sort_dir" class="form-control">
-                        <option value="desc" {{ request('sort_dir', 'desc') === 'desc' ? 'selected' : '' }}>ØªÙ†Ø§Ø²Ù„ÙŠ (Ø§Ù„Ø£Ø­Ø¯Ø«)</option>
-                        <option value="asc"  {{ request('sort_dir') === 'asc'  ? 'selected' : '' }}>ØªØµØ§Ø¹Ø¯ÙŠ (Ø§Ù„Ø£Ù‚Ø¯Ù…)</option>
+                        <option value="desc" {{ request('sort_dir', 'desc') === 'desc' ? 'selected' : '' }}>تنازلي (الأحدث)</option>
+                        <option value="asc"  {{ request('sort_dir') === 'asc'  ? 'selected' : '' }}>تصاعدي (الأقدم)</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="filter-label">Ù„Ù‡Ø§ ÙƒÙˆØ¨ÙˆÙ†ØŸ</label>
+                    <label class="filter-label">لها كوبون؟</label>
                     <select name="has_coupon" class="form-control">
-                        <option value="">Ø§Ù„ÙƒÙ„</option>
-                        <option value="1" {{ request('has_coupon') === '1' ? 'selected' : '' }}>Ù†Ø¹Ù… (Ù…Ø¹ ÙƒÙˆØ¨ÙˆÙ†)</option>
+                        <option value="">الكل</option>
+                        <option value="1" {{ request('has_coupon') === '1' ? 'selected' : '' }}>نعم (مع كوبون)</option>
                     </select>
                 </div>
                 <div class="col-md-5 d-flex gap-2 align-items-center justify-content-end flex-wrap">
@@ -553,8 +554,8 @@ use App\Models\GiftCard;
                     @hasPermission('view_invoice')
                     <a href="{{ route('app.invoice.export') . '?' . http_build_query(request()->except(['_token'])) }}"
                        class="btn btn-export px-4"
-                       title="ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ø§Ù„Ø¸Ø§Ù‡Ø±Ø© Ø¨Ø§Ù„ÙÙ„Ø§ØªØ± Ø§Ù„Ø­Ø§Ù„ÙŠØ©">
-                        <i class="fas fa-file-excel me-1"></i> ØªØ­Ù…ÙŠÙ„ Excel
+                       title="تحميل الفواتير الظاهرة بالفلاتر الحالية إلى ملف Excel">
+                        <i class="fas fa-file-excel me-1"></i> تحميل Excel
                     </a>
                     @endhasPermission
                 </div>

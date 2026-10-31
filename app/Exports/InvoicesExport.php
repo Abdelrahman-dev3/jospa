@@ -153,19 +153,30 @@ class InvoicesExport implements FromCollection, WithHeadings, WithStyles, WithCo
         // الترتيب
         $sortBy = $this->filters['sort_by'] ?? 'created_at';
         $sortDir = $this->filters['sort_dir'] ?? 'desc';
-        $allowedSorts = ['id', 'created_at', 'final_total', 'discount_amount'];
+        $allowedSorts = ['id', 'created_at', 'final_total', 'discount_amount', 'customer_invoices_count'];
         if (!in_array($sortBy, $allowedSorts)) {
             $sortBy = 'created_at';
         }
         $sortDir = in_array(strtolower($sortDir), ['asc', 'desc']) ? strtolower($sortDir) : 'desc';
 
-        $invoices = $query->orderBy($sortBy, $sortDir)->get();
+        if ($sortBy === 'customer_invoices_count') {
+            $invoices = $query->get();
+            // احسب عدد فواتير كل عميل
+            $userInvoiceCount = Invoice::select('user_id')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('user_id')
+                ->pluck('total', 'user_id');
 
-        // احسب عدد فواتير كل عميل دفعة واحدة
-        $userInvoiceCount = Invoice::select('user_id')
-            ->selectRaw('COUNT(*) as total')
-            ->groupBy('user_id')
-            ->pluck('total', 'user_id');
+            $invoices = $invoices->sortBy(function ($inv) use ($userInvoiceCount) {
+                return (int) ($userInvoiceCount[$inv->user_id] ?? 1);
+            }, SORT_REGULAR, $sortDir === 'desc')->values();
+        } else {
+            $invoices = $query->orderBy($sortBy, $sortDir)->get();
+            $userInvoiceCount = Invoice::select('user_id')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('user_id')
+                ->pluck('total', 'user_id');
+        }
 
         $rows = collect();
         $rowNum = 1;
@@ -260,6 +271,9 @@ class InvoicesExport implements FromCollection, WithHeadings, WithStyles, WithCo
 
         // تثبيت الرأس
         $sheet->freezePane('A2');
+
+        // تفعيل الفلاتر التلقائية داخل الإكسل على كافة الأعمدة
+        $sheet->setAutoFilter('A1:' . $highestCol . $highestRow);
 
         // ارتفاع الصفوف
         for ($row = 1; $row <= $highestRow; $row++) {

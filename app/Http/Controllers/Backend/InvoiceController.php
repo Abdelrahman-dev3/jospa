@@ -27,7 +27,25 @@ class InvoiceController extends Controller
 
         $this->applyFilters($query, $request);
 
-        $invoices = $query->orderBy('created_at', 'desc')->get();
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortDir = in_array(strtolower($request->get('sort_dir', 'desc')), ['asc', 'desc']) ? strtolower($request->get('sort_dir', 'desc')) : 'desc';
+
+        if ($sortBy === 'customer_invoices_count') {
+            $invoices = $query->get();
+            $userInvoiceCounts = Invoice::select('user_id')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('user_id')
+                ->pluck('total', 'user_id');
+
+            $invoices = $invoices->sortBy(function ($inv) use ($userInvoiceCounts) {
+                return (int) ($userInvoiceCounts[$inv->user_id] ?? 1);
+            }, SORT_REGULAR, $sortDir === 'desc')->values();
+        } elseif (in_array($sortBy, ['final_total', 'discount_amount', 'id'])) {
+            $invoices = $query->orderBy($sortBy, $sortDir)->get();
+        } else {
+            $invoices = $query->orderBy('created_at', $sortDir)->get();
+        }
+
         $invoices->each(function (Invoice $invoice) {
             $invoice->setAttribute('display_total', $this->resolveInvoiceDisplayTotal($invoice));
         });
