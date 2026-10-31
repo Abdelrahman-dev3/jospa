@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\JavnaWebhookController;
 use App\Http\Controllers\Api\LoyaltyController;
 use App\Http\Controllers\Api\MobileCartController;
 use App\Http\Controllers\Api\PackagesController;
+use App\Http\Controllers\Api\BranchPackagesController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\OuroffersController;
 use Modules\Service\Http\Controllers\Backend\API\ServiceController;
@@ -112,6 +113,13 @@ Route::prefix('branches')->group(function () {
         Route::post('{id}/assign', 'assign_update');
         Route::get('{id}/available-dates', 'getAvailableDates');
     });
+    Route::get('{id}/packages', [BranchPackagesController::class, 'branchPackages']);
+});
+
+Route::prefix('branch-packages')->controller(BranchPackagesController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('{id}', 'show');
+    Route::post('{id}/book', 'book')->middleware('auth:sanctum');
 });
 
 Route::controller(BranchController::class)->group(function () {
@@ -173,6 +181,7 @@ Route::controller(BranchController::class)->group(function () {
 });
 
 
+Route::get('/branch-gifts', [\App\Http\Controllers\BranchGiftController::class, 'branches']);
 Route::get('/branch-gift/{slug}', [\App\Http\Controllers\BranchGiftController::class, 'config']);
 
 Route::prefix('gift-cards')->group(function () {

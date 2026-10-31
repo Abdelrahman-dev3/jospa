@@ -136,6 +136,7 @@ class ComprehensiveReportController extends Controller
         return DB::table('booking_services')
             ->join('bookings', 'bookings.id', '=', 'booking_services.booking_id')
             ->whereNull('bookings.deleted_at')
+            ->whereNull('booking_services.deleted_at')
             ->whereBetween('bookings.start_date_time', [$from, $to])
             ->when($branchId, fn ($q) => $q->where('bookings.branch_id', $branchId))
             ->whereExists(function ($q) {

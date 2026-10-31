@@ -397,6 +397,7 @@
 
         Route::controller(InvoiceController::class)->group(function () {
             Route::get('/app/invoice', 'index')->name('app.invoice');
+            Route::get('/app/invoice/export', 'export')->name('app.invoice.export');
             Route::get('/invoices/{id}', 'destroy')->name('invoices.destroy');
         });
 

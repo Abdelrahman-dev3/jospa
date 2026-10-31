@@ -1,4 +1,4 @@
-@php
+﻿@php
 use App\Models\GiftCard;
 @endphp
 @extends('backend.layouts.app')
@@ -370,6 +370,40 @@ use App\Models\GiftCard;
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ===== فلاتر متقدمة ===== */
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--slate);
+            margin-bottom: 4px;
+            display: block;
+        }
+        .invoice-filter .form-control,
+        .invoice-filter select {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-size: 13px;
+            padding: 7px 10px;
+        }
+        .invoice-filter select {
+            cursor: pointer;
+        }
+        .btn-export {
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            color: #fff;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s ease;
+        }
+        .btn-export:hover {
+            opacity: 0.88;
+            color: #fff;
+        }
     </style>
 @endpush
 
@@ -409,20 +443,120 @@ use App\Models\GiftCard;
             </div>
         </div>
 
+        {{-- ======= Ù†Ù…ÙˆØ°Ø¬ Ø§Ù„ÙÙ„Ø§ØªØ± Ø§Ù„Ù…ØªÙ‚Ø¯Ù…Ø© ======= --}}
         <form method="GET" action="" id="filterForm" class="invoice-filter">
-            <div class="row">
-                <div class="col-md-3 mb-3 mb-md-0">
-                    <input type="text" name="customer_name" class="form-control" placeholder="{{ __('booking.lbl_customer_name') }}" value="{{ request('customer_name') }}">
+            {{-- ØµÙ 1: Ø¨Ø­Ø« Ø£Ø³Ø§Ø³ÙŠ --}}
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="filter-label">Ø±Ù‚Ù… Ø§Ù„ÙØ§ØªÙˆØ±Ø©</label>
+                    <input type="number" name="invoice_id" class="form-control" placeholder="Ù…Ø«Ø§Ù„: 142" value="{{ request('invoice_id') }}">
                 </div>
-                <div class="col-md-3 mb-3 mb-md-0">
-                    <input type="text" name="mobile" class="form-control" placeholder="{{ __('labels.mobile') }}" value="{{ request('mobile') }}">
+                <div class="col-md-3">
+                    <label class="filter-label">{{ __('booking.lbl_customer_name') }}</label>
+                    <input type="text" name="customer_name" class="form-control" placeholder="Ø§Ø³Ù… Ø§Ù„Ø¹Ù…ÙŠÙ„" value="{{ request('customer_name') }}">
                 </div>
-                <div class="col-md-3 mb-3 mb-md-0">
+                <div class="col-md-3">
+                    <label class="filter-label">{{ __('labels.mobile') }}</label>
+                    <input type="text" name="mobile" class="form-control" placeholder="05xxxxxxxx" value="{{ request('mobile') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">ØªØ§Ø±ÙŠØ® Ù…Ø­Ø¯Ø¯</label>
                     <input type="date" name="date" class="form-control" value="{{ request('date') }}">
                 </div>
-                <div class="col-md-3 d-flex justify-content-md-center align-items-center gap-2">
-                    <button type="submit" class="btn btn-primary">{{ __('messages.search') }}</button>
-                    <button type="button" id="resetButton" class="btn btn-secondary">{{ __('messages.reset') }}</button>
+            </div>
+            {{-- ØµÙ 2: Ù†Ø·Ø§Ù‚ Ø§Ù„ØªØ§Ø±ÙŠØ® ÙˆØ§Ù„Ù…Ø¨Ù„Øº --}}
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="filter-label">Ù…Ù† ØªØ§Ø±ÙŠØ®</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">Ø¥Ù„Ù‰ ØªØ§Ø±ÙŠØ®</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ù„Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ (Ø±ÙŠØ§Ù„)</label>
+                    <input type="number" step="0.01" name="min_total" class="form-control" placeholder="0.00" value="{{ request('min_total') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ Ù„Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ (Ø±ÙŠØ§Ù„)</label>
+                    <input type="number" step="0.01" name="max_total" class="form-control" placeholder="9999.00" value="{{ request('max_total') }}">
+                </div>
+            </div>
+            {{-- ØµÙ 3: ÙÙ„Ø§ØªØ± Ù…ØªÙ†ÙˆØ¹Ø© --}}
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <label class="filter-label">Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¯ÙØ¹</label>
+                    <select name="payment_method" class="form-control">
+                        <option value="">-- Ø§Ù„ÙƒÙ„ --</option>
+                        <option value="card"   {{ request('payment_method') === 'card'   ? 'selected' : '' }}>Ø¨Ø·Ø§Ù‚Ø© (Card)</option>
+                        <option value="cash"   {{ request('payment_method') === 'cash'   ? 'selected' : '' }}>Ù†Ù‚Ø¯ÙŠ (Cash)</option>
+                        <option value="wallet" {{ request('payment_method') === 'wallet' ? 'selected' : '' }}>Ù…Ø­ÙØ¸Ø© (Wallet)</option>
+                        <option value="tabby"  {{ request('payment_method') === 'tabby'  ? 'selected' : '' }}>ØªØ§Ø¨ÙŠ (Tabby)</option>
+                        <option value="tamara" {{ request('payment_method') === 'tamara' ? 'selected' : '' }}>ØªÙ…Ø§Ø±Ø§ (Tamara)</option>
+                        <option value="urpay"  {{ request('payment_method') === 'urpay'  ? 'selected' : '' }}>UrPay</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">Ù†ÙˆØ¹ Ø§Ù„ÙØ§ØªÙˆØ±Ø©</label>
+                    <select name="invoice_type" class="form-control">
+                        <option value="">-- Ø§Ù„ÙƒÙ„ --</option>
+                        <option value="booking" {{ request('invoice_type') === 'booking' ? 'selected' : '' }}>Ø­Ø¬ÙˆØ²Ø§Øª ÙÙ‚Ø·</option>
+                        <option value="gift"    {{ request('invoice_type') === 'gift'    ? 'selected' : '' }}>Ø¨Ø·Ø§Ù‚Ø§Øª Ù‡Ø¯Ø§ÙŠØ§ ÙÙ‚Ø·</option>
+                        <option value="product" {{ request('invoice_type') === 'product' ? 'selected' : '' }}>Ù…Ù†ØªØ¬Ø§Øª ÙÙ‚Ø·</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ø¯Ù†Ù‰ Ù„Ù„Ø®ØµÙ… (Ø±ÙŠØ§Ù„)</label>
+                    <input type="number" step="0.01" name="min_discount" class="form-control" placeholder="0.00" value="{{ request('min_discount') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="filter-label">
+                        <i class="fas fa-users" style="color:var(--teal);margin-inline-end:4px;"></i>
+                        Ø£ÙƒØ«Ø± Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ø´Ø±Ø§Ø¡Ù‹ (â‰¥ X ÙØ§ØªÙˆØ±Ø©)
+                    </label>
+                    <input type="number" min="1" name="min_invoices_count" class="form-control" placeholder="Ù…Ø«Ø§Ù„: 3" value="{{ request('min_invoices_count') }}">
+                </div>
+            </div>
+            {{-- ØµÙ 4: Ø®ÙŠØ§Ø±Ø§Øª Ø§Ù„ØªØ±ØªÙŠØ¨ ÙˆØ§Ù„Ø£Ø²Ø±Ø§Ø± --}}
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="filter-label">Ø§Ù„ØªØ±ØªÙŠØ¨ Ø­Ø³Ø¨</label>
+                    <select name="sort_by" class="form-control">
+                        <option value="created_at"    {{ request('sort_by') === 'created_at'    ? 'selected' : '' }}>ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡</option>
+                        <option value="final_total"   {{ request('sort_by') === 'final_total'   ? 'selected' : '' }}>Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ</option>
+                        <option value="discount_amount" {{ request('sort_by') === 'discount_amount' ? 'selected' : '' }}>Ø§Ù„Ø®ØµÙ…</option>
+                        <option value="id"            {{ request('sort_by') === 'id'            ? 'selected' : '' }}>Ø±Ù‚Ù… Ø§Ù„ÙØ§ØªÙˆØ±Ø©</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="filter-label">Ø§Ù„Ø§ØªØ¬Ø§Ù‡</label>
+                    <select name="sort_dir" class="form-control">
+                        <option value="desc" {{ request('sort_dir', 'desc') === 'desc' ? 'selected' : '' }}>ØªÙ†Ø§Ø²Ù„ÙŠ (Ø§Ù„Ø£Ø­Ø¯Ø«)</option>
+                        <option value="asc"  {{ request('sort_dir') === 'asc'  ? 'selected' : '' }}>ØªØµØ§Ø¹Ø¯ÙŠ (Ø§Ù„Ø£Ù‚Ø¯Ù…)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="filter-label">Ù„Ù‡Ø§ ÙƒÙˆØ¨ÙˆÙ†ØŸ</label>
+                    <select name="has_coupon" class="form-control">
+                        <option value="">Ø§Ù„ÙƒÙ„</option>
+                        <option value="1" {{ request('has_coupon') === '1' ? 'selected' : '' }}>Ù†Ø¹Ù… (Ù…Ø¹ ÙƒÙˆØ¨ÙˆÙ†)</option>
+                    </select>
+                </div>
+                <div class="col-md-5 d-flex gap-2 align-items-center justify-content-end flex-wrap">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-search me-1"></i>{{ __('messages.search') }}
+                    </button>
+                    <button type="button" id="resetButton" class="btn btn-secondary px-3">
+                        <i class="fas fa-undo me-1"></i>{{ __('messages.reset') }}
+                    </button>
+                    @hasPermission('view_invoice')
+                    <a href="{{ route('app.invoice.export') . '?' . http_build_query(request()->except(['_token'])) }}"
+                       class="btn btn-export px-4"
+                       title="ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ø§Ù„Ø¸Ø§Ù‡Ø±Ø© Ø¨Ø§Ù„ÙÙ„Ø§ØªØ± Ø§Ù„Ø­Ø§Ù„ÙŠØ©">
+                        <i class="fas fa-file-excel me-1"></i> ØªØ­Ù…ÙŠÙ„ Excel
+                    </a>
+                    @endhasPermission
                 </div>
             </div>
         </form>
@@ -624,13 +758,13 @@ use App\Models\GiftCard;
     </div>
 </div>
 <script>
-    document.getElementById('resetButton').addEventListener('click', function() {
-        document.querySelector('input[name="customer_name"]').value = '';
-        const mobileInput = document.querySelector('input[name="mobile"]');
-        if (mobileInput) mobileInput.value = '';
-        document.querySelector('input[name="date"]').value = '';
-        document.getElementById('filterForm').submit();
+    document.getElementById('resetButton').addEventListener('click', function () {
+        const form = document.getElementById('filterForm');
+        form.querySelectorAll('input').forEach(function (el) { el.value = ''; });
+        form.querySelectorAll('select').forEach(function (el) { el.selectedIndex = 0; });
+        form.submit();
     });
+
     function toggleInvoiceDetails(id) {
         const detailsDiv = document.getElementById(`invoice-details-${id}`);
         const card = document.getElementById(`invoice-card-${id}`);

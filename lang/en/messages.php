@@ -494,4 +494,18 @@ return [
     'value_exceeds_maximum' => 'Exceeds the maximum allowed value.',
     'currency_value_required' => 'Currency value is required.',
     'review_loyalty_points' => 'Loyalty points per review',
+
+    // Invoice Export
+    'export_invoices'          => 'Download Invoices Excel',
+    'invoice_id_filter'        => 'Invoice ID',
+    'date_from'                => 'Date From',
+    'date_to'                  => 'Date To',
+    'payment_method_filter'    => 'Payment Method',
+    'invoice_type_filter'      => 'Invoice Type',
+    'min_total_filter'         => 'Min Total',
+    'max_total_filter'         => 'Max Total',
+    'min_discount_filter'      => 'Min Discount',
+    'min_invoices_count_filter'=> 'Top Buyers (≥ X invoices)',
+    'has_coupon_filter'        => 'Has Coupon',
+    'sort_by_filter'           => 'Sort By',
 ];

@@ -500,4 +500,18 @@ return [
     'value_exceeds_maximum' => 'القيمة تتجاوز الحد الأقصى المسموح به.',
     'currency_value_required' => 'قيمة العملة مطلوبة.',
     'review_loyalty_points' => 'نقاط الولاء مقابل التقييم',
+
+    // تصدير الفواتير
+    'export_invoices'          => 'تحميل الفواتير Excel',
+    'invoice_id_filter'        => 'رقم الفاتورة',
+    'date_from'                => 'من تاريخ',
+    'date_to'                  => 'إلى تاريخ',
+    'payment_method_filter'    => 'طريقة الدفع',
+    'invoice_type_filter'      => 'نوع الفاتورة',
+    'min_total_filter'         => 'الحد الأدنى للإجمالي',
+    'max_total_filter'         => 'الحد الأقصى للإجمالي',
+    'min_discount_filter'      => 'الحد الأدنى للخصم',
+    'min_invoices_count_filter'=> 'أكثر العملاء شراءً (≥ X فاتورة)',
+    'has_coupon_filter'        => 'لها كوبون',
+    'sort_by_filter'           => 'الترتيب حسب',
 ];

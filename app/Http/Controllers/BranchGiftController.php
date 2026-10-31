@@ -29,6 +29,28 @@ class BranchGiftController extends Controller
         ]);
     }
 
+    /** Mobile API: branches that have the gifting page enabled (gives the app each slug). */
+    public function branches(): JsonResponse
+    {
+        $branches = Branch::query()
+            ->where('gift_page_enabled', true)
+            ->where('status', 1)
+            ->whereNotNull('gift_slug')
+            ->withCount(['giftBouquets as bouquets_count' => fn ($q) => $q->active()])
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Branch $branch) => [
+                'id' => $branch->id,
+                'name' => $branch->getTranslation('name', app()->getLocale(), true),
+                'slug' => $branch->gift_slug,
+                'min_amount' => (float) ($branch->gift_card_min_amount ?: 1),
+                'bouquets_count' => $branch->bouquets_count,
+            ])
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $branches]);
+    }
+
     /** Mobile API: branch gifting configuration and bouquets. */
     public function config(string $slug): JsonResponse
     {
