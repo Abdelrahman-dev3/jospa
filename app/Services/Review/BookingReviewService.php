@@ -20,19 +20,26 @@ use Modules\Booking\Models\BookingService;
 
 /**
  * Post-service review flow: request (WhatsApp template) -> 3 interactive questions
- * (WhatsApp or website form) -> one saved review -> loyalty points -> confirmation.
+ * (WhatsApp or website form) -> one saved review -> Google Maps click -> cashback.
  *
  * Idempotency rests on: one row per booking (unique booking_id), a row lock around
- * completion, the loyalty transaction keyed by (source, source_id) and deterministic
- * Odoo references, so retries/redeliveries can never duplicate a review or its points.
+ * completion, the WalletHistory keyed by booking_review_id, so retries/redeliveries
+ * can never duplicate a review or its cashback.
  */
 class BookingReviewService
 {
+    public const CASHBACK_AMOUNT = 50.0;
+    public const WALLET_SOURCE = 'booking_review';
     public const POINTS_SETTING_KEY = 'review_loyalty_points';
     public const LOYALTY_SOURCE = 'booking_review';
 
     public function __construct(private JavnaWhatsAppService $whatsApp)
     {
+    }
+
+    public function cashbackAmount(): float
+    {
+        return (float) Setting::get('review_wallet_cashback', self::CASHBACK_AMOUNT);
     }
 
     public function pointsPerReview(): int
@@ -319,18 +326,17 @@ class BookingReviewService
     }
 
     /* ------------------------------------------------------------------ *
-     | 4. Completion: save once, award points once
+     | 4. Completion: save answers, do NOT award cashback yet
      * ------------------------------------------------------------------ */
 
     /**
      * Finalize a review. Returns the review when THIS call completed it, null when it was
      * already completed (or no longer answerable) — so side effects run exactly once.
+     * Cashback is NOT awarded here — it is awarded only after the customer clicks Google Maps.
      */
     public function complete(BookingReview $review, string $source, array $answers = []): ?BookingReview
     {
-        $awardedPoints = 0;
-
-        $completed = DB::transaction(function () use ($review, $source, $answers, &$awardedPoints) {
+        $completed = DB::transaction(function () use ($review, $source, $answers) {
             $locked = BookingReview::lockForUpdate()->find($review->id);
             if (! $locked || $locked->isCompleted()) {
                 return null;
@@ -345,18 +351,11 @@ class BookingReviewService
             }
 
             $locked->fill([
-                'status' => BookingReview::STATUS_COMPLETED,
-                'source' => $source,
+                'status'       => BookingReview::STATUS_COMPLETED,
+                'source'       => $source,
                 'current_step' => ReviewQuestions::totalSteps(),
                 'completed_at' => now(),
             ]);
-
-            $points = $this->pointsPerReview();
-            if ($points > 0 && $this->awardPoints($locked, $points)) {
-                $locked->points_awarded = $points;
-                $locked->points_awarded_at = now();
-                $awardedPoints = $points;
-            }
 
             $locked->save();
 
@@ -367,39 +366,136 @@ class BookingReviewService
             return null;
         }
 
-        $this->afterCompletion($completed, $awardedPoints);
+        $this->afterCompletion($completed);
 
         return $completed;
     }
 
-    /** Runs inside the completion transaction. Returns false if points were already granted. */
-    private function awardPoints(BookingReview $review, int $points): bool
+    /* ------------------------------------------------------------------ *
+     | 5. Google Maps confirmation: award cashback once the customer clicks
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Called when the customer clicks the Google Maps link. Awards 50 SAR cashback
+     * once and sends the WhatsApp thank-you message. Safe to retry: idempotency via
+     * google_maps_clicked_at and WalletHistory booking_review_id uniqueness.
+     *
+     * Returns true when cashback was awarded, false when already done or review not completed.
+     */
+    public function confirmGoogleReview(BookingReview $review): bool
     {
-        $already = LoyaltyPointTransaction::where('source', self::LOYALTY_SOURCE)
-            ->where('source_id', $review->id)
+        if (! $review->isCompleted() || $review->google_maps_clicked_at) {
+            return false;
+        }
+
+        $awardedCashback = 0.0;
+
+        DB::transaction(function () use ($review, &$awardedCashback) {
+            $locked = BookingReview::lockForUpdate()->find($review->id);
+            if (! $locked || ! $locked->isCompleted() || $locked->google_maps_clicked_at) {
+                return;
+            }
+
+            $cashback = $this->cashbackAmount();
+            if ($cashback > 0 && $this->awardCashback($locked, $cashback)) {
+                $locked->points_awarded    = (int) $cashback;
+                $locked->points_awarded_at = now();
+                $awardedCashback           = $cashback;
+            }
+
+            $locked->google_maps_clicked_at = now();
+            $locked->save();
+        });
+
+        if ($awardedCashback > 0) {
+            $review->refresh();
+            $this->afterGoogleConfirm($review, $awardedCashback);
+        }
+
+        return true;
+    }
+
+    /** Deposits cashback into the customer's wallet once per review. */
+    private function awardCashback(BookingReview $review, float $amount): bool
+    {
+        if ($amount <= 0 || ! $review->user_id) {
+            return false;
+        }
+
+        $already = \Modules\Wallet\Models\WalletHistory::where('user_id', $review->user_id)
+            ->where('activity_type', 'deposit')
+            ->where('activity_data->booking_review_id', $review->id)
             ->exists();
+
         if ($already) {
             return false;
         }
 
-        $loyalty = LoyaltyPoint::where('user_id', $review->user_id)->lockForUpdate()->first()
-            ?? new LoyaltyPoint(['user_id' => $review->user_id, 'points' => 0]);
-        $loyalty->points = ($loyalty->points ?? 0) + $points;
-        $loyalty->save();
+        $user = User::find($review->user_id);
+        if (! $user) {
+            return false;
+        }
 
-        LoyaltyPointTransaction::create([
-            'user_id' => $review->user_id,
-            'action' => 'add',
-            'points' => $points,
-            'balance_after' => $loyalty->points,
-            'source' => self::LOYALTY_SOURCE,
-            'source_id' => $review->id,
+        $wallet = \Modules\Wallet\Models\Wallet::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'amount' => 0,
+                'title' => trim((string) ($user->first_name . ' ' . ($user->last_name ?? ''))),
+                'status' => 1,
+            ]
+        );
+
+        $wallet->increment('amount', $amount);
+
+        \Modules\Wallet\Models\WalletHistory::create([
+            'datetime'         => now(),
+            'user_id'          => $user->id,
+            'activity_type'    => 'deposit',
+            'activity_message' => 'كاش باك تقييم تجربة Jo Spa (' . number_format($amount, 2) . ' ريال)',
+            'activity_data'    => json_encode([
+                'booking_review_id'   => $review->id,
+                'booking_id'          => $review->booking_id,
+                'credit_debit_amount' => $amount,
+                'source'              => self::WALLET_SOURCE,
+            ]),
         ]);
 
         return true;
     }
 
-    private function afterCompletion(BookingReview $review, int $awardedPoints): void
+    private function afterCompletion(BookingReview $review): void
+    {
+        $user = User::find($review->user_id);
+        if (! $user) {
+            return;
+        }
+
+        app(UserNotificationService::class)->notifyReviewReceived($user, $review);
+
+        // Send WhatsApp message asking the customer to click Google Maps link to activate cashback
+        try {
+            $mobile = $user->mobile ?? null;
+            if ($mobile) {
+                $googleUrl = 'https://www.google.com/maps/place/%D8%AC%D9%88+%D8%B3%D8%A8%D8%A7%E2%80%AD/@24.7501491,46.6261178,16.93z/data=!4m8!3m7!1s0x3e2ee3b0cf2cf4b3:0xd9fc022701b9d604!8m2!3d24.7501398!4d46.6236843!9m1!1b1!16s%2Fg%2F11shgfzh4g?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D';
+                $confirmUrl = route('booking-review.google-confirm', $review->token);
+                $lines = [
+                    'شكرًا لإجابتكِ على أسئلة التقييم 🤍',
+                    '',
+                    'خطوة أخيرة لتفعيل 50 ريال كاش باك:',
+                    'قيّمينا على Google Maps من خلال الرابط التالي:',
+                    '',
+                    $confirmUrl,
+                    '',
+                    'بمجرد الضغط على الرابط، ستُضاف 50 ريال فورًا إلى محفظتكِ ✨',
+                ];
+                $this->whatsApp->sendText($mobile, implode("\n", $lines));
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to send Google Maps review link.', ['review_id' => $review->id, 'message' => $e->getMessage()]);
+        }
+    }
+
+    private function afterGoogleConfirm(BookingReview $review, float $awardedCashback): void
     {
         $user = User::find($review->user_id);
         if (! $user) {
@@ -407,11 +503,8 @@ class BookingReviewService
         }
 
         $notifier = app(UserNotificationService::class);
-        $notifier->notifyReviewReceived($user, $review);
-
-        if ($awardedPoints > 0) {
-            $notifier->notifyLoyaltyPointsAdded($user, $awardedPoints);
-            $this->reportPointsToOdoo($user, $review, $awardedPoints);
+        if ($awardedCashback > 0) {
+            $notifier->notifyWalletTopUp($user, $awardedCashback);
         }
 
         try {
@@ -421,45 +514,25 @@ class BookingReviewService
         }
     }
 
-    private function reportPointsToOdoo(User $user, BookingReview $review, int $points): void
-    {
-        if (blank($user->mobile)) {
-            return;
-        }
-
-        try {
-            $name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
-            app(OdooLoyaltyService::class)->adjust(
-                phone: $user->mobile,
-                operation: 'add',
-                points: $points,
-                reference: 'WEB-REVIEW-' . $review->id, // deterministic: a retry cannot add twice
-                note: 'Points earned for booking review #' . $review->booking_id,
-                name: $name !== '' ? $name : null,
-            );
-        } catch (\Throwable $e) {
-            Log::warning('Failed to report review points to Odoo.', ['review_id' => $review->id, 'error' => $e->getMessage()]);
-        }
-    }
-
     /**
-     * Thank-you WhatsApp message. Safe to retry: confirmation_sent_at is the idempotency flag.
+     * Thank-you WhatsApp message. Only sent after Google Maps click. Safe to retry.
      */
     public function sendConfirmation(BookingReview $review): bool
     {
         $review->refresh();
         $mobile = $review->user->mobile ?? null;
 
-        if (! $review->isCompleted() || $review->confirmation_sent_at || blank($mobile)) {
+        if (! $review->isCompleted() || ! $review->google_maps_clicked_at || $review->confirmation_sent_at || blank($mobile)) {
             return true;
         }
 
         $lines = ['تم استلام تقييمكِ بنجاح 🤍', ''];
-        $lines[] = $review->points_awarded > 0
-            ? 'شكرًا لوقتكِ ومشاركتنا رأيكِ، تمت إضافة نقاط التقييم إلى رصيدكِ ✨'
-            : 'شكرًا لوقتكِ ومشاركتنا رأيكِ ✨';
-        $lines[] = '';
-        $lines[] = 'نسعد بكِ دائمًا في عالم Jo Spa 🤍';
+        $cashback = (float) ($review->points_awarded ?: $this->cashbackAmount());
+        if ($cashback > 0) {
+            $lines[] = 'تمت إضافة ' . (int) $cashback . ' ريال كاش باك إلى محفظتكِ فورًا! ✨';
+            $lines[] = '';
+        }
+        $lines[] = 'شكرًا لثقتكِ بنا، نسعد دائمًا بأن نكون جزءًا من لحظات دلالكِ 🤍';
 
         if (! $this->whatsApp->sendText($mobile, implode("\n", $lines))) {
             return false;

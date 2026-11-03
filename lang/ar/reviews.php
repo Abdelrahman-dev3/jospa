@@ -5,7 +5,7 @@ return [
     'total' => 'إجمالي التقييمات',
     'avg_overall' => 'متوسط التجربة العامة',
     'avg_specialist' => 'متوسط أداء الأخصائية',
-    'avg_service' => 'متوسط جودة الخدمة',
+    'avg_service' => 'متوسط خدمة العملاء',
     'source_website' => 'الموقع الإلكتروني',
     'source_whatsapp' => 'الواتساب',
     'points_given' => 'نقاط الولاء الممنوحة',

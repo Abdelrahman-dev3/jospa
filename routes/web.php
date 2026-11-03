@@ -89,6 +89,7 @@
     // Customer review form (token-protected, no login)
     Route::get('/review/{token}', [\App\Http\Controllers\BookingReviewController::class, 'show'])->middleware('throttle:30,1')->name('booking-review.show');
     Route::post('/review/{token}', [\App\Http\Controllers\BookingReviewController::class, 'store'])->middleware('throttle:10,1')->name('booking-review.store');
+    Route::get('/review/{token}/google-confirm', [\App\Http\Controllers\BookingReviewController::class, 'googleConfirm'])->middleware('throttle:5,1')->name('booking-review.google-confirm');
 
     Route::get('/payment/hyperpay/checkout', [CardPaymentStrategy::class, 'checkout'])->name('hyperpay.checkout');
     Route::get('/payment/callback', [CardPaymentStrategy::class, 'callback'])->name('hyperpay.callback');

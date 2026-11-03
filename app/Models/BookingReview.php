@@ -20,6 +20,7 @@ class BookingReview extends Model
         'current_step', 'overall_rating', 'specialist_rating', 'service_rating', 'last_inbound_message_id',
         'request_sent_at', 'request_message_id', 'request_attempts', 'completed_at',
         'points_awarded', 'points_awarded_at', 'confirmation_sent_at',
+        'google_maps_clicked_at',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class BookingReview extends Model
         'completed_at' => 'datetime',
         'points_awarded_at' => 'datetime',
         'confirmation_sent_at' => 'datetime',
+        'google_maps_clicked_at' => 'datetime',
     ];
 
     public function booking()

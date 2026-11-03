@@ -5,7 +5,7 @@ return [
     'total' => 'Total reviews',
     'avg_overall' => 'Average overall experience',
     'avg_specialist' => 'Average specialist performance',
-    'avg_service' => 'Average service quality',
+    'avg_service' => 'Average customer service',
     'source_website' => 'Website',
     'source_whatsapp' => 'WhatsApp',
     'points_given' => 'Loyalty points given',
