@@ -4,7 +4,7 @@ use App\Models\GiftCard;
 @extends('backend.layouts.app')
 
 @section('title')
-{{ __($module_action) }} {{ __($module_title) }}
+{{ __('invoice.page_title') }}
 @endsection
 
 @push('after-styles')
@@ -419,25 +419,25 @@ use App\Models\GiftCard;
         <div class="invoice-hero">
             <div class="invoice-hero-grid">
                 <div>
-                    <h2>{{ __('messages.invoice_cards_list') }}</h2>
-                    <p>Track totals, discounts, and payment details in one place.</p>
+                    <h2>{{ __('invoice.page_title') }}</h2>
+                    <p>{{ __('invoice.hero_subtitle') }}</p>
                 </div>
                 <div class="hero-stats">
                     <div class="stat-card">
-                        <div class="stat-label">Invoices</div>
+                        <div class="stat-label">{{ __('invoice.invoices') }}</div>
                         <div class="stat-value">{{ $invoiceCount }}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Revenue</div>
-                        <div class="stat-value">{{ number_format($totalRevenue, 2) }} SR</div>
+                        <div class="stat-label">{{ __('invoice.revenue') }}</div>
+                        <div class="stat-value">{{ number_format($totalRevenue, 2) }} {{ __('invoice.currency') }}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Discounts</div>
-                        <div class="stat-value">{{ number_format($totalDiscount, 2) }} SR</div>
+                        <div class="stat-label">{{ __('invoice.discounts') }}</div>
+                        <div class="stat-value">{{ number_format($totalDiscount, 2) }} {{ __('invoice.currency') }}</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Tax & Service</div>
-                        <div class="stat-value">{{ number_format($totalTax, 2) }} SR</div>
+                        <div class="stat-label">{{ __('invoice.tax_service') }}</div>
+                        <div class="stat-value">{{ number_format($totalTax, 2) }} {{ __('invoice.currency') }}</div>
                     </div>
                 </div>
             </div>
@@ -448,100 +448,100 @@ use App\Models\GiftCard;
             {{-- صف 1: بحث أساسي --}}
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
-                    <label class="filter-label">رقم الفاتورة</label>
-                    <input type="number" name="invoice_id" class="form-control" placeholder="مثال: 142" value="{{ request('invoice_id') }}">
+                    <label class="filter-label">{{ __('invoice.invoice_number') }}</label>
+                    <input type="number" name="invoice_id" class="form-control" placeholder="{{ __('invoice.invoice_number_ph') }}" value="{{ request('invoice_id') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">اسم العميل</label>
-                    <input type="text" name="customer_name" class="form-control" placeholder="اسم العميل" value="{{ request('customer_name') }}">
+                    <label class="filter-label">{{ __('invoice.customer_name') }}</label>
+                    <input type="text" name="customer_name" class="form-control" placeholder="{{ __('invoice.customer_name') }}" value="{{ request('customer_name') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">رقم الجوال</label>
+                    <label class="filter-label">{{ __('invoice.mobile') }}</label>
                     <input type="text" name="mobile" class="form-control" placeholder="05xxxxxxxx" value="{{ request('mobile') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">تاريخ محدد</label>
+                    <label class="filter-label">{{ __('invoice.specific_date') }}</label>
                     <input type="date" name="date" class="form-control" value="{{ request('date') }}">
                 </div>
             </div>
             {{-- صف 2: نطاق التاريخ والمبلغ --}}
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
-                    <label class="filter-label">من تاريخ</label>
+                    <label class="filter-label">{{ __('invoice.date_from') }}</label>
                     <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">إلى تاريخ</label>
+                    <label class="filter-label">{{ __('invoice.date_to') }}</label>
                     <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">الحد الأدنى للإجمالي (ريال)</label>
+                    <label class="filter-label">{{ __('invoice.min_total') }}</label>
                     <input type="number" step="0.01" name="min_total" class="form-control" placeholder="0.00" value="{{ request('min_total') }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">الحد الأقصى للإجمالي (ريال)</label>
+                    <label class="filter-label">{{ __('invoice.max_total') }}</label>
                     <input type="number" step="0.01" name="max_total" class="form-control" placeholder="9999.00" value="{{ request('max_total') }}">
                 </div>
             </div>
             {{-- صف 3: فلاتر متنوعة --}}
             <div class="row g-2 mb-3">
                 <div class="col-md-3">
-                    <label class="filter-label">طريقة الدفع</label>
+                    <label class="filter-label">{{ __('invoice.payment_method') }}</label>
                     <select name="payment_method" class="form-control">
-                        <option value="">-- الكل --</option>
-                        <option value="card"   {{ request('payment_method') === 'card'   ? 'selected' : '' }}>بطاقة (Card)</option>
-                        <option value="cash"   {{ request('payment_method') === 'cash'   ? 'selected' : '' }}>نقدي (Cash)</option>
-                        <option value="wallet" {{ request('payment_method') === 'wallet' ? 'selected' : '' }}>محفظة (Wallet)</option>
-                        <option value="tabby"  {{ request('payment_method') === 'tabby'  ? 'selected' : '' }}>تابي (Tabby)</option>
-                        <option value="tamara" {{ request('payment_method') === 'tamara' ? 'selected' : '' }}>تمارا (Tamara)</option>
-                        <option value="urpay"  {{ request('payment_method') === 'urpay'  ? 'selected' : '' }}>UrPay</option>
+                        <option value="">{{ __('invoice.all_option') }}</option>
+                        <option value="card"   {{ request('payment_method') === 'card'   ? 'selected' : '' }}>{{ __('invoice.pm_card') }}</option>
+                        <option value="cash"   {{ request('payment_method') === 'cash'   ? 'selected' : '' }}>{{ __('invoice.pm_cash') }}</option>
+                        <option value="wallet" {{ request('payment_method') === 'wallet' ? 'selected' : '' }}>{{ __('invoice.pm_wallet') }}</option>
+                        <option value="tabby"  {{ request('payment_method') === 'tabby'  ? 'selected' : '' }}>{{ __('invoice.pm_tabby') }}</option>
+                        <option value="tamara" {{ request('payment_method') === 'tamara' ? 'selected' : '' }}>{{ __('invoice.pm_tamara') }}</option>
+                        <option value="urpay"  {{ request('payment_method') === 'urpay'  ? 'selected' : '' }}>{{ __('invoice.pm_urpay') }}</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">نوع الفاتورة</label>
+                    <label class="filter-label">{{ __('invoice.invoice_type') }}</label>
                     <select name="invoice_type" class="form-control">
-                        <option value="">-- الكل --</option>
-                        <option value="booking" {{ request('invoice_type') === 'booking' ? 'selected' : '' }}>حجوزات فقط</option>
-                        <option value="gift"    {{ request('invoice_type') === 'gift'    ? 'selected' : '' }}>بطاقات هدايا فقط</option>
-                        <option value="product" {{ request('invoice_type') === 'product' ? 'selected' : '' }}>منتجات فقط</option>
+                        <option value="">{{ __('invoice.all_option') }}</option>
+                        <option value="booking" {{ request('invoice_type') === 'booking' ? 'selected' : '' }}>{{ __('invoice.type_booking') }}</option>
+                        <option value="gift"    {{ request('invoice_type') === 'gift'    ? 'selected' : '' }}>{{ __('invoice.type_gift') }}</option>
+                        <option value="product" {{ request('invoice_type') === 'product' ? 'selected' : '' }}>{{ __('invoice.type_product') }}</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="filter-label">الحد الأدنى للخصم (ريال)</label>
+                    <label class="filter-label">{{ __('invoice.min_discount') }}</label>
                     <input type="number" step="0.01" name="min_discount" class="form-control" placeholder="0.00" value="{{ request('min_discount') }}">
                 </div>
                 <div class="col-md-3">
                     <label class="filter-label">
                         <i class="fas fa-users" style="color:var(--teal);margin-inline-end:4px;"></i>
-                        أكثر العملاء شراءً (≥ X فاتورة)
+                        {{ __('invoice.top_customers') }}
                     </label>
-                    <input type="number" min="1" name="min_invoices_count" class="form-control" placeholder="مثال: 3" value="{{ request('min_invoices_count') }}">
+                    <input type="number" min="1" name="min_invoices_count" class="form-control" placeholder="{{ __('invoice.top_customers_ph') }}" value="{{ request('min_invoices_count') }}">
                 </div>
             </div>
             {{-- صف 4: خيارات الترتيب والأزرار --}}
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label class="filter-label">الترتيب حسب</label>
+                    <label class="filter-label">{{ __('invoice.sort_by') }}</label>
                     <select name="sort_by" class="form-control">
-                        <option value="created_at"              {{ request('sort_by') === 'created_at'              ? 'selected' : '' }}>تاريخ الإنشاء</option>
-                        <option value="customer_invoices_count" {{ request('sort_by') === 'customer_invoices_count' ? 'selected' : '' }}>العملاء الأكثر فواتير (الأكثر شراءً)</option>
-                        <option value="final_total"             {{ request('sort_by') === 'final_total'             ? 'selected' : '' }}>الإجمالي</option>
-                        <option value="discount_amount"         {{ request('sort_by') === 'discount_amount'         ? 'selected' : '' }}>الخصم</option>
-                        <option value="id"                      {{ request('sort_by') === 'id'                      ? 'selected' : '' }}>رقم الفاتورة</option>
+                        <option value="created_at"              {{ request('sort_by') === 'created_at'              ? 'selected' : '' }}>{{ __('invoice.sort_created_at') }}</option>
+                        <option value="customer_invoices_count" {{ request('sort_by') === 'customer_invoices_count' ? 'selected' : '' }}>{{ __('invoice.sort_customer_count') }}</option>
+                        <option value="final_total"             {{ request('sort_by') === 'final_total'             ? 'selected' : '' }}>{{ __('invoice.sort_total') }}</option>
+                        <option value="discount_amount"         {{ request('sort_by') === 'discount_amount'         ? 'selected' : '' }}>{{ __('invoice.sort_discount') }}</option>
+                        <option value="id"                      {{ request('sort_by') === 'id'                      ? 'selected' : '' }}>{{ __('invoice.sort_id') }}</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="filter-label">الاتجاه</label>
+                    <label class="filter-label">{{ __('invoice.direction') }}</label>
                     <select name="sort_dir" class="form-control">
-                        <option value="desc" {{ request('sort_dir', 'desc') === 'desc' ? 'selected' : '' }}>تنازلي (الأحدث)</option>
-                        <option value="asc"  {{ request('sort_dir') === 'asc'  ? 'selected' : '' }}>تصاعدي (الأقدم)</option>
+                        <option value="desc" {{ request('sort_dir', 'desc') === 'desc' ? 'selected' : '' }}>{{ __('invoice.dir_desc') }}</option>
+                        <option value="asc"  {{ request('sort_dir') === 'asc'  ? 'selected' : '' }}>{{ __('invoice.dir_asc') }}</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="filter-label">لها كوبون؟</label>
+                    <label class="filter-label">{{ __('invoice.has_coupon') }}</label>
                     <select name="has_coupon" class="form-control">
-                        <option value="">الكل</option>
-                        <option value="1" {{ request('has_coupon') === '1' ? 'selected' : '' }}>نعم (مع كوبون)</option>
+                        <option value="">{{ __('invoice.all') }}</option>
+                        <option value="1" {{ request('has_coupon') === '1' ? 'selected' : '' }}>{{ __('invoice.with_coupon') }}</option>
                     </select>
                 </div>
                 <div class="col-md-5 d-flex gap-2 align-items-center justify-content-end flex-wrap">
@@ -554,8 +554,8 @@ use App\Models\GiftCard;
                     @hasPermission('view_invoice')
                     <a href="{{ route('app.invoice.export') . '?' . http_build_query(request()->except(['_token'])) }}"
                        class="btn btn-export px-4"
-                       title="تحميل الفواتير الظاهرة بالفلاتر الحالية إلى ملف Excel">
-                        <i class="fas fa-file-excel me-1"></i> تحميل Excel
+                       title="{{ __('invoice.export_title') }}">
+                        <i class="fas fa-file-excel me-1"></i> {{ __('invoice.export_excel') }}
                     </a>
                     @endhasPermission
                 </div>
@@ -590,7 +590,7 @@ use App\Models\GiftCard;
                     $gatewayAmount = (float) ($invoice->payment_gateway_discount_amount ?? 0);
                     $gatewayLabel = $invoice->payment_gateway_discount_label
                         ?: ($invoice->payment_gateway_discount_method ? ucfirst($invoice->payment_gateway_discount_method) : null);
-                    $couponLabel = $couponCode ?: ($couponAmount > 0 ? 'Applied' : '---');
+                    $couponLabel = $couponCode ?: ($couponAmount > 0 ? __('invoice.coupon_applied') : '---');
                 @endphp
 
                 <div class="invoice-card" id="invoice-card-{{ $invoice->id }}" onclick="toggleInvoiceDetails({{ $invoice->id }})">
@@ -601,11 +601,11 @@ use App\Models\GiftCard;
                             <div class="invoice-meta">{{ $invoice->created_at->format('Y-m-d H:i') }}</div>
                         </div>
                         <div class="invoice-total">
-                            <div class="amount">{{ number_format($invoice->display_total, 2) }} SR</div>
+                            <div class="amount">{{ number_format($invoice->display_total, 2) }} {{ __('invoice.currency') }}</div>
                             <div class="label">{{ __('messages.total') }}</div>
                         </div>
                         <div class="invoice-toggle">
-                            <span>Details</span>
+                            <span>{{ __('invoice.details') }}</span>
                             <span class="arrow">&#9660;</span>
                         </div>
                     </div>
@@ -639,15 +639,15 @@ use App\Models\GiftCard;
                                             </div>
                                         </div>
                                         <div class="line-amount">
-                                            {{ number_format($price, 2) }} SR
+                                            {{ number_format($price, 2) }} {{ __('invoice.currency') }}
                                             @if($discount > 0)
-                                                <div class="line-meta">{{ app()->getLocale() === 'ar' ? 'بعد خصم الخدمة' : 'After service discount' }}: {{ number_format($net, 2) }} SR</div>
+                                                <div class="line-meta">{{ __('invoice.after_service_discount') }}: {{ number_format($net, 2) }} {{ __('invoice.currency') }}</div>
                                             @endif
                                         </div>
                                     </div>
                                 @endforeach
                             @empty
-                                <div class="line-meta">No bookings linked.</div>
+                                <div class="line-meta">{{ __('invoice.no_bookings') }}</div>
                             @endforelse
                         </div>
 
@@ -658,7 +658,7 @@ use App\Models\GiftCard;
                                     <div>
                                         <div class="line-title">{{ $gift->sender_name }} -> {{ $gift->recipient_name }}</div>
                                         <div class="line-meta">{{ $gift->sender_phone }} | {{ $gift->recipient_phone }}</div>
-                                        <div class="line-meta">{{ __('messages.delivery_method') }}: {{ in_array($gift->delivery_method, ['electronic_card', 'email'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</div>
+                                        <div class="line-meta">{{ __('invoice.delivery_method') }}: {{ in_array($gift->delivery_method, ['electronic_card', 'email'], true) ? __('messagess.email_delivery') : __('messagess.traditional_gift_card') }}</div>
                                         @php
                                             $packageIds = json_decode($gift->package_ids, true);
                                         @endphp
@@ -682,15 +682,15 @@ use App\Models\GiftCard;
                                             </ul>
                                         @endif
                                     </div>
-                                    <div class="line-amount">{{ number_format($gift->subtotal ?? 0, 2) }} SR</div>
+                                    <div class="line-amount">{{ number_format($gift->subtotal ?? 0, 2) }} {{ __('invoice.currency') }}</div>
                                 </div>
                             @empty
-                                <div class="line-meta">No gift cards linked.</div>
+                                <div class="line-meta">{{ __('invoice.no_gift_cards') }}</div>
                             @endforelse
                         </div>
 
                         <div class="detail-card">
-                            <h5>Products</h5>
+                            <h5>{{ __('invoice.products') }}</h5>
                             @forelse($productItems as $item)
                                 @php
                                     $product = $item->product;
@@ -700,13 +700,13 @@ use App\Models\GiftCard;
                                 @endphp
                                 <div class="line-item">
                                     <div>
-                                        <div class="line-title">{{ $product->name ?? 'Product' }}</div>
-                                        <div class="line-meta">Qty: {{ $qty }} | Unit: {{ number_format($unit, 2) }} SR</div>
+                                        <div class="line-title">{{ $product->name ?? __('invoice.product') }}</div>
+                                        <div class="line-meta">{{ __('invoice.qty') }}: {{ $qty }} | {{ __('invoice.unit') }}: {{ number_format($unit, 2) }} {{ __('invoice.currency') }}</div>
                                     </div>
-                                    <div class="line-amount">{{ number_format($total, 2) }} SR</div>
+                                    <div class="line-amount">{{ number_format($total, 2) }} {{ __('invoice.currency') }}</div>
                                 </div>
                             @empty
-                                <div class="line-meta">No products linked.</div>
+                                <div class="line-meta">{{ __('invoice.no_products') }}</div>
                             @endforelse
                         </div>
                     </div>
@@ -718,14 +718,14 @@ use App\Models\GiftCard;
                         </div>
                         @if($serviceDiscountAmount > 0)
                             <div class="summary-row">
-                                <div>{{ app()->getLocale() === 'ar' ? 'خصم الخدمة' : 'Service Discount' }}</div>
-                                <div style="color: var(--rose);">- {{ number_format($serviceDiscountAmount, 2) }} SR</div>
+                                <div>{{ __('invoice.service_discount') }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($serviceDiscountAmount, 2) }} {{ __('invoice.currency') }}</div>
                             </div>
                         @endif
                         @if($gatewayAmount > 0)
                             <div class="summary-row">
-                                <div>{{ app()->getLocale() === 'ar' ? 'خصم بوابة الدفع' : 'Payment Gateway Discount' }}{{ $gatewayLabel ? ' (' . $gatewayLabel . ')' : '' }}</div>
-                                <div style="color: var(--rose);">- {{ number_format($gatewayAmount, 2) }} SR</div>
+                                <div>{{ __('invoice.gateway_discount') }}{{ $gatewayLabel ? ' (' . $gatewayLabel . ')' : '' }}</div>
+                                <div style="color: var(--rose);">- {{ number_format($gatewayAmount, 2) }} {{ __('invoice.currency') }}</div>
                             </div>
                         @endif
                         @if(($invoice->gift_amount ?? 0) > 0 || !empty($invoice->gift_code))
@@ -735,25 +735,25 @@ use App\Models\GiftCard;
                             </div>
                             <div class="summary-row">
                                 <div>{{ __('messages.gift_card_amount') }}</div>
-                                <div style="color: var(--teal);">{{ number_format($invoice->gift_amount ?? 0, 2) }} SR</div>
+                                <div style="color: var(--teal);">{{ number_format($invoice->gift_amount ?? 0, 2) }} {{ __('invoice.currency') }}</div>
                             </div>
                         @endif
                         <div class="summary-row">
                             <div>{{ __('messages.invoice_discount') }}</div>
-                            <div style="color: var(--rose);">- {{ number_format(max((float) $invoice->discount_amount - $gatewayAmount, 0), 2) }} SR</div>
+                            <div style="color: var(--rose);">- {{ number_format(max((float) $invoice->discount_amount - $gatewayAmount, 0), 2) }} {{ __('invoice.currency') }}</div>
                         </div>
                         <div class="summary-row">
-                            <div>Tax & Service</div>
-                            <div style="color: var(--emerald);">{{ number_format($invoice->taxs_service, 2) }} SR</div>
+                            <div>{{ __('invoice.tax_service') }}</div>
+                            <div style="color: var(--emerald);">{{ number_format($invoice->taxs_service, 2) }} {{ __('invoice.currency') }}</div>
                         </div>
                         <div class="summary-row total">
                             <div>{{ __('messages.total') }}</div>
-                            <div>{{ number_format($invoice->display_total, 2) }} SR</div>
+                            <div>{{ number_format($invoice->display_total, 2) }} {{ __('invoice.currency') }}</div>
                         </div>
                     </div>
                 </div>
             @empty
-                <div class="invoice-empty">No invoices found.</div>
+                <div class="invoice-empty">{{ __('invoice.no_invoices') }}</div>
             @endforelse
         </div>
     </div>
