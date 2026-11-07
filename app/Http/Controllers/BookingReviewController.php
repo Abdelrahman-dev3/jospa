@@ -68,15 +68,21 @@ class BookingReviewController extends Controller
     {
         $review = BookingReview::where('token', $token)->firstOrFail();
 
-        // Award cashback (idempotent — safe if clicked multiple times)
-        if ($review->isCompleted() && ! $review->google_maps_clicked_at) {
-            $service->confirmGoogleReview($review);
+        // Award cashback (idempotent — safe if clicked multiple times). A failure here must
+        // never block the customer from reaching Google Maps.
+        try {
+            if ($review->isCompleted() && ! $review->google_maps_clicked_at) {
+                $service->confirmGoogleReview($review);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Review Google confirm failed.', [
+                'review_id' => $review->id,
+                'message' => $e->getMessage(),
+            ]);
         }
 
         // Always redirect to Google Maps so the customer can leave their review
-        return redirect()->away(
-            'https://www.google.com/maps/place/%D8%AC%D9%88+%D8%B3%D8%A8%D8%A7%E2%80%AD/@24.7501491,46.6261178,16.93z/data=!4m8!3m7!1s0x3e2ee3b0cf2cf4b3:0xd9fc022701b9d604!8m2!3d24.7501398!4d46.6236843!9m1!1b1!16s%2Fg%2F11shgfzh4g?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D'
-        );
+        return redirect()->away($service->googleMapsUrl($review));
     }
 
     private function state(BookingReview $review): string

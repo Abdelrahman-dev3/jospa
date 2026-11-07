@@ -33,4 +33,12 @@ return [
     'rate_column' => 'Review',
     'rate_now' => 'Rate your experience',
     'rated' => 'Rated',
+    'google_links_title' => 'Branch Google Maps Links',
+    'google_links_help' => 'After answering the review questions, the customer is sent to the Google Maps page of the branch they visited.',
+    'google_links_default' => 'Default link',
+    'google_links_default_help' => 'Used for any branch without its own link.',
+    'google_links_test' => 'Test link',
+    'google_links_uses_default' => 'Uses default link',
+    'google_links_save' => 'Save links',
+    'google_links_saved' => 'Google Maps links saved successfully.',
 ];

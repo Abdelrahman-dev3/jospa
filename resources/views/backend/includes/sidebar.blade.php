@@ -84,6 +84,12 @@
                         <span class="item-name">{{ __('reviews.title') }}</span>
                     </a>
                 </li>
+                <li class="nav-item {{ request()->routeIs('backend.booking-reviews.google-links*') ? 'active' : '' }}">
+                    <a href="{{ route('backend.booking-reviews.google-links') }}" class="nav-link {{ request()->routeIs('backend.booking-reviews.google-links*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span class="item-name">{{ __('reviews.google_links_title') }}</span>
+                    </a>
+                </li>
                 @endhasPermission
 
                 @hasPermission('view_loyalty')

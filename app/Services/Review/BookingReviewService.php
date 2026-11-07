@@ -42,6 +42,29 @@ class BookingReviewService
         return (float) Setting::get('review_wallet_cashback', self::CASHBACK_AMOUNT);
     }
 
+    public const GOOGLE_MAPS_DEFAULT_KEY = 'review_google_maps_url';
+    public const GOOGLE_MAPS_FALLBACK_URL = 'https://www.google.com/maps/place/%D8%AC%D9%88+%D8%B3%D8%A8%D8%A7%E2%80%AD/@24.7501491,46.6261178,16.93z/data=!4m8!3m7!1s0x3e2ee3b0cf2cf4b3:0xd9fc022701b9d604!8m2!3d24.7501398!4d46.6236843!9m1!1b1!16s%2Fg%2F11shgfzh4g?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D';
+
+    public static function googleMapsBranchKey(int $branchId): string
+    {
+        return "review_google_maps_url_branch_{$branchId}";
+    }
+
+    /** Google Maps review link for the branch the customer visited, else the default link. */
+    public function googleMapsUrl(BookingReview $review): string
+    {
+        if ($review->branch_id) {
+            $url = trim((string) Setting::get(self::googleMapsBranchKey((int) $review->branch_id), ''));
+            if ($url !== '') {
+                return $url;
+            }
+        }
+
+        $default = trim((string) Setting::get(self::GOOGLE_MAPS_DEFAULT_KEY, ''));
+
+        return $default !== '' ? $default : self::GOOGLE_MAPS_FALLBACK_URL;
+    }
+
     public function pointsPerReview(): int
     {
         return max(0, (int) Setting::get(self::POINTS_SETTING_KEY, 0));
@@ -510,7 +533,6 @@ class BookingReviewService
         try {
             $mobile = $user->mobile ?? null;
             if ($mobile) {
-                $googleUrl = 'https://www.google.com/maps/place/%D8%AC%D9%88+%D8%B3%D8%A8%D8%A7%E2%80%AD/@24.7501491,46.6261178,16.93z/data=!4m8!3m7!1s0x3e2ee3b0cf2cf4b3:0xd9fc022701b9d604!8m2!3d24.7501398!4d46.6236843!9m1!1b1!16s%2Fg%2F11shgfzh4g?entry=ttu&g_ep=EgoyMDI2MTAyOC4wIKXMDSoASAFQAw%3D%3D';
                 $confirmUrl = route('booking-review.google-confirm', $review->token);
                 $lines = [
                     'شكرًا لإجابتكِ على أسئلة التقييم 🤍',

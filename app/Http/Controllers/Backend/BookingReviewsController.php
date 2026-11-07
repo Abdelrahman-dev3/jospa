@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Backend;
 use App\Http\Controllers\Controller;
 use App\Models\BookingReview;
 use App\Models\Branch;
+use App\Models\Setting;
 use App\Models\User;
+use App\Services\Review\BookingReviewService;
 use App\Services\Review\ReviewQuestions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -65,6 +67,41 @@ class BookingReviewsController extends Controller
             'module_title', 'module_action', 'reviews', 'stats', 'distribution', 'byEmployee', 'employeeNames',
             'byBranch', 'branchNames', 'branches', 'employees', 'questions'
         ));
+    }
+
+    /** Google Maps review link per branch (sent to the customer after answering the questions). */
+    public function googleLinks()
+    {
+        $module_title = __('reviews.google_links_title');
+        $branches = Branch::orderBy('id')->get();
+
+        $links = [];
+        foreach ($branches as $branch) {
+            $links[$branch->id] = (string) Setting::get(BookingReviewService::googleMapsBranchKey($branch->id), '');
+        }
+        $defaultLink = (string) Setting::get(BookingReviewService::GOOGLE_MAPS_DEFAULT_KEY, BookingReviewService::GOOGLE_MAPS_FALLBACK_URL);
+
+        return view('backend.booking_reviews.google_links', compact('module_title', 'branches', 'links', 'defaultLink'));
+    }
+
+    public function saveGoogleLinks(Request $request)
+    {
+        $request->validate([
+            'default_link' => 'nullable|url|max:2000',
+            'links' => 'array',
+            'links.*' => 'nullable|url|max:2000',
+        ]);
+
+        Setting::set(BookingReviewService::GOOGLE_MAPS_DEFAULT_KEY, trim((string) $request->input('default_link', '')));
+
+        $branchIds = Branch::pluck('id')->all();
+        foreach ((array) $request->input('links', []) as $branchId => $url) {
+            if (in_array((int) $branchId, $branchIds, true)) {
+                Setting::set(BookingReviewService::googleMapsBranchKey((int) $branchId), trim((string) $url));
+            }
+        }
+
+        return redirect()->route('backend.booking-reviews.google-links')->with('success', __('reviews.google_links_saved'));
     }
 
     public function show($id)

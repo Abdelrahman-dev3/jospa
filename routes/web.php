@@ -408,6 +408,8 @@
 
         Route::controller(\App\Http\Controllers\Backend\BookingReviewsController::class)->group(function () {
             Route::get('/app/booking-reviews', 'index')->name('backend.booking-reviews.index');
+            Route::get('/app/booking-reviews/google-links', 'googleLinks')->name('backend.booking-reviews.google-links');
+            Route::post('/app/booking-reviews/google-links', 'saveGoogleLinks')->name('backend.booking-reviews.google-links.save');
             Route::get('/app/booking-reviews/{id}', 'show')->name('backend.booking-reviews.show')->whereNumber('id');
         });
 

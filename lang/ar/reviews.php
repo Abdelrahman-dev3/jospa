@@ -33,4 +33,12 @@ return [
     'rate_column' => 'التقييم',
     'rate_now' => 'قيّمي تجربتكِ',
     'rated' => 'تم التقييم',
+    'google_links_title' => 'روابط جوجل ماب للفروع',
+    'google_links_help' => 'بعد ما العميل يجاوب على أسئلة التقييم، يتحوّل لرابط جوجل ماب الخاص بالفرع اللي زاره.',
+    'google_links_default' => 'الرابط الافتراضي',
+    'google_links_default_help' => 'يُستخدم لأي فرع لم يُحدَّد له رابط.',
+    'google_links_test' => 'تجربة الرابط',
+    'google_links_uses_default' => 'يستخدم الرابط الافتراضي',
+    'google_links_save' => 'حفظ الروابط',
+    'google_links_saved' => 'تم حفظ روابط جوجل ماب بنجاح.',
 ];
