@@ -229,8 +229,12 @@ class JavnaWebhookController extends Controller
         if (blank($replyId)) {
             $replyId = $this->findString($payload, fn (string $v) => (bool) preg_match('/^rv:\d+:\d+:[1-4]$/', trim($v)));
         }
-        if (blank($replyText)) {
-            $replyText = $this->findString($payload, fn (string $v) => str_contains($v, 'تجرب'));
+        $reviews = app(\App\Services\Review\BookingReviewService::class);
+        if (blank($replyText) || ! $reviews->isReviewText($replyText)) {
+            $found = $this->findString($payload, fn (string $v) => mb_strlen($v) < 100 && $reviews->isReviewText($v));
+            if ($found !== null) {
+                $replyText = $found;
+            }
         }
 
         if (str_contains((string) Arr::get($payload, 'event', ''), 'received')) {

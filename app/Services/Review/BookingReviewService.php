@@ -275,6 +275,29 @@ class BookingReviewService
         return null;
     }
 
+    /** True when a free-text value is the start button or one of the answer labels. */
+    public function isReviewText(string $text): bool
+    {
+        if ($this->looksLikeReviewStart(null, $text)) {
+            return true;
+        }
+
+        $normalized = $this->normalizeLabel($text);
+        if ($normalized === '') {
+            return false;
+        }
+
+        foreach (ReviewQuestions::all() as $question) {
+            foreach ($question['options'] as $label) {
+                if ($normalized === $this->normalizeLabel($label)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function looksLikeReviewStart(?string $replyId, ?string $replyText): bool
     {
         if ($replyId && str_starts_with(trim($replyId), 'rv:')) {
