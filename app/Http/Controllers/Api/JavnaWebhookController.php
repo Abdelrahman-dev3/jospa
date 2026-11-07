@@ -233,7 +233,7 @@ class JavnaWebhookController extends Controller
             $replyText = $this->findString($payload, fn (string $v) => str_contains($v, 'تجرب'));
         }
 
-        if (str_contains($event, 'received')) {
+        if (str_contains((string) Arr::get($payload, 'event', ''), 'received')) {
             Log::info('Javna inbound message for review flow.', [
                 'from' => $fromNumber,
                 'message_id' => $messageId,
