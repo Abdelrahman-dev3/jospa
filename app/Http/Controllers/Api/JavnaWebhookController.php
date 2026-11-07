@@ -225,6 +225,23 @@ class JavnaWebhookController extends Controller
             'results.0.message.title',
         ]);
 
+        // Unknown payload shapes: fall back to scanning every string in the payload.
+        if (blank($replyId)) {
+            $replyId = $this->findString($payload, fn (string $v) => (bool) preg_match('/^rv:\d+:\d+:[1-4]$/', trim($v)));
+        }
+        if (blank($replyText)) {
+            $replyText = $this->findString($payload, fn (string $v) => str_contains($v, 'تجرب'));
+        }
+
+        if (str_contains($event, 'received')) {
+            Log::info('Javna inbound message for review flow.', [
+                'from' => $fromNumber,
+                'message_id' => $messageId,
+                'reply_id' => $replyId,
+                'reply_text' => $replyText,
+            ]);
+        }
+
         if (blank($replyId) && blank($replyText)) {
             return;
         }
@@ -270,6 +287,21 @@ class JavnaWebhookController extends Controller
             'javna_whatsapp_status' => $status,
             'javna_whatsapp_last_event_at' => now(),
         ]);
+    }
+
+    private function findString(array $data, callable $match): ?string
+    {
+        foreach ($data as $value) {
+            if (is_array($value)) {
+                if (($found = $this->findString($value, $match)) !== null) {
+                    return $found;
+                }
+            } elseif (is_string($value) && $value !== '' && $match($value)) {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function firstValue(array $payload, array $keys): mixed

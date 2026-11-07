@@ -128,6 +128,11 @@ class BookingReviewService
     {
         $review = $this->findActiveReviewByPhone($phone);
         if (! $review) {
+            Log::info('Review reply ignored: no active review request for this phone.', [
+                'phone' => $phone,
+                'reply_text' => $replyText,
+            ]);
+
             return false;
         }
 
@@ -146,6 +151,12 @@ class BookingReviewService
 
             if ($review->status === BookingReview::STATUS_REQUESTED) {
                 if (! $this->looksLikeReviewStart($replyId, $replyText)) {
+                    Log::info('Review reply ignored: not recognised as the start button.', [
+                        'review_id' => $review->id,
+                        'reply_id' => $replyId,
+                        'reply_text' => $replyText,
+                    ]);
+
                     return;
                 }
                 $review->update([
