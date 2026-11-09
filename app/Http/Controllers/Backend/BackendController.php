@@ -24,6 +24,11 @@ class BackendController extends Controller
      */
     public function index(Request $request)
     {
+        // Admins and managers (supervisors) go straight to the bookings page
+        if (auth()->user()?->hasAnyRole(['admin', 'manager'])) {
+            return redirect(\App\Providers\RouteServiceProvider::HOME);
+        }
+
         $global_booking = false;
         $today = Carbon::today();
         $action = $request->action ?? 'reset';
