@@ -24,8 +24,8 @@ class BackendController extends Controller
      */
     public function index(Request $request)
     {
-        // Admins and managers (supervisors) go straight to the bookings page
-        if (auth()->user()?->hasAnyRole(['admin', 'manager'])) {
+        // Only admins can view the dashboard; everyone else goes to the bookings page
+        if (! auth()->user()?->hasRole('admin')) {
             return redirect(\App\Providers\RouteServiceProvider::HOME);
         }
 
