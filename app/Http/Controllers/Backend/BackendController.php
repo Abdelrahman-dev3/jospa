@@ -332,7 +332,7 @@ class BackendController extends Controller
         $peakLabels = [];
         $peakData   = [];
         for ($h = 9; $h <= 22; $h++) {
-            $formattedHour = $h > 12 ? ($h - 12) . ':00 م' : ($h == 12 ? '12:00 م' : $h . ':00 ص');
+            $formattedHour = $h > 12 ? ($h - 12) . ':00 ' . __('dashboard.pm') : ($h == 12 ? '12:00 ' . __('dashboard.pm') : $h . ':00 ' . __('dashboard.am'));
             $peakLabels[]  = $formattedHour;
             $peakData[]    = (int) ($hourlyCounts[$h] ?? 0);
         }
@@ -353,18 +353,18 @@ class BackendController extends Controller
         $paymentSeries = [];
         foreach ($paymentCounts as $type => $count) {
             $label = match (strtolower((string) $type)) {
-                'cash'       => 'نقدي (Cash)',
-                'cart', 'card' => 'بطاقة مدى / ائتمان',
-                'tap'        => 'Tap بوابة الدفع',
-                'wallet'     => 'المحفظة الإلكترونية',
-                'apple_pay', 'applepay' => 'Apple Pay',
+                'cash'       => __('dashboard.pay_cash'),
+                'cart', 'card' => __('dashboard.pay_card'),
+                'tap'        => __('dashboard.pay_tap'),
+                'wallet'     => __('dashboard.pay_wallet'),
+                'apple_pay', 'applepay' => __('dashboard.pay_apple_pay'),
                 default      => ucfirst(str_replace('_', ' ', (string) $type)),
             };
             $paymentLabels[] = $label;
             $paymentSeries[] = (int) $count;
         }
 
-        $data['payment_chart_labels'] = $paymentLabels ?: ['نقدي', 'إلكتروني'];
+        $data['payment_chart_labels'] = $paymentLabels ?: [__('dashboard.pay_cash'), __('dashboard.pay_electronic')];
         $data['payment_chart_series'] = $paymentSeries ?: [1, 0];
 
         // Raw comparison amounts

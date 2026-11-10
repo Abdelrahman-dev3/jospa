@@ -1,6 +1,6 @@
 @extends('backend.layouts.app', ['isBanner' => false])
 
-@section('title') {{ 'لوحة القيادة التنفيذية والتحليلات العليا | Executive Dashboard' }} @endsection
+@section('title') {{ __('dashboard.page_title') }} @endsection
 
 @push('after-styles')
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.40.0/apexcharts.min.css" />
@@ -273,12 +273,12 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
       <div>
         <div class="d-flex align-items-center gap-2 mb-2">
-          <span class="exec-badge-pill"><i class="fa-solid fa-gem text-warning"></i> الإدارة العليا &bull; Executive Suite</span>
-          <span class="exec-badge-pill"><i class="fa-solid fa-circle text-success" style="font-size: 8px;"></i> كفاءة التشغيل المباشرة</span>
+          <span class="exec-badge-pill"><i class="fa-solid fa-gem text-warning"></i> {{ __('dashboard.executive_suite') }}</span>
+          <span class="exec-badge-pill"><i class="fa-solid fa-circle text-success" style="font-size: 8px;"></i> {{ __('dashboard.live_efficiency') }}</span>
         </div>
-        <h2 class="mb-1 fw-bolder text-white">تحليلات الأداء المالي والإداري الشاملة</h2>
+        <h2 class="mb-1 fw-bolder text-white">{{ __('dashboard.header_title') }}</h2>
         <p class="mb-0 text-white-50 small">
-          نظرة شمولية استراتيجية على إيرادات السبا، كفاءة الحجوزات، وإنتاجية الكادر الطبي والخدمي &mdash; {{ now()->translatedFormat('l، d F Y') }}
+          {{ __('dashboard.header_subtitle') }} &mdash; {{ now()->translatedFormat(__('dashboard.date_format')) }}
         </p>
       </div>
 
@@ -286,10 +286,10 @@
       <form action="{{ route('backend.home') }}" method="GET" class="d-flex align-items-center gap-2 bg-white bg-opacity-10 p-2 rounded-3 border border-white border-opacity-25 flex-wrap">
         <div class="input-group input-group-sm">
           <span class="input-group-text bg-white bg-opacity-20 text-white border-0"><i class="fa-solid fa-calendar-days"></i></span>
-          <input type="text" name="date_range" value="{{ $date_range }}" class="form-control form-control-sm border-0 dashboard-date-range bg-white text-dark fw-bold" placeholder="اختر الفترة الزمنية" readonly style="min-width: 210px;">
+          <input type="text" name="date_range" value="{{ $date_range }}" class="form-control form-control-sm border-0 dashboard-date-range bg-white text-dark fw-bold" placeholder="{{ __('dashboard.select_period') }}" readonly style="min-width: 210px;">
         </div>
         <button type="submit" name="action" value="filter" class="btn btn-sm btn-light fw-bold px-3">
-          <i class="fa-solid fa-filter me-1 text-primary"></i> تحديث التقارير
+          <i class="fa-solid fa-filter me-1 text-primary"></i> {{ __('dashboard.update_reports') }}
         </button>
       </form>
     </div>
@@ -313,9 +313,9 @@
             </span>
           </div>
           <div class="kpi-value">{{ $data['total_revenue'] }}</div>
-          <div class="kpi-label">إجمالي الإيرادات الكلية</div>
+          <div class="kpi-label">{{ __('dashboard.kpi_total_revenue') }}</div>
         </div>
-        <small class="text-muted d-block pt-2 border-top">خدمات، باقات، إهداءات ومنتجات</small>
+        <small class="text-muted d-block pt-2 border-top">{{ __('dashboard.kpi_total_revenue_hint') }}</small>
       </div>
     </div>
 
@@ -325,12 +325,12 @@
         <div>
           <div class="d-flex justify-content-between align-items-center">
             <div class="kpi-icon-wrap"><i class="fa-solid fa-chart-line-up"></i></div>
-            <span class="kpi-trend up"><i class="fa-solid fa-shield-halved"></i> صافي</span>
+            <span class="kpi-trend up"><i class="fa-solid fa-shield-halved"></i> {{ __('dashboard.kpi_net') }}</span>
           </div>
           <div class="kpi-value">{{ $data['net_revenue'] }}</div>
-          <div class="kpi-label">صافي العائد التشغيلي</div>
+          <div class="kpi-label">{{ __('dashboard.kpi_net_revenue') }}</div>
         </div>
-        <small class="text-muted d-block pt-2 border-top">بعد خصم عمولات الموظفات</small>
+        <small class="text-muted d-block pt-2 border-top">{{ __('dashboard.kpi_net_revenue_hint') }}</small>
       </div>
     </div>
 
@@ -347,9 +347,9 @@
             </span>
           </div>
           <div class="kpi-value">{{ number_format($data['total_appointments']) }}</div>
-          <div class="kpi-label">الحجوزات المكتملة</div>
+          <div class="kpi-label">{{ __('dashboard.kpi_completed_bookings') }}</div>
         </div>
-        <small class="text-muted d-block pt-2 border-top">إجمالي الجلسات المنفذة بنجاح</small>
+        <small class="text-muted d-block pt-2 border-top">{{ __('dashboard.kpi_completed_bookings_hint') }}</small>
       </div>
     </div>
 
@@ -360,13 +360,13 @@
           <div class="d-flex justify-content-between align-items-center">
             <div class="kpi-icon-wrap"><i class="fa-solid fa-gauge-high"></i></div>
             <span class="kpi-trend {{ $fulfillmentRate >= 70 ? 'up' : 'neutral' }}">
-              {{ $fulfillmentRate >= 70 ? 'كفاءة ممتازة' : 'كفاءة عادية' }}
+              {{ $fulfillmentRate >= 70 ? __('dashboard.kpi_excellent_efficiency') : __('dashboard.kpi_normal_efficiency') }}
             </span>
           </div>
           <div class="kpi-value">{{ $fulfillmentRate }}%</div>
-          <div class="kpi-label">معدل إتمام الحجوزات</div>
+          <div class="kpi-label">{{ __('dashboard.kpi_fulfillment_rate') }}</div>
         </div>
-        <small class="text-muted d-block pt-2 border-top">نسبة الإنجاز الفعلي للطلبات</small>
+        <small class="text-muted d-block pt-2 border-top">{{ __('dashboard.kpi_fulfillment_rate_hint') }}</small>
       </div>
     </div>
 
@@ -376,12 +376,12 @@
         <div>
           <div class="d-flex justify-content-between align-items-center">
             <div class="kpi-icon-wrap"><i class="fa-solid fa-basket-shopping"></i></div>
-            <span class="kpi-trend neutral"><i class="fa-solid fa-calculator"></i> متوسط</span>
+            <span class="kpi-trend neutral"><i class="fa-solid fa-calculator"></i> {{ __('dashboard.kpi_average') }}</span>
           </div>
           <div class="kpi-value">{{ $data['avg_booking_value_formatted'] }}</div>
-          <div class="kpi-label">متوسط قيمة الحجز (Basket)</div>
+          <div class="kpi-label">{{ __('dashboard.kpi_avg_ticket') }}</div>
         </div>
-        <small class="text-muted d-block pt-2 border-top">معدل إنفاق العميل في كل زيارة</small>
+        <small class="text-muted d-block pt-2 border-top">{{ __('dashboard.kpi_avg_ticket_hint') }}</small>
       </div>
     </div>
 
@@ -391,12 +391,12 @@
         <div>
           <div class="d-flex justify-content-between align-items-center">
             <div class="kpi-icon-wrap"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-            <span class="kpi-trend down"><i class="fa-solid fa-coins"></i> مصروفات</span>
+            <span class="kpi-trend down"><i class="fa-solid fa-coins"></i> {{ __('dashboard.kpi_expenses') }}</span>
           </div>
           <div class="kpi-value">{{ $data['total_commission'] }}</div>
-          <div class="kpi-label">عمولات الكادر والموظفات</div>
+          <div class="kpi-label">{{ __('dashboard.kpi_staff_commissions') }}</div>
         </div>
-        <small class="text-muted d-block pt-2 border-top">مستحقات فريق العمل عن الفترة</small>
+        <small class="text-muted d-block pt-2 border-top">{{ __('dashboard.kpi_staff_commissions_hint') }}</small>
       </div>
     </div>
 
@@ -413,7 +413,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bolder mb-0 text-dark">{{ number_format($data['total_new_customers']) }}</div>
-          <div class="text-muted small fw-semibold">عملاء جدد مكتسبين</div>
+          <div class="text-muted small fw-semibold">{{ __('dashboard.new_customers_acquired') }}</div>
         </div>
       </div>
     </div>
@@ -423,8 +423,8 @@
           <i class="fa-solid fa-gift"></i>
         </div>
         <div>
-          <div class="fs-4 fw-bolder mb-0 text-dark">{{ number_format($data['gift_cards_sold']) }} بطاقة</div>
-          <div class="text-muted small fw-semibold">مبيعات بطاقات الإهداء</div>
+          <div class="fs-4 fw-bolder mb-0 text-dark">{{ number_format($data['gift_cards_sold']) }} {{ __('dashboard.cards') }}</div>
+          <div class="text-muted small fw-semibold">{{ __('dashboard.gift_card_sales') }}</div>
         </div>
       </div>
     </div>
@@ -435,7 +435,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bolder mb-0 text-dark">{{ $data['product_sales'] }}</div>
-          <div class="text-muted small fw-semibold">مبيعات منتجات المتجر</div>
+          <div class="text-muted small fw-semibold">{{ __('dashboard.store_product_sales') }}</div>
         </div>
       </div>
     </div>
@@ -446,7 +446,7 @@
         </div>
         <div>
           <div class="fs-4 fw-bolder mb-0 text-dark">{{ $cancellationRate }}%</div>
-          <div class="text-muted small fw-semibold">معدل الإلغاء (Cancellation Rate)</div>
+          <div class="text-muted small fw-semibold">{{ __('dashboard.cancellation_rate') }}</div>
         </div>
       </div>
     </div>
@@ -461,11 +461,11 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-chart-area text-primary"></i> منحنى النمو المالي وتدفق الإيرادات اليومي</h5>
-            <p class="exec-card-subtitle">متابعة دقيقة لمسار الإيرادات المحققة يومياً عبر الفترة المحددة</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-chart-area text-primary"></i> {{ __('dashboard.revenue_trend_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.revenue_trend_subtitle') }}</p>
           </div>
           <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-3 py-2">
-            <i class="fa-solid fa-arrow-trend-up me-1"></i> تدفق مباشر
+            <i class="fa-solid fa-arrow-trend-up me-1"></i> {{ __('dashboard.live_flow') }}
           </span>
         </div>
         <div class="exec-card-body">
@@ -479,8 +479,8 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-layer-group text-warning"></i> الإيراد مقابل حجم الحجوزات</h5>
-            <p class="exec-card-subtitle">مقارنة بين عدد الجلسات والدخل المحقق</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-layer-group text-warning"></i> {{ __('dashboard.revenue_vs_volume_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.revenue_vs_volume_subtitle') }}</p>
           </div>
         </div>
         <div class="exec-card-body">
@@ -499,17 +499,17 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-chart-pie text-success"></i> تدفق حالات الحجوزات</h5>
-            <p class="exec-card-subtitle">مكتملة، مؤكدة، معلقة، وملغاة</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-chart-pie text-success"></i> {{ __('dashboard.booking_status_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.booking_status_subtitle') }}</p>
           </div>
         </div>
         <div class="exec-card-body text-center">
           <div id="chart-booking-status" style="min-height: 260px;"></div>
           <div class="d-flex justify-content-around mt-3 pt-3 border-top small text-muted">
-            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#10b981;"></span>مكتمل: <strong>{{ $bookingStatus['completed'] }}</strong></div>
-            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#3b82f6;"></span>مؤكد: <strong>{{ $bookingStatus['confirmed'] }}</strong></div>
-            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#f59e0b;"></span>معلق: <strong>{{ $bookingStatus['pending'] }}</strong></div>
-            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#ef4444;"></span>ملغي: <strong>{{ $bookingStatus['cancelled'] }}</strong></div>
+            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#10b981;"></span>{{ __('dashboard.status_completed') }}: <strong>{{ $bookingStatus['completed'] }}</strong></div>
+            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#3b82f6;"></span>{{ __('dashboard.status_confirmed') }}: <strong>{{ $bookingStatus['confirmed'] }}</strong></div>
+            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#f59e0b;"></span>{{ __('dashboard.status_pending') }}: <strong>{{ $bookingStatus['pending'] }}</strong></div>
+            <div><span class="d-inline-block rounded-circle me-1" style="width:10px;height:10px;background:#ef4444;"></span>{{ __('dashboard.status_cancelled') }}: <strong>{{ $bookingStatus['cancelled'] }}</strong></div>
           </div>
         </div>
       </div>
@@ -520,14 +520,14 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-compass-drafting text-danger"></i> مؤشر كفاءة الجودة والإلغاء</h5>
-            <p class="exec-card-subtitle">معدل إنجاز الحجوزات ونسبة الإلغاء الإجمالية</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-compass-drafting text-danger"></i> {{ __('dashboard.efficiency_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.efficiency_subtitle') }}</p>
           </div>
         </div>
         <div class="exec-card-body text-center">
           <div id="chart-efficiency-gauge" style="min-height: 260px;"></div>
           <div class="p-2 rounded bg-light mt-2 small text-muted">
-            إجمالي الحجوزات المسجلة بالفترة: <strong class="text-dark">{{ $totalPeriodBookings }} حجز</strong>
+            {{ __('dashboard.total_period_bookings') }}: <strong class="text-dark">{{ $totalPeriodBookings }} {{ __('dashboard.booking_unit') }}</strong>
           </div>
         </div>
       </div>
@@ -538,8 +538,8 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-chart-column text-indigo"></i> تنوع مصادر الدخل (Revenue Streams)</h5>
-            <p class="exec-card-subtitle">الخدمات، الباقات، الإهداءات، ومبيعات المتجر</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-chart-column text-indigo"></i> {{ __('dashboard.revenue_streams_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.revenue_streams_subtitle') }}</p>
           </div>
         </div>
         <div class="exec-card-body">
@@ -558,10 +558,10 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-clock text-info"></i> تحليل ساعات الذروة والإقبال (Peak Booking Hours)</h5>
-            <p class="exec-card-subtitle">توزيع مواعيد الجلسات على مدار اليوم (من 9 ص إلى 10 م) للتخطيط التشغيلي</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-clock text-info"></i> {{ __('dashboard.peak_hours_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.peak_hours_subtitle') }}</p>
           </div>
-          <span class="badge bg-info bg-opacity-10 text-info fw-bold">كفاءة الجدولة</span>
+          <span class="badge bg-info bg-opacity-10 text-info fw-bold">{{ __('dashboard.scheduling_efficiency') }}</span>
         </div>
         <div class="exec-card-body">
           <div id="chart-peak-hours" style="min-height: 280px;"></div>
@@ -574,10 +574,10 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-shop text-primary"></i> مقارنة كفاءة وإيرادات الفروع</h5>
-            <p class="exec-card-subtitle">حجم الدخل وعدد الحجوزات المنفذة لكل فرع من فروع جو سبا</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-shop text-primary"></i> {{ __('dashboard.branch_performance_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.branch_performance_subtitle') }}</p>
           </div>
-          <span class="badge bg-primary bg-opacity-10 text-primary fw-bold">تغطية الفروع</span>
+          <span class="badge bg-primary bg-opacity-10 text-primary fw-bold">{{ __('dashboard.branch_coverage') }}</span>
         </div>
         <div class="exec-card-body">
           <div id="chart-branch-performance" style="min-height: 280px;"></div>
@@ -595,8 +595,8 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-credit-card text-success"></i> قنوات وطرق الدفع المعتمدة</h5>
-            <p class="exec-card-subtitle">مدى، Apple Pay، كاش، وTap</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-credit-card text-success"></i> {{ __('dashboard.payment_methods_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.payment_methods_subtitle') }}</p>
           </div>
         </div>
         <div class="exec-card-body">
@@ -610,11 +610,11 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-award text-warning"></i> أعلى الموظفات إنتاجية وتحقيقاً للإيراد</h5>
-            <p class="exec-card-subtitle">قيمة الخدمات المنفذة بواسطة الكادر المتميز</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-award text-warning"></i> {{ __('dashboard.staff_productivity_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.staff_productivity_subtitle') }}</p>
           </div>
           <a href="{{ route('backend.reports.staff-report') }}" class="btn btn-sm btn-outline-primary">
-            تقرير الموظفات التفصيلي <i class="fa-solid fa-arrow-left ms-1"></i>
+            {{ __('dashboard.detailed_staff_report') }} <i class="fa-solid fa-arrow-left ms-1"></i>
           </a>
         </div>
         <div class="exec-card-body">
@@ -633,19 +633,19 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-spa text-info"></i> أكثر 5 خدمات طلباً وربحية</h5>
-            <p class="exec-card-subtitle">الخدمات الرائدة ومساهمتها في دخل السبا</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-spa text-info"></i> {{ __('dashboard.top_services_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.top_services_subtitle') }}</p>
           </div>
-          <a href="{{ route('backend.reports.sales-by-date') }}" class="btn btn-sm btn-link text-decoration-none">عرض الكل &larr;</a>
+          <a href="{{ route('backend.reports.sales-by-date') }}" class="btn btn-sm btn-link text-decoration-none">{{ __('dashboard.view_all') }} &larr;</a>
         </div>
         <div class="exec-card-body p-0">
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr class="small text-muted">
-                  <th>الخدمة</th>
-                  <th class="text-center">عدد الجلسات</th>
-                  <th class="text-end">الإيراد الإجمالي</th>
+                  <th>{{ __('dashboard.col_service') }}</th>
+                  <th class="text-center">{{ __('dashboard.col_sessions') }}</th>
+                  <th class="text-end">{{ __('dashboard.col_total_revenue') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -661,8 +661,8 @@
                           <i class="fa-solid fa-spa"></i>
                         </div>
                         <div>
-                          <div class="fw-bold text-dark">{{ $displayName ?: 'خدمة جو سبا' }}</div>
-                          <small class="text-muted">كود: #{{ $svc->service_id }}</small>
+                          <div class="fw-bold text-dark">{{ $displayName ?: __('dashboard.default_service_name') }}</div>
+                          <small class="text-muted">{{ __('dashboard.code') }}: #{{ $svc->service_id }}</small>
                         </div>
                       </div>
                     </td>
@@ -674,7 +674,7 @@
                     </td>
                   </tr>
                 @empty
-                  <tr><td colspan="3" class="text-center py-4 text-muted">لا توجد خدمات منفذة بالفترة المحددة</td></tr>
+                  <tr><td colspan="3" class="text-center py-4 text-muted">{{ __('dashboard.no_services') }}</td></tr>
                 @endforelse
               </tbody>
             </table>
@@ -688,27 +688,27 @@
       <div class="exec-card">
         <div class="exec-card-header">
           <div>
-            <h5 class="exec-card-title"><i class="fa-solid fa-trophy text-warning"></i> لوحة شرف وإنتاجية فريق العمل</h5>
-            <p class="exec-card-subtitle">ترتيب الموظفات حسب الحجوزات المنجزة والدخل المحقق</p>
+            <h5 class="exec-card-title"><i class="fa-solid fa-trophy text-warning"></i> {{ __('dashboard.staff_leaderboard_title') }}</h5>
+            <p class="exec-card-subtitle">{{ __('dashboard.staff_leaderboard_subtitle') }}</p>
           </div>
-          <a href="{{ route('backend.reports.payout-report') }}" class="btn btn-sm btn-link text-decoration-none">تقرير العمولات &larr;</a>
+          <a href="{{ route('backend.reports.payout-report') }}" class="btn btn-sm btn-link text-decoration-none">{{ __('dashboard.commissions_report') }} &larr;</a>
         </div>
         <div class="exec-card-body p-0">
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr class="small text-muted">
-                  <th>الموظفة / الأخصائية</th>
-                  <th class="text-center">الحجوزات</th>
-                  <th class="text-end">الدخل المحقق</th>
+                  <th>{{ __('dashboard.col_staff') }}</th>
+                  <th class="text-center">{{ __('dashboard.col_bookings') }}</th>
+                  <th class="text-end">{{ __('dashboard.col_earned_revenue') }}</th>
                 </tr>
               </thead>
               <tbody>
                 @forelse($data['top_staff'] as $idx => $staff)
                   @php
                     $emp = $staff->employee;
-                    $staffName = $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : 'أخصائية #' . $staff->employee_id;
-                    $staffName = $staffName ?: ($emp->username ?? 'أخصائية جو سبا');
+                    $staffName = $emp ? trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) : __('dashboard.specialist') . ' #' . $staff->employee_id;
+                    $staffName = $staffName ?: ($emp->username ?? __('dashboard.default_staff_name'));
                   @endphp
                   <tr>
                     <td>
@@ -718,19 +718,19 @@
                         </span>
                         <div>
                           <div class="fw-bold text-dark">{{ $staffName }}</div>
-                          <small class="text-muted">{{ $emp->email ?? 'معتمدة' }}</small>
+                          <small class="text-muted">{{ $emp->email ?? __('dashboard.certified') }}</small>
                         </div>
                       </div>
                     </td>
                     <td class="text-center">
-                      <span class="badge bg-info bg-opacity-10 text-info fw-bold">{{ $staff->total_bookings }} حجز</span>
+                      <span class="badge bg-info bg-opacity-10 text-info fw-bold">{{ $staff->total_bookings }} {{ __('dashboard.booking_unit') }}</span>
                     </td>
                     <td class="text-end fw-bolder text-primary">
                       {{ \Currency::format($staff->total_revenue) }}
                     </td>
                   </tr>
                 @empty
-                  <tr><td colspan="3" class="text-center py-4 text-muted">لا توجد بيانات موظفات مسجلة بالفترة المحددة</td></tr>
+                  <tr><td colspan="3" class="text-center py-4 text-muted">{{ __('dashboard.no_staff') }}</td></tr>
                 @endforelse
               </tbody>
             </table>
@@ -746,8 +746,8 @@
   <div class="exec-card mb-4">
     <div class="exec-card-header">
       <div>
-        <h5 class="exec-card-title"><i class="fa-solid fa-folder-tree text-primary"></i> مركز التقارير التنفيذية المتخصصة &bull; Executive Reports Hub</h5>
-        <p class="exec-card-subtitle">الوصول المباشر إلى كافة التقارير التحليلية والمالية مع إمكانية الفلترة والتصدير بنسبة 100%</p>
+        <h5 class="exec-card-title"><i class="fa-solid fa-folder-tree text-primary"></i> {{ __('dashboard.reports_hub_title') }}</h5>
+        <p class="exec-card-subtitle">{{ __('dashboard.reports_hub_subtitle') }}</p>
       </div>
     </div>
     <div class="exec-card-body">
@@ -755,61 +755,61 @@
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.financial-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-primary bg-opacity-10 text-primary"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-            <div><div class="fw-bold small">التقرير المالي</div><small class="text-muted">مبيعات وضرائب</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_financial') }}</div><small class="text-muted">{{ __('dashboard.rpt_financial_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.sales-by-date') }}" class="report-grid-card">
             <div class="report-grid-icon bg-success bg-opacity-10 text-success"><i class="fa-solid fa-chart-line"></i></div>
-            <div><div class="fw-bold small">مبيعات التاريخ</div><small class="text-muted">تحليل يومي</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_sales_by_date') }}</div><small class="text-muted">{{ __('dashboard.rpt_sales_by_date_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.daily-booking-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-info bg-opacity-10 text-info"><i class="fa-solid fa-calendar-day"></i></div>
-            <div><div class="fw-bold small">الحجوزات اليومية</div><small class="text-muted">إشغال يومي</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_daily_bookings') }}</div><small class="text-muted">{{ __('dashboard.rpt_daily_bookings_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.overall-booking-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-warning bg-opacity-10 text-warning"><i class="fa-solid fa-calendar-days"></i></div>
-            <div><div class="fw-bold small">الحجوزات الشاملة</div><small class="text-muted">كافة العمليات</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_overall_bookings') }}</div><small class="text-muted">{{ __('dashboard.rpt_overall_bookings_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.payout-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-danger bg-opacity-10 text-danger"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-            <div><div class="fw-bold small">تقرير العمولات</div><small class="text-muted">رواتب ومكافآت</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_commissions') }}</div><small class="text-muted">{{ __('dashboard.rpt_commissions_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.staff-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-purple bg-opacity-10 text-purple" style="color:#7c3aed;"><i class="fa-solid fa-users"></i></div>
-            <div><div class="fw-bold small">تقرير الموظفات</div><small class="text-muted">أداء الكادر</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_staff') }}</div><small class="text-muted">{{ __('dashboard.rpt_staff_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.order-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-secondary bg-opacity-10 text-secondary"><i class="fa-solid fa-box-open"></i></div>
-            <div><div class="fw-bold small">مبيعات المنتجات</div><small class="text-muted">متجر المنتجات</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_products') }}</div><small class="text-muted">{{ __('dashboard.rpt_products_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.coupon-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-teal bg-opacity-10" style="color:#0d9488;"><i class="fa-solid fa-ticket"></i></div>
-            <div><div class="fw-bold small">تقرير الكوبونات</div><small class="text-muted">الخصومات الفعالة</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_coupons') }}</div><small class="text-muted">{{ __('dashboard.rpt_coupons_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.promotion-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-pink bg-opacity-10" style="color:#db2777;"><i class="fa-solid fa-bullhorn"></i></div>
-            <div><div class="fw-bold small">العروض الترويجية</div><small class="text-muted">الحملات التسويقية</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_promotions') }}</div><small class="text-muted">{{ __('dashboard.rpt_promotions_hint') }}</small></div>
           </a>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <a href="{{ route('backend.reports.payment-transactions-report') }}" class="report-grid-card">
             <div class="report-grid-icon bg-dark bg-opacity-10 text-dark"><i class="fa-solid fa-money-bill-transfer"></i></div>
-            <div><div class="fw-bold small">سجل المدفوعات</div><small class="text-muted">بوابات الدفع</small></div>
+            <div><div class="fw-bold small">{{ __('dashboard.rpt_payments') }}</div><small class="text-muted">{{ __('dashboard.rpt_payments_hint') }}</small></div>
           </a>
         </div>
       </div>
@@ -851,7 +851,7 @@
         const trendDates = @json($data['revenue_chart']['xaxis'] ?? []);
 
         new ApexCharts(trendEl, {
-          series: [{ name: 'الإيرادات المحققة (SAR)', data: trendData }],
+          series: [{ name: @json(__('dashboard.chart_earned_revenue')) + ' (' + @json(__('dashboard.currency_short')) + ')', data: trendData }],
           chart: {
             type: 'area',
             height: 330,
@@ -878,12 +878,12 @@
           yaxis: {
             labels: {
               style: { fontSize: '11px', colors: '#64748b' },
-              formatter: v => Number(v || 0).toLocaleString() + ' ر.س'
+              formatter: v => Number(v || 0).toLocaleString() + ' ' + @json(__('dashboard.currency_short'))
             }
           },
           grid: { strokeDashArray: 4, borderColor: '#f1f5f9' },
           tooltip: {
-            y: { formatter: v => Number(v || 0).toLocaleString() + ' ريال سعودي' }
+            y: { formatter: v => Number(v || 0).toLocaleString() + ' ' + @json(__('dashboard.currency_long')) }
           }
         }).render();
       }
@@ -901,8 +901,8 @@
 
         new ApexCharts(mixedEl, {
           series: [
-            { name: 'الإيراد', type: 'area', data: revenueData },
-            { name: 'الحجوزات', type: 'column', data: bookingsData }
+            { name: @json(__('dashboard.chart_revenue')), type: 'area', data: revenueData },
+            { name: @json(__('dashboard.chart_bookings')), type: 'column', data: bookingsData }
           ],
           colors: ['#4f46e5', '#f59e0b'],
           chart: { type: 'line', height: 330, toolbar: { show: false }, fontFamily: 'inherit' },
@@ -911,8 +911,8 @@
           dataLabels: { enabled: false },
           xaxis: { categories: chartDates, labels: { style: { fontSize: '10px' } } },
           yaxis: [
-            { title: { text: 'الإيراد (ر.س)' }, labels: { formatter: v => Number(v||0).toLocaleString() } },
-            { opposite: true, title: { text: 'عدد الحجوزات' }, labels: { formatter: v => Number(v||0).toFixed(0) }, min: 0 }
+            { title: { text: @json(__('dashboard.chart_revenue')) + ' (' + @json(__('dashboard.currency_short')) + ')' }, labels: { formatter: v => Number(v||0).toLocaleString() } },
+            { opposite: true, title: { text: @json(__('dashboard.chart_bookings_count')) }, labels: { formatter: v => Number(v||0).toFixed(0) }, min: 0 }
           ],
           legend: { position: 'top', fontSize: '12px' },
           grid: { strokeDashArray: 4, borderColor: '#f1f5f9' }
@@ -935,7 +935,7 @@
 
         new ApexCharts(statusEl, {
           series: bs,
-          labels: ['مكتملة', 'مؤكدة', 'قيد الانتظار', 'ملغاة'],
+          labels: [@json(__('dashboard.chart_completed')), @json(__('dashboard.chart_confirmed')), @json(__('dashboard.chart_pending')), @json(__('dashboard.chart_cancelled'))],
           colors: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
           chart: { type: 'donut', height: 260, fontFamily: 'inherit' },
           legend: { show: false },
@@ -947,7 +947,7 @@
                   show: true,
                   total: {
                     show: true,
-                    label: 'إجمالي الحجوزات',
+                    label: @json(__('dashboard.chart_total_bookings')),
                     fontSize: '12px',
                     formatter: () => '{{ $totalPeriodBookings }}'
                   }
@@ -977,14 +977,14 @@
                 value: { fontSize: '1.4rem', fontWeight: 800, formatter: v => v + '%' },
                 total: {
                   show: true,
-                  label: 'معدل الإنجاز',
+                  label: @json(__('dashboard.chart_fulfillment')),
                   formatter: () => '{{ $fulfillmentRate }}%'
                 }
               }
             }
           },
           colors: ['#10b981', '#ef4444'],
-          labels: ['نسبة الإنجاز', 'نسبة الإلغاء']
+          labels: [@json(__('dashboard.chart_fulfillment_rate')), @json(__('dashboard.chart_cancellation_rate'))]
         }).render();
       }
     } catch(e) { console.error('Error rendering Chart 4:', e); }
@@ -997,7 +997,7 @@
       if (streamEl) {
         new ApexCharts(streamEl, {
           series: [{
-            name: 'الدخل (ر.س)',
+            name: @json(__('dashboard.chart_income')) + ' (' + @json(__('dashboard.currency_short')) + ')',
             data: [
               {{ $revenueBreakdown['services'] ?? 0 }},
               {{ $revenueBreakdown['packages'] ?? 0 }},
@@ -1017,10 +1017,10 @@
           },
           dataLabels: {
             enabled: true,
-            formatter: v => Number(v || 0).toLocaleString() + ' ر.س'
+            formatter: v => Number(v || 0).toLocaleString() + ' ' + @json(__('dashboard.currency_short'))
           },
           xaxis: {
-            categories: ['خدمات السبا', 'الباقات المخفضة', 'بطاقات الإهداء', 'منتجات المتجر'],
+            categories: [@json(__('dashboard.stream_services')), @json(__('dashboard.stream_packages')), @json(__('dashboard.stream_giftcards')), @json(__('dashboard.stream_products'))],
             labels: { style: { fontSize: '11px' } }
           },
           yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600 } } },
@@ -1038,7 +1038,7 @@
       if (peakEl) {
         new ApexCharts(peakEl, {
           series: [{
-            name: 'عدد الجلسات',
+            name: @json(__('dashboard.chart_sessions')),
             data: @json($data['peak_hours_data'] ?? [])
           }],
           chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
@@ -1073,8 +1073,8 @@
       if (branchEl) {
         new ApexCharts(branchEl, {
           series: [
-            { name: 'إجمالي الإيرادات (ر.س)', data: @json($data['branch_chart_revenue'] ?? []) },
-            { name: 'الحجوزات المنفذة', data: @json($data['branch_chart_bookings'] ?? []) }
+            { name: @json(__('dashboard.chart_total_revenue')) + ' (' + @json(__('dashboard.currency_short')) + ')', data: @json($data['branch_chart_revenue'] ?? []) },
+            { name: @json(__('dashboard.chart_completed_bookings')), data: @json($data['branch_chart_bookings'] ?? []) }
           ],
           colors: ['#4f46e5', '#10b981'],
           chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
@@ -1082,8 +1082,8 @@
           dataLabels: { enabled: false },
           xaxis: { categories: @json($data['branch_chart_names'] ?? []) },
           yaxis: [
-            { title: { text: 'الإيراد (ر.س)' }, labels: { formatter: v => Number(v||0).toLocaleString() } },
-            { opposite: true, title: { text: 'الحجوزات' }, labels: { formatter: v => Number(v||0).toFixed(0) } }
+            { title: { text: @json(__('dashboard.chart_revenue')) + ' (' + @json(__('dashboard.currency_short')) + ')' }, labels: { formatter: v => Number(v||0).toLocaleString() } },
+            { opposite: true, title: { text: @json(__('dashboard.chart_bookings')) }, labels: { formatter: v => Number(v||0).toFixed(0) } }
           ],
           legend: { position: 'top', fontSize: '12px' },
           grid: { strokeDashArray: 4, borderColor: '#f1f5f9' }
@@ -1099,7 +1099,7 @@
       if (paymentEl) {
         new ApexCharts(paymentEl, {
           series: @json($data['payment_chart_series'] ?? [1]),
-          labels: @json($data['payment_chart_labels'] ?? ['مدفوعات']),
+          labels: @json($data['payment_chart_labels'] ?? [__('dashboard.chart_payments')]),
           chart: { type: 'donut', height: 270, fontFamily: 'inherit' },
           colors: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'],
           legend: { position: 'bottom', fontSize: '11px' },
@@ -1116,7 +1116,7 @@
       if (staffEl) {
         new ApexCharts(staffEl, {
           series: [{
-            name: 'قيمة الخدمات المنفذة (ر.س)',
+            name: @json(__('dashboard.chart_services_value')) + ' (' + @json(__('dashboard.currency_short')) + ')',
             data: @json($data['staff_chart_revenue'] ?? [])
           }],
           chart: { type: 'bar', height: 270, toolbar: { show: false }, fontFamily: 'inherit' },
@@ -1130,7 +1130,7 @@
           },
           dataLabels: {
             enabled: true,
-            formatter: v => Number(v || 0).toLocaleString() + ' ر.س'
+            formatter: v => Number(v || 0).toLocaleString() + ' ' + @json(__('dashboard.currency_short'))
           },
           xaxis: { categories: @json($data['staff_chart_names'] ?? []) },
           grid: { strokeDashArray: 4, borderColor: '#f1f5f9' }
