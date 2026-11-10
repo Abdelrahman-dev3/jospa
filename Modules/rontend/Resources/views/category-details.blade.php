@@ -521,10 +521,15 @@
               display: flex;
               flex-direction: column;
               gap: 18px;
-              background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.85));
+              background: linear-gradient(180deg,
+                  rgba(0,0,0,.45) 0%,
+                  rgba(0,0,0,0) 30%,
+                  rgba(0,0,0,0) 50%,
+                  rgba(0,0,0,.75) 100%);
               color: #fff;
               text-align: center;
               overflow-wrap: break-word;
+              text-shadow: 0 1px 4px rgba(0,0,0,.6);
           }
           .sub-service-card__title {
               margin: 0;
