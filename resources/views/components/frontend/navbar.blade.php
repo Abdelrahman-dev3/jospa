@@ -106,12 +106,12 @@
                         </li>
                         @endif
     
-                        {{-- <li class="nav-item h5">
+                        <li class="nav-item h5">
                             <a class="nav-link text-white {{ request()->routeIs('frontend.Shop') ? 'text-active' : '' }}"
                                href="{{ route('frontend.Shop') }}">
                                 {{ __('messagess.store') }}
                             </a>
-                        </li> --}}
+                        </li>
     
                         <li class="nav-item h5">
                             <a class="nav-link text-white {{ request()->routeIs('gift.page') ? 'text-active' : '' }}"
@@ -307,11 +307,11 @@
             </a>
           </li>
           @endif
-          {{-- <li class="nav-item">
+          <li class="nav-item">
             <a class="nav-link  {{ request()->routeIs('frontend.Shop') ? 'text-active' : '' }}"href="{{ route('frontend.Shop') }}">
                 {{ __('messagess.store') }}
             </a>
-          </li> --}}
+          </li>
          <li class="nav-item">
             <a class="nav-link  {{ request()->routeIs('gift.page') ? 'text-active' : '' }}"href="{{ route('gift.page') }}">
                {{ __('messagess.gift_cards') }}
