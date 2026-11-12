@@ -34,4 +34,8 @@ return [
     'all_branches' => 'كل الفروع',
     'branches_hint' => 'اتركه فارغًا لتطبيق الكود على كل الفروع، أو اختر فرعًا أو أكثر.',
     'coupon_not_valid_for_branch' => 'هذا الكود غير صالح لهذا الفرع.',
+
+    // Added: missing dashboard translations
+    'address' => 'العنوان',
+    'lbl_update_at' => 'تاريخ التحديث',
 ];

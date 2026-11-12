@@ -74,7 +74,7 @@
               <label class="form-label" for="planlimitation_id">{{ $t('plan.lbl_select_limitation') }}</label>
 
               <a href="/app/subscription/planlimitation"
-                ><h6 for="planlimitation_id" style="float: right"><i class="fa fa-plus-circle" aria-hidden="true"></i> Create Limitation</h6>
+                ><h6 for="planlimitation_id" style="float: right"><i class="fa fa-plus-circle" aria-hidden="true"></i> {{ $t('Create Limitation') }}</h6>
               </a>
 
               <div class="mb-4">
@@ -106,6 +106,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, LIMITATIONDATA_LIST } from '../constant/plan'
 import { useField, useForm } from 'vee-validate'
@@ -228,8 +229,8 @@ const errorMessages = ref({})
 const planlimitation_data = ref({
   searchable: true,
   options: [
-    { label: 'Unlimited', value: 'Unlimited' },
-    { label: 'Limited', value: 'Limited' }
+    { label: __tr('Unlimited'), value: 'Unlimited' },
+    { label: __tr('Limited'), value: 'Limited' }
   ],
   createOption: true,
   closeOnSelect: true
@@ -246,8 +247,8 @@ const type_data = ref({
   searchable: true,
   options: [
     // { label: 'Weekly', value: 'Weekly'},
-    { label: 'Monthly', value: 'Monthly' },
-    { label: 'Yearly', value: 'Yearly' }
+    { label: __tr('Monthly'), value: 'Monthly' },
+    { label: __tr('Yearly'), value: 'Yearly' }
   ],
   createOption: true,
   closeOnSelect: true

@@ -17,13 +17,13 @@
                         </div>
 
                         <div class="list-style-detail">
-                            <p class="text-body mb-1">Booking received for <span class="text-primary">
+                            <p class="text-body mb-1">{{ __('Booking received for') }} <span class="text-primary">
                                 @if(!empty($notification->data['data']['service_name']))
                                     {{ $notification->data['data']['service_name'] }}
                                 @else
                                     {{ $notification->data['data']['package_name'] ?? '-' }}
                                 @endif
-                            </span> service by <span class="text-black">{{ ($notification->data['data']['user_name']) }}</span></p>
+                            </span> {{ __('service by') }} <span class="text-black">{{ ($notification->data['data']['user_name']) }}</span></p>
                             <div class="d-flex justify-content-between">
                                 <p class="text-body">{{ ($notification->data['data']['booking_date']) }}</p>
                                 <p class="text-body">{{ ($notification->data['data']['booking_time']) }}</p>
@@ -45,15 +45,15 @@
                             </div>
                         
                             <div class="list-style-detail">
-                                <p class="text-body mb-1">Package <span class="text-primary">
+                                <p class="text-body mb-1">{{ __('Package') }} <span class="text-primary">
                                     @if(!empty($notification->data['data']['package_name']))
                                         {{ $notification->data['data']['package_name'] }}
                                     @else
                                         {{ '-' }}
                                     @endif
-                                </span> is about to expire soon for <span class="text-black">{{ $notification->data['data']['user_name'] }}</span></p>
+                                </span> {{ __('is about to expire soon for') }} <span class="text-black">{{ $notification->data['data']['user_name'] }}</span></p>
                                 <div class="d-flex justify-content-between">
-                                    <p class="text-body">on {{ $notification->data['data']['package_expiry_date'] }}</p>
+                                    <p class="text-body">{{ __('on') }} {{ $notification->data['data']['package_expiry_date'] }}</p>
                                 </div>
                             </div>
                         </div>
@@ -74,28 +74,28 @@
                         </div>
                          <div class="list-style-detail">
                             @if($notification->data['data']['notification_type']=='order_placed')
-                            <p class="text-body mb-1">New Order received from <span class="text-black">{{ ($notification->data['data']['user_name']) }}.</span></p>
+                            <p class="text-body mb-1">{{ __('New Order received from') }} <span class="text-black">{{ ($notification->data['data']['user_name']) }}.</span></p>
                             <div class="d-flex justify-content-between">
                                 <p class="text-body">{{ ($notification->data['data']['order_date']) }}</p>
                                 <p class="text-body">{{ ($notification->data['data']['order_time']) }}</p>
                             </div>
 
                              @elseif($notification->data['data']['notification_type']=='order_proccessing')
-                            <p class="text-body mb-1">Order <span class="text-black">{{ ($notification->data['data']['order_code']) }}</span> has been Processing.</p>
+                            <p class="text-body mb-1">{{ __('Order') }} <span class="text-black">{{ ($notification->data['data']['order_code']) }}</span> {{ __('has been Processing.') }}</p>
                             <div class="d-flex justify-content-between">
                                 <p class="text-body">{{ ($notification->data['data']['order_date']) }}</p>
                                 <p class="text-body">{{ ($notification->data['data']['order_time']) }}</p>
                             </div>
 
                              @elseif($notification->data['data']['notification_type']=='order_delivered')
-                            <p class="text-body mb-1">Order <span class="text-black">{{ ($notification->data['data']['order_code']) }} </span> has been Delivered.</p>
+                            <p class="text-body mb-1">{{ __('Order') }} <span class="text-black">{{ ($notification->data['data']['order_code']) }} </span> {{ __('has been Delivered.') }}</p>
                             <div class="d-flex justify-content-between">
                                 <p class="text-body">{{ ($notification->data['data']['order_date']) }}</p>
                                 <p class="text-body">{{ ($notification->data['data']['order_time']) }}</p>
                             </div>
 
                               @elseif($notification->data['data']['notification_type']=='order_cancelled')
-                            <p class="text-body mb-1">Order <span class="text-black">{{ ($notification->data['data']['order_code']) }} </span> has been Cancelled.</p>
+                            <p class="text-body mb-1">{{ __('Order') }} <span class="text-black">{{ ($notification->data['data']['order_code']) }} </span> {{ __('has been Cancelled.') }}</p>
                             <div class="d-flex justify-content-between">
                                 <p class="text-body">{{ ($notification->data['data']['order_date']) }}</p>
                                 <p class="text-body">{{ ($notification->data['data']['order_time']) }}</p>

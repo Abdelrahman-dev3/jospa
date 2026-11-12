@@ -189,7 +189,7 @@ class OrdersController extends Controller
         ]);
 
         // todo::['mail notification']
-        return response()->json(['status' => true, 'message' => 'Payment Status Has Been Updated']);
+        return response()->json(['status' => true, 'message' => __('Payment Status Has Been Updated')]);
     }
 
     // update delivery status
@@ -256,7 +256,7 @@ class OrdersController extends Controller
         }
 
         // todo::['mail notification']
-        return response()->json(['status' => true, 'message' => 'Order delivery status has been updated']);
+        return response()->json(['status' => true, 'message' => __('Order delivery status has been updated')]);
     }
 
     // add qty to stock
@@ -501,7 +501,7 @@ class OrdersController extends Controller
             if (!empty($url)) {
                 return response()->json(['status' => true, 'link' => $url], 200);
             } else {
-                return response()->json(['status' => false, 'message' => 'Url Not Found'], 404);
+                return response()->json(['status' => false, 'message' => __('Url Not Found')], 404);
             }
         } else {
             // Handle non-API request

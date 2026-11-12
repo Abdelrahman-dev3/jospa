@@ -155,4 +155,11 @@ return [
     'payment_link_services' => 'الخدمات',
     'payment_link_branch' => 'الفرع',
     'payment_link_date' => 'الموعد',
+
+    // Added: missing dashboard translations
+    'lbl_booking_time' => 'وقت الحجز',
+    'slot_conflict' => 'هذا الموعد يتعارض مع حجز آخر لنفس الموظف.',
+
+    // Added: missing dashboard translations
+    'lbl_readeem_package' => 'إضافة باقة',
 ];

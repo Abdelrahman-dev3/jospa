@@ -27,4 +27,6 @@ return [
     'enter_description' => 'أدخل الوصف',
     'select_sequence' => 'اختر الترتيب',
 
+    // Added: missing dashboard translations
+    'enter_decsription' => 'أدخل الوصف',
 ];

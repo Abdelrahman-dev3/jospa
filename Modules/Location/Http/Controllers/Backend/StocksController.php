@@ -173,6 +173,6 @@ class StocksController extends Controller
 
         $product->save();
 
-        return response()->json(['status' => true, 'message' => 'Stock has been updated.']);
+        return response()->json(['status' => true, 'message' => __('Stock has been updated.')]);
     }
 }

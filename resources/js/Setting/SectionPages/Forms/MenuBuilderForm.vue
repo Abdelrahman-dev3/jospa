@@ -20,7 +20,7 @@
                   <label for="">{{ $t('menu_builder.lbl_title') }} <span class="text-danger">*</span></label>
                   <Multiselect v-model="title" :value="title" :placeholder="$t('menu_builder.lbl_title')"
                     v-bind="singleSelectCreateOption" :options="titleLang.options" class="form-group"></Multiselect>
-                    <span class="mt-3"><strong>Note: </strong>Type and press enter to create new title</span>
+                    <span class="mt-3"><strong>{{ $t('Note:') }} </strong>{{ $t('Type and press enter to create new title') }}</span>
                   <span v-if="errorMessages['title']">
                     <ul class="text-danger">
                       <li v-for="err in errorMessages['title']" :key="err">{{ err }}</li>
@@ -30,7 +30,7 @@
                 </div>
                 <InputField class="col-md-12" :is-required="false" :label="$t('menu_builder.lbl_icon')" placeholder=""
                   v-model="start_icon" :error-message="errors.start_icon" @input="updateIcon">
-                  <span class="mt-3"><strong>Note: </strong>You can add Icon from library. <a href="https://fontawesome.com/search" target="_blank">Click here</a></span>
+                  <span class="mt-3"><strong>{{ $t('Note:') }} </strong>{{ $t('You can add Icon from library.') }} <a href="https://fontawesome.com/search" target="_blank">{{ $t('Click here') }}</a></span>
                 </InputField>
                 <div class="form-group">
                   <label class="form-label" for="menu_item_type">{{ $t('menu_builder.lbl_menu_type') }}<span
@@ -56,8 +56,8 @@
               </div>
 
               <div class="form-group" v-if="is_route && isLinkMenuType">
-                <label for="menu-route" class="form-label">Route List <span class="text-danger">*</span></label>
-                <Multiselect v-model="route" placeholder="Select Route" v-bind="singleSelectOption"
+                <label for="menu-route" class="form-label">{{ $t('Route List') }} <span class="text-danger">*</span></label>
+                <Multiselect v-model="route" :placeholder="$t('Select Route')" v-bind="singleSelectOption"
                   :options="routes.options" id="menu-route" class="form-group"></Multiselect>
                 <span v-if="errorMessages['route']">
                   <ul class="text-danger">
@@ -116,6 +116,7 @@
   </div>
 </template>
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted, watch, computed } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, MENU_ROUTE_LIST, MENU_TITLE_LIST } from '@/vue/constants/menu_builder'
 import { useField, useForm } from 'vee-validate'
@@ -159,9 +160,9 @@ const titleLang = ref({ options: [], list: [] })
 const type_menu = ref({
   searchable: true,
   options: [
-    { label: 'Static Label', value: 'static' },
-    { label: 'Main Menu', value: 'parent' },
-    { label: 'Link/Route', value: 'link' }
+    { label: __tr('Static Label'), value: 'static' },
+    { label: __tr('Main Menu'), value: 'parent' },
+    { label: __tr('Link/Route'), value: 'link' }
   ],
   closeOnSelect: true
 })
@@ -169,8 +170,8 @@ const type_menu = ref({
 const type_target = ref({
   searchable: true,
   options: [
-    { label: 'New', value: '_blank' },
-    { label: 'Existing', value: '_self' }
+    { label: __tr('New'), value: '_blank' },
+    { label: __tr('Existing'), value: '_self' }
   ],
   closeOnSelect: true
 })

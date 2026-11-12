@@ -57,7 +57,7 @@
                     </div>
                     <div class="col-12 col-sm-10">
                         <div class="form-group">
-                            <a href="{{ route('backend.users.changePassword', $user->id) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-key"></i> Change password</a>
+                            <a href="{{ route('backend.users.changePassword', $user->id) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-key"></i> {{ __('Change password') }}</a>
                         </div>
                     </div>
                 </div>
@@ -76,7 +76,7 @@
                     </div>
                     <div class="col-12 col-sm-10">
                         <div class="form-group">
-                            <a href="{{ route('backend.users.profileEdit', $user->id) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-user"></i> Update Profile</a>
+                            <a href="{{ route('backend.users.profileEdit', $user->id) }}" class="btn btn-outline-primary btn-sm"><i class="fas fa-user"></i> {{ __('Update Profile') }}</a>
                         </div>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
                     <div class="col-12 col-sm-10">
                         <div class="form-group">
                             @if ($user->email_verified_at == null)
-                            <a href="{{route('backend.users.emailConfirmationResend', $user->id)}}" class="btn btn-outline-primary btn-sm " data-bs-toggle="tooltip" title="Send Confirmation Email"><i class="fas fa-envelope"></i> Send Confirmation Email</a>
+                            <a href="{{route('backend.users.emailConfirmationResend', $user->id)}}" class="btn btn-outline-primary btn-sm " data-bs-toggle="tooltip" title="{{ __('Send Confirmation Email') }}"><i class="fas fa-envelope"></i> {{ __('Send Confirmation Email') }}</a>
                             @else
                             {!! $user->confirmed_label !!}
                             @endif
@@ -119,7 +119,7 @@
                   <div class="col-12 col-sm-10">
                       <div class="form-group">
                         <select  id="country-dropdown" class="form-control select2">
-                            <option value="">-- Select branch --</option>
+                            <option value="">-- {{ __('Select branch') }} --</option>
                             @foreach ($branch as $data)
                             <option value="{{$data->id}}">
                                 {{$data->name}}
@@ -179,10 +179,10 @@
                                                 <i class="far fa-check-circle mr-1"></i>{{ $permission->name }}&nbsp;
                                                 @endforeach
                                                 @else
-                                                None
+                                                {{ __('None') }}
                                                 @endif
                                                 @else
-                                                All Permissions
+                                                {{ __('All Permissions') }}
                                                 @endif
                                             </div>
                                         </div>
@@ -225,15 +225,15 @@
                             <a href="{{route('backend.users.block', $$module_name_singular)}}" class="btn btn-danger" data-method="PATCH" data-token="{{csrf_token()}}" data-bs-toggle="tooltip" title="{{__('labels.backend.block')}}" data-confirm="{{ __('messages.are_you_sure?') }}"><i class="fas fa-ban"></i></a>
                             @endif
                             @if ($$module_name_singular->status == 2)
-                            <a href="{{route('backend.users.unblock', $$module_name_singular)}}" class="btn btn-info" data-method="PATCH" data-token="{{csrf_token()}}" data-bs-toggle="tooltip" title="{{__('labels.backend.unblock')}}" data-confirm="{{ __('messages.are_you_sure?') }}"><i class="fas fa-check"></i> Unblock</a>
+                            <a href="{{route('backend.users.unblock', $$module_name_singular)}}" class="btn btn-info" data-method="PATCH" data-token="{{csrf_token()}}" data-bs-toggle="tooltip" title="{{__('labels.backend.unblock')}}" data-confirm="{{ __('messages.are_you_sure?') }}"><i class="fas fa-check"></i> {{ __('Unblock') }}</a>
                             @endif
                             @if ($$module_name_singular->email_verified_at == null)
-                            <a href="{{route('backend.users.emailConfirmationResend', $$module_name_singular->id)}}" class="btn btn-primary" data-bs-toggle="tooltip" title="Send Confirmation Email"><i class="fas fa-envelope"></i></a>
+                            <a href="{{route('backend.users.emailConfirmationResend', $$module_name_singular->id)}}" class="btn btn-primary" data-bs-toggle="tooltip" title="{{ __('Send Confirmation Email') }}"><i class="fas fa-envelope"></i></a>
                             @endif
                             @if($$module_name_singular->id != 1)
-                            <a href="{{route("backend.$module_name.destroy", $$module_name_singular)}}" class="btn btn-danger" data-method="DELETE" data-token="{{csrf_token()}}" data-bs-toggle="tooltip" title="{{__('labels.backend.delete')}}"> <i class="fa-solid fa-trash"></i> Delete</a>
+                            <a href="{{route("backend.$module_name.destroy", $$module_name_singular)}}" class="btn btn-danger" data-method="DELETE" data-token="{{csrf_token()}}" data-bs-toggle="tooltip" title="{{__('labels.backend.delete')}}"> <i class="fa-solid fa-trash"></i> {{ __('Delete') }}</a>
                             @endif
-                            <x-backend.buttons.return-back>Cancel</x-backend.buttons.return-back>
+                            <x-backend.buttons.return-back>{{ __('Cancel') }}</x-backend.buttons.return-back>
                         </div>
                     </div>
                 </div>
@@ -247,8 +247,8 @@
         <div class="row">
             <div class="col">
                 <small class="float-end text-muted">
-                    Updated: {{$user->updated_at->diffForHumans()}},
-                    Created at: {{$user->created_at->isoFormat('LLLL')}}
+                    {{ __('Updated:') }} {{$user->updated_at->diffForHumans()}},
+                    {{ __('Created at:') }} {{$user->created_at->isoFormat('LLLL')}}
                 </small>
             </div>
         </div>

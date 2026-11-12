@@ -63,4 +63,10 @@ return [
     'select_staff' => 'اختر الموظف',
     'placeholder_name' => 'اسم الفرع',
 
+    // Added: missing dashboard translations
+    'available_dates' => 'التواريخ المتاحة',
+    'enter_decription' => 'أدخل الوصف',
+    'enter_latitutude' => 'أدخل خط العرض',
+    'enter_logtitude' => 'أدخل خط الطول',
+    'lbl_update_at' => 'تاريخ التحديث',
 ];

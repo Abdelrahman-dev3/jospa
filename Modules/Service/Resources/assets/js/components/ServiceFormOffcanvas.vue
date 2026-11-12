@@ -116,6 +116,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, CATEGORY_LIST,SERVICES_UNIQUE_CHECK } from '../constant/service'
 import { useField, useForm } from 'vee-validate'
@@ -295,7 +296,7 @@ const validationSchema = yup.object({
         });
 
         if (!isUnique.isUnique) {
-          return this.createError({ path: 'name.ar', message: 'Arabic name must be unique' });
+          return this.createError({ path: 'name.ar', message: __tr('Arabic name must be unique') });
         }
 
         return true;
@@ -312,7 +313,7 @@ const validationSchema = yup.object({
         });
 
         if (!isUnique.isUnique) {
-          return this.createError({ path: 'name.en', message: 'English name must be unique' });
+          return this.createError({ path: 'name.en', message: __tr('English name must be unique') });
         }
 
         return true;

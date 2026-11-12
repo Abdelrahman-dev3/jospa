@@ -20,7 +20,7 @@
                 <x-slot name="toolbar">
                     <x-backend.buttons.return-back />
                     <a href='{{ route("backend.$module_name.index") }}' class="btn btn-secondary" data-bs-toggle="tooltip"
-                        title="{{ __($module_name) }} List"><i class="fas fa-list"></i> List</a>
+                        title="{{ __($module_name) }} List"><i class="fas fa-list"></i> {{ __('List') }}</a>
                 </x-slot>
             </x-backend.section-header>
 
@@ -33,16 +33,16 @@
                                     #
                                 </th>
                                 <th>
-                                    Name
+                                    {{ __('Name') }}
                                 </th>
                                 <th>
-                                    Updated At
+                                    {{ __('Updated At') }}
                                 </th>
                                 <th>
-                                    Created By
+                                    {{ __('Created By') }}
                                 </th>
                                 <th class="text-end">
-                                    Action
+                                    {{ __('Action') }}
                                 </th>
                             </tr>
                         </thead>
@@ -74,7 +74,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center"><b>No Recored Found</b></td>
+                                    <td colspan="5" class="text-center"><b>{{ __('No Recored Found') }}</b></td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -86,7 +86,7 @@
             <div class="row">
                 <div class="col-7">
                     <div class="float-left">
-                        Total {{ $$module_name->total() }} {{ __($module_name) }}
+                        {{ __('Total') }} {{ $$module_name->total() }} {{ __($module_name) }}
                     </div>
                 </div>
                 <div class="col-5">

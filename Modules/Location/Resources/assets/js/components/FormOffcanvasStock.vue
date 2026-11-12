@@ -13,7 +13,7 @@
         </div> -->
         <div class="form-group">
           <label class="form-label">{{ $t('product.brand') }} <span class="text-danger">*</span></label>
-          <Multiselect id="brand-list" v-model="brand_id" :value="brand_id" placeholder="Select Brand" v-bind="singleSelectOption" :options="brands.options" @select="selectBrand" class="form-group"></Multiselect>
+          <Multiselect id="brand-list" v-model="brand_id" :value="brand_id" :placeholder="$t('Select Brand')" v-bind="singleSelectOption" :options="brands.options" @select="selectBrand" class="form-group"></Multiselect>
           <span class="text-danger">{{ errors['brand_id'] }}</span>
           <ul class="m-0">
             <li class="text-danger" v-for="msg in errorMessages['brand_id']" :key="msg">{{ msg }}</li>
@@ -21,7 +21,7 @@
         </div>
         <div class="form-group col-md-12">
           <label class="form-label" for="categories">{{ $t('product.categories') }} <span class="text-danger">*</span></label>
-          <Multiselect id="categories" v-model="category_id" :value="category_id" placeholder="Select Category" v-bind="multiselectOption" :options="category.options" @select="selectCategory" class="form-group"></Multiselect>
+          <Multiselect id="categories" v-model="category_id" :value="category_id" :placeholder="$t('Select Category')" v-bind="multiselectOption" :options="category.options" @select="selectCategory" class="form-group"></Multiselect>
           <span class="text-danger">{{ errors['category_ids'] }}</span>
           <ul class="m-0">
             <li class="text-danger" v-for="msg in errorMessages['category_ids']" :key="msg">{{ msg }}</li>
@@ -29,7 +29,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">{{ $t('product.title') }}</label>
-          <Multiselect id="product_id-list" v-model="product_id" :value="product_id" v-bind="singleSelectOption" placeholder="Select Product" :options="products.options" class="form-group" @select="getProductVariationsData"></Multiselect>
+          <Multiselect id="product_id-list" v-model="product_id" :value="product_id" v-bind="singleSelectOption" :placeholder="$t('Select Product')" :options="products.options" class="form-group" @select="getProductVariationsData"></Multiselect>
           <span class="text-danger">{{ errors['product_id'] }}</span>
           <ul class="m-0">
             <li class="text-danger" v-for="msg in errorMessages['product_id']" :key="msg">{{ msg }}</li>

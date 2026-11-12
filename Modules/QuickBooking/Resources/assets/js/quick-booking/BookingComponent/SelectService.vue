@@ -11,7 +11,7 @@
                             <div class="card-body">
                                 <div>
                                     <h5 class="mb-2">{{ serviceItem.name }}</h5>
-                                    <p class="m-0 mt-3">{{ serviceItem.duration_min }} min</p>
+                                    <p class="m-0 mt-3">{{ serviceItem.duration_min }} {{ $t('min') }}</p>
                                 </div>
                                 <div class="service-price mt-3">
                                     <b>{{ formatCurrencyVue(serviceItem.default_price) }}</b>
@@ -38,7 +38,7 @@
       </div>
     </div>
     <div v-else-if="serviceList.length == 0 && !IS_LOADER" class="h-100 w-75 d-flex align-items-center justify-content-center">
-      We apologize for any inconvenience caused. Unfortunately, the selected salon branch does not offer the service you are looking for at the moment.
+      {{ $t('We apologize for any inconvenience caused. Unfortunately, the selected salon branch does not offer the service you are looking for at the moment.') }}
     </div>
   </div>
   <div class="card-footer">

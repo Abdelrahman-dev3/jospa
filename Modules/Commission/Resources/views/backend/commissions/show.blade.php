@@ -16,7 +16,7 @@
             </x-slot>
             <x-slot name="toolbar">
                 <x-backend.buttons.return-back />
-                <a href="{{ route("backend.$module_name.index") }}" class="btn btn-secondary" data-bs-toggle="tooltip" title="{{ __($module_name) }} List"><i class="fas fa-list"></i> List</a>
+                <a href="{{ route("backend.$module_name.index") }}" class="btn btn-secondary" data-bs-toggle="tooltip" title="{{ __($module_name) }} List"><i class="fas fa-list"></i> {{ __('List') }}</a>
                 @can('edit_'.$module_name)
                 <x-buttons.edit route='{!!route("backend.$module_name.edit", $$module_name_singular)!!}' title="{{ __('messages.edit') }} " class="ms-1" />
                 @endcan
@@ -38,8 +38,8 @@
         <div class="row">
             <div class="col">
                 <small class="float-end text-muted">
-                    Updated: {{$$module_name_singular->updated_at->diffForHumans()}},
-                    Created at: {{$$module_name_singular->created_at->isoFormat('LLLL')}}
+                    {{ __('Updated:') }} {{$$module_name_singular->updated_at->diffForHumans()}},
+                    {{ __('Created at:') }} {{$$module_name_singular->created_at->isoFormat('LLLL')}}
                 </small>
             </div>
         </div>

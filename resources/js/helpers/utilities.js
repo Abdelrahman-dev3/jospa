@@ -1,3 +1,4 @@
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { mergeWith } from 'lodash'
 import * as moment from 'moment'
 
@@ -87,8 +88,8 @@ export const confirmSwal = async ({ title }) => {
     showCancelButton: true,
     confirmButtonColor: '#d33', // Red for delete button
     cancelButtonColor: '#858482', 
-    cancelButtonText: 'Cancel',
-    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: __tr('Cancel'),
+    confirmButtonText: __tr('Yes, delete it!'),
     showClass: {
       popup: 'animate__animated animate__zoomIn'
     },
@@ -107,7 +108,7 @@ export const confirmcancleSwal = async ({ title }) => {
     showCancelButton: true,
     confirmButtonColor: '#d33',
     cancelButtonColor: '#858482',
-    confirmButtonText: 'Yes, do it!',
+    confirmButtonText: __tr('Yes, do it!'),
     showClass: {
       popup: 'animate__animated animate__zoomIn'
     },

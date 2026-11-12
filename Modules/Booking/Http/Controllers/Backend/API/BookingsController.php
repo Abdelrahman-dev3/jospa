@@ -58,7 +58,7 @@ class BookingsController extends Controller
             }
 
             if ($this->hasSlotConflict($employeeId, $startDateTime, $durationMinutes)) {
-                return response()->json(['message' => 'This staff member is already booked at this time.', 'status' => false], 409);
+                return response()->json(['message' => __('This staff member is already booked at this time.'), 'status' => false], 409);
             }
         }
 
@@ -74,7 +74,7 @@ class BookingsController extends Controller
                     ->exists();
                 if ($existingPackage) {
                     $alreadyPurchased = true;
-                    return response()->json(['message' => 'Package already purchased.', 'status' => false], 200);
+                    return response()->json(['message' => __('Package already purchased.'), 'status' => false], 200);
                 }
             }
         }
@@ -85,7 +85,7 @@ class BookingsController extends Controller
             $coupon_data = Coupon::where('coupon_code', $data['coupon_code'])->first();
 
             if (! $coupon_data) {
-                return response()->json(['message' => 'Coupon not found.', 'status' => false], 200);
+                return response()->json(['message' => __('Coupon not found.'), 'status' => false], 200);
             }
 
             $coupon_data->syncExpiredState();
@@ -104,7 +104,7 @@ class BookingsController extends Controller
             }
             // Apply the discount validation
             if ($data['couponDiscountamount'] > $totalPrice) {
-                return response()->json(['valid' => false, 'message' => 'Discount exceeds the total price', 'status' => false], 200);
+                return response()->json(['valid' => false, 'message' => __('Discount exceeds the total price'), 'status' => false], 200);
             }
             if ($coupon_data->isCurrentlyExpired()) {
                 $message = 'Coupon has expired.';

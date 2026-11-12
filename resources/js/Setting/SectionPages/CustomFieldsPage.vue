@@ -28,9 +28,9 @@
             <td>{{ item.label }}</td>
             <td>{{ item.type }}</td>
             <td>{{ item.values || '-' }}</td> <!-- Display dash if values is empty or null -->
-            <td><span v-if="item.required == 1">Yes</span><span v-else>No</span></td>
-            <td><span v-if="item.is_export == 1">Yes</span><span v-else>No</span></td>
-            <td><span v-if="item.is_view == 1">Yes</span><span v-else>No</span></td>
+            <td><span v-if="item.required == 1">{{ $t('Yes') }}</span><span v-else>{{ $t('No') }}</span></td>
+            <td><span v-if="item.is_export == 1">{{ $t('Yes') }}</span><span v-else>{{ $t('No') }}</span></td>
+            <td><span v-if="item.is_view == 1">{{ $t('Yes') }}</span><span v-else>{{ $t('No') }}</span></td>
 
             <th>
               <button type="button" v-if="hasPermissions('edit_custom_field')" class="btn btn-soft-primary btn-sm" data-bs-toggle="modal"  :title="$t('messages.edit')"  data-bs-target="#exampleModal" @click="changeId(item.id)" aria-controls="exampleModal"><i class="fa-solid fa-pen-clip"></i></button>
@@ -51,6 +51,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import CardTitle from '@/Setting/Components/CardTitle.vue'
 import { LISTING_URL, DELETE_URL } from '@/vue/constants/custom_field'
@@ -94,7 +95,7 @@ const destroyData = (id, message) => {
     deleteRequest({ url: DELETE_URL, id }).then((res) => {
       if (res.status) {
         Swal.fire({
-          title: 'Deleted',
+          title: __tr('Deleted'),
           text: res.message,
           icon: 'success',
           showClass: {

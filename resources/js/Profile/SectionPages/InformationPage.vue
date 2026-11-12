@@ -1,7 +1,7 @@
 <template>
   <form @submit="formSubmit">
     <div class="d-flex justify-content-between align-items-center">
-      <CardTitle title="Personal Information" icon="fa-solid fa-user"></CardTitle>
+      <CardTitle :title="$t('Personal Information')" icon="fa-solid fa-user"></CardTitle>
     </div>
     <div class="row">
       <div class="col-12 row">

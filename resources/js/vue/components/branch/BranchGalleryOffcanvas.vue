@@ -40,6 +40,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref } from 'vue'
 import { GET_GALLERY_URL, POST_GALLERY_URL } from '../../constants/branch'
 import { useRequest, useModuleId } from '@/helpers/hooks/useCrudOpration'
@@ -83,7 +84,7 @@ const handleImageUpload = (event) => {
 // Function to delete Images
 const removeImage = (index) => {
   featureImages.value.splice(index, 1)
-  window.successSnackbar('Image removed successfully')
+  window.successSnackbar(__tr('Image removed successfully'))
 }
 
 // Reload Datatable, SnackBar Message, Alert, Offcanvas Close

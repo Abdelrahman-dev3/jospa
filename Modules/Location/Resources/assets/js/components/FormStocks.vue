@@ -1,7 +1,7 @@
 <template>
   <form @submit="formSubmit">
     <div class="form-group">
-      <label class="form-label">Location</label>
+      <label class="form-label">{{ $t('Location') }}</label>
       <Multiselect id="location_id-list" v-model="location_id" :value="location_id" v-bind="singleSelectOption" :options="LOCATIONS_OPTIONS" class="form-group" @select="getProductVariationsData"></Multiselect>
       <span class="text-danger">{{ errors['location_id'] }}</span>
       <ul class="m-0">
@@ -9,7 +9,7 @@
       </ul>
     </div>
     <div class="form-group">
-      <label class="form-label">Products</label>
+      <label class="form-label">{{ $t('Products') }}</label>
       <Multiselect id="product_id-list" v-model="product_id" :value="product_id" v-bind="singleSelectOption" :options="PRODUCT_OPTIONS" class="form-group" @select="getProductVariationsData"></Multiselect>
       <span class="text-danger">{{ errors['product_id'] }}</span>
       <ul class="m-0">
@@ -22,10 +22,10 @@
           <thead>
             <tr>
               <th>
-                <label for="" class="control-label">Variation</label>
+                <label for="" class="control-label">{{ $t('Variation') }}</label>
               </th>
               <th data-breakpoints="xs sm">
-                <label for="" class="control-label">Stock</label>
+                <label for="" class="control-label">{{ $t('Stock') }}</label>
               </th>
             </tr>
           </thead>
@@ -48,7 +48,7 @@
       </template>
     </template>
     <div class="form-group">
-      <button type="submit" class="btn btn-primary" :disabled="!product_id">Submit</button>
+      <button type="submit" class="btn btn-primary" :disabled="!product_id">{{ $t('Submit') }}</button>
     </div>
   </form>
 </template>

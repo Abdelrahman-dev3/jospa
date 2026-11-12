@@ -50,6 +50,7 @@
   </form>
 </template>
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted, watch } from 'vue'
 import { DATATABLE_URL, EDIT_URL, STORE_URL, UPDATE_URL } from '@/vue/constants/commission'
 import { useField, useForm } from 'vee-validate'
@@ -103,8 +104,8 @@ const type_commission = ref({
   searchable: true,
   options: [
     // { label: 'Weekly', value: 'Weekly'},
-    { label: 'Percentage', value: 'percentage' },
-    { label: 'Fixed', value: 'fixed' }
+    { label: __tr('Percentage'), value: 'percentage' },
+    { label: __tr('Fixed'), value: 'fixed' }
   ],
   closeOnSelect: true
 })

@@ -18,9 +18,9 @@
           </div>
         </div>
         <InputField class="col-md-12" type="text" :is-required="true" :label="$t('promotion.lbl_name')"
-          placeholder="Enter Name" v-model="name" :error-message="errors['name']"></InputField>
+          :placeholder="$t('Enter Name')" v-model="name" :error-message="errors['name']"></InputField>
         <InputField class="col-md-12" type="textarea" :is-required="true" :label="$t('promotion.description')"
-          placeholder="Enter a brief description..." v-model="description" :error-message="errors['description']"
+          :placeholder="$t('Enter a brief description...')" v-model="description" :error-message="errors['description']"
           :error-messages="errorMessages['description']"></InputField>
         <!-- <InputField class="col-md-12" type="datetime-local" :is-required="true" :label="$t('promotion.start_datetime')" placeholder="" v-model="start_date_time" :error-message="errors['start_date_time']" :error-messages="errorMessages['start_date_time']"></InputField>
         <InputField class="col-md-12" type="datetime-local" :is-required="true" :label="$t('promotion.end_datetime')" placeholder="" v-model="end_date_time" :error-message="errors['end_date_time']" :error-messages="errorMessages['end_date_time']"></InputField> -->
@@ -74,7 +74,7 @@
                 class="btn btn-sm btn-primary me-2" 
                 @click="selectAllServices"
                 :disabled="ISREADONLY">
-                Select All ({{ filteredServices.length }})
+                {{ $t('Select All') }} ({{ filteredServices.length }})
               </button>
               <button 
                 type="button" 
@@ -82,7 +82,7 @@
                 @click="clearAllServices"
                 :disabled="ISREADONLY"
                 v-if="services && services.length > 0">
-                Clear All
+                {{ $t('Clear All') }}
               </button>
             </div>
 
@@ -139,7 +139,7 @@
         <div class="form-group col-md-12" v-if="coupon_type">
           <div v-if="coupon_type == 'custom'">
             <InputField class="col-md-12" type="text" :is-required="true" :label="$t('promotion.coupon_code')"
-              placeholder="Enter a coupon code" v-model="coupon_code" :error-message="errors['coupon_code']"
+              :placeholder="$t('Enter a coupon code')" v-model="coupon_code" :error-message="errors['coupon_code']"
               :error-messages="errorMessages['coupon_code']" :is-read-only="ISREADONLY"></InputField>
           </div>
           <div v-else-if="coupon_type == 'bulk'">
@@ -159,12 +159,12 @@
         <div class="col-md-12" v-if="discount_type">
           <div v-if="discount_type == 'percent'">
             <InputField type="number" step="any" :is-required="true" :label="$t('promotion.discount_percentage')"
-              placeholder="Enter Discount Percentage" v-model="discount_percentage"
+              :placeholder="$t('Enter Discount Percentage')" v-model="discount_percentage"
               :error-message="errors['discount_percentage']"></InputField>
           </div>
           <div v-else-if="discount_type == 'fixed'">
             <InputField type="number" :is-required="true" :label="$t('promotion.discount_amount')"
-              placeholder="Enter Discount Amount" v-model="discount_amount" :error-message="errors['discount_amount']">
+              :placeholder="$t('Enter Discount Amount')" v-model="discount_amount" :error-message="errors['discount_amount']">
             </InputField>
           </div>
         </div>
@@ -218,6 +218,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted, computed, watch } from 'vue'
 import { readFile } from '@/helpers/utilities'
 import { EDIT_URL, STORE_URL, UPDATE_URL, UNIQUE_CHECK } from '../constant'
@@ -545,7 +546,7 @@ const validationSchema = yup.object({
           }
           const isUnique = await storeRequest({ url: UNIQUE_CHECK, body: value, type: 'file' })
           if (!isUnique.isUnique) {
-            return this.createError({ path: 'coupon_code', message: 'Coupon code must be unique' })
+            return this.createError({ path: 'coupon_code', message: __tr('Coupon code must be unique') })
           }
           return true
         })
@@ -597,12 +598,12 @@ const { value: specific_dates } = useField('specific_dates')
 const errorMessages = ref({})
 
 const typeOptions = [
-  { label: 'Percent', value: 'percent' },
-  { label: 'Fixed', value: 'fixed' }
+  { label: __tr('Percent'), value: 'percent' },
+  { label: __tr('Fixed'), value: 'fixed' }
 ]
 
 const couponOptions = [
-  { label: 'Custom', value: 'custom' },
+  { label: __tr('Custom'), value: 'custom' },
   { label: 'bulk', value: 'bulk' }
 ]
 
@@ -629,7 +630,7 @@ const filteredServices = computed(() => {
 
 const serviceOptions = computed(() => {
   const invoiceOption = {
-    label: 'On Invoice',
+    label: __tr('On Invoice'),
     value: INVOICE_OPTION_VALUE
   }
 
@@ -691,7 +692,7 @@ const formSubmit = handleSubmit((values) => {
       .catch((error) => {
         IS_SUBMITED.value = false
         console.error('Update error:', error)
-        window.errorSnackbar('An error occurred while updating the promotion')
+        window.errorSnackbar(__tr('An error occurred while updating the promotion'))
       })
   } else {
     storeRequest({ url: STORE_URL, body: cleanValues, type: 'file' })
@@ -699,7 +700,7 @@ const formSubmit = handleSubmit((values) => {
       .catch((error) => {
         IS_SUBMITED.value = false
         console.error('Store error:', error)
-        window.errorSnackbar('An error occurred while creating the promotion')
+        window.errorSnackbar(__tr('An error occurred while creating the promotion'))
       })
   }
 })

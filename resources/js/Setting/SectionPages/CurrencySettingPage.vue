@@ -23,7 +23,7 @@
             <th>{{ currency.currency_symbol }}</th>
             <th>{{ currency.currency_code }}</th>
             <th>
-              <span v-if="currency.is_primary" class="badge bg-success">Default</span>
+              <span v-if="currency.is_primary" class="badge bg-success">{{ $t('Default') }}</span>
               <span v-else class="badge bg-danger">-</span>
             </th>
             <th>
@@ -36,7 +36,7 @@
       <template v-else>
         <!-- Render message when tableList is null or empty -->
         <tr class="text-center">
-          <td colspan="9" class="py-3">Data is not available in this Table</td>
+          <td colspan="9" class="py-3">{{ $t('Data is not available in this Table') }}</td>
         </tr>
       </template>
     </table>
@@ -44,6 +44,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import CardTitle from '@/Setting/Components/CardTitle.vue'
 import CurrencyFormOffCanvas from './Forms/CurrencyFormOffCanvas.vue'
@@ -83,7 +84,7 @@ const destroyData = (id, message) => {
     deleteRequest({ url: DELETE_URL, id }).then((res) => {
       if (res.status) {
         Swal.fire({
-          title: 'Deleted',
+          title: __tr('Deleted'),
           text: res.message,
           icon: 'success',
           showClass: {

@@ -286,6 +286,17 @@
         $filePaths = \File::files($langFolderPath);
       @endphp
 
+    {{-- Plain-text translations (lang/{locale}.json) so Vue's $t('English text') resolves too --}}
+    @php
+        $jsonLangPath = base_path('lang/' . App::currentLocale() . '.json');
+        $jsonLang = is_file($jsonLangPath) ? (json_decode(file_get_contents($jsonLangPath), true) ?: []) : [];
+    @endphp
+    <script>
+        window.localMessagesUpdate = {
+            ...@json((object) $jsonLang),
+            ...window.localMessagesUpdate
+        }
+    </script>
     @foreach ($filePaths as $filePath)
       @php
         $fileName = pathinfo($filePath, PATHINFO_FILENAME);

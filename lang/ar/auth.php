@@ -43,4 +43,9 @@ return [
     'resend_otp'       => 'أعد إرساله',
     'otp_valid_time'   => 'الكود ساري لمدة 5 دقائق',
     'send_button'      => 'ارسال',
+
+    // Added: missing dashboard translations
+    'log_in' => 'تسجيل الدخول',
+    'dont_have_account' => 'ليس لديك حساب؟',
+    'password_hint' => 'يجب أن تكون كلمة المرور بين 8 و12 حرفاً.',
 ];

@@ -104,7 +104,7 @@
         <div class="col-md-6">
           <div class="form-group mb-0">
             <label class="form-label" for="firebase_project_id">{{ $t('setting_integration_page.lbl_firebase_project_id') }}</label>
-            <input type="text" class="form-control" v-model="firebase_project_id" placeholder="Firebase Project ID" id="firebase_project_id" name="firebase_project_id" :errorMessage="errors.firebase_project_id" :errorMessages="errorMessages.firebase_project_id" />
+            <input type="text" class="form-control" v-model="firebase_project_id" :placeholder="$t('Firebase Project ID')" id="firebase_project_id" name="firebase_project_id" :errorMessage="errors.firebase_project_id" :errorMessages="errorMessages.firebase_project_id" />
             <p class="text-danger" v-for="msg in errorMessages.firebase_project_id" :key="msg">{{ msg }}</p>
             <span class="text-danger">{{ errors.firebase_project_id }}</span>
           </div>
@@ -113,12 +113,12 @@
           <label for="json_file" class="form-control-label">
             {{ $t('setting_integration_page.firebase_json_file') }}
             <span class="ml-3">
-              <a class="text-primary" href="https://console.firebase.google.com/">Download JSON File</a>
+              <a class="text-primary" href="https://console.firebase.google.com/">{{ $t('Download JSON File') }}</a>
             </span>
           </label>
           <div class="custom-file">
             <input type="file" class="form-control" id="json_file" name="json_file" ref="refInput" accept=".json" @change="fileUpload" />
-            <label id="additionalFileHelp" class="custom-file-label upload-label border-0">Upload Firebase JSON files only Once.</label>
+            <label id="additionalFileHelp" class="custom-file-label upload-label border-0">{{ $t('Upload Firebase JSON files only Once.') }}</label>
             <small class="help-block with-errors text-danger"></small>
           </div>
         </div>

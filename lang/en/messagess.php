@@ -732,4 +732,8 @@ return [
         'gift_card_coupon_not_allowed' => 'Discount codes cannot be used when paying with a gift card.',
     'coupon_disabled_by_gift_card' => 'Discount code is disabled because you are paying with a gift card. They cannot be used together.',
     'gift_card_disabled_by_coupon' => 'Gift card payment is disabled because a discount code is applied. They cannot be used together.',
+
+    // Added: missing dashboard translations
+    'confirm_delete' => 'Are you sure you want to delete?',
+    'reason_deleted_success' => 'Reason deleted successfully.',
 ];

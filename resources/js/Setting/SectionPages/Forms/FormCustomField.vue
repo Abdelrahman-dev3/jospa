@@ -75,15 +75,15 @@
 
                 <div class="form-group" v-if="type === 'select' || type === 'radio' || type === 'checkbox'">
                   <div v-for="(input, index) in inputFields" :key="index" class="mb-3 mt-3">
-                    <label class="form-label" for="label">Value</label>
+                    <label class="form-label" for="label">{{ $t('Value') }}</label>
                     <div class="d-flex">
                       <input type="text" class="form-control" v-model="input.value" />
-                      <a v-if="inputFields.length > 1" class="btn btn-primary ml-2" @click="deleteInputField(index)">Delete</a>
+                      <a v-if="inputFields.length > 1" class="btn btn-primary ml-2" @click="deleteInputField(index)">{{ $t('Delete') }}</a>
                     </div>
                   </div>
                   <div class="mb-4">
                     <a @click="addInputField" class="text-primary" style="cursor: pointer;">
-                      <h6><i class="fa fa-plus-circle" aria-hidden="true"></i> Add More</h6>
+                      <h6><i class="fa fa-plus-circle" aria-hidden="true"></i> {{ $t('Add More') }}</h6>
                     </a>
                   </div>
                 </div>
@@ -108,6 +108,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted, watch } from 'vue'
 import { DATATABLE_URL, EDIT_URL, STORE_URL, UPDATE_URL } from '@/vue/constants/custom_field'
 import { useField, useForm } from 'vee-validate'
@@ -172,15 +173,15 @@ const module_data = ref({
 const type_data = ref({
   searchable: true,
   options: [
-    { label: 'Text', value: 'text' },
-    { label: 'Number', value: 'number' },
-    { label: 'Password', value: 'password' },
-    { label: 'Text Area', value: 'textarea' },
-    { label: 'Select', value: 'select' },
-    { label: 'Radio', value: 'radio' },
-    { label: 'Date', value: 'date' },
-    { label: 'Check Box', value: 'checkbox' },
-    { label: 'Files', value: 'file' }
+    { label: __tr('Text'), value: 'text' },
+    { label: __tr('Number'), value: 'number' },
+    { label: __tr('Password'), value: 'password' },
+    { label: __tr('Text Area'), value: 'textarea' },
+    { label: __tr('Select'), value: 'select' },
+    { label: __tr('Radio'), value: 'radio' },
+    { label: __tr('Date'), value: 'date' },
+    { label: __tr('Check Box'), value: 'checkbox' },
+    { label: __tr('Files'), value: 'file' }
   ],
   closeOnSelect: true
 })

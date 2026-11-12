@@ -16,4 +16,7 @@ return [
     'lbl_cc' => 'نسخة للمشاركة (Cc)',
     'edit' => 'تعديل',
     'parameters' => 'معلمات الإخطار',
+
+    // Added: missing dashboard translations
+    'template' => 'القالب',
 ];

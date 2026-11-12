@@ -9,4 +9,11 @@ return [
     'lbl_status' => 'الحالة',
     'lbl_action' => 'الإجراء',
     'lbl_module_type' => 'نوع الوحدة',
+
+    // Added: missing dashboard translations
+    'enter_title' => 'أدخل العنوان',
+    'enter_value' => 'أدخل القيمة',
+    'lbl_updated' => 'تاريخ التحديث',
+    'module_type' => 'اختر نوع الوحدة',
+    'select_type' => 'اختر النوع',
 ];

@@ -63,7 +63,7 @@
         </plan-limit-offcanvas>
 
         <x-backend.advance-filter>
-          <x-slot name="title"><h4>Advanced Filter</h4></x-slot>
+          <x-slot name="title"><h4>{{ __('Advanced Filter') }}</h4></x-slot>
           <select name="" id="" class="select2">
             <option value="1">1</option>
             <option value="2">2</option>
@@ -103,7 +103,7 @@ const columns = [
         ]
 
         const actionColumn = [
-            { data: 'action', name: 'action', orderable: false, searchable: false, title: 'Action' }
+            { data: 'action', name: 'action', orderable: false, searchable: false, title: @json(__('Action')) }
         ]
     const customFieldColumns = JSON.parse(@json($columns))
 

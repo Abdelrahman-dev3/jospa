@@ -178,7 +178,7 @@ class VariationsController extends Controller
     {
         $id->update(['status' => $request->status]);
 
-        return response()->json(['status' => true, 'message' => 'Status Updated']);
+        return response()->json(['status' => true, 'message' => __('Status Updated')]);
     }
 
     /**

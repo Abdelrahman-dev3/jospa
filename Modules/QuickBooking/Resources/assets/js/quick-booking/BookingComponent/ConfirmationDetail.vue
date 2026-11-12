@@ -85,7 +85,7 @@
                             </div>
                         </div>
                         <div class="iq-card-body">
-                            <h6>Taxes</h6>
+                            <h6>{{ $t('Taxes') }}</h6>
                             <template v-if="booking.tax">
                                 <div class="d-flex align-items-center justify-content-between" v-for="(tax, index) in booking.tax" :key="index">
                                     <template v-if="tax.type == 'percent'">

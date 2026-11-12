@@ -91,7 +91,7 @@
         <div class="form-group datatable-filter">
             <label class="form-label" for="column_category">{{ __('service.lbl_category') }}</label>
             <select name="column_category" id="column_category" class="form-control select2" data-filter="select">
-                <option value="">All Categories</option>
+                <option value="">{{ __('All Categories') }}</option>
                 @foreach ($categories as $category)
                     <option value="{{ $category->id }}">{{ $category->name }}</option>
                 @endforeach

@@ -24,4 +24,25 @@ return [
     'no_of_services' => 'عدد الخدمات',
     'placeholder_name' => 'أدخل اسم الحزمة',
 
+    // Added: missing dashboard translations
+    'branch' => 'الفرع',
+    'invalid_action' => 'إجراء غير صالح.',
+    'is_featured_update' => 'تم تحديث حالة التمييز بنجاح.',
+    'lbl_Client' => 'العميل',
+    'lbl_expiration_date' => 'تاريخ الانتهاء',
+    'lbl_no_name' => 'إجمالي الخدمات',
+    'lbl_purchase_date' => 'تاريخ الشراء',
+    'lbl_remainig' => 'المتبقي',
+    'lbl_service' => 'الخدمة',
+    'lbl_service_remaining' => 'الخدمات المتبقية',
+    'no_packages_expiring_soon' => 'لا توجد باقات تنتهي خلال الأسبوع القادم.',
+    'no_packages_for_user' => 'لا توجد باقات متاحة لهذا المستخدم.',
+    'no_packages_with_service' => 'لا توجد باقات متاحة بهذه الخدمة.',
+    'package_list' => 'تم جلب قائمة الباقات بنجاح.',
+    'package_not_available' => 'لا توجد باقات متاحة.',
+
+    // Added: missing dashboard translations
+    'discount_price' => 'السعر بعد الخصم',
+    'no_packages_found' => 'لا توجد باقات تنتهي خلال الأسبوع القادم.',
+    'view_package' => 'عرض الباقة',
 ];

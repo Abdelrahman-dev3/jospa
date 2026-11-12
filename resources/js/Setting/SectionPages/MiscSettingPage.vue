@@ -9,7 +9,7 @@
       <div class="col-md-4">
         <div class="form-group">
           <label class="form-label" for="slot_duration">{{ $t('setting_booking_page.lbl_name') }}</label>
-          <flat-pickr placeholder="Slot Duration (Min)" id="slot_duration" class="form-control" v-model="slot_duration" :value="slot_duration" :config="config"></flat-pickr>
+          <flat-pickr :placeholder="$t('Slot Duration (Min)')" id="slot_duration" class="form-control" v-model="slot_duration" :value="slot_duration" :config="config"></flat-pickr>
           <span class="text-danger">{{ errors.slot_duration }}</span>
         </div>
       </div>
@@ -190,6 +190,7 @@
   </form>
 </template>
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import CardTitle from '@/Setting/Components/CardTitle.vue'
 import InputField from '@/vue/components/form-elements/InputField.vue'
 import { onMounted, ref } from 'vue'
@@ -262,7 +263,7 @@ const data_table_limit_data = ref({
     { label: 25, value: 25 },
     { label: 50, value: 50 },
     { label: 100, value: 100 },
-    { label: 'All', value: -1 }
+    { label: __tr('All'), value: -1 }
   ],
   closeOnSelect: true,
   createOption: true

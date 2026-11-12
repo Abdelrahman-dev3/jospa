@@ -80,7 +80,7 @@
                     <div class="col-8">
                         <div class="float-end">
                             <a href="{{route("backend.$module_name.destroy", $$module_name_singular)}}" class="btn btn-danger" data-method="DELETE" data-token="{{csrf_token()}}" data-bs-toggle="tooltip" title="{{__('labels.backend.delete')}}"> <i class="fa-solid fa-trash"></i></a>
-                            <x-backend.buttons.return-back>Cancel</x-backend.buttons.return-back>
+                            <x-backend.buttons.return-back>{{ __('Cancel') }}</x-backend.buttons.return-back>
                         </div>
                     </div>
                 </div>
@@ -94,8 +94,8 @@
         <div class="row">
             <div class="col">
                 <small class="float-end text-muted">
-                    Updated: {{$$module_name_singular->updated_at->diffForHumans()}},
-                    Created at: {{$$module_name_singular->created_at->isoFormat('LLLL')}}
+                    {{ __('Updated:') }} {{$$module_name_singular->updated_at->diffForHumans()}},
+                    {{ __('Created at:') }} {{$$module_name_singular->created_at->isoFormat('LLLL')}}
                 </small>
             </div>
         </div>

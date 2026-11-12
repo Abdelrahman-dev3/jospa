@@ -294,7 +294,7 @@ class PromotionsController extends Controller
             }
         }
 
-        return response()->json(['status' => true, 'message' => 'Status Updated']);
+        return response()->json(['status' => true, 'message' => __('Status Updated')]);
     }
 
     /**
@@ -495,7 +495,7 @@ class PromotionsController extends Controller
 
         // Ensure discount doesn't exceed the service price
         if ($discountValue > $servicePrice) {
-            return response()->json(['valid' => false, 'message' => 'Discount exceeds the service price', 'status' => false], 400);
+            return response()->json(['valid' => false, 'message' => __('Discount exceeds the service price'), 'status' => false], 400);
         }
         $data = [
             'coupon_code' => $coupon->coupon_code,

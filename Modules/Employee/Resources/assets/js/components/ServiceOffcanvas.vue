@@ -3,12 +3,12 @@
     <div class="offcanvas offcanvas-end" tabindex="-1" id="package-service-form" aria-labelledby="form-offcanvasLabel">
       <div class="offcanvas-body">
         <div class="d-flex flex-column">
-          <h4>Services</h4>
+          <h4>{{ $t('Services') }}</h4>
           <table v-if="services.length > 0" class="table table-striped border table-responsive dataTable no-footer">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Price</th>
+                <th>{{ $t('Name') }}</th>
+                <th>{{ $t('Price') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -22,7 +22,7 @@
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-muted">No data available</p>
+          <p v-else class="text-muted">{{ $t('No data available') }}</p>
         </div>
       </div>
     </div>

@@ -113,4 +113,7 @@ return [
     'change_image' => 'Change Image',
     'e_wallet' => 'E-Wallet',
     'success_update' => 'Profile updated successfully',
+
+    // Added: missing dashboard translations
+    'default_profile' => 'Profile',
 ];

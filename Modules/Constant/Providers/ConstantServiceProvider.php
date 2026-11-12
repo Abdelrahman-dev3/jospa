@@ -84,7 +84,7 @@ class ConstantServiceProvider extends ServiceProvider
      */
     public function registerTranslations()
     {
-        // $this->loadTranslationsFrom(__DIR__.'/../lang', 'constant');
+        $this->loadTranslationsFrom(__DIR__.'/../lang', 'constant');
     }
 
     /**

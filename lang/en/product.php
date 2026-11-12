@@ -79,4 +79,11 @@ return [
     'already_in_cart' => 'The product is already in the cart.',
     'review_msg' => 'Review Message',
 
+    // Added: missing dashboard translations
+    'empty_cart' => 'Cart is empty.',
+    'lbl_update_at' => 'Updated At',
+    'logistic_zone_list' => 'Logistic zone list',
+    'order_detail' => 'Order details',
+    'unit_list' => 'Unit list',
+    'user_address_not_found' => 'User address not found.',
 ];

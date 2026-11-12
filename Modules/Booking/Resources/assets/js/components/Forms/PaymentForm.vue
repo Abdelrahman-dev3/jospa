@@ -1,16 +1,16 @@
 <template>
   <div class="offcanvas-body">
     <div class="form-group d-flex align-items-center justify-content-between">
-      <label for="">Total: </label>
+      <label for="">{{ $t('Total:') }} </label>
       <strong>{{ formatCurrencyVue(subtotal) }}</strong>
     </div>
 
     <div v-if="check_coupon || coupondiscount > 0" class="form-group d-flex align-items-center justify-content-between">
-      <label for="">Coupon Discount:</label>
+      <label for="">{{ $t('Coupon Discount:') }}</label>
       <strong class="text-danger"> -{{ formatCurrencyVue(check_coupon ? check_coupon.discount : coupondiscount) }} </strong>
     </div>
     <div v-if="check_coupon || coupondiscount> 0" class="form-group d-flex align-items-center justify-content-between">
-      <label for="">Subtotal: </label>
+      <label for="">{{ $t('Subtotal:') }} </label>
       <strong>{{ formatCurrencyVue(finalsubtotal || 0) }}</strong>
       <!-- <strong class="text-success">{{ formatCurrencyVue(check_coupon ? subtotal - check_coupon.discount : subtotal - coupondiscount || 0) }}</strong> -->
 
@@ -26,7 +26,7 @@
       </template>
     </div>
     <div class="form-group d-flex align-items-center justify-content-between">
-      <label for="">Final Total: </label>
+      <label for="">{{ $t('Final Total:') }} </label>
       <strong class="text-success">{{ formatCurrencyVue(finalAmount) }}</strong>
     </div>
     
@@ -52,8 +52,8 @@
               <InputField class="col-md-12" type="text" :label="$t('Have a discount coupon')" placeholder="" v-model="data.coupon_code" :is-read-only="isCouponApplied"></InputField>
             </div>
             <div class="col-md-4">
-              <button v-if="!isCouponApplied" type="button" class="btn btn-primary btn-apply mt-5" @click="couponValidate">Apply</button>
-              <button v-if="isCouponApplied" type="button" class="btn btn-danger btn-remove mt-5" @click="removeCoupon">Remove</button>
+              <button v-if="!isCouponApplied" type="button" class="btn btn-primary btn-apply mt-5" @click="couponValidate">{{ $t('Apply') }}</button>
+              <button v-if="isCouponApplied" type="button" class="btn btn-danger btn-remove mt-5" @click="removeCoupon">{{ $t('Remove') }}</button>
               <span></span>
             </div>
           </div>
@@ -63,6 +63,7 @@
   </div>
 </template>
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, reactive, computed, onMounted } from 'vue'
 import { PAYMENT_CREATE_URL, coupon_validate } from '../../constant/booking'
 import { useRequest } from '@/helpers/hooks/useCrudOpration'
@@ -181,11 +182,11 @@ const couponValidate = () => {
       data.coupondiscount = coupondiscount.value
 
       Swal.fire({
-        title: 'You Saved<br>' + formatCurrencyVue(coupondiscount.value),
+        title: __tr('You Saved') + '<br>' + formatCurrencyVue(coupondiscount.value),
         icon: 'success',
         width: 300,
         //showConfirmButton:false,
-        confirmButtonText: 'Go to payment',
+        confirmButtonText: __tr('Go to payment'),
         padding: '3em',
         timer: 3000,
 
@@ -207,7 +208,7 @@ const couponValidate = () => {
       data.message = res.message
       data.coupon_code = ''
       Swal.fire({
-        title: 'invalid coupon !',
+        title: __tr('invalid coupon !'),
         text: data.message,
         icon: 'warning',
         showClass: {

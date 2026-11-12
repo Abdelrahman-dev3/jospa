@@ -261,7 +261,7 @@
     @csrf
     <!-- HOME SECTION -->
     <div class="section">
-        <h2>Main Page Banners</h2>
+        <h2>{{ __('Main Page Banners') }}</h2>
         <input type="hidden" name="page" value="home">
         @hasPermission('store_ads')
             <label class="upload-btn" for="home-input">{{ __('messagess.upload_banners') }}</label>
@@ -511,12 +511,12 @@ function updateStatus(id, currentStatus, btn) {
             if(newStatus == 1){
                 btn.classList.remove('inactive');
                 btn.classList.add('active');
-                btn.innerText = 'Active';
+                btn.innerText = @json(__('Active'));
                 btn.setAttribute('onclick', `updateStatus(${id}, 1, this)`);
             } else {
                 btn.classList.remove('active');
                 btn.classList.add('inactive');
-                btn.innerText = 'Inactive';
+                btn.innerText = @json(__('Inactive'));
                 btn.setAttribute('onclick', `updateStatus(${id}, 0, this)`);
             }
         } else {

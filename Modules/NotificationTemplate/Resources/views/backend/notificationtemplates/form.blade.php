@@ -66,8 +66,8 @@
                     <div class="form-group">
                         <label class="form-label" for="status">{{ __('messages.status') }} :</label>
                         <select class="form-control" name="status" id="status">
-                            <option value="1" {{ $data->status == 1 ? 'selected' : '' }}>Active</option>
-                            <option value="0" {{ $data->status == 0 ? 'selected' : '' }}>Inactive</option>
+                            <option value="1" {{ $data->status == 1 ? 'selected' : '' }}>{{ __('Active') }}</option>
+                            <option value="0" {{ $data->status == 0 ? 'selected' : '' }}>{{ __('Inactive') }}</option>
                         </select>
                     </div>
                 </div>

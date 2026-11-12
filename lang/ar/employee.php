@@ -126,4 +126,7 @@ return [
     'break_end_after_start' => 'وقت نهاية الاستراحة في يوم :day يجب أن يكون بعد بدايتها',
     'break_inside_work_hours' => 'الاستراحة في يوم :day يجب أن تكون داخل وقت الدوام',
     'break_overlap' => 'يوجد تداخل بين الاستراحات في يوم :day',
+
+    // Added: missing dashboard translations
+    'Twitter_link' => 'أدخل رابط تويتر',
 ];

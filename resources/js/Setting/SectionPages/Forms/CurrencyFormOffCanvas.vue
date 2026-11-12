@@ -31,15 +31,15 @@
                   </div>
                 </div>
 
-                <h6><b>Currency Format Settings</b></h6>
+                <h6><b>{{ $t('Currency Format Settings') }}</b></h6>
 
                 <div class="form-group">
                   <label class="form-label" for="label">{{ $t('currency.lbl_currency_position') }}</label>
                   <select class="form-select" v-model="currency_position">
-                    <option value="left">Left</option>
-                    <option value="right">Right</option>
-                    <option value="left_with_space">Left With Space</option>
-                    <option value="right_with_space">Right With Space</option>
+                    <option value="left">{{ $t('Left') }}</option>
+                    <option value="right">{{ $t('Right') }}</option>
+                    <option value="left_with_space">{{ $t('Left With Space') }}</option>
+                    <option value="right_with_space">{{ $t('Right With Space') }}</option>
                   </select>
                 </div>
 
@@ -50,7 +50,7 @@
                 <InputField class="col-md-12" :is-required="true" :label="$t('currency.lbl_number_of_decimals')" placeholder="" v-model="no_of_decimal" :error-message="errors.no_of_decimal" :error-messages="errorMessages['no_of_decimal']"></InputField>
 
                 <div class="form-group">
-                  <label class="form-label" for="label">Example:- {{ formatCurrencyVue(labelValue, no_of_decimal, decimal_separator, thousand_separator, currency_position, currency_symbol) }}</label>
+                  <label class="form-label" for="label">{{ $t('Example:') }}- {{ formatCurrencyVue(labelValue, no_of_decimal, decimal_separator, thousand_separator, currency_position, currency_symbol) }}</label>
                 </div>
               </div>
             </div>

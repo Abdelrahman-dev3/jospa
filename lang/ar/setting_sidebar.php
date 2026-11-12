@@ -19,4 +19,11 @@ return [
     'lbl_language' => 'إعدادات اللغة',
     'lbl_menu' => 'مُنشئ القائمة',
     'lbl_inv_setting' => 'إعدادات الفاتورة',
+
+    // Added: missing dashboard translations
+    'lbl_work_hours' => 'ساعات العمل',
+
+    // Added: missing dashboard translations
+    'lbl_custom_css_code' => 'كود CSS مخصص',
+    'lbl_custom_js_code' => 'كود JS مخصص',
 ];

@@ -17,11 +17,11 @@
       <div class="d-flex mt-2">
         <div class="form-check form-check-inline">
           <input class="form-check-input" type="radio" name="gender" v-model="gender" id="male" value="male" />
-          <label class="form-check-label" for="male"> Male </label>
+          <label class="form-check-label" for="male"> {{ $t('Male') }} </label>
         </div>
         <div class="form-check form-check-inline">
           <input class="form-check-input" type="radio" name="gender" v-model="gender" id="female" value="female" />
-          <label class="form-check-label" for="female"> Female </label>
+          <label class="form-check-label" for="female"> {{ $t('Female') }} </label>
         </div>
 
         <!-- <div class="form-check form-check-inline">

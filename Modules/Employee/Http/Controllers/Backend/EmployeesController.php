@@ -497,7 +497,7 @@ class EmployeesController extends Controller
                 }
 
                 $checked = '';
-                return '<button  type="button" data-url="' . route('backend.employees.verify-employee', $data->id) . '" data-token="' . csrf_token() . '" class="button-status-change btn btn-text-danger btn-sm  bg-soft-danger"  id="datatable-row-' . $data->id . '"  name="is_verify" value="' . $data->id . '" ' . $checked . '>Verify</button>';
+                return '<button  type="button" data-url="' . route('backend.employees.verify-employee', $data->id) . '" data-token="' . csrf_token() . '" class="button-status-change btn btn-text-danger btn-sm  bg-soft-danger"  id="datatable-row-' . $data->id . '"  name="is_verify" value="' . $data->id . '" ' . $checked . '>'.__('Verify').'</button>';
             })
             ->editColumn('service', function ($data) {
                 $servicesCount = (int) ($data->services_count ?? 0);
@@ -1352,7 +1352,7 @@ class EmployeesController extends Controller
 
         // Check if the user has any services
         if ($user->services->isEmpty()) {
-            return response()->json(['data' => [], 'status' => false, 'message' => 'No services found for this employee.'], 404);
+            return response()->json(['data' => [], 'status' => false, 'message' => __('No services found for this employee.')], 404);
         }
 
         foreach ($user->services as $serviceEmployee) {

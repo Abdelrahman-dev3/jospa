@@ -603,7 +603,7 @@ class BranchController extends Controller
 
             return response()->json(['data' => $data, 'status' => true]);
         } else {
-            return response()->json(['message' => 'You are not authorized to access this data.', 'status' => false]);
+            return response()->json(['message' => __('You are not authorized to access this data.'), 'status' => false]);
         }
     }
 

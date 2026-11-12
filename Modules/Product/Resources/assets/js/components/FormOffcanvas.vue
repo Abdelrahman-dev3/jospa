@@ -32,7 +32,7 @@
 
             <div class="form-group col-md-6">
               <label class="form-label">{{ $t('product.brand') }} <span class="text-danger">*</span></label>
-              <Multiselect id="brand-list" v-model="brand_id" :value="brand_id" placeholder="Select Brand" v-bind="singleSelectOption" :options="brands.options" @select="selectBrand" class="form-group"></Multiselect>
+              <Multiselect id="brand-list" v-model="brand_id" :value="brand_id" :placeholder="$t('Select Brand')" v-bind="singleSelectOption" :options="brands.options" @select="selectBrand" class="form-group"></Multiselect>
               <span v-if="errorMessages['brand_id']">
                 <ul class="text-danger">
                   <li v-for="err in errorMessages['brand_id']" :key="err">{{ err }}</li>
@@ -42,7 +42,7 @@
 
             <div class="form-group col-md-6">
               <label class="form-label" for="categories">{{ $t('product.categories') }} <span class="text-danger">*</span></label>
-              <Multiselect id="categories" v-model="category_ids" :value="category_ids" placeholder="Select Category" v-bind="multiselectOption" :options="category.options" class="form-group"></Multiselect>
+              <Multiselect id="categories" v-model="category_ids" :value="category_ids" :placeholder="$t('Select Category')" v-bind="multiselectOption" :options="category.options" class="form-group"></Multiselect>
               <span class="text-danger">{{ errors['category_ids'] }}</span>
             </div>
 
@@ -172,6 +172,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL } from '../constant/product'
 import { CATEGORY_LIST, BRAND_LIST, UNITS_LIST, TAGS_LIST, VARIATIONS_LIST } from '../constant/product'
@@ -381,7 +382,7 @@ const validationSchema = yup.object({
       const dateRange = this.parent.date_range
       if (value !== undefined && value > 0) {
         if (!dateRange || dateRange.length === 0) {
-          return this.createError({ message: 'Please select a date range first' })
+          return this.createError({ message: __tr('Please select a date range first') })
         }
       }
       return true
@@ -518,8 +519,8 @@ const generateCombinations = async () => {
 }
 
 const typeOptions = [
-  { label: 'Percent %', value: 'percent' },
-  { label: 'Fixed', value: 'fixed' }
+  { label: __tr('Percent %'), value: 'percent' },
+  { label: __tr('Fixed'), value: 'fixed' }
 ]
 // Select Options
 const singleSelectOption = ref({

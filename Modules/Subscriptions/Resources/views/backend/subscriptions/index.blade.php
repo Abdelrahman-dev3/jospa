@@ -94,27 +94,27 @@
                     {
                         data: 'user_id',
                         name: 'name',
-                        title: 'Name'
+                        title: @json(__('Name'))
                     },
                     {
                         data: 'name',
                         name: 'name',
-                        title: 'Plan Title'
+                        title: @json(__('Plan Title'))
                     },
                     {
                         data: 'type',
                         name: 'type',
-                        title: 'Type'
+                        title: @json(__('Type'))
                     },
                     {
                         data: 'plan_type',
                         name: 'plan_type',
-                        title: 'Plan Type'
+                        title: @json(__('Plan Type'))
                     },
                     {
                         data: 'amount',
                         name: 'amount',
-                        title: 'Amount'
+                        title: @json(__('Amount'))
                     },
 
                     {
@@ -122,7 +122,7 @@
                         name: 'status',
                         orderable: false,
                         searchable: false,
-                        title: 'Status'
+                        title: @json(__('Status'))
                     },
 
                 ]

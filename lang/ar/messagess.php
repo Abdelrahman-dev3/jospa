@@ -694,5 +694,29 @@ return [
     'sms_delivery_logs' => 'سجل إرسال الرسائل',
     'gift_card_coupon_not_allowed' => 'لا يمكن استخدام كود الخصم عند الدفع ببطاقة الهدية.',
     'coupon_disabled_by_gift_card' => 'تم تعطيل كود الخصم لأنك تستخدم بطاقة الهدية، ولا يمكن الجمع بينهما.',
-    'gift_card_disabled_by_coupon' => 'تم تعطيل بطاقة الهدية لأن كود الخصم مطبق، ولا يمكن الجمع بينهما.', 
+    'gift_card_disabled_by_coupon' => 'تم تعطيل بطاقة الهدية لأن كود الخصم مطبق، ولا يمكن الجمع بينهما.',
+
+    // Added: missing dashboard translations
+    'confirm_delete' => 'هل أنت متأكد من الحذف؟',
+    'reason_deleted_success' => 'تم حذف السبب بنجاح.',
+
+    // Added: missing dashboard translations
+    'optional_services' => 'خدمات اختيارية',
+    'select_start_date' => 'اختر تاريخ البداية',
+    'select_end_date' => 'اختر تاريخ النهاية',
+    'offer_title' => 'عنوان العرض',
+    'profile_updated' => 'تم تحديث الملف الشخصي بنجاح',
+    'january' => 'يناير',
+    'february' => 'فبراير',
+    'march' => 'مارس',
+    'april' => 'أبريل',
+    'may' => 'مايو',
+    'june' => 'يونيو',
+    'july' => 'يوليو',
+    'august' => 'أغسطس',
+    'september' => 'سبتمبر',
+    'october' => 'أكتوبر',
+    'november' => 'نوفمبر',
+    'december' => 'ديسمبر',
+    'months' => ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
 ];

@@ -378,13 +378,13 @@ class BackendController extends Controller
     {
         request()->session()->forget('selected_branch');
         request()->session()->put('selected_branch', $branch_id);
-        return redirect()->back()->with('success', 'Current Branch Has Been Changes')->withInput();
+        return redirect()->back()->with('success', __('Current Branch Has Been Changes'))->withInput();
     }
 
     public function resetBranch()
     {
         request()->session()->forget('selected_branch');
-        return redirect()->back()->with('success', 'Show All Branch Content')->withInput();
+        return redirect()->back()->with('success', __('Show All Branch Content'))->withInput();
     }
 
     public function setUserSetting(Request $request)

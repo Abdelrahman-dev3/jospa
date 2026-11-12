@@ -38,6 +38,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref } from 'vue'
 import { GET_GALLERY_URL, POST_GALLERY_URL } from '../constant/service'
 import { useRequest, useModuleId, useOnOffcanvasHide } from '@/helpers/hooks/useCrudOpration'
@@ -76,7 +77,7 @@ const handleImageUpload = (event) => {
         fileInputRef.value.value = ''; 
       }
     } else {
-      window.errorSnackbar('Only JPEG, JPG, and PNG files are allowed.');
+      window.errorSnackbar(__tr('Only JPEG, JPG, and PNG files are allowed.'));
     }
   }
 }

@@ -27,4 +27,6 @@ return [
     'select_method' => 'اختر الطريقة',
     'enter_description' => 'أدخل الوصف',
 
+    // Added: missing dashboard translations
+    'enter_decription' => 'أدخل الوصف',
 ];

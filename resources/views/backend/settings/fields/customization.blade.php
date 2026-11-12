@@ -4,15 +4,15 @@
             <div class="card-body">
                 <div>
                     <div class="d-flex align-items-center justify-content-between">
-                        <h6>Color Customizer</h6>
+                        <h6>{{ __('Color Customizer') }}</h6>
                         <div class="d-flex align-items-center">
                             <div data-setting="radio">
                                 <input type="radio" value="theme-color-default" class="btn-check"
                                     name="theme_color" id="theme-color-default"
                                     data-colors='{"primary": "#862e6f", "info": "#08B1BA"}'>
                                 <label class="btn bg-transparent border-0" for="theme-color-default"
-                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Reset Color"
-                                    data-bs-original-title="Reset color">
+                                    data-bs-toggle="tooltip" data-bs-placement="top" title="{{ __('Reset Color') }}"
+                                    data-bs-original-title="{{ __('Reset color') }}">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
                                         <path
@@ -101,14 +101,14 @@
                 </div>
                 <hr class="hr-horizontal">
                 <div>
-                    <h6>Menu Color</h6>
+                    <h6>{{ __('Menu Color') }}</h6>
                     <div class="d-grid gap-3 grid-cols-3 mb-3">
                         <div data-setting="radio">
                             <input type="radio" value="sidebar-white" class="btn-check"
                                 name="sidebar_color" id="sidebar-white" checked>
                             <label class="btn btn-border d-flex align-items-center bg-transparent"
                                 for="sidebar-white" data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Sidebar White" data-bs-original-title="Sidebar White">
+                                title="{{ __('Sidebar White') }}" data-bs-original-title="{{ __('Sidebar White') }}">
                                 <i class="text-white">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon-18"
                                         width="18" viewBox="0 0 24 24" fill="currentColor">
@@ -116,7 +116,7 @@
                                             fill="currentColor" stroke="black" stroke-width="3"></circle>
                                     </svg>
                                 </i>
-                                <span class="ms-2 ">Default</span>
+                                <span class="ms-2 ">{{ __('Default') }}</span>
                             </label>
                         </div>
                         <div data-setting="radio">
@@ -124,7 +124,7 @@
                                 name="sidebar_color" id="sidebar-dark">
                             <label class="btn btn-border d-flex align-items-center bg-transparent"
                                 for="sidebar-dark" data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Sidebar Dark" data-bs-original-title="Sidebar Dark">
+                                title="{{ __('Sidebar Dark') }}" data-bs-original-title="{{ __('Sidebar Dark') }}">
                                 <i class="text-dark">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon-18"
                                         width="18" viewBox="0 0 24 24" fill="currentColor">
@@ -132,7 +132,7 @@
                                             fill="currentColor"></circle>
                                     </svg>
                                 </i>
-                                <span class="ms-2 "> Dark </span>
+                                <span class="ms-2 "> {{ __('Dark') }} </span>
                             </label>
                         </div>
                         <div data-setting="radio">
@@ -140,7 +140,7 @@
                                 name="sidebar_color" id="sidebar-color">
                             <label class="btn btn-border d-flex align-items-center bg-transparent"
                                 for="sidebar-color" data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Sidebar Colored" data-bs-original-title="Sidebar Colored">
+                                title="{{ __('Sidebar Colored') }}" data-bs-original-title="{{ __('Sidebar Colored') }}">
                                 <i class="text-primary">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon-18"
                                         width="18" viewBox="0 0 24 24" fill="currentColor">
@@ -148,7 +148,7 @@
                                             fill="currentColor"></circle>
                                     </svg>
                                 </i>
-                                <span class="ms-2 "> Color </span>
+                                <span class="ms-2 "> {{ __('Color') }} </span>
                             </label>
                         </div>
                     </div>
@@ -158,8 +158,8 @@
                                 name="sidebar_color" id="sidebar-transparent">
                             <label class="btn btn-border d-flex align-items-center bg-transparent"
                                 for="sidebar-transparent" data-bs-toggle="tooltip"
-                                data-bs-placement="top" title="Sidebar Transparent"
-                                data-bs-original-title="Sidebar Transparent">
+                                data-bs-placement="top" title="{{ __('Sidebar Transparent') }}"
+                                data-bs-original-title="{{ __('Sidebar Transparent') }}">
                                 <i class="text-dark">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon-18"
                                         width="18" viewBox="0 0 24 24" fill="currentColor">
@@ -167,7 +167,7 @@
                                             fill="#F5F6FA" stroke="black" stroke-width="3"></circle>
                                     </svg>
                                 </i>
-                                <span class="ms-2">Transparent</span>
+                                <span class="ms-2">{{ __('Transparent') }}</span>
                             </label>
                         </div>
                         <div data-setting="radio">
@@ -175,7 +175,7 @@
                                 name="sidebar_color" id="sidebar-glass">
                             <label class="btn btn-border d-flex align-items-center bg-transparent"
                                 for="sidebar-glass" data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="Sidebar Transparent" data-bs-original-title="Sidebar Transparent">
+                                title="{{ __('Sidebar Transparent') }}" data-bs-original-title="{{ __('Sidebar Transparent') }}">
                                 <i class="text-dark">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon-18"
                                         width="18" viewBox="0 0 24 24" fill="currentColor">
@@ -183,63 +183,63 @@
                                             fill="#F5F6FA" stroke="black" stroke-width="3"></circle>
                                     </svg>
                                 </i>
-                                <span class="ms-2">Glass</span>
+                                <span class="ms-2">{{ __('Glass') }}</span>
                             </label>
                         </div>
                     </div>
                 </div>
                 <hr class="hr-horizontal">
                 <div>
-                    <h6>Menu Style</h6>
+                    <h6>{{ __('Menu Style') }}</h6>
                     <div class="d-grid gap-3 grid-cols-4 mb-4">
                         <div data-setting="checkbox" class="text-center">
                             <input type="checkbox" value="sidebar-mini" class="btn-check" name="sidebar_type" id="sidebar-mini">
-                            <label class="btn btn-border d-block overflow-hidden" for="sidebar-mini">Mini</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="sidebar-mini">{{ __('Mini') }}</label>
                         </div>
                         <div data-setting="checkbox" class="text-center">
                             <input type="checkbox" value="sidebar-hover" data-extra="{target: '.sidebar', ClassListAdd: 'sidebar-mini'}" class="btn-check" name="sidebar_type" id="sidebar-hover">
-                            <label class="btn btn-border d-block overflow-hidden" for="sidebar-hover">Hover</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="sidebar-hover">{{ __('Hover') }}</label>
                         </div>
                         <div data-setting="checkbox" class="text-center">
                             <input type="checkbox" value="sidebar-boxed" class="btn-check" name="sidebar_type" id="sidebar-boxed">
-                            <label class="btn btn-border d-block overflow-hidden" for="sidebar-boxed"> Boxed</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="sidebar-boxed"> {{ __('Boxed') }}</label>
                         </div>
                     </div>
                 </div>
                 <hr class="hr-horizontal">
                 <div>
-                    <h6>Active Menu Style</h6>
+                    <h6>{{ __('Active Menu Style') }}</h6>
                     <div class="d-grid gap-3 grid-cols-3 mb-4">
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="sidebar-default navs-rounded" class="btn-check" name="sidebar_menu_style" id="navs-rounded">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-rounded">Rounded One Side</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-rounded">{{ __('Rounded One Side') }}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="sidebar-default navs-rounded-all" class="btn-check" name="sidebar_menu_style" id="navs-rounded-all">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-rounded-all">Rounded {{__('messages.all')}}</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-rounded-all">{{ __('Rounded') }} {{__('messages.all')}}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="sidebar-default navs-pill" class="btn-check" name="sidebar_menu_style" id="navs-pill">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-pill">Pill One Side</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-pill">{{ __('Pill One Side') }}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value=" sidebar-default navs-pill-all" class="btn-check" name="sidebar_menu_style" id="navs-pill-all">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-pill-all"> Pill {{__('messages.all')}}</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-pill-all"> {{ __('Pill') }} {{__('messages.all')}}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="left-bordered" class="btn-check" name="sidebar_menu_style" id="left-bordered" checked>
-                            <label class="btn btn-border d-block overflow-hidden" for="left-bordered">Left Bordered</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="left-bordered">{{ __('Left Bordered') }}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="sidebar-default navs-full-width" class="btn-check" name="sidebar_menu_style" id="navs-full-width">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-full-width">Full Width</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-full-width">{{ __('Full Width') }}</label>
                         </div>
                     </div>
                 </div>
                 <hr class="hr-horizontal">
                 <div data-setting="checkbox">
                     <div class="d-flex align-item-center">
-                        <h6 class="me-5">Menu Hide</h6>
+                        <h6 class="me-5">{{ __('Menu Hide') }}</h6>
                         <div class="form-check form-switch">
                             <input class="form-check-input" value="sidebar-none" class="btn-check"
                                 name="sidebar_show" id="switch-sidebar-show" type="checkbox">
@@ -253,17 +253,17 @@
         <div class="card">
             <div class="card-body">
                 <div>
-                    <h6>Custom Color</h6>
+                    <h6>{{ __('Custom Color') }}</h6>
                     <div class="card">
                         <div class="card-body">
                             <div id="custom-color">
                                 <div class="form-group d-flex justify-content-between align-items-center">
-                                    <label class="" for="custom-primary-color">Primary</label>
+                                    <label class="" for="custom-primary-color">{{ __('Primary') }}</label>
                                     <input class="" name="theme_color" data-extra="primary" type="color"
                                         id="custom-primary-color" value="#862e6f" data-setting="color">
                                 </div>
                                 <div class="form-group d-flex d-flex justify-content-between align-items-center">
-                                    <label class="" for="custom-info-color">Secondary</label>
+                                    <label class="" for="custom-info-color">{{ __('Secondary') }}</label>
                                     <input class="" name="theme_color" data-extra="info" type="color"
                                         id="custom-info-color" value="#08B1BA" data-setting="color">
                                 </div>
@@ -273,24 +273,24 @@
                 </div>
                 <hr class="hr-horizontal">
                 <div>
-                    <h6 class="d-inline-block mb-0 me-2">Card Style</h6>
+                    <h6 class="d-inline-block mb-0 me-2">{{ __('Card Style') }}</h6>
                     <div class="d-grid gap-3 grid-cols-2 mb-3">
                         <div data-setting="radio">
                             <input type="radio" value="card-default" class="btn-check" name="card_color"
                                 id="card-default" checked>
                             <label class="btn btn-border d-block" for="card-default" data-bs-toggle="tooltip"
-                                data-bs-placement="top" title="Card White"
-                                data-bs-original-title="Card White">
-                                <span>Default Style</span>
+                                data-bs-placement="top" title="{{ __('Card White') }}"
+                                data-bs-original-title="{{ __('Card White') }}">
+                                <span>{{ __('Default Style') }}</span>
                             </label>
                         </div>
                         <div data-setting="radio">
                             <input type="radio" value="card-glass" class="btn-check" name="card_color"
                                 id="card-glass">
                             <label class="btn btn-border d-block" for="card-glass" data-bs-toggle="tooltip"
-                                data-bs-placement="top" title="Card Glass"
-                                data-bs-original-title="Card Glass">
-                                <span>Glass Effect</span>
+                                data-bs-placement="top" title="{{ __('Card Glass') }}"
+                                data-bs-original-title="{{ __('Card Glass') }}">
+                                <span>{{ __('Glass Effect') }}</span>
                             </label>
                         </div>
                     </div>
@@ -298,49 +298,48 @@
                         <input type="radio" value="card-transparent" class="btn-check" name="card_color"
                             id="card-transparent">
                         <label class="btn btn-border d-block" for="card-transparent" data-bs-toggle="tooltip"
-                            data-bs-placement="top" title="Card Transparent"
-                            data-bs-original-title="Card Transparent">
-                            <span>Transparent Style</span>
+                            data-bs-placement="top" title="{{ __('Card Transparent') }}"
+                            data-bs-original-title="{{ __('Card Transparent') }}">
+                            <span>{{ __('Transparent Style') }}</span>
                         </label>
                     </div>
                 </div>
                 <hr class="hr-horizontal">
                 <div>
-                    <h6>Page Style </h6>
+                    <h6>{{ __('Page Style') }} </h6>
                     <div class="d-grid gap-3 grid-cols-2 mb-4">
                         <div data-setting="radio">
                             <input type="radio" value="container" class="btn-check" name="page_layout"
                                 id="page-layout-boxed">
-                            <label class="btn btn-border d-block" for="page-layout-boxed">Boxed</label>
+                            <label class="btn btn-border d-block" for="page-layout-boxed">{{ __('Boxed') }}</label>
                         </div>
                         <div data-setting="radio">
                             <input type="radio" value="container-fluid" class="btn-check"
                                 name="page_layout" id="page-layout-full-width" checked>
-                            <label class="btn btn-border d-block" for="page-layout-full-width">Full
-                                Width</label>
+                            <label class="btn btn-border d-block" for="page-layout-full-width">{{ __('Full Width') }}</label>
                         </div>
                     </div>
                 </div>
                 <hr class="hr-horizontal">
                 <div>
-                    <h6>Style Appearance </h6>
+                    <h6>{{ __('Style Appearance') }} </h6>
                     <div class="d-grid gap-3 grid-cols-3 mb-4">
                         <div data-setting="checkbox">
                             <input type="checkbox" value="theme-flat" class="btn-check"
                                 name="theme_style_appearance" id="theme-style-appearance-flat">
-                            <label class="btn btn-border d-block" for="theme-style-appearance-flat">Flat</label>
+                            <label class="btn btn-border d-block" for="theme-style-appearance-flat">{{ __('Flat') }}</label>
                         </div>
                         <div data-setting="checkbox">
                             <input type="checkbox" value="theme-bordered" class="btn-check"
                                 name="theme_style_appearance" id="theme-style-appearance-bordered">
                             <label class="btn btn-border d-block"
-                                for="theme-style-appearance-bordered">Bordered</label>
+                                for="theme-style-appearance-bordered">{{ __('Bordered') }}</label>
                         </div>
                         <div data-setting="checkbox">
                             <input type="checkbox" value="theme-sharp" class="btn-check"
                                 name="theme_style_appearance" id="theme-style-appearance-sharp">
                             <label class="btn btn-border d-block"
-                                for="theme-style-appearance-sharp">Sharp</label>
+                                for="theme-style-appearance-sharp">{{ __('Sharp') }}</label>
                         </div>
                     </div>
                 </div>
@@ -354,30 +353,30 @@
         <div class="card">
             <div class="card-body">
                 <div>
-                    <h6>Navbar Style</h6>
+                    <h6>{{ __('Navbar Style') }}</h6>
                     <div class="d-grid gap-3 grid-cols-4 mb-4">
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="nav-glass" class="btn-check" name="header_navbar" id="nav-glass">
-                            <label class="btn btn-border d-block overflow-hidden" for="nav-glass">Glass</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="nav-glass">{{ __('Glass') }}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="navs-sticky" class="btn-check" name="header_navbar" id="navs-sticky">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-sticky">Sticky</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-sticky">{{ __('Sticky') }}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="navs-transparent" class="btn-check" name="header_navbar" id="navs-transparent">
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-transparent">Transparent</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-transparent">{{ __('Transparent') }}</label>
                         </div>
                         <div data-setting="radio" class="text-center">
                             <input type="radio" value="navs-default" class="btn-check" name="header_navbar" id="navs-default" checked>
-                            <label class="btn btn-border d-block overflow-hidden" for="navs-default">Default</label>
+                            <label class="btn btn-border d-block overflow-hidden" for="navs-default">{{ __('Default') }}</label>
                         </div>
                     </div>
                 </div>
                 <hr class="hr-horizontal">
                 <div data-setting="checkbox">
                     <div class="d-flex">
-                        <h6 class="me-5">Navbar Hide</h6>
+                        <h6 class="me-5">{{ __('Navbar Hide') }}</h6>
                         <div class="form-check form-switch">
                             <input class="form-check-input" value="iq-navbar-none" class="btn-check"
                                 name="header_navbar_show" id="switch-navbar-show" type="checkbox">
@@ -391,19 +390,19 @@
         <div class="card">
             <div class="card-body">
                 <div>
-                    <h6>Footer</h6>
+                    <h6>{{ __('Footer') }}</h6>
                     <div class="d-grid gap-3 grid-cols-3 mb-4">
                         <div data-setting="radio">
                             <input type="radio" value="default" class="btn-check" name="footer" id="footer_default" checked>
-                            <label class="btn btn-border d-block" for="footer_default">Default</label>
+                            <label class="btn btn-border d-block" for="footer_default">{{ __('Default') }}</label>
                         </div>
                         <div data-setting="radio">
                             <input type="radio" value="sticky" class="btn-check" name="footer" id="footer_Sticky">
-                            <label class="btn btn-border d-block" for="footer_Sticky">Sticky</label>
+                            <label class="btn btn-border d-block" for="footer_Sticky">{{ __('Sticky') }}</label>
                         </div>
                         <div data-setting="radio">
                             <input type="radio" value="glass" class="btn-check" name="footer" id="footer_glass">
-                            <label class="btn btn-border d-block" for="footer_glass">Glass</label>
+                            <label class="btn btn-border d-block" for="footer_glass">{{ __('Glass') }}</label>
                         </div>
                     </div>
                 </div>

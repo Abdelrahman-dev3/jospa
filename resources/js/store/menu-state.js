@@ -1,3 +1,4 @@
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import {ref} from 'vue'
 import { defineStore } from 'pinia';
 import { confirmSwal } from '@/helpers/utilities'
@@ -23,7 +24,7 @@ export const useMenu = defineStore('menu', () => {
                 if (res.status) {
                     deleteId.value = null
                     Swal.fire({
-                        title: 'Deleted',
+                        title: __tr('Deleted'),
                         text: res.message,
                         icon: 'success',
                         showClass: {

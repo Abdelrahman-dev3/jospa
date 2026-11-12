@@ -155,4 +155,7 @@ return [
     'payment_link_services' => 'Services',
     'payment_link_branch' => 'Branch',
     'payment_link_date' => 'Appointment',
+
+    // Added: missing dashboard translations
+    'slot_conflict' => 'This time slot conflicts with another booking for the same staff member.',
 ];

@@ -311,7 +311,7 @@ class ProductsController extends Controller
     public function store(ProductRequest $request)
     {
         if ($request->has_variation == 1 && ! $request->has('combinations')) {
-            return response()->json(['message' => 'Invalid product variations, please check again', 'status' => false], 402);
+            return response()->json(['message' => __('Invalid product variations, please check again'), 'status' => false], 402);
         }
 
         $product = new Product;
@@ -520,7 +520,7 @@ class ProductsController extends Controller
     public function update(ProductRequest $request, $id)
     {
         if ($request->has('has_variation') && ! $request->has('combinations')) {
-            return response()->json(['message' => 'Invalid product variations, please check again', 'status' => false], 402);
+            return response()->json(['message' => __('Invalid product variations, please check again'), 'status' => false], 402);
         }
         $product = Product::findOrFail($id);
 

@@ -37,8 +37,8 @@
                       {{$filter['status']}}
                     <select name="column_status" id="column_status" class="select2 form-control" style="width: 100%" data-filter="select" >
                       <option value="">{{__('messages.all')}}</option>
-                      <option value="1" {{$filter['status'] == '1' ? "selected" : ''}}>Active</option>
-                      <option value="0" {{$filter['status'] == '0' ? "selected" : ''}}>Inactive</option>
+                      <option value="1" {{$filter['status'] == '1' ? "selected" : ''}}>{{ __('Active') }}</option>
+                      <option value="0" {{$filter['status'] == '0' ? "selected" : ''}}>{{ __('Inactive') }}</option>
                     </select>
                   </div>
                 </div>
@@ -64,7 +64,7 @@
         </page-offcanvas>
 
         <x-backend.advance-filter>
-          <x-slot name="title"><h4>Advanced Filter</h4></x-slot>
+          <x-slot name="title"><h4>{{ __('Advanced Filter') }}</h4></x-slot>
           <select name="" id="" class="select2">
             <option value="1">1</option>
             <option value="2">2</option>

@@ -18,7 +18,7 @@
                     <select name="action_type" class="form-control select2 col-12" id="quick-action-type" style="width:100%">
                         <option value="">{{ __('messages.no_action') }}</option>
                         <option value="change-status">{{ __('messages.status') }}</option>
-                        <option value="delete">Delete</option>
+                        <option value="delete">{{ __('Delete') }}</option>
                     </select>
                   </div>
                   <div class="select-status d-none quick-action-field" id="change-status-action">
@@ -33,7 +33,7 @@
                     <div>
                         <div class="datatable-filter">
                           <select name="column_category" id="column_category" class="select2 form-control" data-filter="select" style="width: 100%">
-                            <option value="">All Categories</option>
+                            <option value="">{{ __('All Categories') }}</option>
                             @foreach($categories as $category)
                               <option value="{{ $category->id }}" @if($category->id == $parentID) selected @endif>{{$category->name}}</option>
                             @endforeach

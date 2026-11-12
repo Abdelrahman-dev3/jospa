@@ -5,7 +5,7 @@
       <div class="offcanvas-body" :key="formRenderKey">
         <div v-if="isFormLoading" class="employee-form-loader">
           <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
-          <span>Loading employee data...</span>
+          <span>{{ $t('Loading employee data...') }}</span>
         </div>
         <fieldset :disabled="isFormLoading" class="employee-form-fieldset">
         <div class="row" :class="{ 'employee-form-loading': isFormLoading }">
@@ -71,12 +71,12 @@
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="gender" v-model="gender" id="male" value="male"
                   :checked="gender == 'male'" />
-                <label class="form-check-label" for="male"> Male </label>
+                <label class="form-check-label" for="male"> {{ $t('Male') }} </label>
               </div>
               <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="gender" v-model="gender" id="female" value="female"
                   :checked="gender == 'female'" />
-                <label class="form-check-label" for="female"> Female </label>
+                <label class="form-check-label" for="female"> {{ $t('Female') }} </label>
               </div>
 
              <!-- <div class="form-check form-check-inline">
@@ -93,7 +93,7 @@
                 id="roles"
                 v-model="roles"
                 :value="roles"
-                placeholder="Select roles"
+                :placeholder="$t('Select roles')"
                 v-bind="accessSelectOption"
                 :options="roleOptions"
                 class="form-group"
@@ -112,7 +112,7 @@
                 id="permissions"
                 v-model="permissions"
                 :value="permissions"
-                placeholder="Select permissions"
+                :placeholder="$t('Select permissions')"
                 v-bind="accessSelectOption"
                 :options="permissionOptions"
                 class="form-group"
@@ -143,7 +143,7 @@
               </div>
               <div class="form-group col-md-12" v-if="branch.options.length > 1">
                 <label class="form-label" for="branch">{{ $t('employee.lbl_select_branch') }}</label><span class="text-danger">*</span>
-                <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch"
+                <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" :placeholder="$t('Select Branch')"
                   v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group">
                 </Multiselect>
                 <span v-if="errorMessages['branch_id']">
@@ -156,7 +156,7 @@
 
               <div class="form-group col-md-12" >
                 <label class="form-label" for="shift">{{ $t('employee.lbl_select_shift') }}</label><span class="text-danger">*</span>
-                <Multiselect id="shift_id" v-model="shift_id" :value="shift_id" placeholder="Select shift"
+                <Multiselect id="shift_id" v-model="shift_id" :value="shift_id" :placeholder="$t('Select shift')"
                   v-bind="singleSelectOption" :options="shift.options" @select="shiftSelect" class="form-group">
                 </Multiselect>
                 <span v-if="errorMessages['shift_id']">
@@ -167,12 +167,12 @@
                 <span class="text-danger">{{ errors.shift_id }}</span>
               </div>
               <div class="form-group col-md-12">
-                <label class="form-label" for="category_id">Select Category</label>
+                <label class="form-label" for="category_id">{{ $t('Select Category') }}</label>
                 <Multiselect
                   id="category_id"
                   v-model="category_id"
                   :value="category_id"
-                  placeholder="Select Category"
+                  :placeholder="$t('Select Category')"
                   v-bind="categorySelectOption"
                   :options="categories.options"
                   @select="handleCategorySelect"
@@ -191,7 +191,7 @@
               <div class="form-group">
                 <label class="form-label" for="service">{{ $t('employee.lbl_select_service') }}</label>
                 <Multiselect id="service_id" v-model="service_id" :multiple="true" :value="service_id"
-                  placeholder="Select Service" v-bind="multiSelectOption" :options="services.options" class="form-group"
+                  :placeholder="$t('Select Service')" v-bind="multiSelectOption" :options="services.options" class="form-group"
                   @change="markServicesEdited" @select="markServicesEdited" @deselect="markServicesEdited" @clear="markServicesEdited">
                 </Multiselect>
                 <span v-if="errorMessages['service_id']">
@@ -205,7 +205,7 @@
               <div class="form-group col-md-12">
                 <label class="form-label" for="commission_id"> {{ $t('employee.lbl_select_commission') }} <span class="text-danger">*</span> </label>
                 <Multiselect id="commission_id" v-model="commission_id" :value="commission_id"
-                  placeholder="Select Commission" v-bind="singleSelectOption" :options="commissions.options"
+                  :placeholder="$t('Select Commission')" v-bind="singleSelectOption" :options="commissions.options"
                   class="form-group"></Multiselect>
                 <span v-if="errorMessages['commission_id']">
                   <ul class="text-danger">
@@ -277,6 +277,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted, nextTick, computed } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, BRANCH_LIST, SHIFT_LIST, CATEGORY_LIST, SERVICE_LIST, COMMISSION_LIST, EMAIL_UNIQUE_CHECK } from '../constant/employee'
 import { useField, useForm } from 'vee-validate'
@@ -820,7 +821,7 @@ const validationSchema = yup.object({
       const userId  = id.value;
           const isUnique = await storeRequest({ url: EMAIL_UNIQUE_CHECK, body: { email: value, user_id: userId }, type: 'file' });
           if (!isUnique.isUnique) {
-              return this.createError({ path: 'email', message: 'email must be unique' });
+              return this.createError({ path: 'email', message: __tr('email must be unique') });
               }
           return true;
         })

@@ -21,4 +21,8 @@ return [
     'password'=>'Enter password',
     'confirm_password'=>'Enter Confirm password',
     'wallet_balance'=>'Wallet Balance',
+
+    // Added: missing dashboard translations
+    'lbl_create_at' => 'Created At',
+    'lbl_update_at' => 'Updated At',
 ];

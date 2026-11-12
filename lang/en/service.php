@@ -60,4 +60,7 @@ return [
     'lbl_visible_home' => 'Show in home services',
     'lbl_show_in_online_booking' => 'Show Online',
     'lbl_show_in_gift_card' => 'Show in Gift Card',
+
+    // Added: missing dashboard translations
+    'lbl_update_at' => 'Updated At',
 ];

@@ -104,7 +104,7 @@
           <span><strong class="text">-{{ formatCurrencyVue(couponDiscount) }}</strong></span>
       </div>
       <div class=" d-flex justify-content-between align-items-center my-2">
-        <label for=""> Subtotal: </label>
+        <label for=""> {{ $t('Subtotal:') }} </label>
         <strong>{{ formatCurrencyVue(subtotal ) }}</strong>
       </div>
 

@@ -27,7 +27,7 @@
                     <ul class="dropdown-menu" id="module-dropdown-01">
                         <li>
                             <a class="dropdown-item" href='{{ route("backend.$module_name.trashed") }}'>
-                                <i class="fas fa-eye-slash"></i> View trash
+                                <i class="fas fa-eye-slash"></i> {{ __('View trash') }}
                             </a>
                         </li>
                     </ul>
@@ -89,7 +89,7 @@
         <div class="row">
             <div class="col-7">
                 <div class="float-left">
-                    Total {{ $$module_name->total() }} {{ __($module_name) }}
+                    {{ __('Total') }} {{ $$module_name->total() }} {{ __($module_name) }}
                 </div>
             </div>
             <div class="col-5">

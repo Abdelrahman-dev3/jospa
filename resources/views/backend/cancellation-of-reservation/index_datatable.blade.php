@@ -31,11 +31,11 @@
                     <form action="{{route('app.store')}}" method="post">
                         @csrf
                         <div class="mb-3">
-                            <label class="form-label">{{ __('messagess.reason_name') }} (AR)</label>
+                            <label class="form-label">{{ __('messagess.reason_name') }} {{ __('(AR)') }}</label>
                             <input type="text" name="reasonAR" class="form-control" placeholder="{{ __('messagess.enter_reason') }}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">{{ __('messagess.reason_name') }} (EN)</label>
+                            <label class="form-label">{{ __('messagess.reason_name') }} {{ __('(EN)') }}</label>
                             <input type="text" name="reasonEN" class="form-control" placeholder="{{ __('messagess.enter_reason') }}">
                         </div>
                         @hasPermission('store_reject_reasons')
@@ -55,8 +55,8 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>{{ __('messagess.reason_name') }} (AR)</th>
-                                <th>{{ __('messagess.reason_name') }} (EN)</th>
+                                <th>{{ __('messagess.reason_name') }} {{ __('(AR)') }}</th>
+                                <th>{{ __('messagess.reason_name') }} {{ __('(EN)') }}</th>
                                 <th>{{ __('messagess.actions') }}</th>
                             </tr>
                         </thead>
@@ -117,11 +117,11 @@
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">{{ __('messagess.reason_name') }} (AR)</label>
+            <label class="form-label">{{ __('messagess.reason_name') }} {{ __('(AR)') }}</label>
             <input type="text" name="reasonAR" id="editReasonAR" class="form-control" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">{{ __('messagess.reason_name') }} (EN)</label>
+            <label class="form-label">{{ __('messagess.reason_name') }} {{ __('(EN)') }}</label>
             <input type="text" name="reasonEN" id="editReasonEN" class="form-control" required>
           </div>
         </div>

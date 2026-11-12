@@ -63,6 +63,7 @@ return [
     'select_staff'=>'Select Staff',
     'placeholder_name' => 'Branch Name',
 
-
-
+    // Added: missing dashboard translations
+    'available_dates' => 'Available dates',
+    'lbl_update_at' => 'Updated At',
 ];

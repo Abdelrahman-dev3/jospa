@@ -508,4 +508,20 @@ return [
     'min_invoices_count_filter'=> 'Top Buyers (≥ X invoices)',
     'has_coupon_filter'        => 'Has Coupon',
     'sort_by_filter'           => 'Sort By',
+
+    // Added: missing dashboard translations
+    'booking_not_found' => 'Booking not found.',
+    'bulk_promotion_update' => 'Promotions updated successfully.',
+    'bulk_review_delete' => 'Reviews deleted successfully.',
+    'contact_us_greetings' => 'Thank you for contacting us, we will get back to you soon.',
+    'invalid_saudi_phone' => 'Please enter a valid Saudi phone number.',
+    'mailable' => 'Mail template',
+    'msg_added' => ':name added successfully.',
+    'payment_completed' => 'Payment completed successfully.',
+    'restore_form' => ':form restored successfully.',
+    'service_data' => 'Service data',
+    'shift_restored' => 'Shift restored successfully.',
+    'something_wrong' => 'Something went wrong, please try again.',
+    'status_update' => 'Status updated successfully.',
+    'unknown' => 'Unknown',
 ];

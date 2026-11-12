@@ -12,4 +12,7 @@ return [
     'lbl_status' => 'الحالة',
     'lbl_select_limitation' => 'اختر الحدود',
     'lbl_set_limit' => 'تعيين الحد',
+
+    // Added: missing dashboard translations
+    'singular_title' => 'الخطة',
 ];

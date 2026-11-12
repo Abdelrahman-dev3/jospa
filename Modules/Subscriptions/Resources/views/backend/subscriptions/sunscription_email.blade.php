@@ -1,10 +1,10 @@
-<h2>Hello</h2> <br><br>
-You have got an email from : {{ $first_name }} <br><br>
+<h2>{{ __('Hello') }}</h2> <br><br>
+{{ __('You have got an email from :') }} {{ $first_name }} <br><br>
 
-User details: <br><br>
+{{ __('User details:') }} <br><br>
 
-Name: {{ $first_name }} {{ $last_name }} <br>
-Email: {{ $email }} <br>
-Phone: {{ $phone_no }} <br>
-Subject: {{ $subject }} <br>
-Message: {{ $message }} <br><br>
+{{ __('Name:') }} {{ $first_name }} {{ $last_name }} <br>
+{{ __('Email:') }} {{ $email }} <br>
+{{ __('Phone:') }} {{ $phone_no }} <br>
+{{ __('Subject:') }} {{ $subject }} <br>
+{{ __('Message:') }} {{ $message }} <br><br>

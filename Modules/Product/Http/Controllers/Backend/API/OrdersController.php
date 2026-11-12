@@ -98,7 +98,7 @@ class OrdersController extends Controller
                 if (!$userId) {
                     return response()->json([
                         'status' => false,
-                        'message' => 'User not found.'
+                        'message' => __('User not found.')
                     ], 404);  
                 }
     
@@ -107,7 +107,7 @@ class OrdersController extends Controller
                 if (!$wallet) {
                     return response()->json([
                         'status' => false,
-                        'message' => 'Wallet not found.'
+                        'message' => __('Wallet not found.')
                     ], 404);  
                 }
     
@@ -117,7 +117,7 @@ class OrdersController extends Controller
                 } else {
                     return response()->json([
                         'status' => false,
-                        'message' => 'Insufficient wallet balance.'
+                        'message' => __('Insufficient wallet balance.')
                     ], 400);  
                 }
             }

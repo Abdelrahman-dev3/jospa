@@ -18,7 +18,7 @@
     </div>
     <div v-if="booking_id > 0 && status !== 'cancelled' && status !== 'check_in'">
       <strong>
-        <button data-bs-toggle="tooltip" title="Cancel Booking" type="button" @click="changeBookingStatus('cancelled', 'Are You Sure You want to Cancel?')"  class="btn btn-soft-danger btn-sm" >
+        <button data-bs-toggle="tooltip" :title="$t('Cancel Booking')" type="button" @click="changeBookingStatus('cancelled', 'Are You Sure You want to Cancel?')"  class="btn btn-soft-danger btn-sm" >
           <i class="fa-solid fa-ban"></i>
         </button>
       </strong>
@@ -27,6 +27,7 @@
   </div>
 </template>
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { UPDATE_STATUS } from '../../constant/booking'
 import { useRequest } from '@/helpers/hooks/useCrudOpration'
 import { confirmcancleSwal } from '@/helpers/utilities'
@@ -50,7 +51,7 @@ const changeBookingStatus = (status, message) => {
     updateRequest({ url: UPDATE_STATUS, id: props.booking_id, body: data }).then((res) => {
       if (res.status) {
         Swal.fire({
-          title: 'Appointment Cancelled !',
+          title: __tr('Appointment Cancelled !'),
           //text: res.message,
           icon: 'success',
           showClass: {

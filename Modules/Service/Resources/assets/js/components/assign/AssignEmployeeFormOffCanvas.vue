@@ -12,7 +12,7 @@
             <div class="d-flex flex-column">
               <div class="mb-4">
                 <!-- <Multiselect id="branch_id" placeholder="Select Branch" v-model="branch_id" :value="branch_id" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group mb-3"></Multiselect> -->
-                <Multiselect v-model="assign_ids" placeholder="Select Staff"  :value="assign_ids" :canClear="false" v-bind="singleSelectOption" :options="employee.options" @select="selectEmployee" id="employees_ids">
+                <Multiselect v-model="assign_ids" :placeholder="$t('Select Staff')"  :value="assign_ids" :canClear="false" v-bind="singleSelectOption" :options="employee.options" @select="selectEmployee" id="employees_ids">
                   <template v-slot:multiplelabel="{ values }">
                     <div class="multiselect-multiple-label">{{ $t('messages.select_staff')}}</div>
                   </template>

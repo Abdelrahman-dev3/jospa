@@ -78,7 +78,7 @@
                         </td>
                         <td style="min-width:200px">
                             <input form="bf-{{ $b->id }}" type="text" name="name_ar" class="form-control form-control-sm mb-1" value="{{ $b->name_ar }}" required>
-                            <input form="bf-{{ $b->id }}" type="text" name="name_en" class="form-control form-control-sm" value="{{ $b->name_en }}" dir="ltr" placeholder="English name">
+                            <input form="bf-{{ $b->id }}" type="text" name="name_en" class="form-control form-control-sm" value="{{ $b->name_en }}" dir="ltr" placeholder="{{ __('English name') }}">
                         </td>
                         <td style="width:110px"><input form="bf-{{ $b->id }}" type="number" step="0.01" min="1" name="price" class="form-control form-control-sm" value="{{ $b->price }}" required></td>
                         <td style="width:140px"><input form="bf-{{ $b->id }}" type="text" name="badge" class="form-control form-control-sm" value="{{ $b->badge }}"></td>

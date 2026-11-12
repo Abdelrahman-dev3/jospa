@@ -215,7 +215,7 @@ class CustomersController extends Controller
                     return '<span class="badge bg-soft-success"><i class="fa-solid fa-envelope" style="margin-right: 2px"></i> '.__('customer.msg_verified').'</span>';
                 }
 
-                return '<button  type="button" data-url="'.route('backend.customers.verify-customer', $data->id).'" data-token="'.csrf_token().'" class="button-status-change btn btn-text-danger btn-sm  bg-soft-danger"  id="datatable-row-'.$data->id.'"  name="is_verify" value="'.$data->id.'" '.$checked.'>Verify</button>';
+                return '<button  type="button" data-url="'.route('backend.customers.verify-customer', $data->id).'" data-token="'.csrf_token().'" class="button-status-change btn btn-text-danger btn-sm  bg-soft-danger"  id="datatable-row-'.$data->id.'"  name="is_verify" value="'.$data->id.'" '.$checked.'>'.__('Verify').'</button>';
             })
             ->addColumn('wallet_balance', function ($data) {
                 return '<a href="' . route('wallet.history', ['id' => $data->id]) . '">' . Currency::format(optional($data->wallet)->amount) . '</a>';
@@ -439,7 +439,7 @@ class CustomersController extends Controller
             
             if (!$user_id) {
                 \Log::error('No user_id provided');
-                return response()->json(['message' => 'User ID is required', 'status' => false], 400);
+                return response()->json(['message' => __('User ID is required'), 'status' => false], 400);
             }
             
             $user = User::findOrFail($user_id);

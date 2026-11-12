@@ -16,7 +16,7 @@
             </x-slot>
             <x-slot name="toolbar">
                 <x-backend.buttons.return-back />
-                <a href="{{ route("backend.$module_name.index") }}" class="btn btn-secondary ms-1" data-bs-toggle="tooltip" title="{{ $module_title }} List"><i class="fas fa-list-ul"></i> List</a>
+                <a href="{{ route("backend.$module_name.index") }}" class="btn btn-secondary ms-1" data-bs-toggle="tooltip" title="{{ $module_title }} List"><i class="fas fa-list-ul"></i> {{ __('List') }}</a>
             </x-slot>
         </x-backend.section-header>
 

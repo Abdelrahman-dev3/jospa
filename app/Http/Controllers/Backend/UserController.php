@@ -61,7 +61,7 @@ class UserController extends Controller
 
         event(new UserUpdated($$module_name_singular));
 
-        return response()->json(['message' => 'Account has been deactivated!']);
+        return response()->json(['message' => __('Account has been deactivated!')]);
     }
 
     /**
@@ -89,7 +89,7 @@ class UserController extends Controller
                 // Send Email To Registered User
                 $user->sendEmailVerificationNotification();
 
-                flash('<i class="fas fa-check"></i> Email Sent! Please Check Your Inbox.')->success()->important();
+                flash('<i class="fas fa-check"></i> ' . __('Email Sent! Please Check Your Inbox.'))->success()->important();
 
                 return redirect()->back();
             } else {

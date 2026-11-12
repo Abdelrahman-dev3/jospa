@@ -1,3 +1,4 @@
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 ;(function () {
   'use strict'
   $(document).on('change', '.datatable-filter [data-filter="select"]', function () {
@@ -19,7 +20,7 @@
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#858482',
-      confirmButtonText: 'Yes, do it!',
+      confirmButtonText: __tr('Yes, do it!'),
       showClass: {
         popup: 'animate__animated animate__zoomIn'
       },
@@ -83,7 +84,7 @@
           document.dispatchEvent(event)
         } else {
           Swal.fire({
-            title: 'Error',
+            title: __tr('Error'),
             text: res.message,
             icon: 'error',
             showClass: {

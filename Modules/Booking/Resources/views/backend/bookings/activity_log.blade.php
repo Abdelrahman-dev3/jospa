@@ -508,7 +508,7 @@
             {{-- Footer --}}
             <div class="text-center text-muted small mt-4 pt-2 border-top">
                 <i class="fa-solid fa-shield-halved me-1 text-primary"></i>
-                نظام تدقيق وسجل الحجوزات الآمن — JOSPA Audit Log System
+                نظام تدقيق وسجل الحجوزات الآمن — {{ __('JOSPA Audit Log System') }}
             </div>
         </div>{{-- end right col --}}
 

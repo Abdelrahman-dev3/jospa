@@ -3,7 +3,7 @@
     <div class="d-flex align-items-center justify-content-between">
       <h6 class="mt-4 mb-3">{{ $t('customization.color_customizer') }}</h6>
       <div class="d-flex align-items-center">
-        <a href="#custom-color" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="custom-color">Custom</a>
+        <a href="#custom-color" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="custom-color">{{ $t('Custom') }}</a>
         <div data-setting="radio">
           <button class="btn bg-transparent" @click="resetColor">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -16,11 +16,11 @@
     </div>
     <div class="collapse" id="custom-color">
       <div class="form-group d-flex justify-content-between align-items-center">
-        <label for="custom-primary-color">Primary</label>
+        <label for="custom-primary-color">{{ $t('Primary') }}</label>
         <input name="primary" type="color"  @input="onColorUpdate" id="custom-primary-color"  :value="themeCustomColor.colors['--{{prefix}}primary']"/>
       </div>
       <div class="form-group d-flex d-flex justify-content-between align-items-center">
-        <label for="custom-secondary-color">Secondary</label>
+        <label for="custom-secondary-color">{{ $t('Secondary') }}</label>
         <input name="secondary" type="color" @input="onColorUpdate" id="custom-secondary-color" :value="themeCustomColor.colors['--{{prefix}}secondary']" />
       </div>
     </div>

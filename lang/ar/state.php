@@ -7,4 +7,6 @@ return [
     'select_country' => 'اختر البلد',
     'select_state' => 'اختر المدينة',
 
+    // Added: missing dashboard translations
+    'singular_title' => 'المنطقة',
 ];

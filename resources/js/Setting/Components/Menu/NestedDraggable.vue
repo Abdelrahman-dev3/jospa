@@ -10,10 +10,10 @@
     >
       <template #item="{ element }">
         <li class="list-group-item default-flex-gap w-100 align-items-baseline">
-          <i class="fa-solid fa-up-right-from-square" data-bs-toggle="tooltip" title="Opens in new window" v-if="element.target_type == '_blank'"></i>
-          <i class="fa-solid fa-link" data-bs-toggle="tooltip" title="Opens in same tab" v-else-if="element.menu_item_type == 'link'"></i>
-          <i class="fa-solid fa-ban" data-bs-toggle="tooltip" title="Only for view purpose" v-if="element.menu_item_type == 'static'"></i>
-          <i class="fa-regular fa-rectangle-list" data-bs-toggle="tooltip" title="Parent menu Or Group of menus links" v-if="element.menu_item_type == 'parent'"></i>
+          <i class="fa-solid fa-up-right-from-square" data-bs-toggle="tooltip" :title="$t('Opens in new window')" v-if="element.target_type == '_blank'"></i>
+          <i class="fa-solid fa-link" data-bs-toggle="tooltip" :title="$t('Opens in same tab')" v-else-if="element.menu_item_type == 'link'"></i>
+          <i class="fa-solid fa-ban" data-bs-toggle="tooltip" :title="$t('Only for view purpose')" v-if="element.menu_item_type == 'static'"></i>
+          <i class="fa-regular fa-rectangle-list" data-bs-toggle="tooltip" :title="$t('Parent menu Or Group of menus links')" v-if="element.menu_item_type == 'parent'"></i>
           <div :class="`btn btn-border flex-column mb-3 w-100 ${element.menu_item_type == 'static' ? 'static-menu-button' : ''}`">
             <div :class="`default-flex-gap justify-content-between w-100 ${element.menu_item_type == 'parent' ? 'mb-3' : ''}`">
               <div class="default-flex-gap gap-4">

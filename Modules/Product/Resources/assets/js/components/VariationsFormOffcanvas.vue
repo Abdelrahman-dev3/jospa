@@ -49,6 +49,7 @@
   </template>
 
   <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
   import { ref, onMounted, reactive } from 'vue'
   import { EDIT_URL, STORE_URL, UPDATE_URL } from '../constant/variation'
   import { useField, useForm, useFieldArray } from 'vee-validate'
@@ -84,8 +85,8 @@
   const type_data = ref({
   searchable: true,
   options: [
-    { label: 'Text', value: 'text' },
-    { label: 'Color', value: 'color' }
+    { label: __tr('Text'), value: 'text' },
+    { label: __tr('Color'), value: 'color' }
   ],
   closeOnSelect: true
 })

@@ -168,7 +168,7 @@
                                     </div>
                                     @if(!empty($activity['properties']['ip_address']))
                                         <div class="text-muted small" style="font-size: 0.75rem;">
-                                            <i class="fa-solid fa-network-wired me-1"></i> IP: {{ $activity['properties']['ip_address'] }}
+                                            <i class="fa-solid fa-network-wired me-1"></i> {{ __('IP:') }} {{ $activity['properties']['ip_address'] }}
                                         </div>
                                     @endif
                                 </div>
@@ -318,7 +318,7 @@
     <!-- Modal Footer -->
     <div class="d-flex justify-content-between align-items-center pt-3 mt-2 border-top">
         <span class="small text-muted">
-            <i class="fa-solid fa-shield-halved me-1 text-primary"></i> نظام تدقيق وسجل الحجوزات الآمن (JOSPA Audit Log)
+            <i class="fa-solid fa-shield-halved me-1 text-primary"></i> نظام تدقيق وسجل الحجوزات الآمن {{ __('(JOSPA Audit Log)') }}
         </span>
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">إغلاق</button>
     </div>

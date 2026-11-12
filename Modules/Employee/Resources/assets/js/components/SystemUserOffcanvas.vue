@@ -6,7 +6,7 @@
       <div class="offcanvas-body">
         <div v-if="isFormLoading" class="system-user-form-loader">
           <span class="spinner-border text-primary" role="status" aria-hidden="true"></span>
-          <span>Loading user data...</span>
+          <span>{{ $t('Loading user data...') }}</span>
         </div>
 
         <fieldset :disabled="isFormLoading" class="system-user-form-fieldset">
@@ -39,7 +39,7 @@
                 id="roles"
                 v-model="roles"
                 :value="roles"
-                placeholder="Select roles"
+                :placeholder="$t('Select roles')"
                 v-bind="accessSelectOption"
                 :options="roleOptions"
                 class="form-group"
@@ -54,7 +54,7 @@
                 id="permissions"
                 v-model="permissions"
                 :value="permissions"
-                placeholder="Select permissions"
+                :placeholder="$t('Select permissions')"
                 v-bind="accessSelectOption"
                 :options="permissionOptions"
                 class="form-group"

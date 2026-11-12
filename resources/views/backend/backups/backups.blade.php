@@ -13,7 +13,7 @@
                 <div class="small text-medium-emphasis">@lang(":module_name Management Dashboard", ['module_name'=>Str::title($module_name)])</div>
             </div>
             <div class="btn-toolbar d-block" role="toolbar" aria-label="Toolbar with buttons">
-                <a href="{{ route("backend.$module_name.create") }}" class="btn btn-outline-success m-1" data-bs-toggle="tooltip" title="Create New"><i class="fas fa-plus-circle"></i> @lang("Create new :module_name", ['module_name'=>Str::title($module_name)])</a>
+                <a href="{{ route("backend.$module_name.create") }}" class="btn btn-outline-success m-1" data-bs-toggle="tooltip" title="{{ __('Create New') }}"><i class="fas fa-plus-circle"></i> @lang("Create new :module_name", ['module_name'=>Str::title($module_name)])</a>
             </div>
         </div>
 

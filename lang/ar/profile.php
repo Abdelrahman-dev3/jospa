@@ -117,4 +117,7 @@ return [
     'change_image' => 'تغيير الصورة',
     'e_wallet' => 'المحفظة الإلكترونية',
     'success_update' => 'تم تحديث البيانات بنجاح',
+
+    // Added: missing dashboard translations
+    'default_profile' => 'الملف الشخصي',
 ];

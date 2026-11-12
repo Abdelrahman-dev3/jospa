@@ -50,21 +50,21 @@ $terms = Term::all();
 
         {{-- عنوان السياسة --}}
         <div class="mb-3">
-            <label class="form-label">العنوان (AR)</label>
+            <label class="form-label">العنوان {{ __('(AR)') }}</label>
             <input type="text" name="title_ar" class="form-control" required>
         </div>
         <div class="mb-3">
-            <label class="form-label">Title (EN)</label>
+            <label class="form-label">{{ __('Title (EN)') }}</label>
             <input type="text" name="title_en" class="form-control" required>
         </div>
 
         {{-- النقاط --}}
         <div class="mb-3">
-            <label class="form-label">النقاط / Points</label>
+            <label class="form-label">النقاط / {{ __('Points') }}</label>
             <div id="points-wrapper">
                 <div class="point-item">
                     <input type="text" name="points[0][ar]" placeholder="النقطة بالعربي" class="form-control" required>
-                    <input type="text" name="points[0][en]" placeholder="Point in English" class="form-control" required>
+                    <input type="text" name="points[0][en]" placeholder="{{ __('Point in English') }}" class="form-control" required>
                     <button type="button" class="remove-btn" onclick="removePoint(this)">X</button>
                 </div>
             </div>
@@ -84,8 +84,8 @@ $terms = Term::all();
         <thead>
             <tr>
                 <th>#</th>
-                <th>العنوان (AR)</th>
-                <th>Title (EN)</th>
+                <th>العنوان {{ __('(AR)') }}</th>
+                <th>{{ __('Title (EN)') }}</th>
                 <th>النقاط</th>
                 <th>الإجراءات</th>
             </tr>
@@ -147,17 +147,17 @@ $terms = Term::all();
           
           {{-- العنوان --}}
           <div class="mb-3">
-              <label class="form-label">العنوان (AR)</label>
+              <label class="form-label">العنوان {{ __('(AR)') }}</label>
               <input type="text" id="edit_title_ar" name="title_ar" class="form-control" required>
           </div>
           <div class="mb-3">
-              <label class="form-label">Title (EN)</label>
+              <label class="form-label">{{ __('Title (EN)') }}</label>
               <input type="text" id="edit_title_en" name="title_en" class="form-control" required>
           </div>
 
           {{-- النقاط --}}
           <div class="mb-3">
-              <label class="form-label">النقاط / Points</label>
+              <label class="form-label">النقاط / {{ __('Points') }}</label>
               <div id="edit_points_wrapper"></div>
               <button type="button" class="add-btn" id="addEditPoint">+ إضافة نقطة جديدة</button>
           </div>

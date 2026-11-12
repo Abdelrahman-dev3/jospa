@@ -4,7 +4,7 @@
     <div class="d-flex align-items-center gap-3">
       <span class="p-2 border border-light rounded-circle"
         :style="{ 'background-color': filterStatus(status)?.color_hex }">
-        <span class="visually-hidden">Status</span>
+        <span class="visually-hidden">{{ $t('Status') }}</span>
       </span>
       <h5 class="mb-0">{{ filterStatus(status)?.title }}</h5>
     </div>

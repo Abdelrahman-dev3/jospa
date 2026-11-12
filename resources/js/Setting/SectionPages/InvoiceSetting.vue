@@ -3,10 +3,10 @@
     <CardTitle :title="$t('setting_sidebar.lbl_inv_setting')" icon="fa-solid fa-file-invoice"></CardTitle>
     <div class="row">
       <InputField class="col-md-6" :is-required="false" :label="$t('setting_invoice.lbl_order_prefix')" placeholder="# - INV" v-model="inv_prefix" :error-message="errors.inv_prefix"></InputField>
-      <InputField class="col-md-6" type="number" :is-required="false" :label="$t('setting_invoice.lbl_order_starts')" placeholder="Enter Order Starts" v-model="order_code_start" :error-message="errors.order_code_start"></InputField>
+      <InputField class="col-md-6" type="number" :is-required="false" :label="$t('setting_invoice.lbl_order_starts')" :placeholder="$t('Enter Order Starts')" v-model="order_code_start" :error-message="errors.order_code_start"></InputField>
 
       <div class="col-12 position-relative">
-        <InputField :is-required="false" :label="$t('setting_invoice.lbl_spacial_note')" placeholder="Enter your special note" v-model="spacial_note" :error-message="errors.spacial_note"></InputField>
+        <InputField :is-required="false" :label="$t('setting_invoice.lbl_spacial_note')" :placeholder="$t('Enter your special note')" v-model="spacial_note" :error-message="errors.spacial_note"></InputField>
         <div
           :style="{
             position: 'absolute',
@@ -24,7 +24,7 @@
       </div>
 
     <div class="form-group col-md-12">
-      <label for="" class="w-100">Template</label>
+      <label for="" class="w-100">{{ $t('Template') }}</label>
         <div class="form-check form-check-inline">
         <input class="form-check-input" type="radio" name="template" v-model="template" id="template1" value="template1">
         <label class="form-check-label" for="template1">

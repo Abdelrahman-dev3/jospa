@@ -40,9 +40,7 @@ return [
     'no_of_services' => 'No of services',
     'placeholder_name' => 'Enter Package Name',
 
-
-
-
-
-
+    // Added: missing dashboard translations
+    'invalid_action' => 'Invalid action.',
+    'is_featured_update' => 'Featured status updated successfully.',
 ];

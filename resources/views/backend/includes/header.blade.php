@@ -52,17 +52,17 @@ $notifications_count = optional(auth()->user())->unreadNotifications->count();
                 <div class="d-flex align-items-center mr-2 iq-font-style" role="group" aria-label="First group">
                     <input type="radio" class="btn-check" name="theme_font_size" value="theme-fs-sm" id="font-size-sm" checked>
                     <label for="font-size-sm" class="btn btn-border border-0 btn-icon btn-sm" data-bs-toggle="tooltip"
-                      title="Font size 14px" data-bs-placement="bottom">
+                      title="{{ __('Font size 14px') }}" data-bs-placement="bottom">
                       <span class="mb-0 h6" style="color: inherit !important;">A</span>
                     </label>
                     <input type="radio" class="btn-check" name="theme_font_size" value="theme-fs-md" id="font-size-md">
                     <label for="font-size-md" class="btn btn-border border-0 btn-icon" data-bs-toggle="tooltip"
-                      title="Font size 16px" data-bs-placement="bottom">
+                      title="{{ __('Font size 16px') }}" data-bs-placement="bottom">
                       <span class="mb-0 h4" style="color: inherit !important;">A</span>
                     </label>
                     <input type="radio" class="btn-check" name="theme_font_size" value="theme-fs-lg" id="font-size-lg">
                     <label for="font-size-lg" class="btn btn-border border-0 btn-icon" data-bs-toggle="tooltip"
-                      title="Font size 18px" data-bs-placement="bottom">
+                      title="{{ __('Font size 18px') }}" data-bs-placement="bottom">
                       <span class="mb-0 h2" style="color: inherit !important;">A</span>
                     </label>
                 </div>
@@ -113,11 +113,11 @@ $notifications_count = optional(auth()->user())->unreadNotifications->count();
                                   <div class="icon iq-icon-box-3 rounded-pill">{{substr('A',0,1)}}</div>
                               </span>
                               <div class="ms-3 flex-grow-1">
-                                  <h6 class="mb-0 ">All Branches</h6>
+                                  <h6 class="mb-0 ">{{ __('All Branches') }}</h6>
                               </div>
                               <button type="submit" class="btn btn-primary btn-sm rounded">
                                 <span class="btn-inner">
-                                  Apply
+                                  {{ __('Apply') }}
                                 </span>
                             </button>
                             </div>
@@ -137,7 +137,7 @@ $notifications_count = optional(auth()->user())->unreadNotifications->count();
                                   </div>
                                   <button type="submit" class="btn btn-primary btn-sm rounded">
                                     <span class="btn-inner">
-                                      Apply
+                                      {{ __('Apply') }}
                                     </span>
                                 </button>
                                 </div>

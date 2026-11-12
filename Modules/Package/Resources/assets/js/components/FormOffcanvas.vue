@@ -24,7 +24,7 @@
               <InputField :is-required="true" :label="$t('package.lbl_name') + ' ' + $t('settings.translate.ar')" :placeholder="$t('package.placeholder_name')" v-model="nameAr" :error-message="nameArError" :error-messages="errorMessages['name'] && errorMessages['name']['ar']" />
 
               <InputField :is-required="true" :label="$t('package.lbl_name') + ' ' + $t('settings.translate.en')" :placeholder="$t('package.placeholder_name')" v-model="nameEn" :error-message="nameEnError" :error-messages="errorMessages['name'] && errorMessages['name']['en']" />
-              <InputField class="" type="textarea" :textareaRows="5" :label="$t('package.lbl_description')" placeholder="Enter Description" v-model="description"></InputField>
+              <InputField class="" type="textarea" :textareaRows="5" :label="$t('package.lbl_description')" :placeholder="$t('Enter Description')" v-model="description"></InputField>
             </div>
           </div>
 
@@ -32,7 +32,7 @@
             <div class="form-group col-md-4">
               <label class="form-label" for="branch">{{ $t('employee.lbl_select_branch') }}</label
               ><span class="text-danger">*</span>
-              <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" placeholder="Select Branch" v-bind="singleSelectOption" :options="branch.options" @select="onBranchChange" class="form-group"> </Multiselect>
+              <Multiselect id="branch_id" v-model="branch_id" :value="branch_id" :placeholder="$t('Select Branch')" v-bind="singleSelectOption" :options="branch.options" @select="onBranchChange" class="form-group"> </Multiselect>
               <span class="text-danger">{{ errors.branch_id }}</span>
             </div>
             <div class="form-group col-md-8">
@@ -41,14 +41,14 @@
                 id="package_category_ids"
                 v-model="category_ids"
                 :value="category_ids"
-                placeholder="Select categories first to filter services"
+                :placeholder="$t('Select categories first to filter services')"
                 v-bind="multiSelectOption"
                 :options="category.options"
                 :disabled="!branch_id"
                 class="form-group"
               >
               </Multiselect>
-              <small class="text-muted">Selected categories will filter the services available in this package.</small>
+              <small class="text-muted">{{ $t('Selected categories will filter the services available in this package.') }}</small>
             </div>
           </div>
 
@@ -111,11 +111,11 @@
               <table class="table table-striped border table-responsive dataTable no-footer">
                 <thead>
                   <tr>
-                    <th>Service</th>
-                    <th>Unit Price</th>
-                    <th>Quantity</th>
-                    <th>Total Price</th>
-                    <th>Action</th>
+                    <th>{{ $t('Service') }}</th>
+                    <th>{{ $t('Unit Price') }}</th>
+                    <th>{{ $t('Quantity') }}</th>
+                    <th>{{ $t('Total Price') }}</th>
+                    <th>{{ $t('Action') }}</th>
                   </tr>
                 </thead>
                 <tr v-if="selectedServices.length === 0">
@@ -123,7 +123,7 @@
                 </tr>
                 <tr v-for="(service, index) in selectedServices" :key="index">
                   <td class="w-50">
-                    <div><Multiselect v-model="service.service_id" :value="service.service_id" v-bind="singleSelectOption" @select="selectService(index)" :options="availableServiceOptions(service.service_id)" placeholder="Select Service" id="type" autocomplete="off"></Multiselect></div>
+                    <div><Multiselect v-model="service.service_id" :value="service.service_id" v-bind="singleSelectOption" @select="selectService(index)" :options="availableServiceOptions(service.service_id)" :placeholder="$t('Select Service')" id="type" autocomplete="off"></Multiselect></div>
                   </td>
                   <td>
                     <div><input class="form-control" type="number" min="0" placeholder="0" :value="service.service_price" disabled /></div>
@@ -142,7 +142,7 @@
                 </tr>
               </table>
 
-              <button @click="addMore" type="button" class="btn btn-info">Add More</button>
+              <button @click="addMore" type="button" class="btn btn-info">{{ $t('Add More') }}</button>
               <div class="text-danger">{{ errors.services || servicesError }}</div>
             </div>
           </div>
@@ -150,7 +150,7 @@
       </div>
       <div class="form-group m-0 p-3 d-flex justify-content-end border-top gap-3">
         <label for=""
-          ><strong>Services total value</strong>
+          ><strong>{{ $t('Services total value') }}</strong>
         </label>
         <span>{{ formatCurrencyVue(SUB_TOTAL_SERVICE_AMOUNT) }}</span>
       </div>

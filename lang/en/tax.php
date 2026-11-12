@@ -14,4 +14,6 @@ return [
     'select_type'=>'Select Type',
     'module_type'=>'Select module type',
 
+    // Added: missing dashboard translations
+    'lbl_updated' => 'Updated At',
 ];

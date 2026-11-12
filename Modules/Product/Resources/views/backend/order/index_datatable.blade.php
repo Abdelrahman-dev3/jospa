@@ -14,7 +14,7 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text rounded-end-0">{{ setting('inv_prefix') }}</span>
                             </div>
-                            <input type="text" class="form-control order-code" placeholder="code" name="code"
+                            <input type="text" class="form-control order-code" placeholder="{{ __('code') }}" name="code"
                                 value="{{ isset($searchCode) ? $searchCode : '' }}">
                         </div>
                     </div>
@@ -22,9 +22,9 @@
                         <div class="datatable-filter" style="width: 100%; display: inline-block;">
                             <select name="payment_status" id="payment_status" class="select2 form-control"
                                 data-filter="select">
-                                <option value="">Payment Status</option>
-                                <option value="paid">Paid</option>
-                                <option value="unpaid">Unpaid</option>
+                                <option value="">{{ __('Payment Status') }}</option>
+                                <option value="paid">{{ __('Paid') }}</option>
+                                <option value="unpaid">{{ __('Unpaid') }}</option>
                             </select>
                         </div>
                     </div>
@@ -32,12 +32,12 @@
                         <div class="datatable-filter" style="width: 100%; display: inline-block;">
                             <select name="delivery_status" id="delivery_status" class="select2 form-control"
                                 data-filter="select">
-                                <option value="">Delivery Status</option>
-                                <option value="order_placed">Order Placed</option>
-                                <option value="pending">Pending</option>
-                                <option value="processing">Processing</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="cancelled">Cancelled</option>
+                                <option value="">{{ __('Delivery Status') }}</option>
+                                <option value="order_placed">{{ __('Order Placed') }}</option>
+                                <option value="pending">{{ __('Pending') }}</option>
+                                <option value="processing">{{ __('Processing') }}</option>
+                                <option value="delivered">{{ __('Delivered') }}</option>
+                                <option value="cancelled">{{ __('Cancelled') }}</option>
                             </select>
                         </div>
                     </div>

@@ -313,7 +313,7 @@
       <template v-else-if="SINLGE_STEP == 'CHECK_OUT' && status == 'checkout'">
         <div class="offcanvas-header">
           <div class="d-flex gap-2 align-items-center">
-            <h4 class="offcanvas-title" id="form-offcanvasLabel">Checkout</h4>
+            <h4 class="offcanvas-title" id="form-offcanvasLabel">{{ $t('Checkout') }}</h4>
             <small class="badge bg-success" v-if="is_paid">{{ $t('booking.lbl_is_paid') }}</small>
           </div>
 
@@ -331,14 +331,14 @@
                 <div class="gap-2">
                   <strong>{{ selectedCustomer.full_name }}</strong>
                   <p class="m-0">
-                    <small>Client since {{ moment(selectedCustomer.created_at).format('MMMM YYYY') }}</small>
+                    <small>{{ $t('Client since') }} {{ moment(selectedCustomer.created_at).format('MMMM YYYY') }}</small>
                   </p>
                 </div>
               </div>
             </div>
           </div>
           <div v-if="selectedService.length > 0" :class="selectedPackage.length > 0 ? 'border-bottom' : ''">
-            <h5 class="mt-3">Services</h5>
+            <h5 class="mt-3">{{ $t('Services') }}</h5>
             <ul class="form-group list-group list-group-flush">
               <li v-for="(service, index) in selectedService" :key="index" class="list-group-item py-3 px-1">
                 <div class="d-flex flex-column gap-2">
@@ -358,15 +358,15 @@
                     <label
                     ><i>{{ $t('booking.lbl_at') }}</i></label
                     >
-                    <strong>{{ moment(service.start_date_time).format('LT') }}</strong> <span class="px-2">|</span> <label class="me-2"> <i>For:</i></label
-                  ><strong> {{ service.duration_min }} Min</strong>
+                    <strong>{{ moment(service.start_date_time).format('LT') }}</strong> <span class="px-2">|</span> <label class="me-2"> <i>{{ $t('For:') }}</i></label
+                  ><strong> {{ service.duration_min }} {{ $t('Min') }}</strong>
                   </div>
                 </div>
                 <div v-if="!isPackageServiceSelected(service.service_id) && isServiceInFilteredPackages(service.service_id)">
-                  <div class="btn w-100 btn-primary mt-2" @click="applyUserPackage(service.service_id)" :id="service.service_id" data-bs-target="#exampleModal">Apply a Package</div>
+                  <div class="btn w-100 btn-primary mt-2" @click="applyUserPackage(service.service_id)" :id="service.service_id" data-bs-target="#exampleModal">{{ $t('Apply a Package') }}</div>
                 </div>
                 <div class="mt-2 d-none d-flex justify-content-between align-items-center" :id="service.service_id + '' + service.service_id">
-                  <h6>{{ service.service_name }} Package</h6>
+                  <h6>{{ service.service_name }} {{ $t('Package') }}</h6>
                   <h6 class="text-danger" v-if="singleAppliedService(service.service_id)">- {{ formatCurrencyVue(singleAppliedServicePrice) }}</h6>
                 </div>
               </li>
@@ -374,7 +374,7 @@
           </div>
           <div v-if="selectedPackageService && selectedPackageService.length > 0">
             <div class="mt-3 mb-3">
-              <h6>Package Service</h6>
+              <h6>{{ $t('Package Service') }}</h6>
               <div class="bg-soft-secondary p-3 rounded-3">
                 <div v-for="selectedPackageService in selectedPackageService">
                   <div class="d-flex align-items-center justify-content-between gap-2">
@@ -386,11 +386,11 @@
                   </div>
                   <div class="d-flex align-items-center justify-content-between ms-3">
                     <div class="d-flex align-items-center gap-3">
-                      <p class="mb-0">Quantity:</p>
+                      <p class="mb-0">{{ $t('Quantity:') }}</p>
                       <h6 class="mb-0">{{ selectedPackageService.qty }}</h6>
                     </div>
                     <div>
-                      <h6 class="text-danger">(Remainig {{ selectedPackageService.remaining_qty - selectedPackageService.qty }}/{{ selectedPackageService.total_qty }})</h6>
+                      <h6 class="text-danger">({{ $t('Remainig') }} {{ selectedPackageService.remaining_qty - selectedPackageService.qty }}/{{ selectedPackageService.total_qty }})</h6>
                     </div>
                   </div>
                 </div>
@@ -416,10 +416,10 @@
                     <div class="mb-4">
                       <div class="d-flex align-items-center gap-2 mb-1">
                         <p class="mb-0">-> {{ packageServices.service_name }} -</p>
-                        <h6 class="mb-0">60 mins</h6>
+                        <h6 class="mb-0">{{ $t('60 mins') }}</h6>
                       </div>
                       <div class="d-flex align-items-center gap-2 ms-3">
-                        <p class="mb-0">Quantity:</p>
+                        <p class="mb-0">{{ $t('Quantity:') }}</p>
                         <h6 class="mb-0">{{ packageServices.quantity ?? packageServices.qty ?? packageServices.remaining_qty }}</h6>
                       </div>
                     </div>
@@ -430,7 +430,7 @@
           </div>
 
           <div v-if="selectedProduct.length > 0">
-            <h5 class="mt-3">Products</h5>
+            <h5 class="mt-3">{{ $t('Products') }}</h5>
             <ul class="form-group list-group list-group-flush">
               <li v-for="(product, index) in selectedProduct" :key="index" class="list-group-item py-3 px-1">
                 <div class="d-flex flex-column gap-2">
@@ -440,15 +440,15 @@
                   </div>
                   <div>
                     <div class="d-flex">
-                      <label>Price:</label>
+                      <label>{{ $t('Price:') }}</label>
                       <template v-if="product.discounted_price">
                         <h5 class="ms-2">
                           <b>{{ formatCurrencyVue(product.discounted_price) }}</b>
                         </h5>
                         <h6 class="text-secondary" v-if="product.product_price != product.discounted_price">
                           <del class="me-2">{{ formatCurrencyVue(product.product_price) }}</del>
-                          <small class="text-success" v-if="product.discount_type == 'percent'">{{ product.discount_value }}% OFF</small>
-                          <small class="text-success" v-else>{{ formatCurrencyVue(product.discount_value) }} OFF</small>
+                          <small class="text-success" v-if="product.discount_type == 'percent'">{{ product.discount_value }}{{ $t('% OFF') }}</small>
+                          <small class="text-success" v-else>{{ formatCurrencyVue(product.discount_value) }} {{ $t('OFF') }}</small>
                         </h6>
                       </template>
                       <template v-else>
@@ -458,10 +458,10 @@
                         </h5>
                       </template>
                     </div>
-                    <label>Quantity: </label> <QtyButton v-model="product.product_qty" :max="product.max_qty"></QtyButton>
+                    <label>{{ $t('Quantity:') }} </label> <QtyButton v-model="product.product_qty" :max="product.max_qty"></QtyButton>
                   </div>
                   <p class="m-0">
-                    <label><i>Sold By: </i></label> <strong>{{ product.employee?.full_name || selectedEmployee?.name || '' }}</strong>
+                    <label><i>{{ $t('Sold By:') }} </i></label> <strong>{{ product.employee?.full_name || selectedEmployee?.name || '' }}</strong>
                   </p>
                 </div>
               </li>
@@ -469,9 +469,9 @@
           </div>
           <div class="d-flex gap-3 justify-content-between flex-column">
             <div v-if="services_id.length < service.options.length" class="text-center">
-              <Multiselect v-if="newService" :canClear="false" placeholder="Select Service" ref="serviceInput" class="" v-model="services_id" :value="services_id" v-bind="multipleSelectOption" :options="service.options" @select="serviceSelect" id="service_ids">
+              <Multiselect v-if="newService" :canClear="false" :placeholder="$t('Select Service')" ref="serviceInput" class="" v-model="services_id" :value="services_id" v-bind="multipleSelectOption" :options="service.options" @select="serviceSelect" id="service_ids">
                 <template v-slot:multiplelabel="{ values }">
-                  <div class="multiselect-multiple-label">Select Service</div>
+                  <div class="multiselect-multiple-label">{{ $t('Select Service') }}</div>
                 </template>
               </Multiselect>
               <template v-else>
@@ -479,13 +479,13 @@
               </template>
             </div>
             <div v-if="product_variation_id.length < products.options.length" class="text-center">
-              <Multiselect v-if="newProduct" :canClear="false" placeholder="Select Product" ref="productInput" class="" v-model="product_variation_id" :value="product_variation_id" v-bind="multipleSelectOption" :options="products.options" @select="selectProduct" id="product_variation_ids">
+              <Multiselect v-if="newProduct" :canClear="false" :placeholder="$t('Select Product')" ref="productInput" class="" v-model="product_variation_id" :value="product_variation_id" v-bind="multipleSelectOption" :options="products.options" @select="selectProduct" id="product_variation_ids">
                 <template v-slot:multiplelabel="{ values }">
-                  <div class="multiselect-multiple-label">Select Product</div>
+                  <div class="multiselect-multiple-label">{{ $t('Select Product') }}</div>
                 </template>
               </Multiselect>
               <template v-else>
-                <a href="javascript:void(0)" v-if="!is_paid" @click="addNewProduct" class="btnw-100"><i class="fa-solid fa-circle-plus"></i> Add Product</a>
+                <a href="javascript:void(0)" v-if="!is_paid" @click="addNewProduct" class="btnw-100"><i class="fa-solid fa-circle-plus"></i> {{ $t('Add Product') }}</a>
               </template>
             </div>
           </div>
@@ -557,16 +557,16 @@
                     <input type="checkbox" :id="'service-' + packageServices.id" :checked="isServiceSelected(packageServices.user_package_id, packageServices.service_id)" @change="updateSelectedServices(packageServices)" />
                     <p class="mb-0">-></p>
                     <label :for="'service-' + packageServices.id">{{ packageServices.service_name }} </label>
-                    - <label :for="'service-' + packageServices.id" class="fw-semibold text-dark">{{ packageServices.duration_min }} Mins</label>
+                    - <label :for="'service-' + packageServices.id" class="fw-semibold text-dark">{{ packageServices.duration_min }} {{ $t('Mins') }}</label>
                   </div>
                   <div class="d-flex align-items-center gap-3">
-                    <label :for="'qtybutton-' + packageServices.id">Quantity: </label>
+                    <label :for="'qtybutton-' + packageServices.id">{{ $t('Quantity:') }} </label>
                     <QtyButton :id="'qtybutton-' + packageServices.id" v-model="packageServices.qty" :max="packageServices.remaining_qty" @input="updateServiceQty(index, packageServices, $event)"></QtyButton>
                     <p class="mb-0">
-                      Left -<span class="text-danger me-2">{{ packageServices.remaining_qty }}</span>
+                      {{ $t('Left') }} -<span class="text-danger me-2">{{ packageServices.remaining_qty }}</span>
                     </p>
                     <p class="mb-0">
-                      Used -<span class="text-success me-2">{{ packageServices.total_qty - packageServices.remaining_qty }}</span>
+                      {{ $t('Used') }} -<span class="text-success me-2">{{ packageServices.total_qty - packageServices.remaining_qty }}</span>
                     </p>
                   </div>
                 </div>
@@ -575,8 +575,8 @@
           </div>
           <div class="modal-footer position-sticky fixed-bottom bg-white">
             <div class="d-flex justify-content-end gap-2">
-              <button type="button" class="btn btn-secondary" @click="cancelSelectedPackageService()">Cancel</button>
-              <button type="button" class="btn btn-primary" @click="saveSelectedPackageService()">Save</button>
+              <button type="button" class="btn btn-secondary" @click="cancelSelectedPackageService()">{{ $t('Cancel') }}</button>
+              <button type="button" class="btn btn-primary" @click="saveSelectedPackageService()">{{ $t('Save') }}</button>
             </div>
           </div>
         </div>
@@ -588,7 +588,7 @@
         <div class="modal-content">
           <div class="modal-body">
             <div class="modal-header mb-3">
-              <h4 class="mb-0">Your existing package</h4>
+              <h4 class="mb-0">{{ $t('Your existing package') }}</h4>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="row">
@@ -610,15 +610,15 @@
                     <div class="iq-purchase-package">
                       <p class="border-bottom pb-3 mb-3">{{ packages.description }}</p>
                       <div>
-                        <h5 class="mb-3">What's Included</h5>
+                        <h5 class="mb-3">{{ $t('What\'s Included') }}</h5>
                         <div v-for="packageServices in packages.services" :key="packageServices.id">
                           <div class="mb-4">
                             <div class="d-flex align-items-center gap-2 mb-1">
                               <p class="mb-0">-> {{ packageServices.service_name }} -</p>
-                              <h6 class="mb-0">{{ packageServices.duration_min }} mins</h6>
+                              <h6 class="mb-0">{{ packageServices.duration_min }} {{ $t('mins') }}</h6>
                             </div>
                             <div class="d-flex align-items-center gap-2 ms-3">
-                              <p class="mb-0">Quantity:</p>
+                              <p class="mb-0">{{ $t('Quantity:') }}</p>
                               <h6 class="mb-0">{{ packageServices.remaining_qty }}</h6>
                             </div>
                           </div>
@@ -629,10 +629,10 @@
                   <div class="card-footer pt-0">
                     <div>
                       <div v-if="isPackagePurchased(packages.id)">
-                        <div class="btn btn-secondary d-block" @click="removePurchasePackageId(packages.id)">Purchased</div>
+                        <div class="btn btn-secondary d-block" @click="removePurchasePackageId(packages.id)">{{ $t('Purchased') }}</div>
                       </div>
                       <div v-else>
-                        <div class="btn btn-outline-secondary d-block" @click="redeemPackage(packages.package_id)">Use</div>
+                        <div class="btn btn-outline-secondary d-block" @click="redeemPackage(packages.package_id)">{{ $t('Use') }}</div>
                       </div>
                     </div>
                   </div>
@@ -648,7 +648,7 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h4 class="mb-0">Packages Available</h4>
+            <h4 class="mb-0">{{ $t('Packages Available') }}</h4>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
@@ -670,15 +670,15 @@
                     </div>
                     <div class="iq-purchase-package">
                       <p class="border-bottom pb-3 mb-3">{{ packages.description }}</p>
-                      <h5 class="mb-3">What's Included :</h5>
+                      <h5 class="mb-3">{{ $t('What\'s Included :') }}</h5>
                       <div v-for="packageServices in packages.services" :key="packageServices.id">
                         <div class="mb-4">
                           <div class="d-flex align-items-center gap-2 mb-1">
                             <p class="mb-0">-> {{ packageServices.service_name }} -</p>
-                            <h6 class="mb-0">{{ packageServices.duration_min }} mins</h6>
+                            <h6 class="mb-0">{{ packageServices.duration_min }} {{ $t('mins') }}</h6>
                           </div>
                           <div class="d-flex align-items-center gap-2 ms-3">
-                            <p class="mb-0">Quantity:</p>
+                            <p class="mb-0">{{ $t('Quantity:') }}</p>
                             <h6 class="mb-0">{{ packageServices.quantity }}</h6>
                           </div>
                         </div>
@@ -687,22 +687,22 @@
                   </div>
                   <div class="card-footer p-2">
                     <div v-if="isPackagePurchased(packages.id)">
-                      <div class="btn btn-secondary d-block" @click="removePurchasePackageId(packages.id)">Purchased</div>
+                      <div class="btn btn-secondary d-block" @click="removePurchasePackageId(packages.id)">{{ $t('Purchased') }}</div>
                     </div>
                     <div v-else>
-                      <div class="btn btn-secondary d-block" @click="purchasePackage(packages.id)">Purchase Now</div>
+                      <div class="btn btn-secondary d-block" @click="purchasePackage(packages.id)">{{ $t('Purchase Now') }}</div>
                     </div>
                   </div>
                 </div>
               </div>
               <div v-else>
-                <p>No package is available for the current service.</p>
+                <p>{{ $t('No package is available for the current service.') }}</p>
               </div>
             </div>
           </div>
           <div class="modal-footer position-sticky fixed-bottom bg-white">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close" @click="closeModel()">Cancel</button>
-            <button type="button" class="btn btn-primary" @click="savePurchasePackage()">Save</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close" @click="closeModel()">{{ $t('Cancel') }}</button>
+            <button type="button" class="btn btn-primary" @click="savePurchasePackage()">{{ $t('Save') }}</button>
           </div>
         </div>
       </div>
@@ -713,6 +713,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FlatPickr from 'vue-flatpickr-component'
@@ -2152,7 +2153,7 @@ const formSubmitPaynow = () => {
           if (res.data.public_key != '') {
             openRazorpay(res.data)
           } else {
-            window.errorSnackbar('Razorpay key does not exist')
+            window.errorSnackbar(__tr('Razorpay key does not exist'))
             errorMessages.value = 'Razorpay key does not exist'
           }
           break
@@ -2168,7 +2169,7 @@ const formSubmitPaynow = () => {
           if (res.data.public_key != '') {
             openStripe(stripe_payment_data.value)
           } else {
-            window.errorSnackbar('Stripe Secret key does not exist')
+            window.errorSnackbar(__tr('Stripe Secret key does not exist'))
             errorMessages.value = 'Stripe Secret key does not exist'
           }
           break

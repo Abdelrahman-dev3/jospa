@@ -14,5 +14,5 @@ return [
     'lbl_number_of_decimals' => 'عدد الأرقام العشرية',
     'lbl_ID' => 'معرف',
     'lbl_action' => 'الإجراء',
-    'currency_format' => 'Currency Format Settings',
+    'currency_format' => 'إعدادات تنسيق العملة',
 ];

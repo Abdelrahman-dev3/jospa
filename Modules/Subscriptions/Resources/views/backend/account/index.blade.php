@@ -30,7 +30,7 @@
                 <div class="iq-card-header d-flex justify-content-between">
                   <div class="card-header">
                         <h4 class="card-title">
-                            Current Plan
+                            {{ __('Current Plan') }}
                         </h4>
                     </div>
                  </div>
@@ -41,15 +41,15 @@
 
                             @if(count($subscription)!=0)
                                <div class="card-header">
-                                    <h2>Free <span class="h6">(0 USD / Life Time)
+                                    <h2>{{ __('Free') }} <span class="h6">{{ __('(0 USD / Life Time)') }}
                                             </span></h2>
-                                    <a href="#" class="feature-link">View Features</a>
+                                    <a href="#" class="feature-link">{{ __('View Features') }}</a>
                                 </div>
 
                                 @else
 
                                 <div class="card-header">
-                                   <h4>No Subscription Plan has been selected !</h4>
+                                   <h4>{{ __('No Subscription Plan has been selected !') }}</h4>
                                 </div>
                                 @endif
 

@@ -41,6 +41,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL } from '../constant/tax'
 import { useField, useForm } from 'vee-validate'
@@ -90,8 +91,8 @@ const defaultData = () => {
 const type_data = ref({
   searchable: true,
   options: [
-    { label: 'Percent', value: 'percent' },
-    { label: 'Fixed', value: 'fixed' },
+    { label: __tr('Percent'), value: 'percent' },
+    { label: __tr('Fixed'), value: 'fixed' },
 
   ],
   closeOnSelect: true,
@@ -102,8 +103,8 @@ const type_data = ref({
 const module_type_data = ref({
   searchable: true,
   options: [
-    { label: 'Products', value: 'products' },
-    { label: 'Services', value: 'services' },
+    { label: __tr('Products'), value: 'products' },
+    { label: __tr('Services'), value: 'services' },
 
   ],
   closeOnSelect: true,

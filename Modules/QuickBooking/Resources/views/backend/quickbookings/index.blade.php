@@ -1,6 +1,6 @@
 @extends('backend.layouts.quick-booking')
 
-@section('title') Quick Booking @endsection
+@section('title') {{ __('Quick Booking') }} @endsection
 
 @push('after-styles')
     <link rel="stylesheet" href='{{ mix("modules/quickbooking/style.css") }}'>

@@ -73,6 +73,17 @@
         $filePaths = \File::files($langFolderPath);
     @endphp
 
+    {{-- Plain-text translations (lang/{locale}.json) so Vue's $t('English text') resolves too --}}
+    @php
+        $jsonLangPath = base_path('lang/' . App::currentLocale() . '.json');
+        $jsonLang = is_file($jsonLangPath) ? (json_decode(file_get_contents($jsonLangPath), true) ?: []) : [];
+    @endphp
+    <script>
+        window.localMessagesUpdate = {
+            ...@json((object) $jsonLang),
+            ...window.localMessagesUpdate
+        }
+    </script>
     @foreach ($filePaths as $filePath)
         @php
             $fileName = pathinfo($filePath, PATHINFO_FILENAME);
@@ -190,11 +201,11 @@
         <div class="modal-dialog">
             <div class="modal-content" data-iq-modal="content">
                 <div class="modal-header">
-                    <h5 class="modal-title" data-iq-modal="title">Modal title</h5>
+                    <h5 class="modal-title" data-iq-modal="title">{{ __('Modal title') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" data-iq-modal="body">
-                    <p>Modal body text goes here.</p>
+                    <p>{{ __('Modal body text goes here.') }}</p>
                 </div>
             </div>
         </div>
@@ -312,7 +323,7 @@
         {!! setting('custom_js_block') !!}
         @if (\Session::get('error'))
             Swal.fire({
-                title: 'Error',
+                title: @json(__('Error')),
                 text: '{{ session()->get('error') }}',
                 icon: "error",
                 showClass: {

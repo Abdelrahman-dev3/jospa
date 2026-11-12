@@ -142,9 +142,9 @@ class SettingController extends Controller
                 $message->to($mailObject['email'])->subject('Test Email');
             });
 
-            return response()->json(['message' => 'Verification Successful', 'status' => true], 200);
+            return response()->json(['message' => __('Verification Successful'), 'status' => true], 200);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Verification Failed', 'status' => false], 500);
+            return response()->json(['message' => __('Verification Failed'), 'status' => false], 500);
         }
     }
 }

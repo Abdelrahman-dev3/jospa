@@ -10,7 +10,7 @@
       <div class="col-12">
         <div class="form-group" v-if="branch.options.length > 1">
           <label class="form-label">{{ $t('branch.select_branch') }}<span class="text-danger">*</span> </label>
-          <Multiselect id="branch_id" v-model="branch_id" placeholder="Select Branch" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group"></Multiselect>
+          <Multiselect id="branch_id" v-model="branch_id" :placeholder="$t('Select Branch')" v-bind="singleSelectOption" :options="branch.options" @select="branchSelect" class="form-group"></Multiselect>
           <span class="text-danger">{{ errors.branch_id }}</span>
         </div>
       </div>
@@ -23,6 +23,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 
 import FullCalendar from '@fullcalendar/vue3'
@@ -66,7 +67,7 @@ const handleDateClick = (e) => {
       1
     )
   } else {
-    events.value.push({ title: 'Holiday', date: moment(e.date).format('YYYY-MM-DD') })
+    events.value.push({ title: __tr('Holiday'), date: moment(e.date).format('YYYY-MM-DD') })
   }
 }
 

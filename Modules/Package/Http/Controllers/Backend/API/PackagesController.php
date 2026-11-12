@@ -49,7 +49,7 @@ class PackagesController extends Controller
 
             $data->whereHas('userPackage.bookingTransaction');
             if (!$activePackage) {
-                return response()->json(['status' => true, 'data' => [], 'message' => 'No active package for this user'], 200);
+                return response()->json(['status' => true, 'data' => [], 'message' => __('No active package for this user')], 200);
             }
         } else {
             // Normal get package API call - check for active status

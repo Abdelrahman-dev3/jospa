@@ -36,7 +36,7 @@ class PaymentController extends Controller
         if (!$booking) {
             return response()->json([
                 'status' => false,
-                'message' => 'Booking not found.'
+                'message' => __('Booking not found.')
             ], 404); // Not Found
         }
 
@@ -49,7 +49,7 @@ class PaymentController extends Controller
             if (!$user_id) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'User not found.'
+                    'message' => __('User not found.')
                 ], 404); // Not Found
             }
 
@@ -58,7 +58,7 @@ class PaymentController extends Controller
             if (!$wallet) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Wallet not found.'
+                    'message' => __('Wallet not found.')
                 ], 404); // Not Found
             }
 
@@ -87,13 +87,13 @@ class PaymentController extends Controller
                 } else {
                     return response()->json([
                         'status' => false,
-                        'message' => 'Failed to update wallet balance.'
+                        'message' => __('Failed to update wallet balance.')
                     ], 500); // Internal Server Error
                 }
             } else {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Insufficient wallet balance.'
+                    'message' => __('Insufficient wallet balance.')
                 ], 400); // Bad Request
             }
         }
@@ -115,7 +115,7 @@ class PaymentController extends Controller
 
         return response()->json([
             'status' => false,
-            'message' => 'An error occurred while processing the payment.'
+            'message' => __('An error occurred while processing the payment.')
         ], 500); // Internal Server Error
     }
 }

@@ -225,9 +225,9 @@
                 <td>{{ $gift->subtotal ?? '-' }}</td> 
                 <td style="text-align: center;font-size: 16px;">
                     @if($gift->payment_status == 1)
-                        <span class="badge bg-success">Completed</span>
+                        <span class="badge bg-success">{{ __('Completed') }}</span>
                     @else
-                        <span class="badge bg-warning text-dark">Pending</span>
+                        <span class="badge bg-warning text-dark">{{ __('Pending') }}</span>
                     @endif
                 </td>
                 <td>{{ $gift->created_at ? $gift->created_at->format('Y-m-d') : '-' }}</td>

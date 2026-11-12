@@ -75,7 +75,7 @@
         <x-slot name="title">
             <h4>{{ __('service.lbl_advanced_filter') }}</h4>
         </x-slot>
-        <button type="reset" class="btn btn-danger" id="reset-filter">Reset</button>
+        <button type="reset" class="btn btn-danger" id="reset-filter">{{ __('Reset') }}</button>
     </x-backend.advance-filter>
 @endsection
 
@@ -113,7 +113,7 @@
                 name: 'is_default',
                 orderable: true,
                 searchable: true,
-                title: "Default",
+                title: @json(__('Default')),
                 width: '5%'
             },
             {
@@ -121,7 +121,7 @@
                 name: 'status',
                 orderable: true,
                 searchable: true,
-                title: "Published",
+                title: @json(__('Published')),
                 width: '5%'
             },
             {

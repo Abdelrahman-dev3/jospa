@@ -112,6 +112,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { INDEX_LIST_URL, EDIT_URL, STORE_URL, UPDATE_URL } from '../constant/category'
 import { useField, useForm } from 'vee-validate'
@@ -197,7 +198,7 @@ const fileUpload = async (e) => {
   const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
 
   if (!allowedTypes.includes(file.type)) {
-    window.errorSnackbar('Only JPG, JPEG, and PNG files are allowed.'); 
+    window.errorSnackbar(__tr('Only JPG, JPEG, and PNG files are allowed.')); 
    profileInputRef.value.value = ''; // Clear the file input
     return;
   }

@@ -61,5 +61,8 @@ return [
     'Payment Transactions' => 'عمليات الدفع',
     'invoice'     => 'الفواتير',
     'Coupon Report' => 'تقارير الكوبونات',
-    'Payment attempts' => 'محاولات الدفع'
+    'Payment attempts' => 'محاولات الدفع',
+
+    // Added: missing dashboard translations
+    'payment_attempts' => 'محاولات الدفع',
 ];

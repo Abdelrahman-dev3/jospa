@@ -1,6 +1,6 @@
 <template>
   <div class="d-flex justify-content-between">
-    <h6 class="d-inline-block">Font</h6>
+    <h6 class="d-inline-block">{{ $t('Font') }}</h6>
     <a href="javascript:void(0)" data-reset="body-heading-font" @click="resetFont">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M21.4799 12.2424C21.7557 12.2326 21.9886 12.4482 21.9852 12.7241C21.9595 14.8075 21.2975 16.8392 20.0799 18.5506C18.7652 20.3986 16.8748 21.7718 14.6964 22.4612C12.518 23.1505 10.1711 23.1183 8.01299 22.3694C5.85488 21.6205 4.00382 20.196 2.74167 18.3126C1.47952 16.4293 0.875433 14.1905 1.02139 11.937C1.16734 9.68346 2.05534 7.53876 3.55018 5.82945C5.04501 4.12014 7.06478 2.93987 9.30193 2.46835C11.5391 1.99683 13.8711 2.2599 15.9428 3.2175L16.7558 1.91838C16.9822 1.55679 17.5282 1.62643 17.6565 2.03324L18.8635 5.85986C18.945 6.11851 18.8055 6.39505 18.549 6.48314L14.6564 7.82007C14.2314 7.96603 13.8445 7.52091 14.0483 7.12042L14.6828 5.87345C13.1977 5.18699 11.526 4.9984 9.92231 5.33642C8.31859 5.67443 6.8707 6.52052 5.79911 7.74586C4.72753 8.97119 4.09095 10.5086 3.98633 12.1241C3.8817 13.7395 4.31474 15.3445 5.21953 16.6945C6.12431 18.0446 7.45126 19.0658 8.99832 19.6027C10.5454 20.1395 12.2278 20.1626 13.7894 19.6684C15.351 19.1743 16.7062 18.1899 17.6486 16.8652C18.4937 15.6773 18.9654 14.2742 19.0113 12.8307C19.0201 12.5545 19.2341 12.3223 19.5103 12.3125L21.4799 12.2424Z" fill="currentColor" />
@@ -12,7 +12,7 @@
     <div>
       <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="label">
-          <label class="mb-0 d-inline-block">Body Font</label>
+          <label class="mb-0 d-inline-block">{{ $t('Body Font') }}</label>
         </div>
       </div>
       <div class="form-group mb-0">
@@ -24,7 +24,7 @@
     <div>
       <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="label">
-          <label class="mb-0 d-inline-block">Heading Font</label>
+          <label class="mb-0 d-inline-block">{{ $t('Heading Font') }}</label>
         </div>
       </div>
       <div class="form-group mb-0">

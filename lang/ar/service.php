@@ -60,4 +60,7 @@ return [
     'lbl_visible_home' => 'إظهار في الخدمات المنزلية',
     'lbl_show_in_online_booking' => 'إظهار أونلاين',
     'lbl_show_in_gift_card' => 'إظهار في الجيفت كارد',
+
+    // Added: missing dashboard translations
+    'lbl_update_at' => 'تاريخ التحديث',
 ];

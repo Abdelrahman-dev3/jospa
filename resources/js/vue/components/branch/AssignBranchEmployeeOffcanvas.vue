@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import { POST_ASSIGN_URL, GET_ASSIGN_URL } from '../../constants/branch'
 import { EMPLOYEE_LIST } from '../../constants/branch'
@@ -98,7 +99,7 @@ const formSubmit = () => {
 
   if (hasUpdates) {
     confirmcancleSwal({
-      title: 'Do you want to make sure that if the staff is in another branch, they will be moved here?'
+      title: __tr('Do you want to make sure that if the staff is in another branch, they will be moved here?')
     }).then((result) => {
       if (result.isConfirmed) {
         updateRequest({ url: POST_ASSIGN_URL, id: branchId.value, body: data })
@@ -115,7 +116,7 @@ const selectEmployee = (value) => {
   selectedEmployee.value = [...selectedEmployee.value, ...staffList.value.filter((staff) => staff.id === value)]
 }
 const removeEmployee = (value) => {
-  window.successSnackbar('Employee removed successfully')
+  window.successSnackbar(__tr('Employee removed successfully'))
   selectedEmployee.value = [...selectedEmployee.value.filter((emp) => emp.employee_id !== value)]
   assign_ids.value = [...assign_ids.value.filter((emp) => emp !== value)]
 }

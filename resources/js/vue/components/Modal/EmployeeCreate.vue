@@ -56,6 +56,7 @@
     </form>
 </template>
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted, computed } from 'vue'
 
 import { useRequest } from '@/helpers/hooks/useCrudOpration'
@@ -145,7 +146,7 @@ const validationSchema = yup.object({
       console.log(userId)
           const isUnique = await storeRequest({ url: EMAIL_UNIQUE_CHECK, body: { email: value, user_id: userId }, type: 'file' });
           if (!isUnique.isUnique) {
-              return this.createError({ path: 'email', message: 'email must be unique' });
+              return this.createError({ path: 'email', message: __tr('email must be unique') });
               }
           return true;
         }),
@@ -202,7 +203,7 @@ const formSubmit = handleSubmit((value) => {
       errorMessages.value = res.all_message;
     }
   }).catch((error) => {
-    errorSnackbar("An error occurred during submission");  
+    errorSnackbar(__tr('An error occurred during submission'));  
     console.error(error);
   });
 });

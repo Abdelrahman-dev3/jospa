@@ -457,7 +457,7 @@ public function index_list(Request $request)
 
         return response()->json([
             'status' => true,
-            'message' => 'Employee order updated successfully.',
+            'message' => __('Employee order updated successfully.'),
         ]);
     }
 
@@ -2355,7 +2355,7 @@ public function index_list(Request $request)
             if (!empty($url)) {
                 return response()->json(['status' => true, 'link' => $url], 200);
             } else {
-                return response()->json(['status' => false, 'message' => 'Url Not Found'], 404);
+                return response()->json(['status' => false, 'message' => __('Url Not Found')], 404);
             }
         } else {
             // Handle non-API request

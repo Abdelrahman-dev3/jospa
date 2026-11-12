@@ -35,4 +35,7 @@ return [
     'all_branches' => 'All branches',
     'branches_hint' => 'Leave empty to apply the code to all branches, or select one or more branches.',
     'coupon_not_valid_for_branch' => 'This coupon is not valid for this branch.',
+
+    // Added: missing dashboard translations
+    'lbl_update_at' => 'Updated At',
 ];

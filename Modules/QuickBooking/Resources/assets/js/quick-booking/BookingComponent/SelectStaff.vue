@@ -31,7 +31,7 @@
         </div>
       </div>
       <div class="h-100 w-75 d-flex align-items-center justify-content-center mx-auto" v-if="employeeList.length == 0">
-        We apologize for the inconvenience, but currently, there are no staff members available at this particular salon branch.
+        {{ $t('We apologize for the inconvenience, but currently, there are no staff members available at this particular salon branch.') }}
       </div>
     </div>
     <div class="card-footer">

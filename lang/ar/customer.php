@@ -21,4 +21,8 @@ return [
     'password' => 'أدخل كلمة المرور',
     'confirm_password' => 'أدخل تأكيد كلمة المرور',
 
+    // Added: missing dashboard translations
+    'lbl_create_at' => 'تاريخ الإنشاء',
+    'lbl_update_at' => 'تاريخ التحديث',
+    'wallet_balance' => 'رصيد المحفظة',
 ];

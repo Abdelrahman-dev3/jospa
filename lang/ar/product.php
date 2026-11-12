@@ -16,7 +16,7 @@ return [
     'price' => 'السعر',
     'price_tax' => 'السعر (شامل الضريبة)',
     'code' => 'الكود',
-    'sku' => 'SKU',
+    'sku' => 'رمز المنتج (SKU)',
     'stock' => 'المخزون',
     'product_information' => 'معلومات أساسية',
     'product_price' => 'السعر، SKU والمخزون',
@@ -81,5 +81,11 @@ return [
     'review_msg' => 'رسالة المراجعة',
     'already_in_cart' => 'المنتج موجود بالفعل في السلة.',
 
-
+    // Added: missing dashboard translations
+    'empty_cart' => 'السلة فارغة.',
+    'lbl_update_at' => 'تاريخ التحديث',
+    'logistic_zone_list' => 'قائمة مناطق الشحن',
+    'order_detail' => 'تفاصيل الطلب',
+    'unit_list' => 'قائمة الوحدات',
+    'user_address_not_found' => 'عنوان المستخدم غير موجود.',
 ];

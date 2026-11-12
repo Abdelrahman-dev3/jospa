@@ -15,7 +15,7 @@
                 @lang(":module_name Management Dashboard", ['module_name'=>Str::title($module_name)])
             </x-slot>
             <x-slot name="toolbar">
-                <a href="{{ route("backend.$module_name.index") }}" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="{{ __($module_name) }} List"><i class="fas fa-list"></i> List</a>
+                <a href="{{ route("backend.$module_name.index") }}" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="{{ __($module_name) }} List"><i class="fas fa-list"></i> {{ __('List') }}</a>
                 @can('edit_'.$module_name)
                     <button type="button" class="btn btn-primary btn-icon btn-sm" data-bs-toggle="offcanvas" data-bs-target="#form-offcanvas" data-crud-id="{{$$module_name_singular->id}}" title="{{ __('messages.edit') }} " data-bs-toggle="tooltip"> <i class="fa-solid fa-pen-clip"></i></button>
                 @endcan
@@ -38,8 +38,8 @@
         <div class="row">
             <div class="col">
                 <small class="float-end text-muted">
-                    Updated: {{$$module_name_singular->updated_at->diffForHumans()}},
-                    Created at: {{$$module_name_singular->created_at->isoFormat('LLLL')}}
+                    {{ __('Updated:') }} {{$$module_name_singular->updated_at->diffForHumans()}},
+                    {{ __('Created at:') }} {{$$module_name_singular->created_at->isoFormat('LLLL')}}
                 </small>
             </div>
         </div>

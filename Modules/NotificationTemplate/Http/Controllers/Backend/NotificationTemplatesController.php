@@ -473,7 +473,7 @@ class NotificationTemplatesController extends Controller
         if ($data) {
             return response()->json(['success' => true, 'data' => $data]);
         } else {
-            return response()->json(['success' => false, 'message' => 'No data found for the selected user_type.']);
+            return response()->json(['success' => false, 'message' => __('No data found for the selected user_type.')]);
         }
     }
 

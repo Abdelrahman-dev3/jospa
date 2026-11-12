@@ -1,7 +1,7 @@
 <template>
   <form @submit="formSubmit">
     <div class="d-flex justify-content-between align-items-center">
-      <CardTitle title="Branch Setting" icon="fa-solid fa-code-branch"></CardTitle>
+      <CardTitle :title="$t('Branch Setting')" icon="fa-solid fa-code-branch"></CardTitle>
     </div>
     <div class="row">
       <div class="col-12 row">
@@ -90,6 +90,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import CardTitle from '@/Setting/Components/CardTitle.vue'
 import SubmitButton from './Forms/SubmitButton.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
@@ -110,8 +111,8 @@ const { getRequest, storeRequest, updateRequest } = useRequest()
 
 const BRANCH_FOR_OPTIONS = reactive([
 //   { id: 'unisex', text: 'Unisex' },
-  { id: 'female', text: 'Female' },
-  { id: 'male', text: 'Male' }
+  { id: 'female', text: __tr('Female') },
+  { id: 'male', text: __tr('Male') }
   // Add more options as needed
 ])
 

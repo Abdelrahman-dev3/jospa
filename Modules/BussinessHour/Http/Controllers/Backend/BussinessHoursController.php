@@ -60,7 +60,7 @@ class BussinessHoursController extends Controller
             return response()->json([
                 'data' => [],
                 'status' => true,
-                'message' => 'Branch ID is required'
+                'message' => __('Branch ID is required')
             ]);
         }
         if ($branch_id && $branch_id != 'undefined') {

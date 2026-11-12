@@ -717,7 +717,7 @@
         <div class="modal-content border-0 shadow" style="border-radius: 16px;">
             <div class="modal-header border-bottom-0">
                 <h5 class="modal-title fw-bold" id="testSmsModalTitle">
-                    <i class="fa-solid fa-paper-plane text-primary me-2"></i> إرسال رسالة تجريبية (Test SMS)
+                    <i class="fa-solid fa-paper-plane text-primary me-2"></i> إرسال رسالة تجريبية {{ __('(Test SMS)') }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

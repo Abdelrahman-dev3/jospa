@@ -47,6 +47,7 @@
 </template>
 
 <script setup>
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 import { ref, onMounted } from 'vue'
 import { CATEGORY_LIST, SERVICE_LIST, TYPE_LIST, STORE_URL, EDIT_URL, UPDATE_URL ,SLIDERS_UNIQUE_CHECK} from '../constant/slider'
 import { useField, useForm } from 'vee-validate'
@@ -206,7 +207,7 @@ const validationSchema = yup.object({
       if (!isUnique.isUnique) {
         return this.createError({
           path: 'name',
-          message: 'Name must be unique'
+          message: __tr('Name must be unique')
         });
       }
       return true;

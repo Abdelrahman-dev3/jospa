@@ -55,13 +55,13 @@
                                 <select class="form-select select2" name="payment_status"
                                     data-minimum-results-for-search="Infinity" id="update_payment_status">
                                     <option value="" disabled>
-                                        Payment Status
+                                        {{ __('Payment Status') }}
                                     </option>
                                     <option value="paid" {{ $order->payment_status == 'paid' ? 'selected' : '' }}>
-                                        Paid
+                                        {{ __('Paid') }}
                                     </option>
                                     <option value="unpaid" {{ $order->payment_status == 'unpaid' ? 'selected' : '' }}>
-                                        Unpaid
+                                        {{ __('Unpaid') }}
                                     </option>
                                 </select>
                             </div>
@@ -71,7 +71,7 @@
                                 <select name="delivery_status" class="form-control select2" name="delivery_status"
                                     data-ajax--url="{{ route('backend.get_search_data', ['type' => 'constant', 'sub_type' => 'ORDER_STATUS']) }}"
                                     data-ajax--cache="true">
-                                    <option value="" disabled>Delivery Status</option>
+                                    <option value="" disabled>{{ __('Delivery Status') }}</option>
                                     @if (isset($order->delivery_status))
                                         <option value="{{ $order->delivery_status }}" selected>
                                             {{ Str::title(Str::replace('_', ' ', $order->delivery_status)) }}
@@ -87,7 +87,7 @@
                             <!--</a>-->
                             <button class="btn btn-success" id="downloadInvoiceImage">
                                 <i class="fa-solid fa-image"></i>
-                                Download as Image
+                                {{ __('Download as Image') }}
                             </button>
                         </div>
                     </div>
@@ -107,16 +107,16 @@
                             <img src="{{ asset(setting('logo')) }}" alt="logo" class="img-fluid" width="200">
                         </div>
                         <div class="col-auto text-end">
-                            <h5 class="mb-0">Invoice
+                            <h5 class="mb-0">{{ __('Invoice') }}
                                 <span
                                     class="text-accent">{{ setting('inv_prefix') }}{{ $order->orderGroup->order_code }}
                                 </span>
                             </h5>
-                            <span class="text-muted">Order Date:
+                            <span class="text-muted">{{ __('Order Date:') }}
                                 {{ date('d M, Y', strtotime($order->created_at)) }}
                             </span>
                             <br>
-                            <span class="text-muted">Delivery Date:
+                            <span class="text-muted">{{ __('Delivery Date:') }}
                                 {{ date('d M, Y', strtotime($order->updated_at)) }}
                             </span>
                             @if ($order->location_id != null)
@@ -132,17 +132,17 @@
                         <div class="col-md-3">
                             <!--Customer Detail-->
                             <div class="welcome-message">
-                                <h5 class="mb-2">Customer Info</h6>
-                                    <p class="mb-0">Name: <strong>{{ optional($order->user)->full_name }}</strong></p>
-                                    <p class="mb-0">Email: <strong>{{ optional($order->user)->email }}</strong></p>
-                                    <p class="mb-0">Phone: <strong>{{ optional($order->user)->mobile }}</strong></p>
+                                <h5 class="mb-2">{{ __('Customer Info') }}</h6>
+                                    <p class="mb-0">{{ __('Name:') }} <strong>{{ optional($order->user)->full_name }}</strong></p>
+                                    <p class="mb-0">{{ __('Email:') }} <strong>{{ optional($order->user)->email }}</strong></p>
+                                    <p class="mb-0">{{ __('Phone:') }} <strong>{{ optional($order->user)->mobile }}</strong></p>
                             </div>
                             <div class="col-auto mt-3">
-                                <h6 class="d-inline-block">Payment Method: </h6>
+                                <h6 class="d-inline-block">{{ __('Payment Method:') }} </h6>
                                 <span class="badge bg-primary">{{ ucwords(str_replace('_', ' ', $order->orderGroup->payment_method)) }}</span>
                             </div>
-                            <h6 class="col-auto d-inline-block">Logistic: </h6> <span class="badge bg-primary">{{ $order->logistic_name }}</span><br>
-                            <h6 class="col-auto d-inline-block">Status: </h6> <span>{{ Str::title(Str::replace('_', ' ', $order->delivery_status))  }}</span>
+                            <h6 class="col-auto d-inline-block">{{ __('Logistic:') }} </h6> <span class="badge bg-primary">{{ $order->logistic_name }}</span><br>
+                            <h6 class="col-auto d-inline-block">{{ __('Status:') }} </h6> <span>{{ Str::title(Str::replace('_', ' ', $order->delivery_status))  }}</span>
                         </div>
                         <div class="col">
                             <div class="shipping-address d-flex justify-content-md-end gap-3 mb-3">
@@ -151,7 +151,7 @@
                                         $shippingAddress = optional($order->orderGroup)->shippingAddress;
                                     @endphp
                                     @if($shippingAddress)
-                                        <h5 class="mb-2">Shipping Address</h5>
+                                        <h5 class="mb-2">{{ __('Shipping Address') }}</h5>
 
                                         <p class="mb-0 text-wrap">
                                             {{ optional($shippingAddress)->address_line_1 }},
@@ -167,7 +167,7 @@
                                             $billingAddress = optional($order->orderGroup)->billingAddress;
                                         @endphp
                                         @if($billingAddress)
-                                            <h5 class="mb-2">Billing Address</h5>
+                                            <h5 class="mb-2">{{ __('Billing Address') }}</h5>
                                             
                                             <p class="mb-0 text-wrap">
                                                 {{ optional($billingAddress)->address_line_1 }},
@@ -195,10 +195,10 @@
                     <thead>
                         <tr>
                             <th class="text-center" width="7%">S/L</th>
-                            <th>Products</th>
-                            <th class="text-end">Unit Price</th>
-                            <th class="text-end">QTY</th>
-                            <th class="text-end">Total Price</th>
+                            <th>{{ __('Products') }}</th>
+                            <th class="text-end">{{ __('Unit Price') }}</th>
+                            <th class="text-end">{{ __('QTY') }}</th>
+                            <th class="text-end">{{ __('Total Price') }}</th>
                         </tr>
                     </thead>
 
@@ -257,21 +257,21 @@
                     <tfoot class="text-end">
                         <tr>
                             <td colspan="4">
-                                <h6 class="d-inline-block me-3">Sub Total: </h6>
+                                <h6 class="d-inline-block me-3">{{ __('Sub Total:') }} </h6>
                             </td>
                             <td width="10%">
                                 <strong>{{ \Currency::format($order->orderGroup->sub_total_amount) }}</strong></td>
                         </tr>
                         <tr>
                             <td colspan="4">
-                                <h6 class="d-inline-block me-3">Tax: </h6>
+                                <h6 class="d-inline-block me-3">{{ __('Tax:') }} </h6>
                             </td>
                             <td width="10%" class="text-end">
                                 <strong>{{ \Currency::format($order->orderGroup->total_tax_amount) }}</strong></td>
                         </tr>
                         <tr>
                             <td colspan="4">
-                                <h6 class="d-inline-block me-3">Delivery Charge: </h6>
+                                <h6 class="d-inline-block me-3">{{ __('Delivery Charge:') }} </h6>
                             </td>
                             <td width="10%" class="text-end">
                                 <strong>{{ \Currency::format($order->orderGroup->total_shipping_cost) }}</strong></td>
@@ -279,7 +279,7 @@
                         @if ($order->orderGroup->total_coupon_discount_amount > 0)
                             <tr>
                                 <td colspan="4">
-                                    <h6 class="d-inline-block me-3">Coupon Discount: </h6>
+                                    <h6 class="d-inline-block me-3">{{ __('Coupon Discount:') }} </h6>
                                 </td>
                                 <td width="10%" class="text-end">
                                     <strong>{{ \Currency::format($order->orderGroup->total_coupon_discount_amount) }}</strong>
@@ -288,7 +288,7 @@
                         @endif
                         <tr>
                             <td colspan="4">
-                                <h6 class="d-inline-block me-3">Grand Total: </h6>
+                                <h6 class="d-inline-block me-3">{{ __('Grand Total:') }} </h6>
                             </td>
                             <td width="10%" class="text-end"><strong
                                     class="text-accent">{{ \Currency::format($order->orderGroup->grand_total_amount) }}</strong>
@@ -311,7 +311,7 @@
             <div class="sticky-sidebar">
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title">Order Status</h5>
+                        <h5 class="card-title">{{ __('Order Status') }}</h5>
                     </div>
                     <div class="card-body">
                         <ul class="alternate-list list-unstyled">
@@ -319,14 +319,14 @@
                             @forelse ($order->orderUpdates as $orderUpdate)
                                 <li>
                                     <a class="{{ $loop->first ? 'active' : '' }}">
-                                        {{ $orderUpdate->note }} <br> By
+                                        {{ $orderUpdate->note }} <br> {{ __('By') }}
                                         <span class="text-capitalize">{{ optional($orderUpdate->user)->name }}</span>
-                                        at
+                                        {{ __('at') }}
                                         {{ date('d M, Y', strtotime($orderUpdate->created_at)) }}.</a>
                                 </li>
                             @empty
                                 <li>
-                                    <a class="active">No logs found</a>
+                                    <a class="active">{{ __('No logs found') }}</a>
                                 </li>
                             @endforelse
                         </ul>

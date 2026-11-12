@@ -1,3 +1,4 @@
+const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[key]) || key;
 /*
  * Version: 1.1.0
  * Template: Hope-Ui - Responsive Bootstrap 5 Admin Dashboard Template
@@ -613,7 +614,7 @@ Index Of Script
           if (res.status) {
             // window.successSnackbar(res.message)
             Swal.fire({
-              title: 'Deleted',
+              title: __tr('Deleted'),
               text: res.message,
               icon: 'success',
               showClass: {
@@ -628,7 +629,7 @@ Index Of Script
           } else {
             if (res.message) {
               Swal.fire({
-                title: 'Error',
+                title: __tr('Error'),
                 text: res.message,
                 icon: 'error',
                 showClass: {
@@ -698,8 +699,8 @@ Index Of Script
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#858482',
-        confirmButtonText: 'Yes, delete it!',
-        cancelButtonText: 'Cancel',
+        confirmButtonText: __tr('Yes, delete it!'),
+        cancelButtonText: __tr('Cancel'),
         showClass: {
           popup: 'animate__animated animate__zoomIn'
         },

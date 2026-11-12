@@ -1,7 +1,7 @@
 <template>
   <form @submit="formSubmit">
     <div class="d-flex justify-content-between align-items-center">
-      <CardTitle title="Change Password" icon="fa-solid fa-key"></CardTitle>
+      <CardTitle :title="$t('Change Password')" icon="fa-solid fa-key"></CardTitle>
     </div>
 
       <InputField type="password" class="col-md-12" :is-required="true" :label="$t('users.lbl_old_password')" :value="old_password"

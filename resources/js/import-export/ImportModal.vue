@@ -1,6 +1,6 @@
 <template>
-  <BModal title="Import Data" v-model="modal" centered>
-    <a href="/" class="btn btn-secondary"><i class="fa-solid fa-indent"></i> Download Format</a>
+  <BModal :title="$t('Import Data')" v-model="modal" centered>
+    <a href="/" class="btn btn-secondary"><i class="fa-solid fa-indent"></i> {{ $t('Download Format') }}</a>
   </BModal>
 </template>
 <script setup>

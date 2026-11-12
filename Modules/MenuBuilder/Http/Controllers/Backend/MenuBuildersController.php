@@ -120,10 +120,10 @@ class MenuBuildersController extends Controller
                 }
             }
 
-            return response()->json(['message' => 'Menu Updated!', 'status' => true]);
+            return response()->json(['message' => __('Menu Updated!'), 'status' => true]);
         }
 
-        return response()->json(['message' => 'Menu Updated!', 'status' => true]);
+        return response()->json(['message' => __('Menu Updated!'), 'status' => true]);
     }
 
     protected function updateMenu($id, $order, $level, $menuType, $parent = null)

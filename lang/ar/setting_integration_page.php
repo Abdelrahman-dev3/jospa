@@ -25,4 +25,11 @@ return [
     'lbl_taqnyat_booking_cancelled' => 'رسالة إلغاء الحجز',
     'lbl_taqnyat_booking_reminder' => 'رسالة تذكير الحجز',
     'lbl_taqnyat_password_reset' => 'رسالة إعادة تعيين كلمة المرور',
+
+    // Added: missing dashboard translations
+    'firebase_json_file' => 'ملف Firebase Service JSON',
+    'lbl_firebase_project_id' => 'معرف مشروع Firebase',
+
+    // Added: missing dashboard translations
+    'lbl_api_key' => 'مفتاح Firebase Web API',
 ];

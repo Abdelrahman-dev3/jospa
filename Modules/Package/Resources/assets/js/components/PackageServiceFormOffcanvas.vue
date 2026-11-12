@@ -8,14 +8,14 @@
         <div class="offcanvas-body">
           <div class="d-flex flex-column">
         <!-- <p>Description: {{ packages.description }}</p> -->
-            <h4>Services</h4>
+            <h4>{{ $t('Services') }}</h4>
           <!-- Displaying services for the current package -->
           <table class="table table-striped border table-responsive dataTable no-footer">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Price</th>
-                    <th>Discounted Price</th>
+                    <th>{{ $t('Name') }}</th>
+                    <th>{{ $t('Price') }}</th>
+                    <th>{{ $t('Discounted Price') }}</th>
                   </tr>
                 </thead>
                 <tr v-for="serviceItem in packages.service">

@@ -70,7 +70,7 @@
                     <i class="fa-solid fa-money-check-dollar"></i>
                 </div>
                 <div>
-                    <div class="text-muted small fw-semibold">إجمالي المبالغ المدفوعة (Total Pay)</div>
+                    <div class="text-muted small fw-semibold">إجمالي المبالغ المدفوعة {{ __('(Total Pay)') }}</div>
                     <div class="fs-4 fw-bolder text-success" id="stat-payout-total">0.00 ر.س</div>
                 </div>
             </div>
