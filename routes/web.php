@@ -392,6 +392,7 @@
 
         Route::controller(GiftController::class)->group(function () {
             Route::get('/app/gift', 'index')->name('app.gift');
+            Route::get('/app/gift/lookup', 'lookup')->name('app.gift.lookup');
             Route::get('/validate-gift-code', 'validateGiftCode');
             Route::get('/gift/delete/{id}', 'destroy')->name('gift.delete');
         });
