@@ -56,8 +56,8 @@
                     <i class="fa-solid fa-credit-card"></i>
                 </div>
                 <div>
-                    <div class="text-muted small fw-semibold">إجمالي عدد العمليات</div>
-                    <div class="fs-4 fw-bolder text-dark" id="stat-pay-count">0 عملية</div>
+                    <div class="text-muted small fw-semibold">{{ __('report.pt_total_count') }}</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-pay-count">0 {{ __('report.pt_transactions_unit') }}</div>
                 </div>
             </div>
         </div>
@@ -68,8 +68,8 @@
                     <i class="fa-solid fa-sack-dollar"></i>
                 </div>
                 <div>
-                    <div class="text-muted small fw-semibold">إجمالي المبالغ المحصلة</div>
-                    <div class="fs-4 fw-bolder text-success" id="stat-pay-total">0.00 ر.س</div>
+                    <div class="text-muted small fw-semibold">{{ __('report.pt_total_collected') }}</div>
+                    <div class="fs-4 fw-bolder text-success" id="stat-pay-total">0.00 {{ __('report.pt_currency') }}</div>
                 </div>
             </div>
         </div>
@@ -80,8 +80,8 @@
                     <i class="fa-solid fa-tags"></i>
                 </div>
                 <div>
-                    <div class="text-muted small fw-semibold">إجمالي الخصومات</div>
-                    <div class="fs-4 fw-bolder text-dark" id="stat-pay-discount">0.00 ر.س</div>
+                    <div class="text-muted small fw-semibold">{{ __('report.pt_total_discounts') }}</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-pay-discount">0.00 {{ __('report.pt_currency') }}</div>
                 </div>
             </div>
         </div>
@@ -92,8 +92,8 @@
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 <div>
-                    <div class="text-muted small fw-semibold">العمليات الناجحة</div>
-                    <div class="fs-4 fw-bolder text-dark" id="stat-pay-success">0 عملية</div>
+                    <div class="text-muted small fw-semibold">{{ __('report.pt_successful') }}</div>
+                    <div class="fs-4 fw-bolder text-dark" id="stat-pay-success">0 {{ __('report.pt_successful_unit') }}</div>
                 </div>
             </div>
         </div>
@@ -105,11 +105,11 @@
     <div class="report-chart-container">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
-                <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie text-primary me-2"></i> توزيع العمليات حسب وسيلة وطريقة الدفع</h5>
-                <p class="text-muted small mb-0">تحليل المبالغ المحصلة عبر (مدى، كاش، Apple Pay، وبوابات الدفع الإلكترونية)</p>
+                <h5 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie text-primary me-2"></i> {{ __('report.pt_chart_title') }}</h5>
+                <p class="text-muted small mb-0">{{ __('report.pt_chart_subtitle') }}</p>
             </div>
             <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 fw-bold">
-                قنوات الدفع
+                {{ __('report.pt_payment_channels') }}
             </span>
         </div>
         <div id="chart-payment-methods-breakdown" style="min-height: 270px;"></div>
@@ -124,8 +124,8 @@
                 <div class="row w-100">
                     <div class="col-md-8">
                         <div class="input-group gap-2 flex-nowrap" >
-                            <input type="text" name="payment_date" id="payment_date" placeholder="اختر التاريخ" class="payment-report-date-range form-control" readonly />
-                            <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="إعادة تعيين">
+                            <input type="text" name="payment_date" id="payment_date" placeholder="{{ __('report.pt_select_date') }}" class="payment-report-date-range form-control" readonly />
+                            <button id="reset" class="btn bg-primary rounded" data-bs-toggle="tooltip" title="{{ __('report.pt_reset') }}">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
                                      xmlns="http://www.w3.org/2000/svg">
                                     <path
@@ -141,7 +141,7 @@
                     <div class="col-md-4">
                         <div class="datatable-filter">
                             <select name="payment_method" id="payment_method" class="select2 form-control" data-filter="select">
-                                <option value="">طريقة الدفع (الكل)</option>
+                                <option value="">{{ __('report.pt_all_methods') }}</option>
                                 @foreach($payment_methods as $method)
                                     <option value="{{ $method }}">{{ ucwords(str_replace('_', ' ', $method)) }}</option>
                                 @endforeach
@@ -170,6 +170,7 @@
 
 <script type="text/javascript">
     let paymentChart = null;
+    const PT_LANG = {!! json_encode(['unit' => __('report.pt_transactions_unit'), 'successUnit' => __('report.pt_successful_unit'), 'currency' => __('report.pt_currency'), 'other' => __('report.pt_other'), 'noData' => __('report.pt_no_data'), 'paid' => __('messages.paid')], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!};
 
     function updatePaymentReportAnalytics(rows) {
         let totalCount = 0;
@@ -184,13 +185,13 @@
             rows.forEach(row => {
                 const amt  = parseFloat((row.total_amount || row.service_amount || '0').replace(/[^0-9.-]+/g, '')) || 0;
                 const disc = parseFloat((row.discount_amount || '0').replace(/[^0-9.-]+/g, '')) || 0;
-                const meth = (row.payment_method || 'أخرى').trim();
-                const status = (row.payment_status || '').toLowerCase();
+                const meth = (row.payment_method || PT_LANG.other).trim();
+                const status = String(row.payment_status || '').replace(/<[^>]*>/g, '').trim();
 
                 totalAmount += amt;
                 totalDiscount += disc;
 
-                if (status.includes('paid') || status.includes('success') || status.includes('1') || status.includes('ناجح')) {
+                if (status === PT_LANG.paid) {
                     successCount += 1;
                 }
 
@@ -201,16 +202,16 @@
             });
         }
 
-        const currencySymbol = ' ر.س';
-        document.getElementById('stat-pay-count').innerText = totalCount.toLocaleString() + ' عملية';
+        const currencySymbol = ' ' + PT_LANG.currency;
+        document.getElementById('stat-pay-count').innerText = totalCount.toLocaleString() + ' ' + PT_LANG.unit;
         document.getElementById('stat-pay-total').innerText = totalAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
         document.getElementById('stat-pay-discount').innerText = totalDiscount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + currencySymbol;
-        document.getElementById('stat-pay-success').innerText = successCount.toLocaleString() + ' ناجحة';
+        document.getElementById('stat-pay-success').innerText = successCount.toLocaleString() + ' ' + PT_LANG.successUnit;
 
         const methods = Object.keys(methodMap);
         const amounts = methods.map(m => +(Math.round(methodMap[m] + "e+2") + "e-2"));
 
-        renderPaymentChart(methods.length ? methods : ['لا توجد بيانات'], amounts.length ? amounts : [1]);
+        renderPaymentChart(methods.length ? methods : [PT_LANG.noData], amounts.length ? amounts : [1]);
     }
 
     function renderPaymentChart(methods, amounts) {

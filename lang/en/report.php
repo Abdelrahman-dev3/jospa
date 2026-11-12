@@ -130,4 +130,21 @@ return [
     'type_home' => 'Home Services',
     'type_gift_card' => 'Gift Cards',
     'type_package' => 'Packages & Subscriptions',
+
+    // Added: missing dashboard translations
+    'pt_total_count' => 'Total Transactions',
+    'pt_total_collected' => 'Total Collected',
+    'pt_total_discounts' => 'Total Discounts',
+    'pt_successful' => 'Successful Transactions',
+    'pt_transactions_unit' => 'transactions',
+    'pt_successful_unit' => 'successful',
+    'pt_currency' => 'SAR',
+    'pt_chart_title' => 'Transactions by Payment Method',
+    'pt_chart_subtitle' => 'Collected amounts by channel (Mada, Cash, Apple Pay and online payment gateways)',
+    'pt_payment_channels' => 'Payment Channels',
+    'pt_select_date' => 'Select Date',
+    'pt_reset' => 'Reset',
+    'pt_all_methods' => 'Payment Method (All)',
+    'pt_other' => 'Other',
+    'pt_no_data' => 'No data',
 ];

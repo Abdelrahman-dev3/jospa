@@ -120,4 +120,21 @@ return [
     'type_home' => 'خدمات منزلية',
     'type_gift_card' => 'بطاقات الهدايا',
     'type_package' => 'الباقات والاشتراكات',
+
+    // Added: missing dashboard translations
+    'pt_total_count' => 'إجمالي عدد العمليات',
+    'pt_total_collected' => 'إجمالي المبالغ المحصلة',
+    'pt_total_discounts' => 'إجمالي الخصومات',
+    'pt_successful' => 'العمليات الناجحة',
+    'pt_transactions_unit' => 'عملية',
+    'pt_successful_unit' => 'ناجحة',
+    'pt_currency' => 'ر.س',
+    'pt_chart_title' => 'توزيع العمليات حسب وسيلة وطريقة الدفع',
+    'pt_chart_subtitle' => 'تحليل المبالغ المحصلة عبر (مدى، كاش، Apple Pay، وبوابات الدفع الإلكترونية)',
+    'pt_payment_channels' => 'قنوات الدفع',
+    'pt_select_date' => 'اختر التاريخ',
+    'pt_reset' => 'إعادة تعيين',
+    'pt_all_methods' => 'طريقة الدفع (الكل)',
+    'pt_other' => 'أخرى',
+    'pt_no_data' => 'لا توجد بيانات',
 ];
