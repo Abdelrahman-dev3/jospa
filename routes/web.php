@@ -56,6 +56,12 @@
         Route::get('/HomeService', 'home')->name('home.create');
     });
 
+    // Short shareable link for social media: /s/{branch}/{service} -> salon booking page
+    Route::get('/s/{branch}/{service}', fn ($branch, $service) => redirect()->route('salon.create', [
+        'branch_id' => $branch,
+        'mainService_id' => $service,
+    ], 301))->whereNumber(['branch', 'service'])->name('salon.short');
+
     Route::controller(GiftCardController::class)->group(function () {
         Route::get('/giffte', 'index')->name('gift.page');
         Route::get('/gift-cards', 'store')->name('gift.create');
