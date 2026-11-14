@@ -230,7 +230,7 @@ class PaymentFinalizerService
     /**
      * Add loyalty points to user account and report to Odoo.
      */
-    private function addLoyaltyPoints(int $userId, float $paidAmount): void
+    public function addLoyaltyPoints(int $userId, float $paidAmount): void
     {
         $pointsPer100 = Setting::get('points_per_100') ?? 5;
         $pointsToAdd = floor($paidAmount / 100) * $pointsPer100;

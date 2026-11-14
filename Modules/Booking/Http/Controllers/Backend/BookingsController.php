@@ -1815,8 +1815,10 @@ public function index_list(Request $request)
     {
         try {
             $invoiceId = 0;
+            $invoiceUserId = 0;
+            $invoiceTotal = 0.0;
 
-            DB::transaction(function () use ($bookingId, $paymentMethod, &$invoiceId) {
+            DB::transaction(function () use ($bookingId, $paymentMethod, &$invoiceId, &$invoiceUserId, &$invoiceTotal) {
                 $booking = Booking::with('services')->lockForUpdate()->find($bookingId);
                 if (! $booking || ! $booking->user_id) {
                     return;
@@ -1846,10 +1848,21 @@ public function index_list(Request $request)
 
                 BookingTransaction::where('booking_id', $bookingId)->update(['invoice_id' => $invoice->id]);
                 $invoiceId = $invoice->id;
+                $invoiceUserId = (int) $booking->user_id;
+                $invoiceTotal = $subtotal + $tax;
             });
 
             if ($invoiceId <= 0) {
                 return;
+            }
+
+            try {
+                app(\App\Services\Payment\PaymentFinalizerService::class)->addLoyaltyPoints($invoiceUserId, $invoiceTotal);
+            } catch (\Throwable $e) {
+                \Log::error('Failed to add loyalty points for dashboard payment.', [
+                    'invoice_id' => $invoiceId,
+                    'message' => $e->getMessage(),
+                ]);
             }
 
             $odooSynced = app(\App\Services\OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
