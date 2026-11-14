@@ -1796,11 +1796,73 @@ public function index_list(Request $request)
                 ->update(['status' => 'confirmed']);
         }
 
+        if ($paymentStatus === 1) {
+            $this->createInvoiceForDashboardPayment((int) $id, $transactionType);
+        }
+
         $message = __('booking.status_update');
 
         $booking = Booking::with('services', 'user', 'products', 'packages', 'bookingPackages.services')->findOrFail($id);
 
         return response()->json(['message' => $message, 'status' => true, 'data' => new BookingResource($booking)]);
+    }
+
+    /**
+     * Create an invoice for a booking marked as paid from the dashboard/calendar,
+     * then push it to Odoo and send it to the customer via WhatsApp.
+     */
+    private function createInvoiceForDashboardPayment(int $bookingId, string $paymentMethod): void
+    {
+        try {
+            $invoiceId = 0;
+
+            DB::transaction(function () use ($bookingId, $paymentMethod, &$invoiceId) {
+                $booking = Booking::with('services')->lockForUpdate()->find($bookingId);
+                if (! $booking || ! $booking->user_id) {
+                    return;
+                }
+
+                // Already invoiced (e.g. paid online or status toggled twice).
+                if (BookingTransaction::where('booking_id', $bookingId)->whereNotNull('invoice_id')->exists()) {
+                    return;
+                }
+
+                $subtotal = (float) $booking->services->sum(
+                    fn ($row) => (float) ($row->service_price ?? 0) - (float) ($row->discount_amount ?? 0)
+                );
+                $tax = (float) (getBookingTaxamount($subtotal, 0, null)['total_tax_amount'] ?? 0);
+
+                $invoice = \App\Models\Invoice::create([
+                    'user_id' => $booking->user_id,
+                    'cart_ids' => [$bookingId],
+                    'gift_ids' => [],
+                    'product_ids' => [],
+                    'payment_method' => $paymentMethod ?: null,
+                    'discount_amount' => 0,
+                    'taxs_service' => $tax,
+                    'loyalty_points_discount' => 0,
+                    'final_total' => $subtotal + $tax,
+                ]);
+
+                BookingTransaction::where('booking_id', $bookingId)->update(['invoice_id' => $invoice->id]);
+                $invoiceId = $invoice->id;
+            });
+
+            if ($invoiceId <= 0) {
+                return;
+            }
+
+            $odooSynced = app(\App\Services\OdooBookingSyncService::class)->syncPaidInvoice($invoiceId);
+
+            if (! $odooSynced) {
+                app(\App\Services\WhatsApp\PaidInvoiceWhatsAppService::class)->sendForInvoice($invoiceId);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to create invoice for dashboard payment.', [
+                'booking_id' => $bookingId,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function bulk_action(Request $request)
