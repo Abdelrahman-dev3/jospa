@@ -284,6 +284,13 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(PackageBookingController::class)->group(function () {
         Route::get('/pay-now', 'createPayment');
     });
+
+    // Wallet API
+    Route::controller(\Modules\Wallet\Http\Controllers\API\WalletController::class)->prefix('wallet')->group(function () {
+        Route::get('/balance', 'getBalance')->name('api.wallet.balance');
+        Route::get('/history', 'walletHistory')->name('api.wallet.history');
+        Route::post('/topup', 'walletTopup')->name('api.wallet.topup');
+    });
 });
 
 Route::controller(SettingController::class)->group(function () {

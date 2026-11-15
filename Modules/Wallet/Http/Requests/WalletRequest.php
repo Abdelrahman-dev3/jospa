@@ -20,19 +20,21 @@ class WalletRequest extends FormRequest
             ];
         }
 
-        if ($this->isMethod('post') && $this->route()->getName() === 'wallet-top-up') {
+        $routeName = $this->route()?->getName() ?? '';
+
+        if ($this->isMethod('post') && in_array($routeName, ['wallet-top-up', 'api.wallet.topup'])) {
             $rules = [
-                'amount' => 'required|numeric|min:1',
-                'transaction_type' => 'required',
-                'transaction_id' => 'required|string',
+                'amount'           => 'required|numeric|min:1',
+                'transaction_type' => 'required|string',
+                'transaction_id'   => 'required|string',
             ];
         }
 
-        if ($this->isMethod('get') && $this->route()->getName() === 'wallet-history') {
+        if ($this->isMethod('get') && in_array($routeName, ['wallet-history', 'api.wallet.history'])) {
             $rules = [
                 'per_page' => 'nullable|integer|min:1|max:100', 
-                'page' => 'nullable|integer|min:1', 
-                'orderby' => 'nullable|in:asc,desc', 
+                'page'     => 'nullable|integer|min:1', 
+                'orderby'  => 'nullable|in:asc,desc', 
             ];
         }
         return $rules;

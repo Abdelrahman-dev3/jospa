@@ -64,7 +64,11 @@ class DemoShopSeeder extends Seeder
             }
 
             foreach ($row['products'] as $i => [$name, $desc, $price]) {
-                if (Product::where('name', $name)->exists()) {
+                $existing = Product::where('name', $name)->first();
+                if ($existing) {
+                    if (! $existing->getFirstMedia('feature_image')) {
+                        $this->attachImage($existing, $name, $row['color'], false);
+                    }
                     continue;
                 }
 
@@ -99,6 +103,8 @@ class DemoShopSeeder extends Seeder
     private function attachImage($model, string $seed, array $rgb, bool $round): void
     {
         if (! function_exists('imagecreatetruecolor')) {
+            $this->command?->error('PHP GD extension is not enabled - images skipped.');
+
             return;
         }
 
@@ -128,7 +134,7 @@ class DemoShopSeeder extends Seeder
             $model->addMedia($path)->toMediaCollection('feature_image');
         } catch (\Throwable $e) {
             @unlink($path);
-            report($e);
+            $this->command?->error("Image failed for [{$seed}]: " . $e->getMessage());
         }
     }
 }
