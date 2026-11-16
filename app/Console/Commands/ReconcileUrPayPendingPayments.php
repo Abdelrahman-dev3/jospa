@@ -25,7 +25,15 @@ class ReconcileUrPayPendingPayments extends Command
         $dryRun = (bool) $this->option('dry-run');
 
         $pendingAttempts = PaymentAttempt::where('gateway', 'urpay')
-            ->whereIn('status', [PaymentAttempt::STATUS_PENDING, PaymentAttempt::STATUS_INITIATED])
+            ->where(function ($query) {
+                $query->whereIn('status', [PaymentAttempt::STATUS_PENDING, PaymentAttempt::STATUS_INITIATED])
+                    // Attempts the user abandoned in the app are still checked with the bank,
+                    // so a payment completed right before leaving is finalized, not lost.
+                    ->orWhere(function ($cancelled) {
+                        $cancelled->where('status', PaymentAttempt::STATUS_CANCELLED)
+                            ->where('error_message', \App\Services\Payment\PaymentAttemptCancelService::USER_CANCELLED_NOTE);
+                    });
+            })
             ->where('created_at', '<=', now()->subMinutes($minutes))
             ->where('created_at', '>=', now()->subHours(24))
             ->orderBy('id')

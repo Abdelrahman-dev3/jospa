@@ -40,6 +40,46 @@ class PaymentController extends Controller
             ]
         ]);
     }
+    /**
+     * POST /api/payment-attempt/cancel/{attempt_id}
+     * The app calls this when the user leaves the gateway page (back / closed WebView).
+     */
+    public function cancelAttempt(Request $request, $attempt_id)
+    {
+        $attempt = \App\Models\PaymentAttempt::where('id', (int) $attempt_id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (! $attempt) {
+            return response()->json(['status' => false, 'message' => 'Payment attempt not found.'], 404);
+        }
+
+        [$attempt, $result] = app(\App\Services\Payment\PaymentAttemptCancelService::class)->cancelByUser($attempt, $request);
+
+        $data = [
+            'attempt_id' => $attempt->id,
+            'payment_status' => $attempt->status,
+            'invoice_id' => $attempt->invoice_id,
+        ];
+
+        if ($result === \App\Services\Payment\PaymentAttemptCancelService::RESULT_IN_PROGRESS) {
+            return response()->json([
+                'status' => false,
+                'error_code' => 'payment_in_progress',
+                'message' => app()->getLocale() === 'ar'
+                    ? 'عملية الدفع قيد المعالجة لدى البنك، لا يمكن إلغاؤها الآن.'
+                    : 'The payment is being processed by the bank and cannot be cancelled now.',
+                'data' => $data,
+            ], 409);
+        }
+
+        return response()->json([
+            'status' => true,
+            'cancelled' => $result === \App\Services\Payment\PaymentAttemptCancelService::RESULT_CANCELLED,
+            'data' => $data,
+        ]);
+    }
+
     public function index(Request $request){
         
         $isPayNow = $request->has('ids') ? 'payment' : 'cart';

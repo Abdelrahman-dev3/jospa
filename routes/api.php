@@ -271,6 +271,7 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(PaymentController::class)->group(function () {
         Route::post('/payment-chanal', 'payment');
         Route::get('/payment-attempt/status/{attempt_id}', 'checkAttemptStatus');
+        Route::post('/payment-attempt/cancel/{attempt_id}', 'cancelAttempt')->middleware('throttle:30,1');
     });
 
     Route::controller(BookingController::class)->group(function () {
