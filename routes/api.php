@@ -295,6 +295,7 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(\Modules\Wallet\Http\Controllers\API\WalletTopupController::class)->prefix('wallet/topup')->group(function () {
         Route::post('/init', 'init')->middleware('throttle:10,1')->name('api.wallet.topup.init');
         Route::get('/status/{attempt_id}', 'status')->middleware('throttle:60,1')->name('api.wallet.topup.status');
+        Route::get('/latest', 'latest')->middleware('throttle:60,1')->name('api.wallet.topup.latest');
     });
 });
 

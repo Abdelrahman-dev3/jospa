@@ -36,4 +36,6 @@ return [
     'lbl_from' => 'From',
     'lbl_to' => 'To',
     'booking_hours_hint' => "Leave these blank to use only the employee's schedule for bookings.",
+    'booking_hours_pair_required' => 'Set both the start and end time.',
+    'booking_hours_end_after_start' => 'End time must be after start time.',
 ];

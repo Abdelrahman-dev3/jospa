@@ -72,6 +72,17 @@ class WalletTopupServiceTest extends TestCase
         $this->assertNotNull($this->mismatch(['amount' => '150.00', 'currency' => 'SAR', 'merchantTransactionId' => 'ATESTMTID0000001']));
     }
 
+    public function test_idempotent_replay_matches_same_amount_and_brand(): void
+    {
+        $attempt = new WalletTopupAttempt();
+        $attempt->setRawAttributes(['amount' => '150.00', 'brand' => 'MADA']);
+
+        $this->assertTrue(WalletTopupService::matchesRequest($attempt, 150, 'mada'));
+        $this->assertTrue(WalletTopupService::matchesRequest($attempt, 150.004, 'MADA'));
+        $this->assertFalse(WalletTopupService::matchesRequest($attempt, 151, 'MADA'));
+        $this->assertFalse(WalletTopupService::matchesRequest($attempt, 150, 'VISA'));
+    }
+
     private function mismatch(array $payment): ?string
     {
         $attempt = new WalletTopupAttempt();

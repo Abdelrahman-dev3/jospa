@@ -36,4 +36,6 @@ return [
     'lbl_from' => 'من',
     'lbl_to' => 'إلى',
     'booking_hours_hint' => 'اتركها فارغة ليكون الحجز حسب مواعيد الموظف فقط.',
+    'booking_hours_pair_required' => 'حدد وقت البداية والنهاية معًا.',
+    'booking_hours_end_after_start' => 'وقت النهاية لازم يكون بعد وقت البداية.',
 ];

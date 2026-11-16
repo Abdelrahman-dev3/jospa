@@ -89,15 +89,18 @@ class WalletTopupService
      *
      * @throws \RuntimeException when the gateway refuses to create the checkout.
      */
-    public function initiate(User $user, float $amount, string $brand): WalletTopupAttempt
+    public function initiate(User $user, float $amount, string $brand, ?string $idempotencyKey = null): WalletTopupAttempt
     {
         $brand = self::normalizeBrand($brand);
         $amount = round($amount, 2);
         $ttl = max(5, (int) config('services.wallet_topup.ttl_minutes', 30));
 
+        // The unique (user_id, idempotency_key) index makes a concurrent duplicate fail
+        // here, before any gateway call; the controller then returns the stored attempt.
         $attempt = WalletTopupAttempt::create([
             'attempt_id' => (string) Str::uuid(),
             'user_id' => $user->id,
+            'idempotency_key' => $idempotencyKey,
             'amount' => $amount,
             'currency' => 'SAR',
             'gateway' => 'hyperpay',
@@ -145,6 +148,24 @@ class WalletTopupService
         $attempt->update(['checkout_id' => $checkoutId]);
 
         return $attempt->refresh();
+    }
+
+    /** Same request replayed with the same key? (amount and brand must match). */
+    public static function matchesRequest(WalletTopupAttempt $attempt, float $amount, string $brand): bool
+    {
+        return abs((float) $attempt->amount - round($amount, 2)) < 0.001
+            && $attempt->brand === self::normalizeBrand($brand);
+    }
+
+    /** present() plus what the app needs to continue: payment_url while the attempt is resumable. */
+    public function presentForApp(WalletTopupAttempt $attempt): array
+    {
+        $resumable = $attempt->isResumable();
+
+        return array_merge($this->present($attempt), [
+            'can_resume' => $resumable,
+            'payment_url' => $resumable ? $this->paymentUrl($attempt) : null,
+        ]);
     }
 
     public function paymentUrl(WalletTopupAttempt $attempt): string

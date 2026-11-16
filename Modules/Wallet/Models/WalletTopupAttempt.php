@@ -25,6 +25,7 @@ class WalletTopupAttempt extends Model
     protected $fillable = [
         'attempt_id',
         'user_id',
+        'idempotency_key',
         'amount',
         'currency',
         'gateway',
@@ -63,5 +64,14 @@ class WalletTopupAttempt extends Model
     public function isFinal(): bool
     {
         return in_array($this->status, self::FINAL_STATUSES, true);
+    }
+
+    /** Pending, has a gateway checkout and its session has not expired: the app may reopen payment_url. */
+    public function isResumable(): bool
+    {
+        return $this->status === self::STATUS_PENDING
+            && ! empty($this->checkout_id)
+            && $this->expires_at !== null
+            && $this->expires_at->isFuture();
     }
 }

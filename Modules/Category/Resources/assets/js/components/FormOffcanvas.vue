@@ -141,6 +141,7 @@ const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { INDEX_LIST_URL, EDIT_URL, STORE_URL, UPDATE_URL } from '../constant/category'
 import { useField, useForm } from 'vee-validate'
+import { useI18n } from 'vue-i18n'
 
 import * as yup from 'yup'
 import { readFile } from '@/helpers/utilities'
@@ -339,6 +340,7 @@ const reset_datatable_close_offcanvas = (res) => {
   }
 }
 
+const { t } = useI18n()
 const numberRegex = /^\d+$/;
 const specialCharsRegex = /[!@#$%^&*(),.?":{}|<>\-_;'\/+=\[\]\\]/;
 // Validations
@@ -362,13 +364,13 @@ const validationSchema = yup.object({
   booking_start_time: yup
     .string()
     .nullable()
-    .test('pair', 'حدد وقت البداية والنهاية معًا', function (value) {
+    .test('pair', t('category.booking_hours_pair_required'), function (value) {
       return !!value === !!this.parent.booking_end_time
     }),
   booking_end_time: yup
     .string()
     .nullable()
-    .test('after-start', 'وقت النهاية لازم يكون بعد وقت البداية', function (value) {
+    .test('after-start', t('category.booking_hours_end_after_start'), function (value) {
       const start = this.parent.booking_start_time
       return !value || !start || value > start
     })
