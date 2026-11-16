@@ -63,4 +63,6 @@ return [
 
     // Added: missing dashboard translations
     'lbl_update_at' => 'Updated At',
+    'lbl_booking_hours' => 'Available booking hours for this service',
+    'booking_hours_hint' => 'Leave blank to use the category hours (if set), otherwise the employee schedule.',
 ];

@@ -7,11 +7,11 @@ use Modules\Category\Models\Category;
 use Modules\Service\Models\Service;
 
 /**
- * Category-level booking window: a category (e.g. Massage) can restrict the
- * hours in which any of its services may be booked, independent of staff hours.
+ * Booking window per service or category (e.g. Massage only at night): restricts the
+ * hours in which a service may be booked, independent of staff hours.
  *
- * Resolution order for a service: its sub-category, then its category, then that
- * category's parent. The first one with both times set wins. Windows are within a
+ * Resolution order: the service itself, then its sub-category, then its category,
+ * then that category's parent. The first one with both times set wins. Windows are within a
  * single day (start < end), consistent with staff/branch working hours.
  */
 class CategoryBookingHoursService
@@ -32,10 +32,14 @@ class CategoryBookingHoursService
             return self::$cache[$serviceId];
         }
 
-        $service = Service::query()->select(['id', 'category_id', 'sub_category_id'])->find($serviceId);
-        $window = null;
+        $service = Service::query()
+            ->select(['id', 'category_id', 'sub_category_id', 'booking_start_time', 'booking_end_time'])
+            ->find($serviceId);
 
-        if ($service) {
+        // The service's own window wins over any category window.
+        $window = $service ? self::normalize($service->booking_start_time, $service->booking_end_time) : null;
+
+        if ($service && ! $window) {
             $categoryIds = array_values(array_filter([
                 (int) $service->sub_category_id,
                 (int) $service->category_id,

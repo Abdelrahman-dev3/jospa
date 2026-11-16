@@ -63,4 +63,6 @@ return [
 
     // Added: missing dashboard translations
     'lbl_update_at' => 'تاريخ التحديث',
+    'lbl_booking_hours' => 'ساعات الحجز المتاحة لهذه الخدمة',
+    'booking_hours_hint' => 'اتركها فارغة لتطبيق ساعات القسم (إن وجدت)، وإلا يكون الحجز حسب مواعيد الموظف.',
 ];

@@ -25,6 +25,8 @@ class ServiceRequest extends FormRequest
                     'is_visible' => 'nullable|boolean',
                     'show_in_online_booking' => 'nullable|boolean',
                     'show_in_gift_card' => 'nullable|boolean',
+                    'booking_start_time' => ['nullable', 'date_format:H:i', 'required_with:booking_end_time'],
+                    'booking_end_time' => ['nullable', 'date_format:H:i', 'required_with:booking_start_time', 'after:booking_start_time'],
                     'status' => 'boolean',
                 ];
                 break;
@@ -39,6 +41,8 @@ class ServiceRequest extends FormRequest
                     'is_visible' => 'nullable|boolean',
                     'show_in_online_booking' => 'nullable|boolean',
                     'show_in_gift_card' => 'nullable|boolean',
+                    'booking_start_time' => ['nullable', 'date_format:H:i', 'required_with:booking_end_time'],
+                    'booking_end_time' => ['nullable', 'date_format:H:i', 'required_with:booking_start_time', 'after:booking_start_time'],
                     'status' => 'boolean',
                 ];
                 break;

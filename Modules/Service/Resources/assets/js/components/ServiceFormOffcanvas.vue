@@ -34,6 +34,19 @@
         <InputField class="col-md-12" type="text" :is-required="true" :label="$t('service.lbl_duration_min')"  :placeholder="$t('service.service_duration')" v-model="duration_min" :error-message="errors['duration_min']" :error-messages="errorMessages['duration_min']"></InputField>
         <InputField class="col-md-12" type="text" :is-required="true" :label="`${$t('service.lbl_default_price')} (${CURRENCY_SYMBOL})`"  :placeholder="$t('service.enter_price')" v-model="default_price" :error-message="errors['default_price']" :error-messages="errorMessages['default_price']"></InputField>
 
+        <div class="form-group col-md-12">
+          <label class="form-label">{{ $t('service.lbl_booking_hours') }}</label>
+          <div class="row g-2">
+            <div class="col-6">
+              <InputField :label="$t('category.lbl_from')" type="time" v-model="booking_start_time" :error-message="errors['booking_start_time']" :error-messages="errorMessages['booking_start_time']"></InputField>
+            </div>
+            <div class="col-6">
+              <InputField :label="$t('category.lbl_to')" type="time" v-model="booking_end_time" :error-message="errors['booking_end_time']" :error-messages="errorMessages['booking_end_time']"></InputField>
+            </div>
+          </div>
+          <small class="text-muted">{{ $t('service.booking_hours_hint') }}</small>
+        </div>
+
 
         <div class="form-group">
           <label class="form-label" for="category_id">{{ $t('service.lbl_category') }} <span class="text-danger">*</span> </label>
@@ -120,6 +133,7 @@ const __tr = (key) => (window.localMessagesUpdate && window.localMessagesUpdate[
 import { ref, onMounted } from 'vue'
 import { EDIT_URL, STORE_URL, UPDATE_URL, CATEGORY_LIST,SERVICES_UNIQUE_CHECK } from '../constant/service'
 import { useField, useForm } from 'vee-validate'
+import { useI18n } from 'vue-i18n'
 import InputField from '@/vue/components/form-elements/InputField.vue'
 
 import { useModuleId, useRequest, useOnOffcanvasHide } from '@/helpers/hooks/useCrudOpration'
@@ -211,6 +225,8 @@ const defaultData = () => {
     is_visible: 0,
     category_id: '',
     sub_category_id: '',
+    booking_start_time: '',
+    booking_end_time: '',
     feature_image: null,
     custom_fields_data: {}
   }
@@ -259,6 +275,8 @@ const setFormData = (data) => {
       status: data.status,
       category_id: data.category_id,
       sub_category_id: data.sub_category_id,
+      booking_start_time: data.booking_start_time ? String(data.booking_start_time).slice(0, 5) : '',
+      booking_end_time: data.booking_end_time ? String(data.booking_end_time).slice(0, 5) : '',
       feature_image: data.feature_image,
       custom_fields_data: data.custom_field_data
     }
@@ -281,6 +299,7 @@ const reset_datatable_close_offcanvas = (res) => {
   }
 }
 
+const { t } = useI18n()
 const numberRegex = /^\d+$/
 // Validations
 const validationSchema = yup.object({
@@ -332,6 +351,19 @@ const validationSchema = yup.object({
   category_id: yup.string()
     .required('Category is a required field')
     .matches(/^\d+$/, 'Only numbers are allowed'),
+
+  booking_start_time: yup.string()
+    .nullable()
+    .test('pair', t('category.booking_hours_pair_required'), function (value) {
+      return !!value === !!this.parent.booking_end_time
+    }),
+
+  booking_end_time: yup.string()
+    .nullable()
+    .test('after-start', t('category.booking_hours_end_after_start'), function (value) {
+      const start = this.parent.booking_start_time
+      return !value || !start || value > start
+    }),
 });
 
 
@@ -352,6 +384,8 @@ const { value: is_visible } = useField('is_visible')
 const { value: status } = useField('status')
 const { value: category_id } = useField('category_id')
 const { value: sub_category_id } = useField('sub_category_id')
+const { value: booking_start_time } = useField('booking_start_time')
+const { value: booking_end_time } = useField('booking_end_time')
 const { value: feature_image } = useField('feature_image')
 const { value: custom_fields_data } = useField('custom_fields_data')
 
