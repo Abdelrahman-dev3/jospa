@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Wallet\Http\Controllers\WalletAppTopupController;
 use Modules\Wallet\Http\Controllers\WalletController;
 
 /*
@@ -24,3 +25,12 @@ Route::group(['prefix' => 'app', 'middleware' => 'auth'], function () {
 Route::get('add/balance-to-wallet', [WalletController::class, 'addbalance'])->middleware('auth')->name('wallet.addbalance');
 Route::get('/add/balance/hyperpay/checkout', [WalletController::class, 'hyperpayCheckout'])->name('wallet.hyperpay.checkout');
 Route::match(['get', 'post'], '/add/balance/callback', [WalletController::class, 'callback'])->name('addbalance.callback');
+
+// Mobile-app wallet top-up pages (started by POST /api/wallet/topup/init).
+Route::prefix('wallet/app-topup')->name('wallet.app-topup.')->group(function () {
+    Route::get('/pay/{attempt}', [WalletAppTopupController::class, 'pay'])->name('pay');
+    Route::match(['get', 'post'], '/return/{attempt}', [WalletAppTopupController::class, 'return'])
+        ->middleware('throttle:30,1')
+        ->name('return');
+    Route::get('/done', [WalletAppTopupController::class, 'done'])->name('done');
+});

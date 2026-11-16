@@ -53,6 +53,7 @@ class UrPayPaymentStrategy extends BasePaymentStrategy
                 'amount' => $remainingAmount,
                 'payment_method' => $data['payment_method'],
                 'discount_amount' => $data['discountAmount'] ?? 0,
+                'attempt_id' => $data['attempt_id'] ?? null,
             ];
 
             if ($checkout['type'] === 'redirect') {

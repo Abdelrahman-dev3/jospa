@@ -78,86 +78,26 @@ class WalletController extends Controller
     }
 
 
-    public function walletTopup(WalletRequest $request)
+    /**
+     * Disabled: this endpoint credited whatever amount the client sent without
+     * checking any payment. Top-ups now go through POST /api/wallet/topup/init,
+     * and the server credits the wallet itself after verifying with the gateway.
+     */
+    public function walletTopup(Request $request)
     {
-
-        $user_id = auth()->user()->id;
-
-
-        $wallet = Wallet::where('user_id', $user_id)->first();
-
-
-        if (!$wallet) {
-            $user = User::find($user_id);
-
-            if ($user) {
-                $wallet = Wallet::create([
-                    'title' => $user->display_name,
-                    'user_id' => $user->id,
-                    'amount' => 0,
-                ]);
-            } else {
-                return response()->json(['error' => 'User not found'], 400);
-            }
-        }
-
-        // Increase the wallet balance by the amount from the request
-        $wallet->amount += $request->amount;
-        $wallet->save();
-
-        // Prepare the activity message
-        $activity_message = __('messages.top_up');
-
-        // Get the user and provider details
-        $user = \App\Models\User::find($wallet->user_id);
-
-        // Prepare activity data
-        $activity_data = [
-            'title' => $wallet->title,
-            'user_id' => $wallet->user_id,
-            'amount' => $wallet->amount,
-            'transaction_id' => $request->transaction_id,
-            'transaction_type' => $request->transaction_type,
-            'credit_debit_amount' => (float) $request->amount,
-            'transaction_type' => 'credit',
-        ];
-
-        // Prepare the data for the WalletHistory entry
-        $data = [
-            'user_id' => $wallet->user_id,
-            'datetime' => now(),
-            'activity_type' => 'wallet_top_up',
-            'activity_message' => $activity_message,
-            'activity_data' => json_encode($activity_data),
-        ];
-
-        // Create an entry in the WalletHistory table
-        WalletHistory::create($data);
-
-        $notification_data = [
-            'type' => 'Wallet Top Up',
-            'message' => 'Wallet Top up SuccessFully',
-            'notification_type' => 'wallet_top_up', // Matches the seeder type
-            'wallet' => [
-                'user_id' => $wallet->user_id,
-                'user_name' => auth()->user()->first_name . ' ' . auth()->user()->last_name,
-                'credit_debit_amount' => (float) $request->amount,
-                'transaction_id' => $request->transaction_id,
-                'transaction_type' => 'credit',
-                'id' => $wallet->id,
-            ],
-        ];
-
-        // Send the notification
-        sendNotification($notification_data);
-
-        Log::info('Sending Notification', ['data' => $data]);
-
-        // Return the response with success message and updated wallet data
-        return response()->json([
-            'message' => 'Wallet top-up successful. New balance: ' . $wallet->amount,
-            'data' => $wallet,
+        Log::warning('Blocked call to disabled wallet top-up endpoint.', [
+            'user_id' => auth()->id(),
+            'path' => $request->path(),
+            'amount' => $request->input('amount'),
+            'transaction_id' => $request->input('transaction_id'),
+            'ip' => $request->ip(),
         ]);
+
+        return response()->json([
+            'status' => false,
+            'error_code' => 'endpoint_removed',
+            'message' => 'This endpoint is disabled. Use POST /api/wallet/topup/init and GET /api/wallet/topup/status/{attempt_id}.',
+        ], 410);
     }
 
 

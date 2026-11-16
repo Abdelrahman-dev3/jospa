@@ -30,6 +30,17 @@ return [
         'base_url'           => env('HYPERPAY_BASE_URL', 'https://eu-prod.oppwa.com'),
         'shopper_result_url' => env('HYPERPAY_SHOPPER_RESULT_URL'),
     ],
+
+    // Mobile-app wallet top-up (POST /api/wallet/topup/init).
+    'wallet_topup' => [
+        // Optional deep link the app registers, e.g. "jospa://wallet/topup".
+        // When empty, the payment page ends on {APP_URL}/wallet/app-topup/done?attempt_id=..&status=..
+        'app_return_url' => env('WALLET_TOPUP_APP_RETURN_URL', ''),
+        'min_amount'     => (float) env('WALLET_TOPUP_MIN_AMOUNT', 10),
+        'max_amount'     => (float) env('WALLET_TOPUP_MAX_AMOUNT', 10000),
+        // HyperPay checkout sessions live 30 minutes.
+        'ttl_minutes'    => (int) env('WALLET_TOPUP_TTL_MINUTES', 30),
+    ],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],

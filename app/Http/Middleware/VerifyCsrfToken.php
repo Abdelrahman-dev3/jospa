@@ -18,6 +18,7 @@ protected $except = [
     'urpay/success',
     'urpay/failure',
     'urpay/cancel',
+    'wallet/app-topup/return/*',
 
 ];
 }

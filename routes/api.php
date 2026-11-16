@@ -289,7 +289,12 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(\Modules\Wallet\Http\Controllers\API\WalletController::class)->prefix('wallet')->group(function () {
         Route::get('/balance', 'getBalance')->name('api.wallet.balance');
         Route::get('/history', 'walletHistory')->name('api.wallet.history');
-        Route::post('/topup', 'walletTopup')->name('api.wallet.topup');
+        Route::post('/topup', 'walletTopup')->name('api.wallet.topup'); // disabled: returns 410
+    });
+
+    Route::controller(\Modules\Wallet\Http\Controllers\API\WalletTopupController::class)->prefix('wallet/topup')->group(function () {
+        Route::post('/init', 'init')->middleware('throttle:10,1')->name('api.wallet.topup.init');
+        Route::get('/status/{attempt_id}', 'status')->middleware('throttle:60,1')->name('api.wallet.topup.status');
     });
 });
 
