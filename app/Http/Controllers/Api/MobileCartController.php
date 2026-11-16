@@ -94,6 +94,16 @@ class MobileCartController extends Controller
                         'message' => \App\Services\BookingAvailabilityService::getRejectionMessage($subService['date']),
                     ], 422);
                 }
+
+                $serviceId = (int) $subService['id'];
+                $startDateTime = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $subService['date'] . ' ' . $subService['time']);
+                $duration = (int) (\Modules\Service\Models\Service::whereKey($serviceId)->value('duration_min') ?: ($subService['duration'] ?? 0));
+                if (! \App\Services\CategoryBookingHoursService::allows($serviceId, $startDateTime, $duration)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => \App\Services\CategoryBookingHoursService::rejectionMessage($serviceId),
+                    ], 422);
+                }
             }
         }
 

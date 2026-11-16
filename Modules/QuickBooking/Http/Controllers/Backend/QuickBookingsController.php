@@ -52,7 +52,22 @@ class QuickBookingsController extends Controller
        $serviceDuration=$service->duration_min;
 
         $slots = $this->getSlots($data['date'], $day, $data['branch_id'], $serviceDuration, $data['employee_id']);
-        
+
+        // Category booking window (e.g. Massage only at night).
+        if ($service && \App\Services\CategoryBookingHoursService::windowForService((int) $service->id)) {
+            $slots = array_values(array_filter($slots, function ($slot) use ($service, $serviceDuration) {
+                if (empty($slot['value'])) {
+                    return true;
+                }
+
+                return \App\Services\CategoryBookingHoursService::allows(
+                    (int) $service->id,
+                    \Carbon\Carbon::parse($slot['value']),
+                    (int) $serviceDuration
+                );
+            }));
+        }
+
         return $this->sendResponse($slots,$businessHours, __('booking.booking_timeslot'));
     }
 

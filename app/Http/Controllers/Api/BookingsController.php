@@ -196,6 +196,18 @@ public function getAvailableTimes(Request $request ,$date, $staffId)
         return response()->json([]);
     }
 
+    // Category booking window (e.g. Massage only at night) narrows the staff hours.
+    $categoryWindow = \App\Services\CategoryBookingHoursService::clampWorkingWindow(
+        $serviceId,
+        $workingConfig['start_time'],
+        $workingConfig['end_time']
+    );
+    if (!$categoryWindow) {
+        return response()->json([]);
+    }
+    $workingConfig['start_time'] = $categoryWindow['start'];
+    $workingConfig['end_time'] = $categoryWindow['end'];
+
     $bookedTimes = $this->buildBookedTimes($staffId, $date, $min_minutes);
 
     $availableTimes = $this->buildAvailableTimes(

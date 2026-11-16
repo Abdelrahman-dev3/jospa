@@ -57,6 +57,31 @@
               :error-messages="errorMessages['calendar_color']"
             />
 
+            <div class="form-group">
+              <label class="form-label">ساعات الحجز المتاحة لخدمات القسم</label>
+              <div class="row g-2">
+                <div class="col-6">
+                  <InputField
+                    :label="'من'"
+                    type="time"
+                    v-model="booking_start_time"
+                    :error-message="errors.booking_start_time"
+                    :error-messages="errorMessages['booking_start_time']"
+                  />
+                </div>
+                <div class="col-6">
+                  <InputField
+                    :label="'إلى'"
+                    type="time"
+                    v-model="booking_end_time"
+                    :error-message="errors.booking_end_time"
+                    :error-messages="errorMessages['booking_end_time']"
+                  />
+                </div>
+              </div>
+              <small class="text-muted">اتركها فارغة ليكون الحجز حسب مواعيد الموظف فقط.</small>
+            </div>
+
             <div v-for="field in customefield" :key="field.id">
               <FormElement v-model="custom_fields_data" :name="field.name" :label="field.label" :type="field.type" :required="field.required" :options="field.value"  :field_id="field.id"  ></FormElement>
             </div>
@@ -249,6 +274,8 @@ const defaultData = () => {
     is_gift_card: true,
     is_online: true,
     calendar_color: '#BF9456',
+    booking_start_time: '',
+    booking_end_time: '',
     feature_image: null,
     custom_fields_data: {
     }
@@ -287,6 +314,8 @@ const setFormData = (data) => {
       is_gift_card: data.is_gift_card !== 0 ? true : false,
       is_online: data.is_online !== 0 ? true : false,
       calendar_color: data.calendar_color || '#BF9456',
+      booking_start_time: data.booking_start_time ? String(data.booking_start_time).slice(0, 5) : '',
+      booking_end_time: data.booking_end_time ? String(data.booking_end_time).slice(0, 5) : '',
       feature_image: data.feature_image,
       custom_fields_data: data.custom_field_data
     }
@@ -329,7 +358,20 @@ const validationSchema = yup.object({
   calendar_color: yup
     .string()
     .nullable()
-    .matches(/^#(?:[0-9a-fA-F]{3}){1,2}$/, 'Category color must be a valid hex color')
+    .matches(/^#(?:[0-9a-fA-F]{3}){1,2}$/, 'Category color must be a valid hex color'),
+  booking_start_time: yup
+    .string()
+    .nullable()
+    .test('pair', 'حدد وقت البداية والنهاية معًا', function (value) {
+      return !!value === !!this.parent.booking_end_time
+    }),
+  booking_end_time: yup
+    .string()
+    .nullable()
+    .test('after-start', 'وقت النهاية لازم يكون بعد وقت البداية', function (value) {
+      const start = this.parent.booking_start_time
+      return !value || !start || value > start
+    })
 })
 
 
@@ -343,6 +385,8 @@ const { value: status } = useField('status')
 const { value: is_gift_card } = useField('is_gift_card')
 const { value: is_online } = useField('is_online')
 const { value: calendar_color } = useField('calendar_color')
+const { value: booking_start_time } = useField('booking_start_time')
+const { value: booking_end_time } = useField('booking_end_time')
 const { value: is_visible } = useField('is_visible')
 const { value: feature_image } = useField('feature_image')
 const { value: custom_fields_data } = useField('custom_fields_data')

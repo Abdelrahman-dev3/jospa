@@ -173,6 +173,13 @@ class BookingCartController extends Controller
                         ], 422);
                     }
 
+                    if (! \App\Services\CategoryBookingHoursService::allows($slotData['service_id'], $slotData['start_date_time'], $slotData['duration'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => \App\Services\CategoryBookingHoursService::rejectionMessage($slotData['service_id']),
+                        ], 422);
+                    }
+
                     $pendingSlots[] = [
                         'staff_id' => $slotData['staff_id'],
                         'start_date_time' => $slotData['start_date_time']->copy(),

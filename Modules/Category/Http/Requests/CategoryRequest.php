@@ -21,6 +21,8 @@ class CategoryRequest extends FormRequest
                     'slug' => 'string',
                     'name' => 'required|string',
                     'calendar_color' => ['nullable', 'regex:/^#(?:[0-9a-fA-F]{3}){1,2}$/'],
+                    'booking_start_time' => ['nullable', 'date_format:H:i', 'required_with:booking_end_time'],
+                    'booking_end_time' => ['nullable', 'date_format:H:i', 'required_with:booking_start_time', 'after:booking_start_time'],
                 ];
                 break;
             case 'put':
@@ -29,6 +31,8 @@ class CategoryRequest extends FormRequest
                     'slug' => 'string',
                     'name' => 'required|string',
                     'calendar_color' => ['nullable', 'regex:/^#(?:[0-9a-fA-F]{3}){1,2}$/'],
+                    'booking_start_time' => ['nullable', 'date_format:H:i', 'required_with:booking_end_time'],
+                    'booking_end_time' => ['nullable', 'date_format:H:i', 'required_with:booking_start_time', 'after:booking_start_time'],
                 ];
                 break;
         }
