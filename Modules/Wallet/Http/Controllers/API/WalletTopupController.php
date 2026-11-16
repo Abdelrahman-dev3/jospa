@@ -115,6 +115,48 @@ class WalletTopupController extends Controller
     }
 
     /**
+     * POST /api/wallet/topup/cancel/{attempt_id}
+     * Call when the user leaves the payment page (back button / closed the WebView).
+     * The server checks HyperPay first: a completed payment is credited (status "paid"),
+     * a payment still processing at the bank stays "pending" (409), otherwise "cancelled".
+     */
+    public function cancel(Request $request, string $attemptId): JsonResponse
+    {
+        $attempt = WalletTopupAttempt::where('attempt_id', $attemptId)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (! $attempt) {
+            return response()->json([
+                'status' => false,
+                'error_code' => 'attempt_not_found',
+                'message' => 'Top-up attempt not found.',
+            ], 404);
+        }
+
+        [$attempt, $cancelled] = $this->topups->cancelByUser($attempt);
+        $data = $this->topups->presentForApp($attempt);
+
+        if ($attempt->status === WalletTopupAttempt::STATUS_PENDING) {
+            return response()->json([
+                'status' => false,
+                'error_code' => 'payment_in_progress',
+                'message' => app()->getLocale() === 'ar'
+                    ? 'عملية الدفع قيد المعالجة لدى البنك، لا يمكن إلغاؤها الآن.'
+                    : 'The payment is being processed by the bank and cannot be cancelled now.',
+                'data' => $data,
+            ], 409);
+        }
+
+        return response()->json([
+            'status' => true,
+            'cancelled' => $cancelled,
+            'message' => $cancelled ? 'Top-up attempt cancelled.' : 'Top-up attempt already finished.',
+            'data' => $data,
+        ]);
+    }
+
+    /**
      * GET /api/wallet/topup/latest
      * The user's most recent attempt (any status), e.g. when the app lost the attempt_id.
      * data is null when the user has never started a top-up.

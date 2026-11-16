@@ -31,6 +31,9 @@ class WalletTopupService
     /** Extra minutes after expires_at before an unpaid attempt is declared expired. */
     private const EXPIRY_GRACE_MINUTES = 5;
 
+    /** result_description of an attempt the user abandoned; such attempts stay re-checkable. */
+    public const USER_CANCELLED_NOTE = 'Cancelled by user.';
+
     public function __construct(private HyperpayService $hyperpay)
     {
     }
@@ -150,6 +153,51 @@ class WalletTopupService
         return $attempt->refresh();
     }
 
+    /**
+     * The user left the payment page (back button / closed the WebView).
+     * Asks HyperPay first: a completed payment is credited instead of cancelled, and a
+     * payment still being processed by the bank is left pending.
+     *
+     * @return array{0: WalletTopupAttempt, 1: bool}  [attempt, cancelled now?]
+     */
+    public function cancelByUser(WalletTopupAttempt $attempt): array
+    {
+        if ($attempt->isFinal()) {
+            return [$attempt, false];
+        }
+
+        $attempt = $this->refresh($attempt, force: true);
+
+        if ($attempt->isFinal()) {
+            return [$attempt, false];
+        }
+
+        // refresh() stores a result code only when HyperPay reports an actual payment
+        // that is still pending (e.g. 3-D Secure in progress). Do not cancel that one.
+        if ($attempt->result_code
+            && self::classifyResultCode($attempt->result_code, self::isTestGateway()) === WalletTopupAttempt::STATUS_PENDING) {
+            return [$attempt, false];
+        }
+
+        $attempt = $this->settleWithoutCredit(
+            $attempt,
+            WalletTopupAttempt::STATUS_CANCELLED,
+            (string) $attempt->result_code,
+            self::USER_CANCELLED_NOTE,
+            []
+        );
+
+        return [$attempt, $attempt->status === WalletTopupAttempt::STATUS_CANCELLED];
+    }
+
+    private function isRecheckableUserCancel(WalletTopupAttempt $attempt): bool
+    {
+        return $attempt->status === WalletTopupAttempt::STATUS_CANCELLED
+            && $attempt->result_description === self::USER_CANCELLED_NOTE
+            && $attempt->expires_at !== null
+            && now()->lessThan($attempt->expires_at->copy()->addMinutes(self::EXPIRY_GRACE_MINUTES));
+    }
+
     /** Same request replayed with the same key? (amount and brand must match). */
     public static function matchesRequest(WalletTopupAttempt $attempt, float $amount, string $brand): bool
     {
@@ -188,7 +236,9 @@ class WalletTopupService
      */
     public function refresh(WalletTopupAttempt $attempt, bool $force = false): WalletTopupAttempt
     {
-        if ($attempt->isFinal() || ! $attempt->checkout_id) {
+        // A user-cancelled attempt is still re-checked until its session expires, so a
+        // payment that completed at the bank right before the cancel is never lost.
+        if (($attempt->isFinal() && ! $this->isRecheckableUserCancel($attempt)) || ! $attempt->checkout_id) {
             return $attempt;
         }
 
@@ -216,7 +266,9 @@ class WalletTopupService
         $status = self::classifyResultCode($resultCode, self::isTestGateway());
 
         if ($status === WalletTopupAttempt::STATUS_PENDING) {
-            $attempt->update(['result_code' => $resultCode ?: null, 'result_description' => $resultDescription ?: null]);
+            if ($attempt->status === WalletTopupAttempt::STATUS_PENDING) {
+                $attempt->update(['result_code' => $resultCode ?: null, 'result_description' => $resultDescription ?: null]);
+            }
 
             return $this->expireIfOverdue($attempt);
         }
@@ -319,7 +371,7 @@ class WalletTopupService
             /** @var WalletTopupAttempt $locked */
             $locked = WalletTopupAttempt::whereKey($attempt->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->status !== WalletTopupAttempt::STATUS_PENDING) {
+            if ($locked->status !== WalletTopupAttempt::STATUS_PENDING && ! $this->isRecheckableUserCancel($locked)) {
                 return $locked;
             }
 
