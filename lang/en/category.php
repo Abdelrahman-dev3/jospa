@@ -31,4 +31,9 @@ return [
     'placeholder_name' => 'Enter category name',
     'placeholder_parent_category' => 'Select  category',
     'placeholder_parent_brand' => 'Select  brands',
+    'lbl_calendar_color' => 'Category color on calendar',
+    'lbl_booking_hours' => 'Available booking hours for category services',
+    'lbl_from' => 'From',
+    'lbl_to' => 'To',
+    'booking_hours_hint' => "Leave these blank to use only the employee's schedule for bookings.",
 ];

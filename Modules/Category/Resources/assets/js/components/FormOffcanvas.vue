@@ -50,7 +50,7 @@
             />
 
             <InputField
-              :label="'لون الكاتيجوري في الكالندر'"
+              :label="$t('category.lbl_calendar_color')"
               type="color"
               v-model="calendar_color"
               :error-message="errors.calendar_color"
@@ -58,11 +58,11 @@
             />
 
             <div class="form-group">
-              <label class="form-label">ساعات الحجز المتاحة لخدمات القسم</label>
+              <label class="form-label">{{$t('category.lbl_booking_hours')}}</label>
               <div class="row g-2">
                 <div class="col-6">
                   <InputField
-                    :label="'من'"
+                    :label="$t('category.lbl_from')"
                     type="time"
                     v-model="booking_start_time"
                     :error-message="errors.booking_start_time"
@@ -71,7 +71,7 @@
                 </div>
                 <div class="col-6">
                   <InputField
-                    :label="'إلى'"
+                    :label="$t('category.lbl_to')"
                     type="time"
                     v-model="booking_end_time"
                     :error-message="errors.booking_end_time"
@@ -79,7 +79,7 @@
                   />
                 </div>
               </div>
-              <small class="text-muted">اتركها فارغة ليكون الحجز حسب مواعيد الموظف فقط.</small>
+              <small class="text-muted">{{$t('category.booking_hours_hint')}}</small>
             </div>
 
             <div v-for="field in customefield" :key="field.id">

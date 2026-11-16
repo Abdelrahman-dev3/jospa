@@ -30,5 +30,10 @@ return [
     'all_categories' => 'جميع التصنيفات',
     "placeholder_name"=> "أدخل اسم الفئة",
     "placeholder_parent_category"=> "اختر الفئة الرئيسية",
-    "placeholder_parent_brand"=> "اختر العلامات التجارية الرئيسية"
+    "placeholder_parent_brand"=> "اختر العلامات التجارية الرئيسية",
+    'lbl_calendar_color' => 'لون التصنيف في التقويم',
+    'lbl_booking_hours' => 'ساعات الحجز المتاحة لخدمات القسم',
+    'lbl_from' => 'من',
+    'lbl_to' => 'إلى',
+    'booking_hours_hint' => 'اتركها فارغة ليكون الحجز حسب مواعيد الموظف فقط.',
 ];
