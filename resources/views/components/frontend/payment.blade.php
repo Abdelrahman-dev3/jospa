@@ -963,6 +963,8 @@
                             {{ __('messagess.SR') }}
                         </div>
                     </div>
+                    {{-- Invoice coupon field only when no coupon was already applied to the services in the cart --}}
+                    @if(empty($serviceCoupons))
                     <div class="payment-disable-reason" id="couponDisableReason">
                         {{ __('messagess.coupon_disabled_by_gift_card') }}
                     </div>
@@ -970,6 +972,7 @@
                         <input class="form-control" id="invoiceCouponInput" name="invoiceCopon" placeholder="{{ __('messagess.coupon_code') }}" @if(isset($GifttCount) && $GifttCount > 0) disabled title="{{ __('messagess.gift_card_coupon_not_allowed') ?? 'Gift cards and coupons cannot be used together' }}" @endif>
                         <button class="apply-btn" type="button" id="applyCoupon" @if(isset($GifttCount) && $GifttCount > 0) disabled @endif>{{ __('messagess.apply') }}</button>
                     </div>
+                    @endif
                     
                     <div class="toggle-input">
                         <div class="d-flex justify-content-between align-items-center">
@@ -1314,7 +1317,8 @@
         });
 
         // Coupon
-        document.querySelector('#applyCoupon').addEventListener('click', function() {
+        // The field is not rendered when the services already have a coupon from the cart.
+        document.querySelector('#applyCoupon')?.addEventListener('click', function() {
             const button = this;
             const input = document.getElementById('invoiceCouponInput');
             const couponCode = input.value.trim();
