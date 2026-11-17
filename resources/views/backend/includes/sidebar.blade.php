@@ -49,6 +49,15 @@
 
 @include(config('laravel-menu.views.bootstrap-items'), ['items' => $filteredItems])
 
+                @hasPermission('view_payment_request')
+                <li class="nav-item {{ request()->routeIs('backend.payment-requests.*') ? 'active' : '' }}">
+                    <a href="{{ route('backend.payment-requests.index') }}" class="nav-link {{ request()->routeIs('backend.payment-requests.*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        <span class="item-name">{{ __('payment_requests.title') }}</span>
+                    </a>
+                </li>
+                @endhasPermission
+
 
                 @hasPermission('view_gift')
                 <li class="nav-item {{ request()->routeIs('app.gift') ? 'active' : '' }}">

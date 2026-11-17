@@ -514,3 +514,6 @@
      });
 
            
+
+// Mini invoices & payment links (dashboard tab + public pay pages).
+require __DIR__.'/payment_requests.php';

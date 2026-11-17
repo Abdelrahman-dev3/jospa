@@ -33,6 +33,17 @@
                   </a>
                 </div>
 
+                @elseif($notification->data['data']['notification_group']=='payment_request')
+                <div class="dropdown-item-1 float-none p-3 list-unstyled iq-sub-card {{ $notification->read_at ? '' : 'notify-list-bg'}}">
+                    <a href="{{ route('backend.payment-requests.index', ['search' => $notification->data['data']['number'] ?? '']) }}">
+                        <h6>{{ $notification->data['subject'] }}</h6>
+                        <div class="list-style-detail">
+                            <p class="text-body mb-1">{{ $notification->data['message'] ?? '' }}</p>
+                            <p class="text-body mb-0">{{ $notification->data['data']['paid_at'] ?? '' }}</p>
+                        </div>
+                    </a>
+                </div>
+
                 @elseif($notification->data['data']['notification_group']=='package')
                 <div class="dropdown-item-1 float-none p-3 list-unstyled iq-sub-card {{ $notification->read_at ? '' : 'notify-list-bg'}}">
                     <a href="{{ route('backend.package.index') }}" class="">    

@@ -19,6 +19,8 @@ protected $except = [
     'urpay/failure',
     'urpay/cancel',
     'wallet/app-topup/return/*',
+    // HyperPay may POST the shopper back; the handler ignores the payload and verifies server-side.
+    'pay/invoice/return/*',
 
 ];
 }

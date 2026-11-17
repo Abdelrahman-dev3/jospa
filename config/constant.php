@@ -120,6 +120,11 @@ return [
             'is_custom_permission' => 0,
         ],
         [
+            // Mini invoices & payment links: view/add/edit/delete_payment_request
+            'module_name' => 'Payment Request',
+            'is_custom_permission' => 0,
+        ],
+        [
             'module_name' => 'Gift',
             'is_custom_permission' => 0,
         ],
