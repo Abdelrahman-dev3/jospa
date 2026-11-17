@@ -70,6 +70,10 @@ class PaymentAttemptService
             'error_message' => null,
         ]));
 
+        if ($attempt) {
+            $this->flagDuplicateCapture($attempt);
+        }
+
         // Keep dashboard payment links in sync once the gateway-confirmed payment is recorded.
         if ($attempt && $attempt->page === 'payment') {
             try {
@@ -83,6 +87,51 @@ class PaymentAttemptService
         }
 
         return $attempt;
+    }
+
+    /**
+     * Two different gateway payments for the same cart items = the customer was charged
+     * twice. The order is only finalized once, so the extra charge must be refunded
+     * manually: log it loudly for the finance team.
+     */
+    private function flagDuplicateCapture(PaymentAttempt $attempt): void
+    {
+        $items = array_merge(
+            array_map(fn ($id) => 'c' . $id, (array) ($attempt->cart_ids ?? [])),
+            array_map(fn ($id) => 'g' . $id, (array) ($attempt->gift_ids ?? []))
+        );
+
+        if (empty($items)) {
+            return;
+        }
+
+        $others = PaymentAttempt::where('user_id', $attempt->user_id)
+            ->where('id', '!=', $attempt->id)
+            ->where('status', PaymentAttempt::STATUS_PAID)
+            ->where('created_at', '>=', now()->subDays(2))
+            ->get();
+
+        foreach ($others as $other) {
+            $otherItems = array_merge(
+                array_map(fn ($id) => 'c' . $id, (array) ($other->cart_ids ?? [])),
+                array_map(fn ($id) => 'g' . $id, (array) ($other->gift_ids ?? []))
+            );
+
+            $sameTransaction = $attempt->gateway_transaction_id
+                && $attempt->gateway_transaction_id === $other->gateway_transaction_id;
+
+            if (! $sameTransaction && array_intersect($items, $otherItems)) {
+                \Log::critical('DUPLICATE PAYMENT: the same cart items were paid twice. Refund the later charge.', [
+                    'user_id' => $attempt->user_id,
+                    'attempt_id' => $attempt->id,
+                    'attempt_amount' => $attempt->amount,
+                    'attempt_gateway' => $attempt->gateway,
+                    'attempt_transaction_id' => $attempt->gateway_transaction_id,
+                    'other_attempt_id' => $other->id,
+                    'other_transaction_id' => $other->gateway_transaction_id,
+                ]);
+            }
+        }
     }
 
     public function markFailed(?int $attemptId, ?string $message = null, array $attributes = []): ?PaymentAttempt

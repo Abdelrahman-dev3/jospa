@@ -172,13 +172,10 @@ class WalletTopupService
             return [$attempt, false];
         }
 
-        // refresh() stores a result code only when HyperPay reports an actual payment
-        // that is still pending (e.g. 3-D Secure in progress). Do not cancel that one.
-        if ($attempt->result_code
-            && self::classifyResultCode($attempt->result_code, self::isTestGateway()) === WalletTopupAttempt::STATUS_PENDING) {
-            return [$attempt, false];
-        }
-
+        // HyperPay answers 000.200.x ("transaction pending") for an open checkout the user
+        // never paid, so a pending code does not block the cancel. A payment completed after
+        // this point is still credited: user-cancelled attempts stay re-checkable until the
+        // session expires (status/latest endpoints and the wallet:reconcile-topups job).
         $attempt = $this->settleWithoutCredit(
             $attempt,
             WalletTopupAttempt::STATUS_CANCELLED,
@@ -188,6 +185,37 @@ class WalletTopupService
         );
 
         return [$attempt, $attempt->status === WalletTopupAttempt::STATUS_CANCELLED];
+    }
+
+    /**
+     * Background sweep: settles pending attempts and re-checks user-cancelled ones while
+     * their session can still be paid. Returns how many attempts were checked.
+     */
+    public function reconcileOpenAttempts(): int
+    {
+        $attempts = WalletTopupAttempt::query()
+            ->whereNotNull('checkout_id')
+            ->where('created_at', '>=', now()->subDay())
+            ->where(function ($q) {
+                $q->where('status', WalletTopupAttempt::STATUS_PENDING)
+                    ->orWhere(function ($c) {
+                        $c->where('status', WalletTopupAttempt::STATUS_CANCELLED)
+                            ->where('result_description', self::USER_CANCELLED_NOTE)
+                            ->where('expires_at', '>=', now()->subMinutes(self::EXPIRY_GRACE_MINUTES));
+                    });
+            })
+            ->orderBy('id')
+            ->get();
+
+        foreach ($attempts as $attempt) {
+            try {
+                $this->refresh($attempt);
+            } catch (\Throwable $e) {
+                Log::warning('Wallet top-up reconcile failed for attempt.', ['attempt_id' => $attempt->attempt_id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return $attempts->count();
     }
 
     private function isRecheckableUserCancel(WalletTopupAttempt $attempt): bool

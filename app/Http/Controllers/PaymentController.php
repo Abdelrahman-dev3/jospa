@@ -37,6 +37,7 @@ class PaymentController extends Controller
                 'attempt_id' => $attempt->id,
                 'payment_status' => $attempt->status,
                 'invoice_id' => $attempt->invoice_id,
+                'can_retry_payment' => \App\Services\Payment\PaymentAttemptCancelService::canRetry($attempt),
             ]
         ]);
     }
@@ -60,6 +61,7 @@ class PaymentController extends Controller
             'attempt_id' => $attempt->id,
             'payment_status' => $attempt->status,
             'invoice_id' => $attempt->invoice_id,
+            'can_retry_payment' => \App\Services\Payment\PaymentAttemptCancelService::canRetry($attempt),
         ];
 
         if ($result === \App\Services\Payment\PaymentAttemptCancelService::RESULT_IN_PROGRESS) {
@@ -78,6 +80,38 @@ class PaymentController extends Controller
             'cancelled' => $result === \App\Services\Payment\PaymentAttemptCancelService::RESULT_CANCELLED,
             'data' => $data,
         ]);
+    }
+
+    /** 409 returned instead of starting a new payment. Not cached under the Idempotency-Key. */
+    private function blockedPaymentResponse(Request $request, string $errorCode, ?\App\Models\PaymentAttempt $attempt)
+    {
+        $ar = app()->getLocale() === 'ar';
+        $message = match ($errorCode) {
+            'previous_payment_completed' => $ar
+                ? 'تم دفع هذه العملية بالفعل. يرجى تحديث السلة.'
+                : 'This payment was already completed. Please refresh your cart.',
+            'payment_already_starting' => $ar
+                ? 'جارٍ بدء عملية دفع أخرى، يرجى الانتظار.'
+                : 'Another payment is being started. Please wait.',
+            default => $ar
+                ? 'عملية دفع سابقة قيد المعالجة لدى البنك. يرجى الانتظار قبل المحاولة مرة أخرى.'
+                : 'A previous payment is still being processed by the bank. Please wait before trying again.',
+        };
+
+        if (! $request->expectsJson()) {
+            throw ValidationException::withMessages(['paymentMethod' => $message]);
+        }
+
+        return response()->json([
+            'status' => false,
+            'error_code' => $errorCode,
+            'message' => $message,
+            'data' => $attempt ? [
+                'attempt_id' => $attempt->id,
+                'payment_status' => $attempt->status,
+                'invoice_id' => $attempt->invoice_id,
+            ] : null,
+        ], 409);
     }
 
     public function index(Request $request){
@@ -214,7 +248,31 @@ class PaymentController extends Controller
             }
         }
 
-        $response = $strategy->pay($request, $isPayNow);
+        // One payment start at a time per user, and never while a previous attempt may
+        // still be paid (prevents charging the same cart twice).
+        $guardUserId = (int) (auth()->id() ?? 0);
+        $startLock = $guardUserId > 0 ? \Illuminate\Support\Facades\Cache::lock("pay_start_user_{$guardUserId}", 120) : null;
+
+        if ($startLock && ! $startLock->get()) {
+            return $this->blockedPaymentResponse($request, 'payment_already_starting', null);
+        }
+
+        try {
+            if ($guardUserId > 0) {
+                $blocking = app(\App\Services\Payment\PaymentAttemptCancelService::class)->blockingAttemptFor($guardUserId, $request);
+                if ($blocking) {
+                    return $this->blockedPaymentResponse(
+                        $request,
+                        $blocking->status === \App\Models\PaymentAttempt::STATUS_PAID ? 'previous_payment_completed' : 'previous_payment_in_progress',
+                        $blocking
+                    );
+                }
+            }
+
+            $response = $strategy->pay($request, $isPayNow);
+        } finally {
+            $startLock?->release();
+        }
 
         if ($cacheKey && $response instanceof \Illuminate\Http\JsonResponse) {
             \Illuminate\Support\Facades\Cache::put($cacheKey, [

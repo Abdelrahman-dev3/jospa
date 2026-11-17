@@ -116,7 +116,12 @@ class CardPaymentStrategy extends BasePaymentStrategy
         $checkoutId = (string) $request->get('checkoutId');
         $data = $this->resolvePaymentData($merchantTransactionId);
 
-        if (! $data || ($data['checkout_id'] ?? null) !== $checkoutId) {
+        $attemptClosed = ! empty($data['attempt_id'])
+            && ($attemptModel = PaymentAttempt::find($data['attempt_id']))
+            && ! in_array($attemptModel->status, [PaymentAttempt::STATUS_INITIATED, PaymentAttempt::STATUS_PENDING], true);
+
+        // A cancelled/failed/paid attempt can never be paid again from its old page.
+        if (! $data || ($data['checkout_id'] ?? null) !== $checkoutId || $attemptClosed) {
             return $this->respondFailure(
                 $request,
                 app()->getLocale() === 'ar'

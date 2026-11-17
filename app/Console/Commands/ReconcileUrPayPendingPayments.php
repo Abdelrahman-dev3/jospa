@@ -15,7 +15,8 @@ class ReconcileUrPayPendingPayments extends Command
 {
     protected $signature = 'urpay:reconcile-pending
                             {--minutes=30 : عدد الدقائق اللي المعاملة تكون معلقة قبل ما نتحقق منها}
-                            {--dry-run : يطبع النتائج بس من غير ما يعمل أي تغيير}';
+                            {--dry-run : يطبع النتائج بس من غير ما يعمل أي تغيير}
+                            {--attempt= : تسوية محاولة واحدة فقط بالـ id (تتجاهل --minutes)}';
 
     protected $description = 'التحقق من معاملات UrPay المعلقة عن طريق استعلام البنك مباشرة وتسوية حالتها';
 
@@ -24,7 +25,7 @@ class ReconcileUrPayPendingPayments extends Command
         $minutes = (int) $this->option('minutes');
         $dryRun = (bool) $this->option('dry-run');
 
-        $pendingAttempts = PaymentAttempt::where('gateway', 'urpay')
+        $pendingAttempts = PaymentAttempt::whereIn('gateway', ['urpay', 'applepay_urpay'])
             ->where(function ($query) {
                 $query->whereIn('status', [PaymentAttempt::STATUS_PENDING, PaymentAttempt::STATUS_INITIATED])
                     // Attempts the user abandoned in the app are still checked with the bank,
@@ -34,7 +35,8 @@ class ReconcileUrPayPendingPayments extends Command
                             ->where('error_message', \App\Services\Payment\PaymentAttemptCancelService::USER_CANCELLED_NOTE);
                     });
             })
-            ->where('created_at', '<=', now()->subMinutes($minutes))
+            ->when($this->option('attempt'), fn ($q, $id) => $q->whereKey((int) $id))
+            ->when(! $this->option('attempt'), fn ($q) => $q->where('created_at', '<=', now()->subMinutes($minutes)))
             ->where('created_at', '>=', now()->subHours(24))
             ->orderBy('id')
             ->get();
