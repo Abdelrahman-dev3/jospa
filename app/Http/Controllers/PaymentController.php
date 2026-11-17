@@ -31,6 +31,8 @@ class PaymentController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+        [$isFinal, $stopPolling, $pollAfter] = $this->pollingHints($attempt);
+
         return response()->json([
             'status' => true,
             'data' => [
@@ -38,8 +40,51 @@ class PaymentController extends Controller
                 'payment_status' => $attempt->status,
                 'invoice_id' => $attempt->invoice_id,
                 'can_retry_payment' => \App\Services\Payment\PaymentAttemptCancelService::canRetry($attempt),
+                // Polling guidance for the app: wait poll_after_seconds between calls,
+                // and stop as soon as stop_polling is true.
+                'is_final' => $isFinal,
+                'stop_polling' => $stopPolling,
+                'poll_after_seconds' => $pollAfter,
             ]
-        ]);
+        ])
+            ->header('Cache-Control', 'no-store, private')
+            ->header('Retry-After', (string) ($pollAfter ?? 0));
+    }
+
+    /** Statuses that will not change any more. */
+    private const FINAL_ATTEMPT_STATUSES = [
+        \App\Models\PaymentAttempt::STATUS_PAID,
+        \App\Models\PaymentAttempt::STATUS_FAILED,
+        \App\Models\PaymentAttempt::STATUS_CANCELLED,
+    ];
+
+    /** After this, the app stops polling; the scheduled reconcile jobs settle the attempt in the background. */
+    private const MAX_POLL_MINUTES = 30;
+
+    /**
+     * Back-off for status polling: frequent right after the payment, then slower.
+     *
+     * @return array{0: bool, 1: bool, 2: ?int} [is_final, stop_polling, poll_after_seconds]
+     */
+    private function pollingHints(\App\Models\PaymentAttempt $attempt): array
+    {
+        if (in_array($attempt->status, self::FINAL_ATTEMPT_STATUSES, true)) {
+            return [true, true, null];
+        }
+
+        $ageSeconds = $attempt->created_at ? $attempt->created_at->diffInSeconds(now()) : 0;
+
+        if ($ageSeconds >= self::MAX_POLL_MINUTES * 60) {
+            return [false, true, null];
+        }
+
+        $pollAfter = match (true) {
+            $ageSeconds < 60 => 3,
+            $ageSeconds < 300 => 5,
+            default => 15,
+        };
+
+        return [false, false, $pollAfter];
     }
     /**
      * POST /api/payment-attempt/cancel/{attempt_id}

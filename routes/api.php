@@ -270,7 +270,8 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
 
     Route::controller(PaymentController::class)->group(function () {
         Route::post('/payment-chanal', 'payment');
-        Route::get('/payment-attempt/status/{attempt_id}', 'checkAttemptStatus');
+        // Per user: caps a runaway polling loop in the app (normal polling is every 3–15 s).
+        Route::get('/payment-attempt/status/{attempt_id}', 'checkAttemptStatus')->middleware('throttle:60,1');
         Route::post('/payment-attempt/cancel/{attempt_id}', 'cancelAttempt')->middleware('throttle:30,1');
     });
 
