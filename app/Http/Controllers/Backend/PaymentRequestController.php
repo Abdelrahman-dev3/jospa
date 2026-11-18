@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Backend;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentRequest;
+use App\Services\PaymentRequest\OdooPaymentInvoiceSyncService;
 use App\Services\PaymentRequest\PaymentRequestService;
 use App\Support\SaudiPhoneNumber;
 use Illuminate\Http\Request;
@@ -14,9 +15,52 @@ class PaymentRequestController extends Controller
 {
     public function __construct(private PaymentRequestService $service)
     {
-        $this->middleware('permission:view_payment_request')->only(['index', 'refresh']);
+        $this->middleware('permission:view_payment_request')->only(['index', 'refresh', 'invoicePdf']);
         $this->middleware('permission:add_payment_request')->only(['store']);
-        $this->middleware('permission:edit_payment_request')->only(['cancel']);
+        $this->middleware('permission:edit_payment_request')->only(['cancel', 'odooSync']);
+    }
+
+    /** Send a paid request to Odoo now (manual retry after automatic retries gave up or failed). */
+    public function odooSync(PaymentRequest $paymentRequest, OdooPaymentInvoiceSyncService $odoo)
+    {
+        if (! OdooPaymentInvoiceSyncService::enabled()) {
+            return back()->with('error', __('payment_requests.odoo.disabled'));
+        }
+
+        if ($paymentRequest->status !== PaymentRequest::STATUS_PAID) {
+            return back()->with('error', __('payment_requests.odoo.not_paid'));
+        }
+
+        return $odoo->sync($paymentRequest, manual: true)
+            ? back()->with('success', __('payment_requests.odoo.sent', ['number' => $paymentRequest->number]))
+            : back()->with('error', __('payment_requests.odoo.send_failed', ['error' => (string) $paymentRequest->fresh()->odoo_last_error]));
+    }
+
+    /** The Odoo invoice PDF (tax invoice) returned for a paid request. */
+    public function invoicePdf(PaymentRequest $paymentRequest, OdooPaymentInvoiceSyncService $odoo)
+    {
+        return self::pdfResponse($paymentRequest, $odoo);
+    }
+
+    public static function pdfResponse(PaymentRequest $paymentRequest, OdooPaymentInvoiceSyncService $odoo)
+    {
+        $path = (string) $paymentRequest->odoo_invoice_pdf;
+        abort_if($path === '', 404);
+
+        if (str_starts_with($path, 'https://') || str_starts_with($path, 'http://')) {
+            return redirect()->away($path);
+        }
+
+        $contents = $odoo->pdfContents($paymentRequest);
+        abort_if($contents === null, 404);
+
+        $filename = 'Invoice-'.($paymentRequest->odoo_invoice_number ?: $paymentRequest->number).'.pdf';
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.preg_replace('/[^A-Za-z0-9_.\/-]/', '_', $filename).'"',
+            'Cache-Control' => 'no-store, private',
+        ]);
     }
 
     public function index(Request $request)

@@ -80,6 +80,9 @@ return [
         'login' => env('ODOO_LOGIN'),
         'password' => env('ODOO_PASSWORD'),
         'timeout' => env('ODOO_TIMEOUT', 15),
+        // Payment-link invoices (event odoo_create_payment_invoice, same URL and credentials).
+        // Keep false until the Odoo side confirms the handler is deployed.
+        'payment_invoice_sync_enabled' => (bool) env('ODOO_PAYMENT_INVOICE_SYNC_ENABLED', false),
     ],
 
     'javna' => [

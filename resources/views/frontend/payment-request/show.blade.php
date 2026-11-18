@@ -40,6 +40,7 @@
     <div class="total">
         {{ number_format((float) $paymentRequest->amount, 2) }} {{ app()->getLocale() === 'ar' ? 'ر.س' : 'SAR' }}
         <small>{{ __('payment_requests.fields.total') }}</small>
+        <small>{{ __('payment_requests.fields.vat_inclusive') }}</small>
     </div>
 
     @if (session('success'))
@@ -52,6 +53,9 @@
         @unless (session('success'))
             <div class="msg ok">{{ __('payment_requests.public.paid') }}</div>
         @endunless
+        @if ($paymentRequest->hasOdooInvoicePdf())
+            <a class="btn alt" style="text-align:center;text-decoration:none;margin-top:14px" href="{{ route('payment-request.invoice-pdf', $paymentRequest->token) }}" target="_blank" rel="noopener">{{ __('payment_requests.odoo.download_pdf') }}</a>
+        @endif
     @elseif ($paymentRequest->status === 'cancelled')
         <div class="msg warn">{{ __('payment_requests.public.cancelled') }}</div>
     @else

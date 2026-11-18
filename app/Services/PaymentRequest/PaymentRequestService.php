@@ -466,6 +466,15 @@ class PaymentRequestService
 
             if ($request) {
                 $this->notifyAdmins($request, $event);
+
+                // Money was received for this request: record it in Odoo (not for a duplicate payment).
+                if ($event !== PaymentRequestPaid::EVENT_DUPLICATE) {
+                    try {
+                        app(OdooPaymentInvoiceSyncService::class)->queue($request);
+                    } catch (\Throwable $e) {
+                        Log::warning('Payment request: could not queue Odoo sync.', ['payment_request' => $request->number, 'error' => $e->getMessage()]);
+                    }
+                }
             }
         }
 

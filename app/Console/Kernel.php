@@ -28,6 +28,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('booking-links:reconcile')->everyFiveMinutes()->withoutOverlapping();
         $schedule->command('wallet:reconcile-topups')->everyFiveMinutes()->withoutOverlapping();
         $schedule->command('payment-requests:reconcile')->everyFiveMinutes()->withoutOverlapping();
+        $schedule->command('payment-requests:sync-odoo')->everyFiveMinutes()->withoutOverlapping();
         $schedule->command('payments:recheck-cancelled-card')->everyFiveMinutes()->withoutOverlapping();
     }
 

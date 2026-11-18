@@ -74,6 +74,7 @@
                     <label class="form-label">{{ __('payment_requests.fields.amount') }} <span class="text-danger">*</span></label>
                     <input type="text" inputmode="decimal" name="amount" class="form-control @error('amount') is-invalid @enderror" value="{{ old('amount') }}" placeholder="5000.00" dir="ltr" required>
                     @error('amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="form-text">{{ __('payment_requests.fields.amount_hint') }}</div>
                 </div>
                 <div class="col-12">
                     <label class="form-label">{{ __('payment_requests.fields.description') }} <span class="text-danger">*</span></label>
@@ -125,13 +126,23 @@
                                 @if ($pr->customer_mobile)<div class="text-muted small" dir="ltr">{{ $pr->customer_mobile }}</div>@endif
                             </td>
                             <td class="pr-desc">{{ \Illuminate\Support\Str::limit($pr->description, 120) }}</td>
-                            <td class="text-nowrap fw-bold">{{ number_format((float) $pr->amount, 2) }} {{ app()->getLocale() === 'ar' ? 'ر.س' : 'SAR' }}</td>
+                            <td class="text-nowrap">
+                                <span class="fw-bold">{{ number_format((float) $pr->amount, 2) }} {{ app()->getLocale() === 'ar' ? 'ر.س' : 'SAR' }}</span>
+                                <div class="text-muted small">{{ __('payment_requests.fields.vat_inclusive') }}</div>
+                            </td>
                             <td>
                                 <span class="pr-status {{ $pr->status }}">{{ __('payment_requests.status.' . $pr->status) }}</span>
                                 @if ($pr->status === 'paid')
                                     <div class="text-muted small text-nowrap">{{ optional($pr->paid_at)->format('Y-m-d H:i') }}</div>
                                     @if ($pr->gateway_transaction_id)
                                         <div class="text-muted small" dir="ltr" title="{{ __('payment_requests.fields.reference') }}">{{ $pr->gateway_transaction_id }}</div>
+                                    @endif
+                                    @if ($pr->odoo_sync_status)
+                                        <div class="small {{ $pr->odoo_sync_status === 'synced' ? 'text-success' : ($pr->odoo_sync_status === 'failed' ? 'text-danger' : 'text-muted') }}"
+                                             @if ($pr->odoo_sync_status === 'failed' && $pr->odoo_last_error) title="{{ $pr->odoo_last_error }}" @endif>
+                                            {{ __('payment_requests.odoo.' . $pr->odoo_sync_status) }}
+                                            @if ($pr->odoo_invoice_number)<span dir="ltr">({{ $pr->odoo_invoice_number }})</span>@endif
+                                        </div>
                                     @endif
                                 @endif
                             </td>
@@ -150,6 +161,17 @@
                                         <form method="POST" action="{{ route('backend.payment-requests.cancel', $pr->id) }}" class="d-inline" onsubmit="return confirm(@json(__('payment_requests.actions.cancel_confirm')))">
                                             @csrf
                                             <button class="btn btn-sm btn-outline-danger" type="submit">{{ __('payment_requests.actions.cancel') }}</button>
+                                        </form>
+                                        @endhasPermission
+                                    @endif
+                                    @if ($pr->status === 'paid' && $pr->hasOdooInvoicePdf())
+                                        <a href="{{ route('backend.payment-requests.invoice-pdf', $pr->id) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-dark"><i class="fa-solid fa-file-pdf"></i> {{ __('payment_requests.odoo.download_pdf') }}</a>
+                                    @endif
+                                    @if ($pr->status === 'paid' && $pr->odoo_sync_status === 'failed' && \App\Services\PaymentRequest\OdooPaymentInvoiceSyncService::enabled())
+                                        @hasPermission('edit_payment_request')
+                                        <form method="POST" action="{{ route('backend.payment-requests.odoo-sync', $pr->id) }}" class="d-inline">
+                                            @csrf
+                                            <button class="btn btn-sm btn-outline-warning" type="submit">{{ __('payment_requests.odoo.resend') }}</button>
                                         </form>
                                         @endhasPermission
                                     @endif

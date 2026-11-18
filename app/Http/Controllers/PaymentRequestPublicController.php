@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Backend\PaymentRequestController;
 use App\Models\PaymentRequest;
 use App\Models\PaymentRequestAttempt;
+use App\Services\PaymentRequest\OdooPaymentInvoiceSyncService;
 use App\Services\PaymentRequest\PaymentRequestService;
 use Illuminate\Http\Request;
 
@@ -93,6 +95,15 @@ class PaymentRequestPublicController extends Controller
         return redirect()
             ->route('payment-request.show', $model->paymentRequest->token)
             ->with($flash[0], $flash[1]);
+    }
+
+    /** GET /pay/invoice/{token}/invoice.pdf — the Odoo tax invoice, once the request is paid. */
+    public function invoicePdf(string $token, OdooPaymentInvoiceSyncService $odoo)
+    {
+        $paymentRequest = $this->find($token);
+        abort_if($paymentRequest->status !== PaymentRequest::STATUS_PAID, 404);
+
+        return PaymentRequestController::pdfResponse($paymentRequest, $odoo);
     }
 
     private function find(string $token): PaymentRequest
